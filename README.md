@@ -40,8 +40,41 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 
 ## Instalação
 
+### Opção 1: Arch Linux do zero (live ISO)
+
+Instala Arch Linux mínimo + StoaLinux em um único comando, direto do live ISO:
+
 ```bash
-git clone https://github.com/seu-usuario/StoaLinux.git
+# No live ISO do Arch Linux, com internet conectada:
+curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
+chmod +x arch-install.sh
+./arch-install.sh
+```
+
+O script faz tudo automaticamente:
+- Particiona o disco (GPT: EFI + swap + root)
+- Instala o sistema base + todos os pacotes do StoaLinux
+- Configura locale, timezone, hostname, GRUB
+- Cria usuário com sudo
+- Instala os dotfiles estoicos
+
+### Opção 2: Arch Linux já instalado (post-install)
+
+Para um Arch já funcional, instala os pacotes e dotfiles:
+
+```bash
+git clone https://github.com/VictorGSchneider/StoaLinux.git
+cd StoaLinux
+chmod +x post-install.sh
+./post-install.sh
+```
+
+### Opção 3: Apenas dotfiles (pacotes já instalados)
+
+Se já tem os pacotes e quer só os dotfiles:
+
+```bash
+git clone https://github.com/VictorGSchneider/StoaLinux.git
 cd StoaLinux
 chmod +x install.sh
 ./install.sh
@@ -52,6 +85,8 @@ chmod +x install.sh
 ```bash
 sudo pacman -S alacritty i3-wm i3status rofi dunst picom feh neovim imagemagick
 sudo pacman -S ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme
+sudo pacman -S pipewire pipewire-pulse wireplumber brightnessctl maim
+sudo pacman -S xorg-server xorg-xinit zsh git
 ```
 
 ### Shell
