@@ -1,0 +1,152 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — i3wm                                          ║
+# ║  "A ordem é a primeira lei do céu." — Marco Aurélio         ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+set $mod Mod4
+
+# ── Fontes ──
+font pango:JetBrains Mono 10
+
+# ── Paleta Estoica ──
+set $bg         #211e19
+set $bg_light   #2d2921
+set $fg         #d4cfc4
+set $fg_dim     #a89f91
+set $bronze     #c49a5c
+set $gold       #d4a84b
+set $olive      #8a9a6c
+set $terracotta #b36b5a
+set $stone      #6e6a62
+set $parchment  #c4b08a
+set $azure      #5a7a8a
+
+# ── Cores das Janelas ──
+# class                 border      bg          text        indicator   child_border
+client.focused          $bronze     $bg_light   $fg         $gold       $bronze
+client.focused_inactive $stone      $bg         $fg_dim     $stone      $stone
+client.unfocused        $bg         $bg         $fg_dim     $bg         $bg
+client.urgent           $terracotta $terracotta $fg         $terracotta $terracotta
+client.placeholder      $bg         $bg         $fg_dim     $bg         $bg
+client.background       $bg
+
+# ── Bordas ──
+default_border pixel 2
+default_floating_border pixel 2
+gaps inner 6
+gaps outer 2
+smart_gaps on
+
+# ── Barra ──
+bar {
+    status_command i3status -c ~/.config/i3/i3status.conf
+    position top
+    separator_symbol "  │  "
+
+    colors {
+        background $bg
+        statusline $fg
+        separator  $stone
+
+        # class            border      bg          text
+        focused_workspace  $bronze     $bg_light   $fg
+        active_workspace   $stone      $bg         $fg_dim
+        inactive_workspace $bg         $bg         $fg_dim
+        urgent_workspace   $terracotta $terracotta $fg
+        binding_mode       $gold       $bg_light   $fg
+    }
+}
+
+# ── Atalhos Fundamentais ──
+bindsym $mod+Return exec alacritty
+bindsym $mod+d exec --no-startup-id rofi -show drun -config ~/.config/rofi/config.rasi
+bindsym $mod+q kill
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Sair do i3?' -B 'Sim' 'i3-msg exit'"
+
+# ── Navegação ──
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+# ── Layout ──
+bindsym $mod+b splith
+bindsym $mod+v splitv
+bindsym $mod+s layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+bindsym $mod+f fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+space focus mode_toggle
+bindsym $mod+a focus parent
+
+# ── Workspaces (numerais romanos) ──
+set $ws1 "I"
+set $ws2 "II"
+set $ws3 "III"
+set $ws4 "IV"
+set $ws5 "V"
+set $ws6 "VI"
+set $ws7 "VII"
+set $ws8 "VIII"
+set $ws9 "IX"
+set $ws10 "X"
+
+bindsym $mod+1 workspace $ws1
+bindsym $mod+2 workspace $ws2
+bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace $ws4
+bindsym $mod+5 workspace $ws5
+bindsym $mod+6 workspace $ws6
+bindsym $mod+7 workspace $ws7
+bindsym $mod+8 workspace $ws8
+bindsym $mod+9 workspace $ws9
+bindsym $mod+0 workspace $ws10
+
+bindsym $mod+Shift+1 move container to workspace $ws1
+bindsym $mod+Shift+2 move container to workspace $ws2
+bindsym $mod+Shift+3 move container to workspace $ws3
+bindsym $mod+Shift+4 move container to workspace $ws4
+bindsym $mod+Shift+5 move container to workspace $ws5
+bindsym $mod+Shift+6 move container to workspace $ws6
+bindsym $mod+Shift+7 move container to workspace $ws7
+bindsym $mod+Shift+8 move container to workspace $ws8
+bindsym $mod+Shift+9 move container to workspace $ws9
+bindsym $mod+Shift+0 move container to workspace $ws10
+
+# ── Redimensionar ──
+mode "resize" {
+    bindsym h resize shrink width 5 px or 5 ppt
+    bindsym j resize grow height 5 px or 5 ppt
+    bindsym k resize shrink height 5 px or 5 ppt
+    bindsym l resize grow width 5 px or 5 ppt
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+    bindsym $mod+r mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# ── Volume ──
+bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
+
+# ── Brilho ──
+bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set +10%
+bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
+
+# ── Screenshot ──
+bindsym Print exec --no-startup-id maim ~/Imagens/screenshot-$(date +%s).png
+bindsym $mod+Print exec --no-startup-id maim -s ~/Imagens/screenshot-$(date +%s).png
+
+# ── Autostart ──
+exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
+exec_always --no-startup-id feh --bg-fill ~/.config/stoa/wallpapers/marble.png
+exec --no-startup-id dunst -config ~/.config/dunst/dunstrc

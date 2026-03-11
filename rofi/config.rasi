@@ -1,0 +1,120 @@
+/* ╔══════════════════════════════════════════════════════════════╗ */
+/* ║  STOA LINUX — Rofi                                          ║ */
+/* ║  "Escolhe, não sejas escolhido." — Epicteto                 ║ */
+/* ╚══════════════════════════════════════════════════════════════╝ */
+
+configuration {
+    modi:                "drun,run,window";
+    show-icons:          true;
+    display-drun:        "  Iniciar";
+    display-run:         "  Executar";
+    display-window:      "  Janelas";
+    font:                "JetBrains Mono 11";
+}
+
+* {
+    bg:          #211e19;
+    bg-alt:      #2d2921;
+    fg:          #d4cfc4;
+    fg-dim:      #a89f91;
+    bronze:      #c49a5c;
+    gold:        #d4a84b;
+    parchment:   #c4b08a;
+    terracotta:  #b36b5a;
+    olive:       #8a9a6c;
+    stone:       #6e6a62;
+
+    background-color: transparent;
+    text-color:       @fg;
+}
+
+window {
+    width:            520px;
+    border:           2px;
+    border-color:     @bronze;
+    border-radius:    4px;
+    background-color: @bg;
+    padding:          0;
+}
+
+mainbox {
+    children: [ inputbar, message, listview ];
+    spacing:  0;
+    padding:  0;
+}
+
+inputbar {
+    children:         [ prompt, entry ];
+    background-color: @bg-alt;
+    padding:          12px 16px;
+    spacing:          10px;
+}
+
+prompt {
+    text-color: @bronze;
+}
+
+entry {
+    placeholder:       "Buscar...";
+    placeholder-color: @stone;
+    text-color:        @fg;
+}
+
+listview {
+    lines:            8;
+    columns:          1;
+    fixed-height:     true;
+    border:           1px 0 0 0;
+    border-color:     @stone;
+    background-color: @bg;
+    padding:          4px 0;
+}
+
+element {
+    padding: 8px 16px;
+    spacing: 10px;
+}
+
+element normal.normal {
+    background-color: @bg;
+    text-color:       @fg;
+}
+
+element normal.urgent {
+    background-color: @bg;
+    text-color:       @terracotta;
+}
+
+element normal.active {
+    background-color: @bg;
+    text-color:       @olive;
+}
+
+element selected.normal {
+    background-color: @bg-alt;
+    text-color:       @bronze;
+}
+
+element selected.urgent {
+    background-color: @terracotta;
+    text-color:       @fg;
+}
+
+element selected.active {
+    background-color: @bg-alt;
+    text-color:       @gold;
+}
+
+element-icon {
+    size: 20px;
+}
+
+element-text {
+    vertical-align: 0.5;
+}
+
+message {
+    padding:          8px 16px;
+    background-color: @bg-alt;
+    text-color:       @parchment;
+}

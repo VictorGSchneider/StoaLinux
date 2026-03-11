@@ -1,0 +1,84 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — Alacritty                                     ║
+# ║  "Não sofras antes do tempo." — Sêneca                      ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+[window]
+opacity = 0.92
+padding = { x = 12, y = 12 }
+decorations = "None"
+title = "Stoa Terminal"
+
+[font]
+size = 11.0
+
+[font.normal]
+family = "JetBrains Mono"
+style = "Regular"
+
+[font.bold]
+family = "JetBrains Mono"
+style = "Bold"
+
+[font.italic]
+family = "JetBrains Mono"
+style = "Italic"
+
+[cursor]
+style = { shape = "Block", blinking = "On" }
+blink_interval = 750
+
+# ── Paleta Estoica ──
+[colors.primary]
+background = "#211e19"
+foreground = "#d4cfc4"
+
+[colors.cursor]
+text    = "#211e19"
+cursor  = "#c49a5c"
+
+[colors.vi_mode_cursor]
+text    = "#211e19"
+cursor  = "#d4a84b"
+
+[colors.selection]
+text       = "#211e19"
+background = "#c4b08a"
+
+[colors.search.matches]
+foreground = "#211e19"
+background = "#8a9a6c"
+
+[colors.search.focused_match]
+foreground = "#211e19"
+background = "#d4a84b"
+
+[colors.hints.start]
+foreground = "#211e19"
+background = "#c49a5c"
+
+[colors.hints.end]
+foreground = "#211e19"
+background = "#a89272"
+
+# Terminal ANSI — Normal
+[colors.normal]
+black   = "#1a1714"
+red     = "#b36b5a"
+green   = "#8a9a6c"
+yellow  = "#c49a5c"
+blue    = "#5a7a8a"
+magenta = "#946a7a"
+cyan    = "#6a8a7a"
+white   = "#d4cfc4"
+
+# Terminal ANSI — Brilhante
+[colors.bright]
+black   = "#4a4540"
+red     = "#c4806e"
+green   = "#9aaa7c"
+yellow  = "#d4a84b"
+blue    = "#6a8a9a"
+magenta = "#a47a8a"
+cyan    = "#7a9a8a"
+white   = "#e4dfd4"
