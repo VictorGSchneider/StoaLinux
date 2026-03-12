@@ -7,20 +7,27 @@
 # ║  Ele instala um Arch mínimo + todos os pacotes do Stoa.     ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# USO:
+# PRÉ-REQUISITOS (manuais):
 #   1. Dê boot pelo ISO do Arch Linux
 #   2. Conecte à internet (iwctl ou cabo ethernet)
-#   3. curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
-#   4. chmod +x arch-install.sh
-#   5. ./arch-install.sh
+#   3. Particione, formate e monte os discos manualmente:
+#        - Partição EFI montada em /mnt/boot/efi (ou /mnt/boot)
+#        - Partição root montada em /mnt
+#        - Swap ativado (opcional)
+#   4. Baixe e execute:
+#        curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
+#        chmod +x arch-install.sh
+#        ./arch-install.sh
 #
-# O script vai:
-#   - Particionar o disco (GPT: EFI + swap + root)
-#   - Instalar base system + pacotes do StoaLinux
-#   - Configurar locale, timezone, hostname, bootloader
-#   - Criar usuário e instalar dotfiles
+# O script NÃO faz:
+#   - Particionamento (faça manualmente com fdisk/cfdisk/gdisk)
+#   - Criação de usuário (faça manualmente após o reboot)
 #
-# ⚠  ATENÇÃO: Este script APAGA TODOS OS DADOS do disco selecionado!
+# O script FAZ:
+#   - pacstrap com base + todos os pacotes do StoaLinux
+#   - Configuração de locale, timezone, hostname
+#   - Instalação do rEFInd boot manager
+#   - Clonagem e instalação dos dotfiles StoaLinux
 
 set -e
 
@@ -36,11 +43,11 @@ R='\033[0m'
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     STOA LINUX — Arch Linux Installer                ║${R}"
-echo -e "  ${B}║     Instalação mínima com dotfiles estoicos          ║${R}"
+echo -e "  ${B}║     Hyprland (Wayland) + i3 (Xorg) fallback          ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
-# ── Verificar se está no live ISO ──
+# ── Verificar root ──
 if [ "$(id -u)" -ne 0 ]; then
     echo -e "  ${T}[!] Execute como root (live ISO).${R}"
     exit 1
@@ -57,31 +64,45 @@ fi
 echo -e "  ${O}[✓] Conectado.${R}"
 echo ""
 
-# ── Listar discos ──
-echo -e "  ${F}Discos disponíveis:${R}"
-echo ""
-lsblk -d -o NAME,SIZE,MODEL | grep -v "loop\|sr\|NAME" | while read -r line; do
-    echo -e "  ${S}  ${line}${R}"
-done
-echo ""
-
-# ── Selecionar disco ──
-read -rp "  Disco para instalar (ex: sda, nvme0n1): " DISK_NAME
-DISK="/dev/${DISK_NAME}"
-
-if [ ! -b "$DISK" ]; then
-    echo -e "  ${T}[!] Disco ${DISK} não encontrado.${R}"
+# ── Verificar que /mnt está montado ──
+if ! mountpoint -q /mnt; then
+    echo -e "  ${T}[!] /mnt não está montado.${R}"
+    echo -e "  ${S}Particione e monte os discos antes de executar este script:${R}"
+    echo ""
+    echo -e "  ${F}Exemplo com cfdisk + ext4:${R}"
+    echo -e "  ${S}  cfdisk /dev/sda              # criar partições GPT${R}"
+    echo -e "  ${S}  mkfs.fat -F 32 /dev/sda1     # EFI (512M)${R}"
+    echo -e "  ${S}  mkfs.ext4 /dev/sda2           # Root${R}"
+    echo -e "  ${S}  mount /dev/sda2 /mnt${R}"
+    echo -e "  ${S}  mkdir -p /mnt/boot/efi${R}"
+    echo -e "  ${S}  mount /dev/sda1 /mnt/boot/efi${R}"
+    echo ""
     exit 1
 fi
+echo -e "  ${O}[✓] /mnt montado.${R}"
 
+# Detectar partição EFI
+EFI_DIR=""
+if mountpoint -q /mnt/boot/efi 2>/dev/null; then
+    EFI_DIR="/boot/efi"
+elif mountpoint -q /mnt/boot 2>/dev/null; then
+    EFI_DIR="/boot"
+else
+    echo -e "  ${T}[!] Partição EFI não encontrada em /mnt/boot/efi ou /mnt/boot.${R}"
+    echo -e "  ${S}Monte a partição EFI antes de continuar.${R}"
+    exit 1
+fi
+echo -e "  ${O}[✓] EFI detectada em ${EFI_DIR}.${R}"
 echo ""
-echo -e "  ${T}╔══════════════════════════════════════════════════════╗${R}"
-echo -e "  ${T}║  ATENÇÃO: TODOS OS DADOS em ${DISK} serão APAGADOS!  ${R}"
-echo -e "  ${T}╚══════════════════════════════════════════════════════╝${R}"
+
+# ── Layout de partições ──
+echo -e "  ${F}Layout atual:${R}"
+lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT | grep -E "/mnt|NAME"
 echo ""
-read -rp "  Continuar? (sim/não): " CONFIRM
-if [ "$CONFIRM" != "sim" ]; then
-    echo -e "  ${S}Instalação cancelada.${R}"
+
+read -rp "  Layout correto? (s/n): " CONFIRM
+if [ "$CONFIRM" != "s" ]; then
+    echo -e "  ${S}Ajuste as partições e execute novamente.${R}"
     exit 0
 fi
 
@@ -90,151 +111,74 @@ echo ""
 echo -e "  ${F}Configuração do sistema:${R}"
 echo ""
 
-read -rp "  Hostname (ex: stoa): " HOSTNAME
+read -rp "  Hostname [stoa]: " HOSTNAME
 HOSTNAME="${HOSTNAME:-stoa}"
 
-read -rp "  Nome do usuário: " USERNAME
-if [ -z "$USERNAME" ]; then
-    echo -e "  ${T}[!] Nome de usuário obrigatório.${R}"
-    exit 1
-fi
-
-read -rsp "  Senha do usuário: " USER_PASS
-echo ""
-read -rsp "  Confirme a senha: " USER_PASS2
-echo ""
-
-if [ "$USER_PASS" != "$USER_PASS2" ]; then
-    echo -e "  ${T}[!] Senhas não conferem.${R}"
-    exit 1
-fi
-
-read -rp "  Timezone (ex: America/Sao_Paulo): " TIMEZONE
+read -rp "  Timezone [America/Sao_Paulo]: " TIMEZONE
 TIMEZONE="${TIMEZONE:-America/Sao_Paulo}"
 
-read -rp "  Tamanho do swap em GB (ex: 4, 0 para sem swap): " SWAP_SIZE
-SWAP_SIZE="${SWAP_SIZE:-4}"
-
-# ── Shell preferido ──
-echo ""
-echo -e "  ${F}Shell:${R}"
-echo -e "  ${S}  1) zsh (recomendado)${R}"
-echo -e "  ${S}  2) bash${R}"
-read -rp "  Escolha [1]: " SHELL_CHOICE
-SHELL_CHOICE="${SHELL_CHOICE:-1}"
-
-SHELL_PKG="zsh"
-SHELL_BIN="/bin/zsh"
-if [ "$SHELL_CHOICE" = "2" ]; then
-    SHELL_PKG="bash"
-    SHELL_BIN="/bin/bash"
-fi
+read -rp "  Locale [pt_BR.UTF-8]: " LOCALE
+LOCALE="${LOCALE:-pt_BR.UTF-8}"
 
 echo ""
 echo -e "  ${F}Iniciando instalação...${R}"
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# FASE 1: Particionamento
+# FASE 1: Pacstrap
 # ══════════════════════════════════════════════════════════════
 
-echo -e "  ${B}[1/7] Particionando ${DISK}...${R}"
+echo -e "  ${B}[1/5] Instalando sistema base + pacotes StoaLinux...${R}"
 
-# Detectar se é NVMe (partições: p1, p2) ou SATA (1, 2)
-if [[ "$DISK" == *"nvme"* ]]; then
-    PART_PREFIX="${DISK}p"
-else
-    PART_PREFIX="${DISK}"
-fi
+# Base
+BASE_PKGS="base linux linux-firmware sudo"
 
-# Limpar tabela de partições
-wipefs -af "$DISK" &>/dev/null
-sgdisk -Z "$DISK" &>/dev/null
+# Rede
+NET_PKGS="networkmanager"
 
-if [ "$SWAP_SIZE" -gt 0 ] 2>/dev/null; then
-    # GPT: EFI (512M) + Swap + Root
-    sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI" "$DISK"
-    sgdisk -n 2:0:+${SWAP_SIZE}G -t 2:8200 -c 2:"Swap" "$DISK"
-    sgdisk -n 3:0:0 -t 3:8300 -c 3:"Root" "$DISK"
+# Boot — rEFInd
+BOOT_PKGS="refind efibootmgr"
 
-    PART_EFI="${PART_PREFIX}1"
-    PART_SWAP="${PART_PREFIX}2"
-    PART_ROOT="${PART_PREFIX}3"
-else
-    # GPT: EFI (512M) + Root
-    sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI" "$DISK"
-    sgdisk -n 2:0:0 -t 2:8300 -c 2:"Root" "$DISK"
+# Hyprland (Wayland — primário)
+WAYLAND_PKGS="hyprland waybar swaybg xdg-desktop-portal-hyprland"
 
-    PART_EFI="${PART_PREFIX}1"
-    PART_SWAP=""
-    PART_ROOT="${PART_PREFIX}2"
-fi
+# i3 (Xorg — fallback)
+XORG_PKGS="i3-wm i3status xorg-server xorg-xinit picom"
 
-# Esperar dispositivos
-sleep 2
-partprobe "$DISK" 2>/dev/null || true
+# Launcher, notificações (funcionam em ambos)
+UI_PKGS="rofi dunst"
 
-echo -e "  ${O}[✓] Particionamento concluído.${R}"
+# Terminal e editor
+APP_PKGS="alacritty neovim"
 
-# ══════════════════════════════════════════════════════════════
-# FASE 2: Formatação e Montagem
-# ══════════════════════════════════════════════════════════════
+# Screenshot — Wayland (grim+slurp) e Xorg (maim)
+SCREENSHOT_PKGS="grim slurp maim"
 
-echo -e "  ${B}[2/7] Formatando e montando...${R}"
+# Wallpaper — feh para Xorg (swaybg já está nos Wayland pkgs)
+WALL_PKGS="feh imagemagick"
 
-mkfs.fat -F 32 "$PART_EFI"
-mkfs.ext4 -F "$PART_ROOT"
+# Fontes e tema
+FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
 
-if [ -n "$PART_SWAP" ]; then
-    mkswap "$PART_SWAP"
-    swapon "$PART_SWAP"
-fi
+# Áudio e utilidades
+UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl"
 
-mount "$PART_ROOT" /mnt
-mkdir -p /mnt/boot/efi
-mount "$PART_EFI" /mnt/boot/efi
+# Extras
+EXTRA_PKGS="git zsh"
 
-echo -e "  ${O}[✓] Formatado e montado.${R}"
-
-# ══════════════════════════════════════════════════════════════
-# FASE 3: Instalação base + pacotes StoaLinux
-# ══════════════════════════════════════════════════════════════
-
-echo -e "  ${B}[3/7] Instalando sistema base + pacotes StoaLinux...${R}"
-
-# Pacotes base mínimos
-BASE_PKGS="base linux linux-firmware"
-
-# Utilitários essenciais
-UTIL_PKGS="sudo networkmanager grub efibootmgr os-prober"
-
-# StoaLinux - Window Manager e componentes
-STOA_WM="i3-wm i3status rofi dunst picom"
-
-# StoaLinux - Terminal e editor
-STOA_APPS="alacritty neovim feh"
-
-# StoaLinux - Fontes
-STOA_FONTS="ttf-jetbrains-mono ttf-font-awesome"
-
-# StoaLinux - Áudio e utilidades
-STOA_UTILS="pipewire pipewire-pulse wireplumber brightnessctl maim xorg-server xorg-xinit"
-
-# StoaLinux - Ferramentas extras
-STOA_EXTRA="git imagemagick ${SHELL_PKG}"
-
-# GTK theme
-STOA_GTK="papirus-icon-theme"
-
-pacstrap -K /mnt $BASE_PKGS $UTIL_PKGS $STOA_WM $STOA_APPS $STOA_FONTS $STOA_UTILS $STOA_EXTRA $STOA_GTK
+pacstrap -K /mnt \
+    $BASE_PKGS $NET_PKGS $BOOT_PKGS \
+    $WAYLAND_PKGS $XORG_PKGS $UI_PKGS \
+    $APP_PKGS $SCREENSHOT_PKGS $WALL_PKGS \
+    $FONT_PKGS $UTIL_PKGS $EXTRA_PKGS
 
 echo -e "  ${O}[✓] Pacotes instalados.${R}"
 
 # ══════════════════════════════════════════════════════════════
-# FASE 4: Configuração do sistema
+# FASE 2: Configuração do sistema
 # ══════════════════════════════════════════════════════════════
 
-echo -e "  ${B}[4/7] Configurando sistema...${R}"
+echo -e "  ${B}[2/5] Configurando sistema...${R}"
 
 # fstab
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -244,10 +188,11 @@ arch-chroot /mnt ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /etc/localtime
 arch-chroot /mnt hwclock --systohc
 
 # Locale
+LOCALE_SHORT="${LOCALE%.*}"
 echo "en_US.UTF-8 UTF-8" >> /mnt/etc/locale.gen
-echo "pt_BR.UTF-8 UTF-8" >> /mnt/etc/locale.gen
+echo "${LOCALE} UTF-8" >> /mnt/etc/locale.gen
 arch-chroot /mnt locale-gen
-echo "LANG=pt_BR.UTF-8" > /mnt/etc/locale.conf
+echo "LANG=${LOCALE}" > /mnt/etc/locale.conf
 
 # Hostname
 echo "$HOSTNAME" > /mnt/etc/hostname
@@ -260,67 +205,96 @@ HOSTS
 echo -e "  ${O}[✓] Sistema configurado.${R}"
 
 # ══════════════════════════════════════════════════════════════
-# FASE 5: Bootloader (GRUB EFI)
+# FASE 3: rEFInd Boot Manager
 # ══════════════════════════════════════════════════════════════
 
-echo -e "  ${B}[5/7] Instalando bootloader (GRUB)...${R}"
+echo -e "  ${B}[3/5] Instalando rEFInd...${R}"
 
-arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=StoaLinux
-arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+arch-chroot /mnt refind-install --usedefault "${EFI_DIR}"
 
-echo -e "  ${O}[✓] GRUB instalado.${R}"
+# Detectar partição root e gerar refind_linux.conf
+ROOT_UUID=$(findmnt -n -o UUID /mnt)
+cat > /mnt/boot/refind_linux.conf <<REFIND
+"Boot with defaults"    "root=UUID=${ROOT_UUID} rw quiet"
+"Boot with logging"     "root=UUID=${ROOT_UUID} rw loglevel=3"
+REFIND
+
+echo -e "  ${O}[✓] rEFInd instalado.${R}"
 
 # ══════════════════════════════════════════════════════════════
-# FASE 6: Usuário e serviços
+# FASE 4: Serviços
 # ══════════════════════════════════════════════════════════════
 
-echo -e "  ${B}[6/7] Criando usuário e habilitando serviços...${R}"
+echo -e "  ${B}[4/5] Habilitando serviços...${R}"
 
-# Criar usuário
-arch-chroot /mnt useradd -m -G wheel -s "$SHELL_BIN" "$USERNAME"
-echo "${USERNAME}:${USER_PASS}" | arch-chroot /mnt chpasswd
+arch-chroot /mnt systemctl enable NetworkManager
 
 # Sudo para grupo wheel
 echo "%wheel ALL=(ALL:ALL) ALL" > /mnt/etc/sudoers.d/wheel
 
-# Habilitar serviços
-arch-chroot /mnt systemctl enable NetworkManager
+echo -e "  ${O}[✓] Serviços habilitados.${R}"
 
-# .xinitrc para iniciar i3
-cat > "/mnt/home/${USERNAME}/.xinitrc" <<'XINITRC'
+# ══════════════════════════════════════════════════════════════
+# FASE 5: Clonar StoaLinux para /etc/skel
+# ══════════════════════════════════════════════════════════════
+
+echo -e "  ${B}[5/5] Preparando StoaLinux em /etc/skel...${R}"
+
+# Clonar para /etc/skel para que novos usuários recebam os dotfiles
+arch-chroot /mnt git clone https://github.com/VictorGSchneider/StoaLinux.git /etc/skel/StoaLinux
+
+# Executar install.sh em contexto do skel (links apontam para ~/StoaLinux)
+SKEL="/mnt/etc/skel"
+CONFIG="${SKEL}/.config"
+mkdir -p "${CONFIG}/hypr" "${CONFIG}/waybar" "${CONFIG}/i3" \
+         "${CONFIG}/alacritty" "${CONFIG}/nvim/colors" \
+         "${CONFIG}/rofi" "${CONFIG}/dunst" "${CONFIG}/picom" \
+         "${CONFIG}/neofetch" "${CONFIG}/gtk-3.0" \
+         "${CONFIG}/stoa/wallpapers" "${SKEL}/.local/bin"
+
+STOA="${SKEL}/StoaLinux"
+
+# Hyprland (primário)
+ln -sf ~/StoaLinux/hyprland/hyprland.conf "${CONFIG}/hypr/hyprland.conf"
+
+# Waybar
+ln -sf ~/StoaLinux/waybar/config "${CONFIG}/waybar/config"
+ln -sf ~/StoaLinux/waybar/style.css "${CONFIG}/waybar/style.css"
+
+# i3 (fallback Xorg)
+ln -sf ~/StoaLinux/i3/config "${CONFIG}/i3/config"
+ln -sf ~/StoaLinux/i3/i3status.conf "${CONFIG}/i3/i3status.conf"
+
+# Picom (Xorg only)
+ln -sf ~/StoaLinux/picom/picom.conf "${CONFIG}/picom/picom.conf"
+
+# Terminal e editor
+ln -sf ~/StoaLinux/alacritty/alacritty.toml "${CONFIG}/alacritty/alacritty.toml"
+ln -sf ~/StoaLinux/nvim/init.vim "${CONFIG}/nvim/init.vim"
+ln -sf ~/StoaLinux/nvim/colors/stoa.vim "${CONFIG}/nvim/colors/stoa.vim"
+
+# UI
+ln -sf ~/StoaLinux/rofi/config.rasi "${CONFIG}/rofi/config.rasi"
+ln -sf ~/StoaLinux/dunst/dunstrc "${CONFIG}/dunst/dunstrc"
+
+# Outros
+ln -sf ~/StoaLinux/neofetch/config.conf "${CONFIG}/neofetch/config.conf"
+ln -sf ~/StoaLinux/gtk-3.0/settings.ini "${CONFIG}/gtk-3.0/settings.ini"
+
+# Scripts
+ln -sf ~/StoaLinux/scripts/stoa-fetch.sh "${SKEL}/.local/bin/stoa-fetch"
+ln -sf ~/StoaLinux/scripts/stoa-walls.sh "${SKEL}/.local/bin/stoa-walls"
+
+# .xinitrc para fallback Xorg
+cat > "${SKEL}/.xinitrc" <<'XINITRC'
 #!/bin/sh
 exec i3
 XINITRC
-arch-chroot /mnt chown "${USERNAME}:${USERNAME}" "/home/${USERNAME}/.xinitrc"
 
-echo -e "  ${O}[✓] Usuário criado e serviços habilitados.${R}"
+# Zsh config
+echo 'source ~/StoaLinux/zsh/.zshrc' > "${SKEL}/.zshrc"
 
-# ══════════════════════════════════════════════════════════════
-# FASE 7: Instalar StoaLinux dotfiles
-# ══════════════════════════════════════════════════════════════
-
-echo -e "  ${B}[7/7] Instalando StoaLinux dotfiles...${R}"
-
-# Clonar repo no home do usuário
-arch-chroot /mnt su - "$USERNAME" -c \
-    "git clone https://github.com/VictorGSchneider/StoaLinux.git ~/StoaLinux"
-
-# Executar instalador de dotfiles
-arch-chroot /mnt su - "$USERNAME" -c \
-    "cd ~/StoaLinux && chmod +x install.sh && ./install.sh"
-
-# Configurar shell
-if [ "$SHELL_CHOICE" = "1" ]; then
-    # Zsh
-    arch-chroot /mnt su - "$USERNAME" -c \
-        "echo 'source ~/StoaLinux/zsh/.zshrc' >> ~/.zshrc"
-else
-    # Bash
-    arch-chroot /mnt su - "$USERNAME" -c \
-        "echo 'source ~/StoaLinux/zsh/.bashrc' >> ~/.bashrc"
-fi
-
-echo -e "  ${O}[✓] StoaLinux dotfiles instalados.${R}"
+echo -e "  ${O}[✓] StoaLinux preparado em /etc/skel.${R}"
 
 # ══════════════════════════════════════════════════════════════
 # Fim
@@ -332,10 +306,21 @@ echo -e "  ${B}║     Instalação concluída!                            ║${
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 echo -e "  ${F}Próximos passos:${R}"
-echo -e "  ${S}  1. umount -R /mnt${R}"
-echo -e "  ${S}  2. reboot${R}"
-echo -e "  ${S}  3. Login com: ${B}${USERNAME}${R}"
-echo -e "  ${S}  4. Iniciar interface: ${B}startx${R}"
+echo ""
+echo -e "  ${S}  1. Definir senha do root:${R}"
+echo -e "  ${B}     arch-chroot /mnt passwd${R}"
+echo ""
+echo -e "  ${S}  2. Criar seu usuário:${R}"
+echo -e "  ${B}     arch-chroot /mnt useradd -m -G wheel -s /bin/zsh USUARIO${R}"
+echo -e "  ${B}     arch-chroot /mnt passwd USUARIO${R}"
+echo ""
+echo -e "  ${S}  3. Desmontar e reiniciar:${R}"
+echo -e "  ${B}     umount -R /mnt${R}"
+echo -e "  ${B}     reboot${R}"
+echo ""
+echo -e "  ${S}  4. Após o login:${R}"
+echo -e "  ${B}     Hyprland (Wayland):  Hyprland${R}"
+echo -e "  ${B}     i3 (Xorg fallback):  startx${R}"
 echo ""
 echo -e "  ${O}\"O caminho do sábio está preparado.\" — Sêneca${R}"
 echo ""
