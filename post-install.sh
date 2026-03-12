@@ -55,8 +55,14 @@ XORG_PKGS="i3-wm i3status xorg-server xorg-xinit picom"
 # Launcher, notificações
 UI_PKGS="rofi dunst"
 
+# Browser
+BROWSER_PKGS="brave-bin"
+
 # Terminal, editor, wallpapers
 APP_PKGS="alacritty neovim feh imagemagick"
+
+# Apps estoicos (minimalistas)
+STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop"
 
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
@@ -64,20 +70,26 @@ SCREENSHOT_PKGS="grim slurp maim"
 # Fontes e tema
 FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
 
+# Toolkit unification (Qt = GTK aparência)
+THEME_PKGS="qt5ct qt6ct"
+
 # Áudio + utilidades
 UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl"
 
 # Shell e extras
 SHELL_PKGS="zsh git"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $SCREENSHOT_PKGS $FONT_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
+echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
+echo -e "  ${S}Estoicos:   ${STOA_APPS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
 echo -e "  ${S}Fontes:     ${FONT_PKGS}${R}"
+echo -e "  ${S}Tema:       ${THEME_PKGS}${R}"
 echo -e "  ${S}Áudio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
 echo ""
@@ -87,7 +99,27 @@ INSTALL_PKGS="${INSTALL_PKGS:-s}"
 
 if [ "$INSTALL_PKGS" = "s" ]; then
     sudo pacman -S --needed $ALL_PKGS
-    echo -e "  ${O}[✓] Pacotes instalados.${R}"
+    echo -e "  ${O}[✓] Pacotes oficiais instalados.${R}"
+
+    # Brave Browser (AUR)
+    echo ""
+    if ! command -v brave &>/dev/null; then
+        echo -e "  ${F}Instalando Brave Browser (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm brave-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm brave-bin
+        else
+            echo -e "  ${S}Instalando Brave manualmente via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/brave-bin.git "$_tmpdir/brave-bin"
+            (cd "$_tmpdir/brave-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Brave instalado.${R}"
+    else
+        echo -e "  ${S}[~] Brave já instalado.${R}"
+    fi
 else
     echo -e "  ${S}[~] Pacotes pulados.${R}"
 fi

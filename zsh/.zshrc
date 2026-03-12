@@ -79,11 +79,9 @@ alias du='du -sh'
 alias free='free -h'
 alias cls='clear'
 
-# ── Variáveis ──
-export EDITOR='nvim'
-export VISUAL='nvim'
-export TERMINAL='alacritty'
-export BROWSER='firefox'
+# ── Ambiente Stoa (toolkits + apps padrão) ──
+[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa-env.sh" ] && \
+    source "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa-env.sh"
 
 # ── Cores para ls ──
 export LS_COLORS='di=38;2;196;154;92:ln=38;2;90;122;138:ex=38;2;138;154;108:*.tar=38;2;179;107;90:*.gz=38;2;179;107;90:*.zip=38;2;179;107;90:*.jpg=38;2;148;106;122:*.png=38;2;148;106;122:*.mp3=38;2;164;122;138:*.mp4=38;2;164;122;138'

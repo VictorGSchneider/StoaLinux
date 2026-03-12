@@ -2,7 +2,7 @@
 
 Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na filosofia estoica, com cores de mármore romano, bronze, pergaminho e pedra.
 
-**Hyprland (Wayland)** como compositor primário, **i3 (Xorg)** como fallback, **rEFInd** como boot manager.
+**Hyprland (Wayland)** como compositor primário, **i3 (Xorg)** como fallback. Apps minimalistas, Brave Browser, aparência unificada GTK/Qt.
 
 > *"A felicidade depende da qualidade dos teus pensamentos."* — Marco Aurélio
 
@@ -34,7 +34,16 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 | Colorscheme | `nvim/colors/stoa.vim` | Tema de cores para Neovim |
 | Rofi | `rofi/config.rasi` | Launcher com bordas bronze |
 | Dunst | `dunst/dunstrc` | Notificações discretas |
-| GTK 3.0 | `gtk-3.0/settings.ini` | Configuração GTK dark |
+| **Brave** | (pacote AUR) | Browser padrão |
+| **Zathura** | `zathura/zathurarc` | Leitor PDF com tema estoico |
+| **mpv** | `mpv/mpv.conf` | Player de vídeo minimalista |
+| **imv** | `imv/config` | Visualizador de imagens (Wayland) |
+| **lf** | `lf/lfrc` | File manager vim-style |
+| **btop** | `btop/btop.conf` | Monitor do sistema |
+| GTK 3.0 | `gtk-3.0/settings.ini` | Tema GTK dark |
+| GTK 4.0 | `gtk-4.0/settings.ini` | Tema GTK4 dark |
+| Qt5/Qt6 | `qt5ct/`, `qt6ct/` | Qt padronizado com GTK (Fusion dark) |
+| Environment | `environment/stoa-env.sh` | Variáveis de toolkit + apps padrão |
 | Neofetch | `neofetch/config.conf` | Fetch com nomes estoicos |
 | Zsh | `zsh/.zshrc` | Shell com citações e prompt Ι |
 | Bash | `zsh/.bashrc` | Alternativa Bash |
@@ -97,11 +106,20 @@ sudo pacman -S hyprland waybar swaybg xdg-desktop-portal-hyprland grim slurp
 # Xorg (fallback)
 sudo pacman -S i3-wm i3status xorg-server xorg-xinit picom maim feh
 
-# Comum
-sudo pacman -S alacritty neovim rofi dunst imagemagick brightnessctl
-sudo pacman -S pipewire pipewire-pulse wireplumber
-sudo pacman -S ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme
-sudo pacman -S zsh git
+# Apps estoicos
+sudo pacman -S alacritty neovim rofi dunst zathura zathura-pdf-mupdf mpv imv lf btop
+
+# Toolkit unification (GTK/Qt)
+sudo pacman -S qt5ct qt6ct papirus-icon-theme imagemagick
+
+# Áudio, fontes, extras
+sudo pacman -S pipewire pipewire-pulse wireplumber brightnessctl
+sudo pacman -S ttf-jetbrains-mono ttf-font-awesome
+sudo pacman -S zsh git base-devel
+
+# Brave Browser (AUR)
+git clone https://aur.archlinux.org/brave-bin.git /tmp/brave-bin
+cd /tmp/brave-bin && makepkg -si
 ```
 
 ### Shell
@@ -126,20 +144,39 @@ Hyprland
 startx
 ```
 
+## Atalhos
+
+| Tecla | Ação |
+|-------|------|
+| `Super+Return` | Terminal (Alacritty) |
+| `Super+B` | Browser (Brave) |
+| `Super+E` | Arquivos (lf) |
+| `Super+N` | Monitor (btop) |
+| `Super+D` | Launcher (Rofi) |
+| `Super+Q` | Fechar janela |
+| `Super+F` | Fullscreen |
+| `Super+HJKL` | Navegação vim |
+| `Super+1-0` | Workspaces I-X |
+| `Print` | Screenshot tela inteira |
+| `Super+Print` | Screenshot seleção |
+
 ## Funcionalidades
 
 - **Hyprland** como compositor Wayland primário com animações suaves
 - **i3wm** como fallback Xorg com mesmos atalhos
-- **rEFInd** boot manager (substituindo GRUB)
+- **Brave Browser** como navegador padrão (privacidade + Wayland nativo)
+- **Apps estoicos**: zathura (PDF), mpv (vídeo), imv (imagens), lf (arquivos), btop (monitor)
+- **Aparência unificada** — GTK e Qt usam mesmo tema escuro, fonte e ícones via qt5ct/qt6ct
 - **Workspaces em numerais romanos** (I, II, III... X)
 - **Citação estoica aleatória** ao abrir o terminal
 - **Prompt com coluna grega** (Ι) em bronze com branch git
 - **stoa-fetch** — system fetch com arte ASCII de templo grego
 - **stoa-walls** — gerador de wallpapers com ImageMagick
-- **Navegação vim** (hjkl) em Hyprland e i3
+- **Navegação vim** (hjkl) em Hyprland, i3 e lf
 - **Tema Neovim completo** com suporte a Treesitter
 - **Man pages coloridas** na paleta estoica
 - **Screenshot** — grim+slurp (Wayland) / maim (Xorg)
+- **XDG MIME** configurado — Brave para web, zathura para PDF, mpv para vídeo, imv para imagens
 
 ## Filosofia do Design
 

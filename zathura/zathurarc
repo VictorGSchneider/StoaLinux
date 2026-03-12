@@ -1,0 +1,42 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — Zathura (leitor de PDF)                      ║
+# ║  "Leitura é alimento da alma." — Sêneca                    ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ── Aparência ──
+set font                "JetBrains Mono 10"
+set default-bg          "#211e19"
+set default-fg          "#d4cfc4"
+set statusbar-bg        "#2d2921"
+set statusbar-fg        "#a89f91"
+set inputbar-bg         "#2d2921"
+set inputbar-fg         "#d4cfc4"
+set notification-bg     "#2d2921"
+set notification-fg     "#d4cfc4"
+set notification-error-bg   "#211e19"
+set notification-error-fg   "#b36b5a"
+set notification-warning-bg "#211e19"
+set notification-warning-fg "#c49a5c"
+
+set highlight-color     "#c49a5c"
+set highlight-active-color "#d4a84b"
+
+set completion-bg       "#2d2921"
+set completion-fg       "#d4cfc4"
+set completion-highlight-bg "#c49a5c"
+set completion-highlight-fg "#211e19"
+set completion-group-bg "#1a1714"
+set completion-group-fg "#a89f91"
+
+set recolor-lightcolor  "#211e19"
+set recolor-darkcolor   "#d4cfc4"
+set recolor             true
+set recolor-keephue     true
+
+# ── Comportamento ──
+set selection-clipboard clipboard
+set adjust-open         "best-fit"
+set pages-per-row       1
+set scroll-page-aware   true
+set guioptions          ""
+set window-title-basename true

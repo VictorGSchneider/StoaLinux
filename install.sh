@@ -72,17 +72,58 @@ _link "${STOA_DIR}/dunst/dunstrc" "${CONFIG_DIR}/dunst/dunstrc"
 # ── Neofetch ──
 _link "${STOA_DIR}/neofetch/config.conf" "${CONFIG_DIR}/neofetch/config.conf"
 
-# ── GTK 3.0 ──
+# ── GTK 3.0 + 4.0 ──
 _link "${STOA_DIR}/gtk-3.0/settings.ini" "${CONFIG_DIR}/gtk-3.0/settings.ini"
+_link "${STOA_DIR}/gtk-4.0/settings.ini" "${CONFIG_DIR}/gtk-4.0/settings.ini"
+
+# ── Qt5/Qt6 (padronização com GTK) ──
+_link "${STOA_DIR}/qt5ct/qt5ct.conf" "${CONFIG_DIR}/qt5ct/qt5ct.conf"
+_link "${STOA_DIR}/qt6ct/qt6ct.conf" "${CONFIG_DIR}/qt6ct/qt6ct.conf"
+
+# ── Apps estoicos ──
+_link "${STOA_DIR}/zathura/zathurarc"  "${CONFIG_DIR}/zathura/zathurarc"
+_link "${STOA_DIR}/mpv/mpv.conf"       "${CONFIG_DIR}/mpv/mpv.conf"
+_link "${STOA_DIR}/btop/btop.conf"     "${CONFIG_DIR}/btop/btop.conf"
+_link "${STOA_DIR}/lf/lfrc"            "${CONFIG_DIR}/lf/lfrc"
+_link "${STOA_DIR}/imv/config"         "${CONFIG_DIR}/imv/config"
 
 # ── Stoa wallpapers dir ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
+
+# ── Environment (toolkit unification) ──
+_link "${STOA_DIR}/environment/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
 
 # ── Scripts ──
 mkdir -p "${HOME}/.local/bin"
 _link "${STOA_DIR}/scripts/stoa-fetch.sh" "${HOME}/.local/bin/stoa-fetch"
 _link "${STOA_DIR}/scripts/stoa-walls.sh" "${HOME}/.local/bin/stoa-walls"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls"
+
+# ── XDG MIME defaults (browser + apps) ──
+MIME_DIR="${HOME}/.local/share/applications"
+mkdir -p "$MIME_DIR"
+if [ ! -f "${MIME_DIR}/mimeapps.list" ]; then
+    cat > "${MIME_DIR}/mimeapps.list" <<'MIME'
+[Default Applications]
+text/html=brave-browser.desktop
+x-scheme-handler/http=brave-browser.desktop
+x-scheme-handler/https=brave-browser.desktop
+x-scheme-handler/about=brave-browser.desktop
+x-scheme-handler/unknown=brave-browser.desktop
+application/pdf=org.pwmt.zathura.desktop
+image/png=imv.desktop
+image/jpeg=imv.desktop
+image/gif=imv.desktop
+image/webp=imv.desktop
+video/mp4=mpv.desktop
+video/x-matroska=mpv.desktop
+video/webm=mpv.desktop
+audio/mpeg=mpv.desktop
+audio/flac=mpv.desktop
+audio/ogg=mpv.desktop
+MIME
+    echo -e "  ${O}[+] mimeapps.list (Brave como browser padrão)${R}"
+fi
 
 echo ""
 echo -e "${F}Configurações do shell:${R}"
@@ -95,15 +136,12 @@ echo -e "  ${B}Zsh:${R}  source ${STOA_DIR}/zsh/.zshrc"
 echo -e "  ${B}Bash:${R} source ${STOA_DIR}/zsh/.bashrc"
 echo ""
 
-echo -e "${F}Dependências recomendadas:${R}"
-echo ""
-echo -e "  ${B}Wayland:${R} sudo pacman -S hyprland waybar swaybg xdg-desktop-portal-hyprland"
-echo -e "  ${B}Xorg:${R}   sudo pacman -S i3-wm i3status xorg-server xorg-xinit picom"
-echo -e "  ${B}Comum:${R}  sudo pacman -S alacritty neovim rofi dunst grim slurp feh"
-echo -e "  ${S}Fontes: ttf-jetbrains-mono ttf-font-awesome${R}"
-echo -e "  ${S}Wallpapers: imagemagick (para gerar com stoa-walls)${R}"
-echo ""
 echo -e "  ${O}Pronto! O caminho do sábio está preparado.${R}"
-echo -e "  ${S}Hyprland (Wayland):  Hyprland${R}"
-echo -e "  ${S}i3 (Xorg fallback):  startx${R}"
+echo ""
+echo -e "  ${F}Atalhos:${R}"
+echo -e "  ${S}  Super+Return  Terminal (Alacritty)${R}"
+echo -e "  ${S}  Super+B       Browser (Brave)${R}"
+echo -e "  ${S}  Super+E       Arquivos (lf)${R}"
+echo -e "  ${S}  Super+N       Monitor (btop)${R}"
+echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo ""
