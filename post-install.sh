@@ -26,7 +26,7 @@ R='\033[0m'
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     STOA LINUX — Post-Install                        ║${R}"
-echo -e "  ${B}║     Pacotes + Dotfiles em Arch existente             ║${R}"
+echo -e "  ${B}║     Hyprland (Wayland) + i3 (Xorg) fallback          ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
@@ -43,31 +43,45 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 # ── Pacotes ──
-echo -e "  ${F}Instalando pacotes do StoaLinux...${R}"
+echo -e "  ${F}Pacotes do StoaLinux:${R}"
 echo ""
 
-# Window Manager + componentes
-WM_PKGS="i3-wm i3status rofi dunst picom"
+# Hyprland (Wayland — primário)
+WAYLAND_PKGS="hyprland waybar swaybg xdg-desktop-portal-hyprland"
+
+# i3 (Xorg — fallback)
+XORG_PKGS="i3-wm i3status xorg-server xorg-xinit picom"
+
+# Launcher, notificações
+UI_PKGS="rofi dunst"
 
 # Terminal, editor, wallpapers
 APP_PKGS="alacritty neovim feh imagemagick"
+
+# Screenshot — Wayland + Xorg
+SCREENSHOT_PKGS="grim slurp maim"
 
 # Fontes e tema
 FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
 
 # Áudio + utilidades
-UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl maim"
+UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl"
 
-# Xorg (caso não tenha)
-XORG_PKGS="xorg-server xorg-xinit"
-
-# Shell
+# Shell e extras
 SHELL_PKGS="zsh git"
 
-ALL_PKGS="$WM_PKGS $APP_PKGS $FONT_PKGS $UTIL_PKGS $XORG_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $SCREENSHOT_PKGS $FONT_PKGS $UTIL_PKGS $SHELL_PKGS"
 
-echo -e "  ${S}Pacotes: ${ALL_PKGS}${R}"
+echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
+echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
+echo -e "  ${S}UI:         ${UI_PKGS}${R}"
+echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
+echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
+echo -e "  ${S}Fontes:     ${FONT_PKGS}${R}"
+echo -e "  ${S}Áudio:      ${UTIL_PKGS}${R}"
+echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
 echo ""
+
 read -rp "  Instalar pacotes? (s/n) [s]: " INSTALL_PKGS
 INSTALL_PKGS="${INSTALL_PKGS:-s}"
 
@@ -106,7 +120,6 @@ case "$SHELL_CHOICE" in
         else
             echo -e "  ${S}[~] .zshrc já contém StoaLinux.${R}"
         fi
-        # Trocar shell para zsh se ainda não é
         if [ "$SHELL" != "/bin/zsh" ] && [ "$SHELL" != "/usr/bin/zsh" ]; then
             echo -e "  ${S}Trocando shell para zsh...${R}"
             chsh -s /bin/zsh
@@ -127,13 +140,13 @@ case "$SHELL_CHOICE" in
         ;;
 esac
 
-# ── .xinitrc ──
+# ── .xinitrc (fallback Xorg) ──
 echo ""
 if [ ! -f "$HOME/.xinitrc" ]; then
     echo "exec i3" > "$HOME/.xinitrc"
-    echo -e "  ${O}[✓] .xinitrc criado (exec i3).${R}"
+    echo -e "  ${O}[✓] .xinitrc criado (exec i3 — fallback Xorg).${R}"
 else
-    echo -e "  ${S}[~] .xinitrc já existe. Para usar i3, adicione 'exec i3' ao final.${R}"
+    echo -e "  ${S}[~] .xinitrc já existe.${R}"
 fi
 
 # ── Fim ──
@@ -143,7 +156,8 @@ echo -e "  ${B}║     StoaLinux instalado!                             ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 echo -e "  ${F}Para iniciar:${R}"
-echo -e "  ${S}  startx${R}"
+echo -e "  ${B}  Hyprland (Wayland):   Hyprland${R}"
+echo -e "  ${B}  i3 (Xorg fallback):   startx${R}"
 echo ""
 echo -e "  ${F}Comandos do Stoa:${R}"
 echo -e "  ${S}  stoa-fetch  — System fetch estoico${R}"

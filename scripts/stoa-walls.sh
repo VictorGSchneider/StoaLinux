@@ -52,4 +52,7 @@ echo "  [+] memento.png"
 
 echo ""
 echo "Wallpapers salvos em: $WALLDIR"
-echo "Use: feh --bg-fill $WALLDIR/marble.png"
+echo ""
+echo "Aplicar:"
+echo "  Hyprland (Wayland): swaybg -i $WALLDIR/marble.png -m fill"
+echo "  i3 (Xorg):          feh --bg-fill $WALLDIR/marble.png"

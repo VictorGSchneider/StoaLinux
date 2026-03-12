@@ -2,6 +2,8 @@
 
 Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na filosofia estoica, com cores de mármore romano, bronze, pergaminho e pedra.
 
+**Hyprland (Wayland)** como compositor primário, **i3 (Xorg)** como fallback, **rEFInd** como boot manager.
+
 > *"A felicidade depende da qualidade dos teus pensamentos."* — Marco Aurélio
 
 ## Paleta de Cores
@@ -22,14 +24,16 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 
 | Componente | Arquivo | Descrição |
 |------------|---------|-----------|
+| **Hyprland** | `hyprland/hyprland.conf` | Compositor Wayland (primário) |
+| **Waybar** | `waybar/config`, `waybar/style.css` | Barra de status Wayland |
+| i3wm | `i3/config` | WM Xorg (fallback) |
+| i3status | `i3/i3status.conf` | Barra de status Xorg |
+| Picom | `picom/picom.conf` | Compositor Xorg (fallback) |
 | Alacritty | `alacritty/alacritty.toml` | Terminal com paleta estoica |
-| i3wm | `i3/config` | WM com workspaces em numerais romanos |
-| i3status | `i3/i3status.conf` | Barra de status minimalista |
 | Neovim | `nvim/init.vim` | Editor com tema `stoa` |
 | Colorscheme | `nvim/colors/stoa.vim` | Tema de cores para Neovim |
 | Rofi | `rofi/config.rasi` | Launcher com bordas bronze |
 | Dunst | `dunst/dunstrc` | Notificações discretas |
-| Picom | `picom/picom.conf` | Compositor com sombras suaves |
 | GTK 3.0 | `gtk-3.0/settings.ini` | Configuração GTK dark |
 | Neofetch | `neofetch/config.conf` | Fetch com nomes estoicos |
 | Zsh | `zsh/.zshrc` | Shell com citações e prompt Ι |
@@ -42,21 +46,34 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 
 ### Opção 1: Arch Linux do zero (live ISO)
 
-Instala Arch Linux mínimo + StoaLinux em um único comando, direto do live ISO:
+Particione e monte os discos manualmente, depois execute o script:
 
 ```bash
-# No live ISO do Arch Linux, com internet conectada:
+# 1. Particionar (exemplo)
+cfdisk /dev/sda                # criar partições GPT: EFI (512M) + Root
+mkfs.fat -F 32 /dev/sda1      # formatar EFI
+mkfs.ext4 /dev/sda2            # formatar Root
+
+# 2. Montar
+mount /dev/sda2 /mnt
+mkdir -p /mnt/boot/efi
+mount /dev/sda1 /mnt/boot/efi
+
+# 3. Executar instalador
 curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
 chmod +x arch-install.sh
 ./arch-install.sh
 ```
 
-O script faz tudo automaticamente:
-- Particiona o disco (GPT: EFI + swap + root)
-- Instala o sistema base + todos os pacotes do StoaLinux
-- Configura locale, timezone, hostname, GRUB
-- Cria usuário com sudo
-- Instala os dotfiles estoicos
+O script faz:
+- `pacstrap` com base + Hyprland + i3 + todos os pacotes do StoaLinux
+- Configura locale, timezone, hostname
+- Instala rEFInd boot manager
+- Prepara dotfiles em `/etc/skel`
+
+O script **não** faz (manual):
+- Particionamento e formatação de discos
+- Criação de usuário e senha (instruções ao final)
 
 ### Opção 2: Arch Linux já instalado (post-install)
 
@@ -83,10 +100,20 @@ chmod +x install.sh
 ### Dependências
 
 ```bash
-sudo pacman -S alacritty i3-wm i3status rofi dunst picom feh neovim imagemagick
+# Wayland (primário)
+sudo pacman -S hyprland waybar swaybg xdg-desktop-portal-hyprland grim slurp
+
+# Xorg (fallback)
+sudo pacman -S i3-wm i3status xorg-server xorg-xinit picom maim feh
+
+# Comum
+sudo pacman -S alacritty neovim rofi dunst imagemagick brightnessctl
+sudo pacman -S pipewire pipewire-pulse wireplumber
 sudo pacman -S ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme
-sudo pacman -S pipewire pipewire-pulse wireplumber brightnessctl maim
-sudo pacman -S xorg-server xorg-xinit zsh git
+sudo pacman -S zsh git
+
+# Boot manager
+sudo pacman -S refind
 ```
 
 ### Shell
@@ -101,16 +128,30 @@ echo 'source ~/StoaLinux/zsh/.zshrc' >> ~/.zshrc
 echo 'source ~/StoaLinux/zsh/.bashrc' >> ~/.bashrc
 ```
 
+## Iniciar
+
+```bash
+# Hyprland (Wayland — primário)
+Hyprland
+
+# i3 (Xorg — fallback)
+startx
+```
+
 ## Funcionalidades
 
-- **Workspaces em numerais romanos** (I, II, III... X) no i3
+- **Hyprland** como compositor Wayland primário com animações suaves
+- **i3wm** como fallback Xorg com mesmos atalhos
+- **rEFInd** boot manager (substituindo GRUB)
+- **Workspaces em numerais romanos** (I, II, III... X)
 - **Citação estoica aleatória** ao abrir o terminal
 - **Prompt com coluna grega** (Ι) em bronze com branch git
 - **stoa-fetch** — system fetch com arte ASCII de templo grego
 - **stoa-walls** — gerador de wallpapers com ImageMagick
-- **Navegação vim** (hjkl) no i3wm
+- **Navegação vim** (hjkl) em Hyprland e i3
 - **Tema Neovim completo** com suporte a Treesitter
 - **Man pages coloridas** na paleta estoica
+- **Screenshot** — grim+slurp (Wayland) / maim (Xorg)
 
 ## Filosofia do Design
 
