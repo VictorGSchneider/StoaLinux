@@ -1,0 +1,13 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — imv (visualizador de imagens)                ║
+# ║  "O olho vê o que a mente busca." — Sêneca                 ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+[options]
+background = 211e19
+overlay_font = JetBrains Mono:10
+overlay_text_color = d4cfc4
+overlay_background_color = 2d2921
+overlay_background_alpha = cc
+fullscreen = false
+upscaling_method = lanczos

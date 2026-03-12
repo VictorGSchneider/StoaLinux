@@ -156,6 +156,12 @@ arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
 
 echo -e "  ${O}[✓] Dotfiles instalados para ${CREATED_USER}.${R}"
 
+# ── Brave Browser (AUR — requer makepkg como usuário) ──
+echo ""
+echo -e "  ${S}Brave Browser (AUR) será instalado no primeiro boot.${R}"
+echo -e "  ${S}Execute após o login:${R}"
+echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/brave-bin.git && cd brave-bin && makepkg -si${R}"
+
 # ══════════════════════════════════════════════════════════════
 # Fim
 # ══════════════════════════════════════════════════════════════
@@ -168,6 +174,11 @@ echo ""
 echo -e "  ${F}Após o reboot, faça login e inicie:${R}"
 echo -e "  ${B}  Hyprland (Wayland):  Hyprland${R}"
 echo -e "  ${B}  i3 (Xorg fallback):  startx${R}"
+echo ""
+echo -e "  ${F}Atalhos:${R}"
+echo -e "  ${S}  Super+Return  Terminal     Super+B  Brave${R}"
+echo -e "  ${S}  Super+D       Launcher     Super+E  Arquivos (lf)${R}"
+echo -e "  ${S}  Super+N       Monitor      Super+Q  Fechar janela${R}"
 echo ""
 echo -e "  ${O}\"O caminho do sábio está preparado.\" — Sêneca${R}"
 echo ""

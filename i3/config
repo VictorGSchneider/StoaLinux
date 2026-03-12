@@ -65,6 +65,10 @@ bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Sair do i3?' -B 'Sim' 'i3-msg exit'"
 
+# ── Apps ──
+bindsym $mod+b exec brave
+bindsym $mod+n exec alacritty -e btop
+
 # ── Navegação ──
 bindsym $mod+h focus left
 bindsym $mod+j focus down

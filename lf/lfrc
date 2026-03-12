@@ -1,0 +1,53 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — lf (file manager)                            ║
+# ║  "Ordena o que é teu." — Epicteto                          ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ── Opções ──
+set preview true
+set hidden true
+set drawbox true
+set icons true
+set ignorecase true
+set scrolloff 5
+set shell bash
+set shellopts '-eu'
+set ifs "\n"
+
+# ── Atalhos vim ──
+map <enter> open
+map D delete
+map x cut
+map y copy
+map p paste
+map r rename
+map . set hidden!
+map R reload
+map q quit
+
+# ── Abrir arquivos ──
+cmd open ${{
+    case $(file --mime-type "$f" -bL) in
+        text/*|application/json) $EDITOR "$f" ;;
+        image/*) imv "$f" ;;
+        video/*|audio/*) mpv "$f" ;;
+        application/pdf) zathura "$f" ;;
+        *) xdg-open "$f" ;;
+    esac
+}}
+
+# ── Criar diretório ──
+cmd mkdir %{{
+    printf "Nome: "
+    read name
+    mkdir -p "$name"
+}}
+map a mkdir
+
+# ── Criar arquivo ──
+cmd mkfile %{{
+    printf "Nome: "
+    read name
+    touch "$name"
+}}
+map A mkfile
