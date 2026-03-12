@@ -46,34 +46,25 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 
 ### Opção 1: Arch Linux do zero (live ISO)
 
-Particione e monte os discos manualmente, depois execute o script:
+Usa o `archinstall` padrão do Arch com uma config pré-definida do StoaLinux:
 
 ```bash
-# 1. Particionar (exemplo)
-cfdisk /dev/sda                # criar partições GPT: EFI (512M) + Root
-mkfs.fat -F 32 /dev/sda1      # formatar EFI
-mkfs.ext4 /dev/sda2            # formatar Root
-
-# 2. Montar
-mount /dev/sda2 /mnt
-mkdir -p /mnt/boot/efi
-mount /dev/sda1 /mnt/boot/efi
-
-# 3. Executar instalador
+# No live ISO, com internet conectada:
 curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
 chmod +x arch-install.sh
 ./arch-install.sh
 ```
 
-O script faz:
-- `pacstrap` com base + Hyprland + i3 + todos os pacotes do StoaLinux
-- Configura locale, timezone, hostname
-- Instala rEFInd boot manager
-- Prepara dotfiles em `/etc/skel`
+O script abre o `archinstall` com pacotes e configurações pré-selecionados. **Você configura na TUI:**
+- Discos (particionamento e formatação)
+- Usuário e senha
+- Driver de vídeo
 
-O script **não** faz (manual):
-- Particionamento e formatação de discos
-- Criação de usuário e senha (instruções ao final)
+**Pré-configurado pelo StoaLinux:**
+- Pacotes: Hyprland, Waybar, i3, Alacritty, Neovim, Rofi, PipeWire...
+- Locale: `pt_BR.UTF-8`, teclado `br`
+- Rede: NetworkManager
+- Após o archinstall, instala automaticamente os dotfiles
 
 ### Opção 2: Arch Linux já instalado (post-install)
 
@@ -111,9 +102,6 @@ sudo pacman -S alacritty neovim rofi dunst imagemagick brightnessctl
 sudo pacman -S pipewire pipewire-pulse wireplumber
 sudo pacman -S ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme
 sudo pacman -S zsh git
-
-# Boot manager
-sudo pacman -S refind
 ```
 
 ### Shell

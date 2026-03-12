@@ -1,0 +1,51 @@
+{
+    "additional-repositories": [],
+    "audio_config": {
+        "audio": "pipewire"
+    },
+    "bootloader": "efistub",
+    "hostname": "stoa",
+    "kernels": ["linux"],
+    "locale_config": {
+        "kb_layout": "br",
+        "sys_enc": "UTF-8",
+        "sys_lang": "pt_BR.UTF-8"
+    },
+    "network_config": {
+        "type": "nm"
+    },
+    "ntp": true,
+    "packages": [
+        "hyprland",
+        "waybar",
+        "swaybg",
+        "xdg-desktop-portal-hyprland",
+        "i3-wm",
+        "i3status",
+        "xorg-server",
+        "xorg-xinit",
+        "picom",
+        "rofi",
+        "dunst",
+        "alacritty",
+        "neovim",
+        "grim",
+        "slurp",
+        "maim",
+        "feh",
+        "imagemagick",
+        "brightnessctl",
+        "ttf-jetbrains-mono",
+        "ttf-font-awesome",
+        "papirus-icon-theme",
+        "git",
+        "zsh"
+    ],
+    "parallel downloads": 5,
+    "profile_config": {
+        "gfx_driver": null,
+        "greeter": null,
+        "profile": null
+    },
+    "timezone": "America/Sao_Paulo"
+}
