@@ -35,6 +35,8 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 | Rofi | `rofi/config.rasi` | Launcher com bordas bronze |
 | Dunst | `dunst/dunstrc` | Notificações discretas |
 | **Brave** | (pacote AUR) | Browser padrão |
+| **Obsidian** | (pacote AUR) | Notas e segundo cérebro |
+| **eww** | `eww/eww.yuck`, `eww/eww.scss` | Widget Memento Mori |
 | **Zathura** | `zathura/zathurarc` | Leitor PDF com tema estoico |
 | **mpv** | `mpv/mpv.conf` | Player de vídeo minimalista |
 | **imv** | `imv/config` | Visualizador de imagens (Wayland) |
@@ -49,6 +51,8 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 | Bash | `zsh/.bashrc` | Alternativa Bash |
 | Stoa Fetch | `scripts/stoa-fetch.sh` | Fetch personalizado com coluna grega |
 | Stoa Walls | `scripts/stoa-walls.sh` | Gerador de wallpapers minimalistas |
+| Memento Mori | `scripts/stoa-memento.sh` | Toggle do widget Memento Mori |
+| Memento Data | `scripts/stoa-memento-data.sh` | Dados JSON para o widget eww |
 | Cores | `colors.sh` | Referência central da paleta |
 
 ## Instalação
@@ -117,9 +121,14 @@ sudo pacman -S pipewire pipewire-pulse wireplumber brightnessctl
 sudo pacman -S ttf-jetbrains-mono ttf-font-awesome
 sudo pacman -S zsh git base-devel
 
-# Brave Browser (AUR)
+# Widgets
+sudo pacman -S eww
+
+# Brave Browser + Obsidian (AUR)
 git clone https://aur.archlinux.org/brave-bin.git /tmp/brave-bin
 cd /tmp/brave-bin && makepkg -si
+git clone https://aur.archlinux.org/obsidian.git /tmp/obsidian
+cd /tmp/obsidian && makepkg -si
 ```
 
 ### Shell
@@ -153,6 +162,8 @@ startx
 | `Super+E` | Arquivos (lf) |
 | `Super+N` | Monitor (btop) |
 | `Super+D` | Launcher (Rofi) |
+| `Super+O` | Notas (Obsidian) |
+| `Super+M` | Memento Mori (eww widget) |
 | `Super+Q` | Fechar janela |
 | `Super+F` | Fullscreen |
 | `Super+HJKL` | Navegação vim |
@@ -165,6 +176,8 @@ startx
 - **Hyprland** como compositor Wayland primário com animações suaves
 - **i3wm** como fallback Xorg com mesmos atalhos
 - **Brave Browser** como navegador padrão (privacidade + Wayland nativo)
+- **Obsidian** como app de notas e segundo cérebro (Markdown)
+- **Memento Mori** — widget eww com dias/semanas/anos vividos, progresso do ano e citação estoica
 - **Apps estoicos**: zathura (PDF), mpv (vídeo), imv (imagens), lf (arquivos), btop (monitor)
 - **Aparência unificada** — GTK e Qt usam mesmo tema escuro, fonte e ícones via qt5ct/qt6ct
 - **Workspaces em numerais romanos** (I, II, III... X)

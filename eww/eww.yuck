@@ -1,0 +1,87 @@
+;; ╔══════════════════════════════════════════════════════════════╗
+;; ║  STOA LINUX — Memento Mori Widget (eww)                     ║
+;; ║  "Lembra-te de que vais morrer." — tradição estoica          ║
+;; ╚══════════════════════════════════════════════════════════════╝
+
+;; ── Variáveis (dados do script JSON) ──
+(defpoll memento-data :interval "60s"
+  `~/.local/bin/stoa-memento-data`)
+
+;; ── Widget principal ──
+(defwidget memento-mori []
+  (box :class "memento-container"
+       :orientation "v"
+       :space-evenly false
+    ;; Header
+    (box :class "memento-header"
+         :orientation "v"
+         :space-evenly false
+      (label :class "header-title" :text "MEMENTO MORI")
+      (label :class "header-subtitle"
+             :text "Lembra-te de que vais morrer."))
+
+    ;; Stats
+    (box :class "memento-stats"
+         :orientation "h"
+         :space-evenly true
+      (box :class "stat-box" :orientation "v"
+        (label :class "stat-value"
+               :text {memento-data != "" ? jq(memento-data, ".days_lived") : "—"})
+        (label :class "stat-label" :text "dias vividos"))
+      (box :class "stat-box" :orientation "v"
+        (label :class "stat-value"
+               :text {memento-data != "" ? jq(memento-data, ".weeks_lived") : "—"})
+        (label :class "stat-label" :text "semanas vividas"))
+      (box :class "stat-box" :orientation "v"
+        (label :class "stat-value"
+               :text {memento-data != "" ? jq(memento-data, ".years_lived") : "—"})
+        (label :class "stat-label" :text "anos vividos")))
+
+    ;; Year progress
+    (box :class "memento-year"
+         :orientation "v"
+         :space-evenly false
+      (label :class "year-label"
+             :text {memento-data != "" ?
+               "Ano ${jq(memento-data, '.current_year')} — ${jq(memento-data, '.year_pct')}%" :
+               "Ano — %"})
+      (progress :class "year-bar"
+                :value {memento-data != "" ? jq(memento-data, ".year_pct") : 0}))
+
+    ;; Weeks grid info
+    (box :class "memento-weeks"
+         :orientation "v"
+         :space-evenly false
+      (label :class "weeks-info"
+             :text {memento-data != "" ?
+               "${jq(memento-data, '.weeks_lived')} de ${jq(memento-data, '.total_weeks')} semanas" :
+               "— de — semanas"})
+      (label :class "weeks-sub"
+             :text {memento-data != "" ?
+               "Expectativa: ${jq(memento-data, '.life_years')} anos" :
+               "Expectativa: — anos"}))
+
+    ;; Quote
+    (box :class "memento-quote"
+         :orientation "v"
+      (label :class "quote-text"
+             :text {memento-data != "" ? jq(memento-data, ".quote") : "…"}
+             :wrap true))
+
+    ;; Footer
+    (box :class "memento-footer"
+      (label :class "footer-text"
+             :text {memento-data != "" ?
+               "${jq(memento-data, '.today')}" : "—"}))))
+
+;; ── Janela ──
+(defwindow memento
+  :monitor 0
+  :geometry (geometry :x "0%"
+                      :y "0%"
+                      :width "860px"
+                      :height "580px"
+                      :anchor "center")
+  :stacking "overlay"
+  :focusable true
+  (memento-mori))

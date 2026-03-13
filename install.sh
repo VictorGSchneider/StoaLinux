@@ -87,6 +87,10 @@ _link "${STOA_DIR}/btop/btop.conf"     "${CONFIG_DIR}/btop/btop.conf"
 _link "${STOA_DIR}/lf/lfrc"            "${CONFIG_DIR}/lf/lfrc"
 _link "${STOA_DIR}/imv/config"         "${CONFIG_DIR}/imv/config"
 
+# ── eww (Memento Mori widget) ──
+_link "${STOA_DIR}/eww/eww.yuck"  "${CONFIG_DIR}/eww/eww.yuck"
+_link "${STOA_DIR}/eww/eww.scss"  "${CONFIG_DIR}/eww/eww.scss"
+
 # ── Stoa wallpapers dir ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 
@@ -95,9 +99,12 @@ _link "${STOA_DIR}/environment/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
 
 # ── Scripts ──
 mkdir -p "${HOME}/.local/bin"
-_link "${STOA_DIR}/scripts/stoa-fetch.sh" "${HOME}/.local/bin/stoa-fetch"
-_link "${STOA_DIR}/scripts/stoa-walls.sh" "${HOME}/.local/bin/stoa-walls"
-chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls"
+_link "${STOA_DIR}/scripts/stoa-fetch.sh"        "${HOME}/.local/bin/stoa-fetch"
+_link "${STOA_DIR}/scripts/stoa-walls.sh"        "${HOME}/.local/bin/stoa-walls"
+_link "${STOA_DIR}/scripts/stoa-memento.sh"      "${HOME}/.local/bin/stoa-memento"
+_link "${STOA_DIR}/scripts/stoa-memento-data.sh" "${HOME}/.local/bin/stoa-memento-data"
+chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
+         "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data"
 
 # ── XDG MIME defaults (browser + apps) ──
 MIME_DIR="${HOME}/.local/share/applications"
@@ -110,6 +117,7 @@ x-scheme-handler/http=brave-browser.desktop
 x-scheme-handler/https=brave-browser.desktop
 x-scheme-handler/about=brave-browser.desktop
 x-scheme-handler/unknown=brave-browser.desktop
+text/markdown=obsidian.desktop
 application/pdf=org.pwmt.zathura.desktop
 image/png=imv.desktop
 image/jpeg=imv.desktop
@@ -144,4 +152,6 @@ echo -e "  ${S}  Super+B       Browser (Brave)${R}"
 echo -e "  ${S}  Super+E       Arquivos (lf)${R}"
 echo -e "  ${S}  Super+N       Monitor (btop)${R}"
 echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
+echo -e "  ${S}  Super+O       Notas (Obsidian)${R}"
+echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
 echo ""

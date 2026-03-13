@@ -68,6 +68,8 @@ bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Sair do i3?' -B 'Sim' 'i3-ms
 # ── Apps ──
 bindsym $mod+b exec brave
 bindsym $mod+n exec alacritty -e btop
+bindsym $mod+o exec obsidian
+bindsym $mod+m exec ~/.local/bin/stoa-memento
 
 # ── Navegação ──
 bindsym $mod+h focus left
@@ -81,7 +83,6 @@ bindsym $mod+Shift+k move up
 bindsym $mod+Shift+l move right
 
 # ── Layout ──
-bindsym $mod+b splith
 bindsym $mod+v splitv
 bindsym $mod+s layout stacking
 bindsym $mod+w layout tabbed
@@ -154,3 +155,6 @@ bindsym $mod+Print exec --no-startup-id maim -s ~/Imagens/screenshot-$(date +%s)
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
 exec_always --no-startup-id feh --bg-fill ~/.config/stoa/wallpapers/marble.png
 exec --no-startup-id dunst -config ~/.config/dunst/dunstrc
+
+# ── eww Memento Mori ──
+for_window [title="memento"] floating enable, resize set 860 580, move position center
