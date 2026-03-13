@@ -162,6 +162,11 @@ echo -e "  ${S}Brave Browser (AUR) será instalado no primeiro boot.${R}"
 echo -e "  ${S}Execute após o login:${R}"
 echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/brave-bin.git && cd brave-bin && makepkg -si${R}"
 
+# ── GPU + CPU Setup ──
+echo ""
+echo -e "  ${S}Para configurar GPU e microcode do processador:${R}"
+echo -e "  ${B}    cd ~/StoaLinux && ./scripts/stoa-gpu-setup.sh${R}"
+
 # ══════════════════════════════════════════════════════════════
 # Fim
 # ══════════════════════════════════════════════════════════════

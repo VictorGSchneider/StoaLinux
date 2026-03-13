@@ -36,3 +36,13 @@ export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 # ── Cursor ──
 export XCURSOR_THEME="Adwaita"
 export XCURSOR_SIZE=24
+
+# ── NVIDIA (Wayland) ──
+# Descomente se usar GPU NVIDIA com Hyprland:
+# export LIBVA_DRIVER_NAME=nvidia
+# export __GLX_VENDOR_LIBRARY_NAME=nvidia
+# export GBM_BACKEND=nvidia-drm
+# export NVD_BACKEND=direct
+# export WLR_NO_HARDWARE_CURSORS=1
+# export __GL_GSYNC_ALLOWED=1
+# export __GL_VRR_ALLOWED=1

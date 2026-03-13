@@ -53,6 +53,7 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 | Stoa Walls | `scripts/stoa-walls.sh` | Gerador de wallpapers minimalistas |
 | Memento Mori | `scripts/stoa-memento.sh` | Toggle do widget Memento Mori |
 | Memento Data | `scripts/stoa-memento-data.sh` | Dados JSON para o widget eww |
+| GPU Setup | `scripts/stoa-gpu-setup.sh` | Configuração automática CPU + GPU |
 | Cores | `colors.sh` | Referência central da paleta |
 
 ## Instalação
@@ -130,6 +131,27 @@ cd /tmp/brave-bin && makepkg -si
 git clone https://aur.archlinux.org/obsidian.git /tmp/obsidian
 cd /tmp/obsidian && makepkg -si
 ```
+
+### GPU + CPU Setup
+
+Após a instalação, configure drivers de GPU e microcode do processador:
+
+```bash
+cd StoaLinux
+chmod +x scripts/stoa-gpu-setup.sh
+./scripts/stoa-gpu-setup.sh
+```
+
+O script detecta automaticamente:
+- **CPU**: AMD (`amd-ucode`) ou Intel (`intel-ucode`)
+- **GPU NVIDIA**: escolhe o driver correto para sua geração (`nvidia`, `nvidia-open`, `nvidia-470xx-dkms`)
+- **GPU AMD**: `mesa` + `vulkan-radeon` + `libva-mesa-driver`
+- **GPU Intel**: `mesa` + `vulkan-intel` + `intel-media-driver`
+
+Para NVIDIA, também configura:
+- Módulos early KMS no mkinitcpio
+- `nvidia-drm modeset=1 fbdev=1` via modprobe
+- Variáveis de ambiente NVIDIA no Hyprland e stoa-env.sh
 
 ### Shell
 
