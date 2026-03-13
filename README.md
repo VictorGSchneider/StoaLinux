@@ -53,6 +53,7 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 | Stoa Walls | `scripts/stoa-walls.sh` | Gerador de wallpapers minimalistas |
 | Memento Mori | `scripts/stoa-memento.sh` | Toggle do widget Memento Mori |
 | Memento Data | `scripts/stoa-memento-data.sh` | Dados JSON para o widget eww |
+| NVIDIA Setup | `scripts/stoa-nvidia-setup.sh` | Configuração AMD CPU + NVIDIA GPU |
 | Cores | `colors.sh` | Referência central da paleta |
 
 ## Instalação
@@ -129,6 +130,24 @@ git clone https://aur.archlinux.org/brave-bin.git /tmp/brave-bin
 cd /tmp/brave-bin && makepkg -si
 git clone https://aur.archlinux.org/obsidian.git /tmp/obsidian
 cd /tmp/obsidian && makepkg -si
+```
+
+### NVIDIA GPU + AMD CPU
+
+Se você usa processador AMD com placa NVIDIA, execute o script de setup:
+
+```bash
+cd StoaLinux
+chmod +x scripts/stoa-nvidia-setup.sh
+./scripts/stoa-nvidia-setup.sh
+```
+
+O script instala e configura:
+- `nvidia`, `nvidia-utils`, `nvidia-settings`, `libva-nvidia-driver`
+- `amd-ucode` (microcode do processador)
+- Módulos early KMS no mkinitcpio (`nvidia nvidia_modeset nvidia_uvm nvidia_drm`)
+- `nvidia-drm modeset=1 fbdev=1` via modprobe
+- Variáveis de ambiente NVIDIA no Hyprland e stoa-env.sh
 ```
 
 ### Shell

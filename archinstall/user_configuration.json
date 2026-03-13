@@ -49,6 +49,7 @@
         "git",
         "zsh",
         "eww",
+        "amd-ucode",
         "base-devel"
     ],
     "parallel downloads": 5,

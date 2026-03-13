@@ -162,6 +162,11 @@ echo -e "  ${S}Brave Browser (AUR) será instalado no primeiro boot.${R}"
 echo -e "  ${S}Execute após o login:${R}"
 echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/brave-bin.git && cd brave-bin && makepkg -si${R}"
 
+# ── NVIDIA Setup (se aplicável) ──
+echo ""
+echo -e "  ${S}Se usa GPU NVIDIA, execute após o login:${R}"
+echo -e "  ${B}    cd ~/StoaLinux && ./scripts/stoa-nvidia-setup.sh${R}"
+
 # ══════════════════════════════════════════════════════════════
 # Fim
 # ══════════════════════════════════════════════════════════════
