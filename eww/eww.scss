@@ -1,0 +1,148 @@
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  STOA LINUX — Memento Mori Widget (eww stylesheet)          ║
+// ║  Paleta Estoica: bronze, olive, terracotta, stone           ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// ── Variáveis da paleta Stoa ──
+$bg:          #211e19;
+$bg-light:    #2a2621;
+$fg:          #d4cfc4;
+$fg-dim:      #a09b90;
+$bronze:      #c49a5c;
+$gold:        #d4a84b;
+$olive:       #8a9a6c;
+$terracotta:  #b36b5a;
+$stone:       #6e6a62;
+$font:        "JetBrains Mono";
+
+// ── Container ──
+.memento-container {
+    background-color: $bg;
+    border: 2px solid $bronze;
+    border-radius: 12px;
+    padding: 24px;
+    font-family: $font;
+    color: $fg;
+}
+
+// ── Header ──
+.memento-header {
+    padding: 8px 0 16px 0;
+    border-bottom: 1px solid $stone;
+    margin-bottom: 16px;
+}
+
+.header-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: $bronze;
+    letter-spacing: 4px;
+}
+
+.header-subtitle {
+    font-size: 12px;
+    color: $stone;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+// ── Stats ──
+.memento-stats {
+    margin: 12px 0;
+}
+
+.stat-box {
+    background-color: $bg-light;
+    border: 1px solid $stone;
+    border-radius: 8px;
+    padding: 16px 12px;
+    margin: 0 6px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: $gold;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: $fg-dim;
+    margin-top: 4px;
+}
+
+// ── Year progress ──
+.memento-year {
+    margin: 16px 0;
+    padding: 12px 16px;
+    background-color: $bg-light;
+    border: 1px solid $stone;
+    border-radius: 8px;
+}
+
+.year-label {
+    font-size: 13px;
+    color: $fg;
+    margin-bottom: 8px;
+}
+
+.year-bar {
+    background-color: $stone;
+    border-radius: 4px;
+
+    trough {
+        min-height: 10px;
+        border-radius: 4px;
+        background-color: rgba($stone, 0.3);
+    }
+
+    progress {
+        min-height: 10px;
+        border-radius: 4px;
+        background-color: $olive;
+    }
+}
+
+// ── Weeks info ──
+.memento-weeks {
+    margin: 12px 0;
+    padding: 12px 16px;
+}
+
+.weeks-info {
+    font-size: 14px;
+    color: $fg;
+}
+
+.weeks-sub {
+    font-size: 11px;
+    color: $stone;
+    margin-top: 4px;
+}
+
+// ── Quote ──
+.memento-quote {
+    margin: 12px 0;
+    padding: 16px;
+    background-color: $bg-light;
+    border-left: 3px solid $bronze;
+    border-radius: 0 8px 8px 0;
+}
+
+.quote-text {
+    font-size: 12px;
+    color: $fg-dim;
+    font-style: italic;
+}
+
+// ── Footer ──
+.memento-footer {
+    padding-top: 12px;
+    border-top: 1px solid $stone;
+    margin-top: 8px;
+}
+
+.footer-text {
+    font-size: 11px;
+    color: $stone;
+}

@@ -55,8 +55,9 @@ XORG_PKGS="i3-wm i3status xorg-server xorg-xinit picom"
 # Launcher, notificações
 UI_PKGS="rofi dunst"
 
-# Browser
+# Browser + Notes (AUR)
 BROWSER_PKGS="brave-bin"
+NOTES_PKGS="obsidian"
 
 # Terminal, editor, wallpapers
 APP_PKGS="alacritty neovim feh imagemagick"
@@ -66,6 +67,9 @@ STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop"
 
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
+
+# Widgets (eww — Memento Mori)
+WIDGET_PKGS="eww"
 
 # Fontes e tema
 FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
@@ -79,18 +83,20 @@ UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl"
 # Shell e extras
 SHELL_PKGS="zsh git"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $WIDGET_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
+echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Estoicos:   ${STOA_APPS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
 echo -e "  ${S}Fontes:     ${FONT_PKGS}${R}"
 echo -e "  ${S}Tema:       ${THEME_PKGS}${R}"
 echo -e "  ${S}Áudio:      ${UTIL_PKGS}${R}"
+echo -e "  ${S}Widgets:    ${WIDGET_PKGS}${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
 echo ""
 
@@ -119,6 +125,26 @@ if [ "$INSTALL_PKGS" = "s" ]; then
         echo -e "  ${O}[✓] Brave instalado.${R}"
     else
         echo -e "  ${S}[~] Brave já instalado.${R}"
+    fi
+
+    # Obsidian (AUR)
+    echo ""
+    if ! command -v obsidian &>/dev/null; then
+        echo -e "  ${F}Instalando Obsidian (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm obsidian
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm obsidian
+        else
+            echo -e "  ${S}Instalando Obsidian manualmente via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/obsidian.git "$_tmpdir/obsidian"
+            (cd "$_tmpdir/obsidian" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Obsidian instalado.${R}"
+    else
+        echo -e "  ${S}[~] Obsidian já instalado.${R}"
     fi
 else
     echo -e "  ${S}[~] Pacotes pulados.${R}"
@@ -194,6 +220,7 @@ echo ""
 echo -e "  ${F}Comandos do Stoa:${R}"
 echo -e "  ${S}  stoa-fetch  — System fetch estoico${R}"
 echo -e "  ${S}  stoa-walls  — Gerar wallpapers${R}"
+echo -e "  ${S}  stoa-memento — Memento Mori widget${R}"
 echo ""
 echo -e "  ${O}\"O caminho do sábio está preparado.\" — Sêneca${R}"
 echo ""

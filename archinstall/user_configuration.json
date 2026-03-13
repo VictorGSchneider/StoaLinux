@@ -48,6 +48,7 @@
         "papirus-icon-theme",
         "git",
         "zsh",
+        "eww",
         "base-devel"
     ],
     "parallel downloads": 5,
