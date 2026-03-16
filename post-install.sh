@@ -81,7 +81,7 @@ THEME_PKGS="qt5ct qt6ct"
 UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl"
 
 # Shell e extras
-SHELL_PKGS="zsh git"
+SHELL_PKGS="zsh git base-devel"
 
 ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $WIDGET_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
 

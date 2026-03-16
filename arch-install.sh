@@ -70,7 +70,7 @@ echo ""
 
 # ── Mostrar o que vem pré-configurado ──
 echo -e "  ${F}Configuração pré-definida pelo StoaLinux:${R}"
-echo -e "  ${S}  Bootloader:  systemd-boot (efistub)${R}"
+echo -e "  ${S}  Bootloader:  EFISTUB (boot direto via UEFI)${R}"
 echo -e "  ${S}  Áudio:       PipeWire${R}"
 echo -e "  ${S}  Rede:        NetworkManager${R}"
 echo -e "  ${S}  Locale:      pt_BR.UTF-8 / teclado br${R}"
