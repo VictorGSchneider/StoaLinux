@@ -4,22 +4,20 @@
 # ║  "A riqueza consiste não em ter grandes posses, mas em ter  ║
 # ║   poucas necessidades." — Epicteto                          ║
 # ║                                                              ║
-# ║  Arquivo central:  ~/.local/share/stoa/quotes.json           ║
-# ║  Frase atual:      ~/.local/share/stoa/current               ║
-# ║  Rotação:          a cada 20 min (playlist embaralhada)      ║
-# ║  Sync:             no boot + quando todas forem consumidas   ║
+# ║  Banco:     ~/.local/share/stoa/quotes.json                  ║
+# ║  Playlist:  ~/.local/share/stoa/playlist (fila embaralhada)  ║
+# ║  Cada app consome a próxima frase via "next".                ║
+# ║  Sync: no boot + quando a playlist esvazia.                  ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 STOA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/stoa"
 QUOTES_FILE="$STOA_DIR/quotes.json"
-CURRENT_FILE="$STOA_DIR/current"
 PLAYLIST_FILE="$STOA_DIR/playlist"
 BOOT_ID_FILE="$STOA_DIR/.boot-id"
 SYNC_LOCK="$STOA_DIR/.sync.lock"
+PLAYLIST_LOCK="$STOA_DIR/.playlist.lock"
 
-ROTATE_SECS=1200  # 20 minutos
 FETCH_COUNT=75
-
 FALLBACK="The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius"
 
 # ── Cores ──
@@ -76,14 +74,12 @@ _init() {
 # ── APIs ──
 _fetch_one() {
     local r q a
-    # Tenta tekloon primeiro
     r=$(curl -sf --max-time 5 "https://stoic.tekloon.net/stoic-quote" 2>/dev/null)
     if [ $? -eq 0 ] && [ -n "$r" ]; then
         q=$(printf '%s' "$r" | jq -r '.data.quote // empty' 2>/dev/null)
         a=$(printf '%s' "$r" | jq -r '.data.author // empty' 2>/dev/null)
         [ -n "$q" ] && echo "${q} — ${a}" && return 0
     fi
-    # Fallback: stoicquotesapi
     r=$(curl -sf --max-time 5 "https://api.stoicquotesapi.com/v1/api/quotes/random" 2>/dev/null)
     if [ $? -eq 0 ] && [ -n "$r" ]; then
         q=$(printf '%s' "$r" | jq -r '.body // .quote // empty' 2>/dev/null)
@@ -108,7 +104,6 @@ _do_sync() {
     _init
     command -v curl &>/dev/null && command -v jq &>/dev/null || return 1
 
-    # Lock
     if [ -f "$SYNC_LOCK" ]; then
         local age=$(( $(date +%s) - $(stat -c %Y "$SYNC_LOCK" 2>/dev/null || echo 0) ))
         [ "$age" -gt 300 ] && rm -f "$SYNC_LOCK" || return 0
@@ -148,13 +143,12 @@ _do_sync() {
     fi
 }
 
-# ── Playlist: embaralha índices do quotes.json ──
+# ── Playlist: embaralha índices ──
 _rebuild_playlist() {
     _init
     local total
     total=$(jq 'length' "$QUOTES_FILE" 2>/dev/null || echo 0)
     [ "$total" -eq 0 ] && return
-    # Gera índices 0..N-1 e embaralha
     seq 0 $((total - 1)) | shuf > "$PLAYLIST_FILE"
 }
 
@@ -164,20 +158,21 @@ _is_new_boot() {
     current_boot=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo "unknown")
     if [ ! -f "$BOOT_ID_FILE" ]; then
         echo "$current_boot" > "$BOOT_ID_FILE"
-        return 0  # primeira execução = boot novo
+        return 0
     fi
     local saved_boot
     saved_boot=$(cat "$BOOT_ID_FILE" 2>/dev/null)
     if [ "$current_boot" != "$saved_boot" ]; then
         echo "$current_boot" > "$BOOT_ID_FILE"
-        return 0  # boot diferente
+        return 0
     fi
-    return 1  # mesmo boot
+    return 1
 }
 
-# ── Tick: avança a frase se passaram 20 min ──
-# Chamado pelos consumidores. Escreve em "current".
-_cmd_tick() {
+# ── Next: consome a próxima frase da playlist ──
+# Cada chamada retorna uma frase diferente.
+# Sync automático no boot e quando a playlist esvazia.
+_cmd_next() {
     _init
 
     # Boot novo? Sync em background + reembaralhar
@@ -187,70 +182,37 @@ _cmd_tick() {
         disown 2>/dev/null
     fi
 
-    # Se não tem playlist, criar
+    # Sem playlist? Criar
     [ -f "$PLAYLIST_FILE" ] || _rebuild_playlist
 
-    # Verificar se já passou 20 min desde a última rotação
-    local now rotate_needed=false
-    now=$(date +%s)
-    if [ -f "$CURRENT_FILE" ]; then
-        local mtime
-        mtime=$(stat -c %Y "$CURRENT_FILE" 2>/dev/null || echo 0)
-        local age=$(( now - mtime ))
-        [ "$age" -ge "$ROTATE_SECS" ] && rotate_needed=true
-    else
-        rotate_needed=true
-    fi
+    # Lock para acesso atômico à playlist (evita 2 apps pegarem a mesma frase)
+    local result
+    result=$(
+        (
+            flock -w 2 200 || exit 1
 
-    if [ "$rotate_needed" = "true" ]; then
-        # Pegar próximo da playlist
-        if [ ! -s "$PLAYLIST_FILE" ]; then
-            # Playlist vazia → todas foram consumidas!
-            # Sync em background + reembaralhar
-            ( _do_sync false && _rebuild_playlist ) &
-            disown 2>/dev/null
-            # Enquanto sync roda, reembaralhar com o que tem
-            _rebuild_playlist
-        fi
-
-        # Ler primeiro índice da playlist
-        local idx
-        idx=$(head -1 "$PLAYLIST_FILE" 2>/dev/null)
-        # Remover do topo
-        sed -i '1d' "$PLAYLIST_FILE"
-
-        if [ -n "$idx" ]; then
-            local quote
-            quote=$(jq -r ".[$idx] // empty" "$QUOTES_FILE" 2>/dev/null)
-            if [ -n "$quote" ]; then
-                echo "$quote" > "$CURRENT_FILE"
+            # Playlist vazia? Todas consumidas → sync + rebuild
+            if [ ! -s "$PLAYLIST_FILE" ]; then
+                _rebuild_playlist
+                ( _do_sync false && _rebuild_playlist ) &
+                disown 2>/dev/null
             fi
-        fi
-    fi
 
-    # Output: frase atual
-    if [ -f "$CURRENT_FILE" ] && [ -s "$CURRENT_FILE" ]; then
-        cat "$CURRENT_FILE"
-    else
-        echo "$FALLBACK"
-    fi
-}
+            # Pop primeiro índice
+            local idx
+            idx=$(head -1 "$PLAYLIST_FILE" 2>/dev/null)
+            sed -i '1d' "$PLAYLIST_FILE"
 
-# ── Comando: random (alias para tick) ──
-_cmd_random() { _cmd_tick; }
+            [ -n "$idx" ] && jq -r ".[$idx] // empty" "$QUOTES_FILE" 2>/dev/null
+        ) 200>"$PLAYLIST_LOCK"
+    )
 
-# ── Comando: current (só lê, sem tick) ──
-_cmd_current() {
-    if [ -f "$CURRENT_FILE" ] && [ -s "$CURRENT_FILE" ]; then
-        cat "$CURRENT_FILE"
-    else
-        echo "$FALLBACK"
-    fi
+    echo "${result:-$FALLBACK}"
 }
 
 _cmd_count() { _init; jq 'length' "$QUOTES_FILE"; }
-
-_cmd_list() { _init; jq -r 'to_entries[] | "\(.key + 1). \(.value)"' "$QUOTES_FILE"; }
+_cmd_list()  { _init; jq -r 'to_entries[] | "\(.key + 1). \(.value)"' "$QUOTES_FILE"; }
+_cmd_remaining() { _init; [ -f "$PLAYLIST_FILE" ] && wc -l < "$PLAYLIST_FILE" || echo 0; }
 
 _cmd_add() {
     local quote="$1"
@@ -264,10 +226,9 @@ _cmd_add() {
 }
 
 _cmd_reset() {
-    rm -f "$QUOTES_FILE" "$PLAYLIST_FILE" "$CURRENT_FILE" "$BOOT_ID_FILE"
+    rm -f "$QUOTES_FILE" "$PLAYLIST_FILE" "$BOOT_ID_FILE"
     _init
     _rebuild_playlist
-    _cmd_tick > /dev/null
     echo -e "  ${O}[✓] Resetado para $(jq 'length' "$QUOTES_FILE") frases embutidas.${R}"
 }
 
@@ -281,7 +242,7 @@ _cmd_sync() {
     echo ""
     _do_sync true
     _rebuild_playlist
-    echo -e "  ${O}[✓] Playlist reembaralhada.${R}"
+    echo -e "  ${O}[✓] Playlist reembaralhada ($(wc -l < "$PLAYLIST_FILE") frases).${R}"
     echo ""
 }
 
@@ -289,31 +250,31 @@ _cmd_help() {
     echo ""
     echo -e "  ${B}stoa-quotes-sync${R} — Frases estoicas"
     echo ""
-    echo -e "  ${S}Banco:       ${QUOTES_FILE}${R}"
-    echo -e "  ${S}Frase atual: ${CURRENT_FILE}${R}"
+    echo -e "  ${S}Banco:     ${QUOTES_FILE}${R}"
+    echo -e "  ${S}Playlist:  ${PLAYLIST_FILE}${R}"
     echo ""
-    echo -e "  ${S}Rotação:  a cada 20 min (playlist embaralhada)${R}"
-    echo -e "  ${S}Sync:     no boot + quando todas forem consumidas${R}"
+    echo -e "  ${S}Cada app pega uma frase diferente via \"next\".${R}"
+    echo -e "  ${S}Sync automático no boot e quando a playlist esvazia.${R}"
     echo ""
     echo -e "  ${S}Comandos:${R}"
-    echo -e "    ${O}stoa-quotes-sync${R}            Buscar frases agora"
-    echo -e "    ${O}stoa-quotes-sync tick${R}       Avançar frase (chamado pelos apps)"
-    echo -e "    ${O}stoa-quotes-sync current${R}    Ler frase atual (sem avançar)"
-    echo -e "    ${O}stoa-quotes-sync list${R}       Listar todas"
-    echo -e "    ${O}stoa-quotes-sync count${R}      Total de frases"
-    echo -e "    ${O}stoa-quotes-sync add \"...\"${R}  Adicionar frase manual"
-    echo -e "    ${O}stoa-quotes-sync reset${R}      Voltar às embutidas"
+    echo -e "    ${O}stoa-quotes-sync${R}             Buscar frases agora"
+    echo -e "    ${O}stoa-quotes-sync next${R}        Próxima frase (consome da playlist)"
+    echo -e "    ${O}stoa-quotes-sync remaining${R}   Frases restantes na playlist"
+    echo -e "    ${O}stoa-quotes-sync list${R}        Listar todas do banco"
+    echo -e "    ${O}stoa-quotes-sync count${R}       Total no banco"
+    echo -e "    ${O}stoa-quotes-sync add \"...\"${R}   Adicionar frase manual"
+    echo -e "    ${O}stoa-quotes-sync reset${R}       Voltar às embutidas"
     echo ""
 }
 
 # ── Main ──
 case "${1:-}" in
-    tick|random) _cmd_tick ;;
-    current)     _cmd_current ;;
-    count)       _cmd_count ;;
-    list)        _cmd_list ;;
-    add)         shift; _cmd_add "$*" ;;
-    reset)       _cmd_reset ;;
-    help|-h|--help) _cmd_help ;;
-    *)           _cmd_sync ;;
+    next|random|tick) _cmd_next ;;
+    remaining)        _cmd_remaining ;;
+    count)            _cmd_count ;;
+    list)             _cmd_list ;;
+    add)              shift; _cmd_add "$*" ;;
+    reset)            _cmd_reset ;;
+    help|-h|--help)   _cmd_help ;;
+    *)                _cmd_sync ;;
 esac

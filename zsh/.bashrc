@@ -4,15 +4,11 @@
 # ║   o que tem de fazer." — Epicteto                            ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# ── Citação Estoica ──
-# Lê de ~/.local/share/stoa/current (atualizado a cada 20 min)
+# ── Citação Estoica (cada terminal recebe uma frase diferente) ──
 
 _stoa_greeting() {
-    local current="${XDG_DATA_HOME:-$HOME/.local/share}/stoa/current"
     local quote=""
-    [ -s "$current" ] && quote=$(cat "$current")
-    # Tick em background: avança frase se >20min, sync se boot novo/playlist vazia
-    command -v stoa-quotes-sync &>/dev/null && stoa-quotes-sync tick &>/dev/null &
+    command -v stoa-quotes-sync &>/dev/null && quote=$(stoa-quotes-sync next 2>/dev/null)
     quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
     echo ""
     echo -e "  \033[38;2;196;154;92m╔══════════════════════════════════════════════════════╗\033[0m"

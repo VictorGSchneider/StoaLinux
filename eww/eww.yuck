@@ -4,7 +4,7 @@
 ;; ╚══════════════════════════════════════════════════════════════╝
 
 ;; ── Variáveis (dados do script JSON) ──
-(defpoll memento-data :interval "60s"
+(defpoll memento-data :interval "1200s"
   `~/.local/bin/stoa-memento-data`)
 
 ;; ── Widget principal ──
