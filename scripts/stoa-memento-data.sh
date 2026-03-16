@@ -47,11 +47,18 @@ year_pct=$(awk "BEGIN { printf \"%.1f\", ($today - $year_start) / ($year_end - $
 # Total de semanas na vida
 total_weeks=$(( LIFE_YEARS * 52 ))
 
-# ── Frase estoica (banco central de frases) ──
-if command -v stoa-quotes-sync &>/dev/null; then
-    quote=$(stoa-quotes-sync random 2>/dev/null)
+# ── Frase estoica (arquivo central: ~/.local/share/stoa/quotes.json) ──
+_qfile="${XDG_DATA_HOME:-$HOME/.local/share}/stoa/quotes.json"
+quote=""
+if [ -f "$_qfile" ] && command -v jq &>/dev/null; then
+    _total=$(jq 'length' "$_qfile" 2>/dev/null)
+    if [ -n "$_total" ] && [ "$_total" -gt 0 ]; then
+        _slot=$(( $(date +%s) / 1200 ))
+        _idx=$(( _slot % _total ))
+        quote=$(jq -r ".[$_idx]" "$_qfile" 2>/dev/null)
+    fi
 fi
-quote="${quote:-A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio}"
+quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
 
 # Escapar aspas duplas no quote para JSON válido
 quote_escaped="${quote//\"/\\\"}"

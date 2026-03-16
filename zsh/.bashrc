@@ -5,15 +5,24 @@
 # ╚══════════════════════════════════════════════════════════════╝
 
 # ── Citação Estoica ──
-# Usa banco central de frases (~/.local/share/stoa/quotes.json)
-# Sync: stoa-quotes-sync [N]  |  Manual: stoa-quotes-sync add "frase"
+# Arquivo central: ~/.local/share/stoa/quotes.json
+# Sync diário + rotação a cada 20 min via stoa-quotes-sync
 
 _stoa_greeting() {
-    local quote
-    if command -v stoa-quotes-sync &>/dev/null; then
-        quote=$(stoa-quotes-sync random 2>/dev/null)
+    local qfile="${XDG_DATA_HOME:-$HOME/.local/share}/stoa/quotes.json"
+    local quote=""
+    if [ -f "$qfile" ] && command -v jq &>/dev/null; then
+        local total slot idx
+        total=$(jq 'length' "$qfile" 2>/dev/null)
+        if [ -n "$total" ] && [ "$total" -gt 0 ]; then
+            slot=$(( $(date +%s) / 1200 ))
+            idx=$(( slot % total ))
+            quote=$(jq -r ".[$idx]" "$qfile" 2>/dev/null)
+        fi
     fi
-    quote="${quote:-A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio}"
+    # Sync diário em background (não bloqueia o terminal)
+    command -v stoa-quotes-sync &>/dev/null && stoa-quotes-sync random &>/dev/null &
+    quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
     echo ""
     echo -e "  \033[38;2;196;154;92m╔══════════════════════════════════════════════════════╗\033[0m"
     echo -e "  \033[38;2;196;154;92m║\033[0m  \033[38;2;212;207;196;3m${quote}\033[0m"

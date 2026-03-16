@@ -1,203 +1,217 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Quotes Sync                                   ║
+# ║  STOA LINUX — Quotes                                        ║
 # ║  "A riqueza consiste não em ter grandes posses, mas em ter  ║
 # ║   poucas necessidades." — Epicteto                          ║
 # ║                                                              ║
-# ║  Busca frases estoicas da internet e salva localmente.       ║
-# ║  Uso: stoa-quotes-sync [N]   (padrão: 20 frases novas)      ║
+# ║  Arquivo central: ~/.local/share/stoa/quotes.json            ║
+# ║  Rotação: a cada 20 minutos (determinística)                 ║
+# ║  Sync: 1x por dia, busca ~75 frases novas em background     ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-QUOTES_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/stoa/quotes.json"
-QUOTES_DIR="$(dirname "$QUOTES_FILE")"
+STOA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/stoa"
+QUOTES_FILE="$STOA_DIR/quotes.json"
+SYNC_STAMP="$STOA_DIR/.quotes-last-sync"
+SYNC_LOCK="$STOA_DIR/.quotes-sync.lock"
 
-# ── Cores ──
+SYNC_INTERVAL=86400   # 24h entre syncs
+ROTATE_INTERVAL=1200  # 20 min entre rotações
+FETCH_COUNT=75        # 24h / 20min = 72 slots, busca 75 para margem
+
+# ── Cores (só para output interativo) ──
 B='\033[38;2;196;154;92m'
 S='\033[38;2;110;106;98m'
 O='\033[38;2;138;154;108m'
 T='\033[38;2;179;107;90m'
 R='\033[0m'
 
-# ── Quantas frases buscar ──
-COUNT="${1:-20}"
-
-# ── Frases embutidas (fallback offline) ──
-BUILTIN_QUOTES=(
-    "A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio"
-    "Não sofras antes do tempo. — Sêneca"
-    "Não é o que te acontece, mas como reages ao que te acontece. — Epicteto"
-    "A riqueza consiste não em ter grandes posses, mas em ter poucas necessidades. — Epicteto"
-    "O impedimento à ação avança a ação. O que se interpõe no caminho torna-se o caminho. — Marco Aurélio"
-    "Temos duas orelhas e uma boca para ouvir o dobro do que falamos. — Zenão de Cítio"
-    "A virtude é o único bem. — Zenão de Cítio"
-    "Quem vive sem loucura não é tão sábio quanto pensa. — Sêneca"
-    "Sorte é o que acontece quando a preparação encontra a oportunidade. — Sêneca"
-    "Se queres melhorar, aceita parecer ignorante ou estúpido. — Epicteto"
-    "Perde quem se dá por perdido; a coragem não permite a fortuna adversa. — Sêneca"
-    "Ama o teu destino. — Nietzsche (inspirado nos estoicos)"
-    "A alma torna-se tingida pela cor dos seus pensamentos. — Marco Aurélio"
-    "Memento Mori — Lembra-te de que vais morrer."
-    "Amor Fati — Ama o teu destino."
-)
-
-# ── Verificar dependências ──
-if ! command -v curl &>/dev/null; then
-    echo -e "  ${T}[!] curl não encontrado. Instale: sudo pacman -S curl${R}"
-    exit 1
-fi
-
-if ! command -v jq &>/dev/null; then
-    echo -e "  ${T}[!] jq não encontrado. Instale: sudo pacman -S jq${R}"
-    exit 1
-fi
+# ── Frases embutidas (fallback offline / seed inicial) ──
+_builtin_quotes() {
+    cat <<'QUOTES'
+[
+  "The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius",
+  "We suffer more often in imagination than in reality. — Seneca",
+  "It's not what happens to you, but how you react to it that matters. — Epictetus",
+  "Wealth consists not in having great possessions, but in having few wants. — Epictetus",
+  "The impediment to action advances action. What stands in the way becomes the way. — Marcus Aurelius",
+  "We have two ears and one mouth so that we can listen twice as much as we speak. — Zeno of Citium",
+  "Virtue is the sole good. — Zeno of Citium",
+  "Luck is what happens when preparation meets opportunity. — Seneca",
+  "If you want to improve, be content to be thought foolish and stupid. — Epictetus",
+  "The soul becomes dyed with the colour of its thoughts. — Marcus Aurelius",
+  "No man is free who is not master of himself. — Epictetus",
+  "Begin at once to live, and count each separate day as a separate life. — Seneca",
+  "He who fears death will never do anything worthy of a living man. — Seneca",
+  "First say to yourself what you would be; and then do what you have to do. — Epictetus",
+  "Memento Mori — Remember that you will die.",
+  "Amor Fati — Love your fate.",
+  "A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio",
+  "Não sofras antes do tempo. — Sêneca",
+  "Não é o que te acontece, mas como reages ao que te acontece. — Epicteto",
+  "O impedimento à ação avança a ação. O que se interpõe no caminho torna-se o caminho. — Marco Aurélio",
+  "A virtude é o único bem. — Zenão de Cítio",
+  "Sorte é o que acontece quando a preparação encontra a oportunidade. — Sêneca",
+  "A alma torna-se tingida pela cor dos seus pensamentos. — Marco Aurélio",
+  "Perde quem se dá por perdido; a coragem não permite a fortuna adversa. — Sêneca",
+  "Se queres melhorar, aceita parecer ignorante ou estúpido. — Epicteto"
+]
+QUOTES
+}
 
 # ── Inicializar arquivo se não existir ──
-_init_quotes_file() {
-    mkdir -p "$QUOTES_DIR"
+_init() {
+    mkdir -p "$STOA_DIR"
     if [ ! -f "$QUOTES_FILE" ]; then
-        # Criar com frases embutidas
-        local json="["
-        for i in "${!BUILTIN_QUOTES[@]}"; do
-            local q="${BUILTIN_QUOTES[$i]}"
-            local escaped
-            escaped=$(printf '%s' "$q" | jq -Rs '.')
-            [ "$i" -gt 0 ] && json+=","
-            json+=$'\n'"  $escaped"
-        done
-        json+=$'\n'"]"
-        echo "$json" > "$QUOTES_FILE"
-        echo -e "  ${O}[+] Arquivo criado com ${#BUILTIN_QUOTES[@]} frases embutidas.${R}"
+        _builtin_quotes > "$QUOTES_FILE"
     fi
 }
 
-# ── Buscar de stoic.tekloon.net ──
-_fetch_tekloon() {
-    local result
-    result=$(curl -sf --max-time 5 "https://stoic.tekloon.net/stoic-quote" 2>/dev/null)
-    if [ $? -eq 0 ] && [ -n "$result" ]; then
-        local quote author
-        quote=$(echo "$result" | jq -r '.data.quote // empty' 2>/dev/null)
-        author=$(echo "$result" | jq -r '.data.author // empty' 2>/dev/null)
-        if [ -n "$quote" ]; then
-            echo "${quote} — ${author}"
-            return 0
-        fi
-    fi
+# ── APIs de frases estoicas ──
+_fetch_one_tekloon() {
+    local r
+    r=$(curl -sf --max-time 5 "https://stoic.tekloon.net/stoic-quote" 2>/dev/null) || return 1
+    local q a
+    q=$(printf '%s' "$r" | jq -r '.data.quote // empty' 2>/dev/null)
+    a=$(printf '%s' "$r" | jq -r '.data.author // empty' 2>/dev/null)
+    [ -n "$q" ] && echo "${q} — ${a}" && return 0
     return 1
 }
 
-# ── Buscar de stoicquotesapi.com ──
-_fetch_stoicapi() {
-    local result
-    result=$(curl -sf --max-time 5 "https://api.stoicquotesapi.com/v1/api/quotes/random" 2>/dev/null)
-    if [ $? -eq 0 ] && [ -n "$result" ]; then
-        local quote author
-        quote=$(echo "$result" | jq -r '.body // .quote // empty' 2>/dev/null)
-        author=$(echo "$result" | jq -r '.author // empty' 2>/dev/null)
-        if [ -n "$quote" ]; then
-            echo "${quote} — ${author}"
-            return 0
-        fi
-    fi
+_fetch_one_stoicapi() {
+    local r
+    r=$(curl -sf --max-time 5 "https://api.stoicquotesapi.com/v1/api/quotes/random" 2>/dev/null) || return 1
+    local q a
+    q=$(printf '%s' "$r" | jq -r '.body // .quote // empty' 2>/dev/null)
+    a=$(printf '%s' "$r" | jq -r '.author // empty' 2>/dev/null)
+    [ -n "$q" ] && echo "${q} — ${a}" && return 0
     return 1
 }
 
-# ── Adicionar frase ao arquivo (sem duplicar) ──
+# ── Adicionar frase sem duplicar ──
 _add_quote() {
-    local new_quote="$1"
-    # Verificar se já existe
-    if jq -e --arg q "$new_quote" 'map(. == $q) | any' "$QUOTES_FILE" &>/dev/null; then
-        return 1  # duplicada
+    local q="$1"
+    if jq -e --arg q "$q" 'map(ascii_downcase == ($q | ascii_downcase)) | any' "$QUOTES_FILE" &>/dev/null; then
+        return 1
     fi
-    # Adicionar
     local tmp
-    tmp=$(jq --arg q "$new_quote" '. + [$q]' "$QUOTES_FILE")
-    echo "$tmp" > "$QUOTES_FILE"
-    return 0
+    tmp=$(jq --arg q "$q" '. + [$q]' "$QUOTES_FILE") && echo "$tmp" > "$QUOTES_FILE"
 }
 
-# ── Comando: sync ──
-_cmd_sync() {
-    echo ""
-    echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
-    echo -e "  ${B}║     STOA QUOTES — Buscando sabedoria...              ║${R}"
-    echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
-    echo ""
+# ── Sync: busca frases novas da internet ──
+_do_sync() {
+    local interactive="${1:-false}"
+    _init
 
-    _init_quotes_file
+    # Lock para evitar syncs simultâneos
+    if [ -f "$SYNC_LOCK" ]; then
+        local lock_age=$(( $(date +%s) - $(stat -c %Y "$SYNC_LOCK" 2>/dev/null || echo 0) ))
+        # Lock preso há mais de 5 min? Remover
+        [ "$lock_age" -gt 300 ] && rm -f "$SYNC_LOCK" || return 0
+    fi
+    touch "$SYNC_LOCK"
 
-    local before after added fetched
-    before=$(jq 'length' "$QUOTES_FILE")
-    added=0
-    fetched=0
+    local added=0 tried=0
 
-    for i in $(seq 1 "$COUNT"); do
+    for i in $(seq 1 "$FETCH_COUNT"); do
         local quote=""
-
-        # Tentar APIs em ordem
-        quote=$(_fetch_tekloon) || quote=$(_fetch_stoicapi) || true
+        quote=$(_fetch_one_tekloon) || quote=$(_fetch_one_stoicapi) || true
 
         if [ -n "$quote" ]; then
-            fetched=$((fetched + 1))
+            tried=$((tried + 1))
             if _add_quote "$quote"; then
                 added=$((added + 1))
-                echo -e "  ${O}[+]${R} ${quote}"
+                [ "$interactive" = "true" ] && echo -e "  ${O}[+]${R} ${quote}"
             else
-                echo -e "  ${S}[~]${R} (duplicada) ${quote:0:60}..."
+                [ "$interactive" = "true" ] && echo -e "  ${S}[~]${R} (duplicada)"
             fi
         else
-            echo -e "  ${T}[!]${R} Falha ao buscar frase $i"
+            [ "$interactive" = "true" ] && echo -e "  ${T}[!]${R} Falha #$i"
         fi
 
-        # Pausa entre requests para não abusar da API
-        [ "$i" -lt "$COUNT" ] && sleep 0.5
+        [ "$i" -lt "$FETCH_COUNT" ] && sleep 0.3
     done
 
-    after=$(jq 'length' "$QUOTES_FILE")
-    echo ""
-    echo -e "  ${B}Resultado:${R}"
-    echo -e "  ${S}  Buscadas:  ${fetched}${R}"
-    echo -e "  ${S}  Novas:     ${added}${R}"
-    echo -e "  ${S}  Total:     ${after} frases${R}"
-    echo -e "  ${S}  Arquivo:   ${QUOTES_FILE}${R}"
-    echo ""
+    # Marcar timestamp do sync
+    date +%s > "$SYNC_STAMP"
+    rm -f "$SYNC_LOCK"
+
+    if [ "$interactive" = "true" ]; then
+        local total
+        total=$(jq 'length' "$QUOTES_FILE")
+        echo ""
+        echo -e "  ${B}Resultado:${R}"
+        echo -e "  ${S}  Buscadas:  ${tried}${R}"
+        echo -e "  ${S}  Novas:     ${added}${R}"
+        echo -e "  ${S}  Total:     ${total} frases${R}"
+        echo -e "  ${S}  Arquivo:   ${QUOTES_FILE}${R}"
+        echo ""
+    fi
 }
 
-# ── Comando: random (retorna 1 frase aleatória) ──
+# ── Sync automático: verifica se já passou 24h, roda em background ──
+_auto_sync() {
+    # Precisa de curl e jq
+    command -v curl &>/dev/null && command -v jq &>/dev/null || return 0
+
+    local now last_sync age
+    now=$(date +%s)
+
+    if [ -f "$SYNC_STAMP" ]; then
+        last_sync=$(cat "$SYNC_STAMP" 2>/dev/null || echo 0)
+        age=$(( now - last_sync ))
+    else
+        age=$SYNC_INTERVAL  # nunca sincronizou → forçar
+    fi
+
+    if [ "$age" -ge "$SYNC_INTERVAL" ]; then
+        # Rodar sync em background (silencioso)
+        _do_sync false &
+        disown 2>/dev/null
+    fi
+}
+
+# ── Comando: random ──
+# Retorna 1 frase determinística que muda a cada 20 minutos.
+# Dispara sync em background se necessário.
 _cmd_random() {
-    _init_quotes_file
-    jq -r '.[ env.idx | tonumber ]' --arg idx "" "$QUOTES_FILE" 2>/dev/null || true
-    # Forma mais simples:
+    _init
+
+    # Disparar sync diário em background se necessário
+    _auto_sync
+
     local total
-    total=$(jq 'length' "$QUOTES_FILE")
-    if [ "$total" -eq 0 ]; then
-        echo "${BUILTIN_QUOTES[$((RANDOM % ${#BUILTIN_QUOTES[@]}))]}"
+    total=$(jq 'length' "$QUOTES_FILE" 2>/dev/null)
+    if [ -z "$total" ] || [ "$total" -eq 0 ]; then
+        echo "The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius"
         return
     fi
-    local idx=$(( RANDOM % total ))
+
+    # Índice determinístico: muda a cada 20 minutos
+    local slot=$(( $(date +%s) / ROTATE_INTERVAL ))
+    local idx=$(( slot % total ))
     jq -r ".[$idx]" "$QUOTES_FILE"
 }
 
 # ── Comando: count ──
 _cmd_count() {
-    _init_quotes_file
+    _init
     jq 'length' "$QUOTES_FILE"
 }
 
 # ── Comando: list ──
 _cmd_list() {
-    _init_quotes_file
-    jq -r '.[]' "$QUOTES_FILE"
+    _init
+    jq -r 'to_entries[] | "\(.key + 1). \(.value)"' "$QUOTES_FILE"
 }
 
 # ── Comando: add "frase" ──
 _cmd_add() {
     local quote="$1"
     if [ -z "$quote" ]; then
-        echo -e "  ${T}Uso: stoa-quotes-sync add \"Frase aqui — Autor\"${R}"
+        echo -e "  ${T}Uso: stoa-quotes-sync add \"Quote here — Author\"${R}"
         return 1
     fi
-    _init_quotes_file
+    _init
     if _add_quote "$quote"; then
         echo -e "  ${O}[+] Adicionada: ${quote}${R}"
     else
@@ -205,11 +219,52 @@ _cmd_add() {
     fi
 }
 
-# ── Comando: reset (volta às embutidas) ──
+# ── Comando: reset ──
 _cmd_reset() {
-    rm -f "$QUOTES_FILE"
-    _init_quotes_file
-    echo -e "  ${O}[✓] Resetado para ${#BUILTIN_QUOTES[@]} frases embutidas.${R}"
+    rm -f "$QUOTES_FILE" "$SYNC_STAMP"
+    _init
+    local total
+    total=$(jq 'length' "$QUOTES_FILE")
+    echo -e "  ${O}[✓] Resetado para ${total} frases embutidas.${R}"
+}
+
+# ── Comando: sync (interativo) ──
+_cmd_sync() {
+    if ! command -v curl &>/dev/null; then
+        echo -e "  ${T}[!] curl não encontrado. sudo pacman -S curl${R}"; exit 1
+    fi
+    if ! command -v jq &>/dev/null; then
+        echo -e "  ${T}[!] jq não encontrado. sudo pacman -S jq${R}"; exit 1
+    fi
+
+    echo ""
+    echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
+    echo -e "  ${B}║     STOA QUOTES — Buscando sabedoria...              ║${R}"
+    echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
+    echo ""
+
+    _do_sync true
+}
+
+# ── Help ──
+_cmd_help() {
+    echo ""
+    echo -e "  ${B}stoa-quotes-sync${R} — Frases estoicas"
+    echo ""
+    echo -e "  ${S}O arquivo central fica em:${R}"
+    echo -e "  ${O}${QUOTES_FILE}${R}"
+    echo ""
+    echo -e "  ${S}Rotação:  a cada 20 minutos (automática)${R}"
+    echo -e "  ${S}Sync:     1x por dia (automático em background)${R}"
+    echo ""
+    echo -e "  ${S}Comandos:${R}"
+    echo -e "    ${O}stoa-quotes-sync${R}            Buscar frases agora (interativo)"
+    echo -e "    ${O}stoa-quotes-sync random${R}     Frase atual (muda a cada 20 min)"
+    echo -e "    ${O}stoa-quotes-sync list${R}       Listar todas"
+    echo -e "    ${O}stoa-quotes-sync count${R}      Total de frases"
+    echo -e "    ${O}stoa-quotes-sync add \"...\"${R}  Adicionar frase manual"
+    echo -e "    ${O}stoa-quotes-sync reset${R}      Voltar às embutidas"
+    echo ""
 }
 
 # ── Main ──
@@ -219,24 +274,6 @@ case "${1:-}" in
     list)    _cmd_list ;;
     add)     shift; _cmd_add "$*" ;;
     reset)   _cmd_reset ;;
-    help|-h|--help)
-        echo ""
-        echo -e "  ${B}stoa-quotes-sync${R} — Gerenciador de frases estoicas"
-        echo ""
-        echo -e "  ${S}Comandos:${R}"
-        echo -e "    ${O}stoa-quotes-sync [N]${R}      Buscar N frases novas (padrão: 20)"
-        echo -e "    ${O}stoa-quotes-sync random${R}   Exibir 1 frase aleatória"
-        echo -e "    ${O}stoa-quotes-sync list${R}     Listar todas as frases"
-        echo -e "    ${O}stoa-quotes-sync count${R}    Contar total de frases"
-        echo -e "    ${O}stoa-quotes-sync add \"...\"${R} Adicionar frase manual"
-        echo -e "    ${O}stoa-quotes-sync reset${R}    Resetar para frases embutidas"
-        echo ""
-        ;;
-    *)
-        # Se é número, usa como COUNT
-        if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
-            COUNT="$1"
-        fi
-        _cmd_sync
-        ;;
+    help|-h|--help) _cmd_help ;;
+    *)       _cmd_sync ;;
 esac
