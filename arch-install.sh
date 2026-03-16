@@ -63,7 +63,7 @@ STOA_REPO="https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main"
 CONFIG_DIR="/tmp/stoa-archinstall"
 mkdir -p "$CONFIG_DIR"
 
-echo -e "  ${B}[1/3] Baixando configuração StoaLinux...${R}"
+echo -e "  ${B}[1/4] Baixando configuração StoaLinux...${R}"
 curl -sL "${STOA_REPO}/archinstall/user_configuration.json" -o "${CONFIG_DIR}/user_configuration.json"
 echo -e "  ${O}[✓] Config baixada.${R}"
 echo ""
@@ -97,20 +97,14 @@ fi
 # ══════════════════════════════════════════════════════════════
 
 echo ""
-echo -e "  ${B}[2/3] Iniciando archinstall...${R}"
+echo -e "  ${B}[2/4] Iniciando archinstall...${R}"
 echo -e "  ${S}Configure discos, usuário e driver de vídeo na TUI.${R}"
 echo ""
 
 archinstall --config "${CONFIG_DIR}/user_configuration.json"
 
-# ══════════════════════════════════════════════════════════════
-# FASE 3: Instalar dotfiles StoaLinux via chroot
-# ══════════════════════════════════════════════════════════════
+# ── Detectar sistema instalado ──
 
-echo ""
-echo -e "  ${B}[3/3] Instalando dotfiles StoaLinux...${R}"
-
-# Detectar ponto de montagem do archinstall
 INSTALL_ROOT="/mnt/archinstall"
 if [ ! -d "$INSTALL_ROOT" ] || ! mountpoint -q "$INSTALL_ROOT" 2>/dev/null; then
     INSTALL_ROOT="/mnt"
@@ -122,7 +116,6 @@ if ! mountpoint -q "$INSTALL_ROOT" 2>/dev/null; then
     exit 0
 fi
 
-# Detectar o primeiro usuário criado
 CREATED_USER=""
 for userdir in "${INSTALL_ROOT}/home"/*/; do
     if [ -d "$userdir" ]; then
@@ -137,6 +130,50 @@ if [ -z "$CREATED_USER" ]; then
 fi
 
 echo -e "  ${S}Usuário detectado: ${B}${CREATED_USER}${R}"
+
+# ══════════════════════════════════════════════════════════════
+# FASE 3: Instalar yay (AUR helper) + pacotes AUR
+# ══════════════════════════════════════════════════════════════
+
+echo ""
+echo -e "  ${B}[3/4] Instalando yay (AUR helper)...${R}"
+
+# Garantir sudo sem senha temporariamente para makepkg no chroot
+arch-chroot "$INSTALL_ROOT" bash -c \
+    "echo '${CREATED_USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/stoa-temp" 2>/dev/null
+
+arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c '
+    cd /tmp
+    git clone https://aur.archlinux.org/yay-bin.git
+    cd yay-bin
+    makepkg -si --noconfirm
+    cd /tmp && rm -rf yay-bin
+' 2>/dev/null
+
+if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/null; then
+    echo -e "  ${O}[✓] yay instalado.${R}"
+
+    # ── Pacotes AUR ──
+    echo -e "  ${S}Instalando pacotes AUR: brave-bin, obsidian, eww...${R}"
+    arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
+        "yay -S --needed --noconfirm brave-bin obsidian eww" 2>/dev/null || true
+    echo -e "  ${O}[✓] Pacotes AUR instalados.${R}"
+else
+    echo -e "  ${T}[!] yay não pôde ser instalado no chroot.${R}"
+    echo -e "  ${S}Instale após o primeiro boot:${R}"
+    echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian eww${R}"
+fi
+
+# Remover sudo temporário
+arch-chroot "$INSTALL_ROOT" rm -f /etc/sudoers.d/stoa-temp 2>/dev/null
+
+# ══════════════════════════════════════════════════════════════
+# FASE 4: Instalar dotfiles StoaLinux
+# ══════════════════════════════════════════════════════════════
+
+echo ""
+echo -e "  ${B}[4/4] Instalando dotfiles StoaLinux...${R}"
 
 # Clonar StoaLinux no home do usuário
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
@@ -155,12 +192,6 @@ arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
     "[ -f ~/.xinitrc ] || echo 'exec i3' > ~/.xinitrc" 2>/dev/null || true
 
 echo -e "  ${O}[✓] Dotfiles instalados para ${CREATED_USER}.${R}"
-
-# ── Brave Browser (AUR — requer makepkg como usuário) ──
-echo ""
-echo -e "  ${S}Brave Browser (AUR) será instalado no primeiro boot.${R}"
-echo -e "  ${S}Execute após o login:${R}"
-echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/brave-bin.git && cd brave-bin && makepkg -si${R}"
 
 # ── GPU + CPU Setup ──
 echo ""
