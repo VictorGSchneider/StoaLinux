@@ -49,14 +49,34 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 | Neofetch | `neofetch/config.conf` | Fetch com nomes estoicos |
 | Zsh | `zsh/.zshrc` | Shell com citações e prompt Ι |
 | Bash | `zsh/.bashrc` | Alternativa Bash |
-| Stoa Fetch | `scripts/stoa-fetch.sh` | Fetch personalizado com coluna grega |
-| Stoa Walls | `scripts/stoa-walls.sh` | Gerador de wallpapers minimalistas |
-| Memento Mori | `scripts/stoa-memento.sh` | Toggle do widget Memento Mori |
-| Memento Data | `scripts/stoa-memento-data.sh` | Dados JSON para o widget eww |
-| GPU Setup | `scripts/stoa-gpu-setup.sh` | Configuração automática CPU + GPU |
-| Keybinds Bar | `scripts/stoa-keybinds-bar.sh` | Atalhos na Waybar (toggle) |
 | Stoa Config | `stoa.conf` | Configurações do Stoa (keybinds, etc.) |
 | Cores | `colors.sh` | Referência central da paleta |
+
+## Scripts & Ferramentas
+
+| Script | Descrição |
+|--------|-----------|
+| `stoa-fetch` | System fetch com arte ASCII de templo grego |
+| `stoa-walls` | Gerador de wallpapers minimalistas (ImageMagick) |
+| `stoa-memento` | Toggle do widget Memento Mori (eww) |
+| `stoa-memento-data` | Dados JSON para o widget (dias/semanas/anos vividos) |
+| `stoa-gpu-setup` | Configuração automática CPU + GPU (NVIDIA/AMD/Intel) |
+| `stoa-keybinds-bar` | Atalhos na Waybar (módulo toggle) |
+| `stoa-osd` | OSD para volume, brilho, CapsLock/NumLock (1% incrementos) |
+| `stoa-clipboard` | Clipboard manager com favoritos fixados (wl-clipboard + cliphist + rofi) |
+| `stoa-quotes-sync` | Frases estoicas da internet com rotação playlist |
+
+### PowerTools
+
+Ferramentas inspiradas no Microsoft PowerToys, adaptadas para Linux/Wayland:
+
+| Script | Equivalente PowerToys | Descrição |
+|--------|----------------------|-----------|
+| `stoa-locksmith` | File Locksmith | Descobre qual processo está travando um arquivo (`lsof` + rofi) |
+| `stoa-resize` | Image Resizer | Redimensiona múltiplas imagens de uma vez com presets (ImageMagick + rofi) |
+| `stoa-paste` | Advanced Paste | Cola clipboard em diferentes formatos: texto puro, MAIÚSCULAS, minúsculas, Title Case, snake_case, camelCase, JSON formatado, Markdown limpo |
+| `stoa-ocr` | Text Extractor | Extrai texto de áreas da tela usando OCR — suporta inglês e português (`grim` + `slurp` + `tesseract`) |
+| `stoa-rename` | PowerRename | Renomeia arquivos em lote com regex, preview via rofi, e proteção contra conflitos |
 
 ## Instalação
 
@@ -120,18 +140,21 @@ sudo pacman -S alacritty neovim rofi dunst zathura zathura-pdf-mupdf mpv imv lf 
 sudo pacman -S qt5ct qt6ct papirus-icon-theme imagemagick
 
 # Áudio, fontes, extras
-sudo pacman -S pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl
+sudo pacman -S pipewire pipewire-pulse wireplumber brightnessctl jq curl
 sudo pacman -S ttf-jetbrains-mono ttf-font-awesome
 sudo pacman -S zsh git base-devel
+
+# Clipboard
+sudo pacman -S wl-clipboard cliphist
+
+# PowerTools (OCR, paste, etc.)
+sudo pacman -S tesseract tesseract-data-eng tesseract-data-por lsof wtype
 
 # Widgets
 sudo pacman -S eww
 
-# Brave Browser + Obsidian (AUR)
-git clone https://aur.archlinux.org/brave-bin.git /tmp/brave-bin
-cd /tmp/brave-bin && makepkg -si
-git clone https://aur.archlinux.org/obsidian.git /tmp/obsidian
-cd /tmp/obsidian && makepkg -si
+# Brave Browser + Obsidian + Satty (AUR)
+yay -S brave-bin obsidian satty
 ```
 
 ### GPU + CPU Setup
@@ -188,13 +211,22 @@ startx
 | `Super+D` | Launcher (Rofi) |
 | `Super+O` | Notas (Obsidian) |
 | `Super+M` | Memento Mori (eww widget) |
+| `Super+V` | Clipboard (histórico) |
+| `Super+Shift+V` | Clipboard (fixar/desfixar) |
+| `Super+Shift+T` | OCR — extrair texto da tela |
+| `Super+Shift+P` | Advanced Paste (formatos) |
 | `Super+/` | Atalhos na barra (toggle) |
 | `Super+Q` | Fechar janela |
 | `Super+F` | Fullscreen |
+| `Super+R` | Modo resize (HJKL) |
 | `Super+HJKL` | Navegação vim |
+| `Super+Shift+HJKL` | Mover janela |
 | `Super+1-0` | Workspaces I-X |
 | `Print` | Screenshot tela inteira |
 | `Super+Print` | Screenshot seleção |
+| `Scroll na Waybar` | Volume +/- |
+| `XF86Audio*` | Volume (OSD) |
+| `XF86MonBrightness*` | Brilho (OSD) |
 
 ## Funcionalidades
 
@@ -207,13 +239,17 @@ startx
 - **Aparência unificada** — GTK e Qt usam mesmo tema escuro, fonte e ícones via qt5ct/qt6ct
 - **Workspaces em numerais romanos** (I, II, III... X)
 - **Citação estoica aleatória** ao abrir o terminal
+- **Quotes Sync** — busca frases estoicas de APIs externas com rotação playlist (cada app recebe uma frase diferente)
+- **OSD** — indicadores visuais para volume, brilho, CapsLock e NumLock com incrementos de 1%
+- **Clipboard Manager** — histórico com favoritos fixados via rofi
+- **PowerTools** — ferramentas inspiradas no PowerToys: locksmith, resize, paste, OCR, rename
 - **Prompt com coluna grega** (Ι) em bronze com branch git
 - **stoa-fetch** — system fetch com arte ASCII de templo grego
 - **stoa-walls** — gerador de wallpapers com ImageMagick
 - **Navegação vim** (hjkl) em Hyprland, i3 e lf
 - **Tema Neovim completo** com suporte a Treesitter
 - **Man pages coloridas** na paleta estoica
-- **Screenshot** — grim+slurp (Wayland) / maim (Xorg)
+- **Screenshot** — grim+slurp+satty (Wayland) / maim (Xorg)
 - **XDG MIME** configurado — Brave para web, zathura para PDF, mpv para vídeo, imv para imagens
 
 ## Filosofia do Design
