@@ -116,11 +116,18 @@ _link "${STOA_DIR}/scripts/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-key
 _link "${STOA_DIR}/scripts/stoa-osd.sh"             "${HOME}/.local/bin/stoa-osd"
 _link "${STOA_DIR}/scripts/stoa-clipboard.sh"      "${HOME}/.local/bin/stoa-clipboard"
 _link "${STOA_DIR}/scripts/stoa-quotes-sync.sh"   "${HOME}/.local/bin/stoa-quotes-sync"
+_link "${STOA_DIR}/scripts/stoa-locksmith.sh"    "${HOME}/.local/bin/stoa-locksmith"
+_link "${STOA_DIR}/scripts/stoa-resize.sh"       "${HOME}/.local/bin/stoa-resize"
+_link "${STOA_DIR}/scripts/stoa-paste.sh"        "${HOME}/.local/bin/stoa-paste"
+_link "${STOA_DIR}/scripts/stoa-ocr.sh"          "${HOME}/.local/bin/stoa-ocr"
+_link "${STOA_DIR}/scripts/stoa-rename.sh"       "${HOME}/.local/bin/stoa-rename"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
          "${HOME}/.local/bin/stoa-osd" "${HOME}/.local/bin/stoa-clipboard" \
-         "${HOME}/.local/bin/stoa-quotes-sync"
+         "${HOME}/.local/bin/stoa-quotes-sync" "${HOME}/.local/bin/stoa-locksmith" \
+         "${HOME}/.local/bin/stoa-resize" "${HOME}/.local/bin/stoa-paste" \
+         "${HOME}/.local/bin/stoa-ocr" "${HOME}/.local/bin/stoa-rename"
 
 # ── XDG MIME defaults (browser + apps) ──
 MIME_DIR="${HOME}/.local/share/applications"
@@ -171,4 +178,6 @@ echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+O       Notas (Obsidian)${R}"
 echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
 echo -e "  ${S}  Super+/       Atalhos na barra (toggle)${R}"
+echo -e "  ${S}  Super+Shift+T OCR — extrair texto da tela${R}"
+echo -e "  ${S}  Super+Shift+P Colar com formatação avançada${R}"
 echo ""

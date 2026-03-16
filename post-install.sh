@@ -68,6 +68,9 @@ STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop"
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
 
+# PowerTools (OCR, paste, etc.)
+POWERTOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
+
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard cliphist"
 
@@ -86,7 +89,7 @@ UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl jq curl"
 # Shell e extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $CLIPBOARD_PKGS $WIDGET_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $POWERTOOLS_PKGS $CLIPBOARD_PKGS $WIDGET_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -96,6 +99,7 @@ echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Estoicos:   ${STOA_APPS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
+echo -e "  ${S}PowerTools: ${POWERTOOLS_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fontes:     ${FONT_PKGS}${R}"
 echo -e "  ${S}Tema:       ${THEME_PKGS}${R}"
@@ -246,6 +250,11 @@ echo -e "  ${S}  stoa-fetch        — System fetch estoico${R}"
 echo -e "  ${S}  stoa-walls        — Gerar wallpapers${R}"
 echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Buscar frases estoicas da internet${R}"
+echo -e "  ${S}  stoa-ocr          — Extrair texto da tela (OCR)${R}"
+echo -e "  ${S}  stoa-paste        — Colar com formatação avançada${R}"
+echo -e "  ${S}  stoa-resize       — Redimensionar imagens em lote${R}"
+echo -e "  ${S}  stoa-rename       — Renomear arquivos com regex${R}"
+echo -e "  ${S}  stoa-locksmith    — Ver quem trava um arquivo${R}"
 echo ""
 echo -e "  ${O}\"O caminho do sábio está preparado.\" — Sêneca${R}"
 echo ""
