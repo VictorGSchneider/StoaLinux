@@ -55,8 +55,14 @@
         "pipewire",
         "pipewire-pulse",
         "pipewire-alsa",
-        "wireplumber"
-        "base-devel"
+        "wireplumber",
+        "tesseract",
+        "tesseract-data-eng",
+        "tesseract-data-por",
+        "wtype",
+        "jq",
+        "curl",
+        "lsof"
     ],
     "parallel downloads": 5,
     "profile_config": {

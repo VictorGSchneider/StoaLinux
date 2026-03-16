@@ -154,15 +154,15 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     echo -e "  ${O}[✓] yay instalado.${R}"
 
     # ── Pacotes AUR ──
-    echo -e "  ${S}Instalando pacotes AUR: brave-bin, obsidian, eww...${R}"
+    echo -e "  ${S}Instalando pacotes AUR: brave-bin, obsidian, eww, satty...${R}"
     arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-        "yay -S --needed --noconfirm brave-bin obsidian eww" 2>/dev/null || true
+        "yay -S --needed --noconfirm brave-bin obsidian eww satty" 2>/dev/null || true
     echo -e "  ${O}[✓] Pacotes AUR instalados.${R}"
 else
     echo -e "  ${T}[!] yay não pôde ser instalado no chroot.${R}"
     echo -e "  ${S}Instale após o primeiro boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
-    echo -e "  ${B}    yay -S brave-bin obsidian eww${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian eww satty${R}"
 fi
 
 # Remover sudo temporário
