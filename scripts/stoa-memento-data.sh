@@ -69,6 +69,9 @@ stoa_quotes=(
 idx=$(( RANDOM % ${#stoa_quotes[@]} ))
 quote="${stoa_quotes[$idx]}"
 
+# Escapar aspas duplas no quote para JSON válido
+quote_escaped="${quote//\"/\\\"}"
+
 # ── Output JSON ──
 cat <<JSON
 {
@@ -81,6 +84,6 @@ cat <<JSON
     "life_years": $LIFE_YEARS,
     "current_year": $(date +%Y),
     "today": "$(date '+%d %b %Y')",
-    "quote": "$quote"
+    "quote": "$quote_escaped"
 }
 JSON

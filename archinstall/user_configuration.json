@@ -49,7 +49,11 @@
         "git",
         "zsh",
         "eww",
-        "base-devel"
+        "base-devel",
+        "brightnessctl",
+        "pipewire",
+        "pipewire-pulse",
+        "wireplumber"
     ],
     "parallel downloads": 5,
     "profile_config": {
