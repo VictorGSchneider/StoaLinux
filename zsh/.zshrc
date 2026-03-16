@@ -5,24 +5,14 @@
 # ╚══════════════════════════════════════════════════════════════╝
 
 # ── Citação Estoica (exibida ao abrir o terminal) ──
-# Arquivo central: ~/.local/share/stoa/quotes.json
-# Sync diário + rotação a cada 20 min via stoa-quotes-sync
+# Lê de ~/.local/share/stoa/current (atualizado a cada 20 min)
 
-# ── Exibir citação ao iniciar ──
 _stoa_greeting() {
-    local qfile="${XDG_DATA_HOME:-$HOME/.local/share}/stoa/quotes.json"
+    local current="${XDG_DATA_HOME:-$HOME/.local/share}/stoa/current"
     local quote=""
-    if [ -f "$qfile" ] && command -v jq &>/dev/null; then
-        local total slot idx
-        total=$(jq 'length' "$qfile" 2>/dev/null)
-        if [ -n "$total" ] && [ "$total" -gt 0 ]; then
-            slot=$(( $(date +%s) / 1200 ))
-            idx=$(( slot % total ))
-            quote=$(jq -r ".[$idx]" "$qfile" 2>/dev/null)
-        fi
-    fi
-    # Sync diário em background (não bloqueia o terminal)
-    command -v stoa-quotes-sync &>/dev/null && stoa-quotes-sync random &>/dev/null &
+    [ -s "$current" ] && quote=$(<"$current")
+    # Tick em background: avança frase se >20min, sync se boot novo/playlist vazia
+    command -v stoa-quotes-sync &>/dev/null && stoa-quotes-sync tick &>/dev/null &
     quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
     echo ""
     echo "  \033[38;2;196;154;92m╔══════════════════════════════════════════════════════╗\033[0m"
