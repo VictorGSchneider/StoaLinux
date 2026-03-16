@@ -48,12 +48,7 @@
         "papirus-icon-theme",
         "git",
         "zsh",
-        "eww",
-        "base-devel",
-        "brightnessctl",
-        "pipewire",
-        "pipewire-pulse",
-        "wireplumber"
+        "base-devel"
     ],
     "parallel downloads": 5,
     "profile_config": {
