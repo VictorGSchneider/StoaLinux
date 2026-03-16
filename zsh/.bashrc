@@ -4,23 +4,16 @@
 # ║   o que tem de fazer." — Epicteto                            ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# ── Citações Estoicas ──
-stoa_quotes=(
-    "A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio"
-    "Não sofras antes do tempo. — Sêneca"
-    "Não é o que te acontece, mas como reages ao que te acontece. — Epicteto"
-    "A riqueza consiste não em ter grandes posses, mas em ter poucas necessidades. — Epicteto"
-    "O impedimento à ação avança a ação. — Marco Aurélio"
-    "A virtude é o único bem. — Zenão de Cítio"
-    "Sorte é o que acontece quando a preparação encontra a oportunidade. — Sêneca"
-    "A alma torna-se tingida pela cor dos seus pensamentos. — Marco Aurélio"
-    "Memento Mori — Lembra-te de que vais morrer."
-    "Amor Fati — Ama o teu destino."
-)
+# ── Citação Estoica ──
+# Usa banco central de frases (~/.local/share/stoa/quotes.json)
+# Sync: stoa-quotes-sync [N]  |  Manual: stoa-quotes-sync add "frase"
 
 _stoa_greeting() {
-    local idx=$(( RANDOM % ${#stoa_quotes[@]} ))
-    local quote="${stoa_quotes[$idx]}"
+    local quote
+    if command -v stoa-quotes-sync &>/dev/null; then
+        quote=$(stoa-quotes-sync random 2>/dev/null)
+    fi
+    quote="${quote:-A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio}"
     echo ""
     echo -e "  \033[38;2;196;154;92m╔══════════════════════════════════════════════════════╗\033[0m"
     echo -e "  \033[38;2;196;154;92m║\033[0m  \033[38;2;212;207;196;3m${quote}\033[0m"

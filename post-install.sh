@@ -81,7 +81,7 @@ FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
 THEME_PKGS="qt5ct qt6ct"
 
 # Áudio + utilidades
-UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl"
+UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl jq curl"
 
 # Shell e extras
 SHELL_PKGS="zsh git base-devel"
@@ -242,9 +242,10 @@ echo -e "  ${B}  Hyprland (Wayland):   Hyprland${R}"
 echo -e "  ${B}  i3 (Xorg fallback):   startx${R}"
 echo ""
 echo -e "  ${F}Comandos do Stoa:${R}"
-echo -e "  ${S}  stoa-fetch  — System fetch estoico${R}"
-echo -e "  ${S}  stoa-walls  — Gerar wallpapers${R}"
-echo -e "  ${S}  stoa-memento — Memento Mori widget${R}"
+echo -e "  ${S}  stoa-fetch        — System fetch estoico${R}"
+echo -e "  ${S}  stoa-walls        — Gerar wallpapers${R}"
+echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
+echo -e "  ${S}  stoa-quotes-sync  — Buscar frases estoicas da internet${R}"
 echo ""
 echo -e "  ${O}\"O caminho do sábio está preparado.\" — Sêneca${R}"
 echo ""
