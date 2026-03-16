@@ -88,8 +88,9 @@
 
     "custom/clipboard": {
         "format": "",
-        "tooltip-format": "Clipboard (Super+V)",
-        "on-click": "cliphist list | rofi -dmenu -p 'Clipboard' -config ~/.config/rofi/config.rasi | cliphist decode | wl-copy",
+        "tooltip-format": "Clipboard (Super+V) │ Fixar (Super+Shift+V)",
+        "on-click": "~/.local/bin/stoa-clipboard show",
+        "on-click-right": "~/.local/bin/stoa-clipboard pin",
         "interval": "once"
     },
 
