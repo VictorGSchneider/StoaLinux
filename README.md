@@ -120,7 +120,7 @@ sudo pacman -S alacritty neovim rofi dunst zathura zathura-pdf-mupdf mpv imv lf 
 sudo pacman -S qt5ct qt6ct papirus-icon-theme imagemagick
 
 # Áudio, fontes, extras
-sudo pacman -S pipewire pipewire-pulse wireplumber brightnessctl
+sudo pacman -S pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl
 sudo pacman -S ttf-jetbrains-mono ttf-font-awesome
 sudo pacman -S zsh git base-devel
 

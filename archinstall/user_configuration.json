@@ -50,6 +50,12 @@
         "papirus-icon-theme",
         "git",
         "zsh",
+        "eww",
+        "base-devel",
+        "pipewire",
+        "pipewire-pulse",
+        "pipewire-alsa",
+        "wireplumber"
         "base-devel"
     ],
     "parallel downloads": 5,
