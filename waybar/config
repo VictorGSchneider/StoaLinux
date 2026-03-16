@@ -5,7 +5,7 @@
     "spacing": 0,
 
     "modules-left": ["hyprland/workspaces"],
-    "modules-center": [],
+    "modules-center": ["custom/keybinds", "hyprland/window"],
     "modules-right": [
         "disk",
         "network",
@@ -76,5 +76,29 @@
     "clock": {
         "format": " {:%a %d %b  %H:%M}",
         "tooltip-format": "<tt>{calendar}</tt>"
+    },
+
+    "custom/keybinds": {
+        "exec": "~/.local/bin/stoa-keybinds-bar",
+        "return-type": "json",
+        "interval": 5,
+        "tooltip": true
+    },
+
+    "hyprland/window": {
+        "format": "{class}~{title}",
+        "separate-outputs": true,
+        "rewrite": {
+            "brave-browser~(.*)": "Super+B │ $1",
+            "obsidian~(.*)": "Super+O │ $1",
+            "Alacritty~.*btop.*": "Super+N │ btop",
+            "Alacritty~.*lf.*": "Super+E │ lf",
+            "Alacritty~(.*)": "Super+⏎ │ $1",
+            "org.pwmt.zathura~(.*)": "$1",
+            "mpv~(.*)": "$1",
+            "imv~(.*)": "$1",
+            "(.*)~(.*)": "$2",
+            "": ""
+        }
     }
 }

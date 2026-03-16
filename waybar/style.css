@@ -76,6 +76,22 @@ window#waybar {
     color: @stone;
 }
 
+/* ── Keybinds ── */
+
+#custom-keybinds {
+    padding: 0 12px;
+    color: @stone;
+    font-size: 11px;
+}
+
+/* ── Active Window ── */
+
+#window {
+    padding: 0 12px;
+    color: @bronze;
+    font-size: 12px;
+}
+
 tooltip {
     background-color: @bg_light;
     border: 1px solid @stone;

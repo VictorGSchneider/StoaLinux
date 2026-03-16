@@ -97,14 +97,25 @@ mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 # ── Environment (toolkit unification) ──
 _link "${STOA_DIR}/environment/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
 
+# ── Stoa config (preserva configurações do usuário) ──
+if [ ! -f "${CONFIG_DIR}/stoa/stoa.conf" ]; then
+    cp "${STOA_DIR}/stoa.conf" "${CONFIG_DIR}/stoa/stoa.conf"
+    echo -e "  ${O}[+] ${CONFIG_DIR}/stoa/stoa.conf${R}"
+else
+    echo -e "  ${S}[~] stoa.conf já existe (preservado)${R}"
+fi
+
 # ── Scripts ──
 mkdir -p "${HOME}/.local/bin"
-_link "${STOA_DIR}/scripts/stoa-fetch.sh"        "${HOME}/.local/bin/stoa-fetch"
-_link "${STOA_DIR}/scripts/stoa-walls.sh"        "${HOME}/.local/bin/stoa-walls"
-_link "${STOA_DIR}/scripts/stoa-memento.sh"      "${HOME}/.local/bin/stoa-memento"
-_link "${STOA_DIR}/scripts/stoa-memento-data.sh" "${HOME}/.local/bin/stoa-memento-data"
+_link "${STOA_DIR}/scripts/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"
+_link "${STOA_DIR}/scripts/stoa-walls.sh"           "${HOME}/.local/bin/stoa-walls"
+_link "${STOA_DIR}/scripts/stoa-memento.sh"         "${HOME}/.local/bin/stoa-memento"
+_link "${STOA_DIR}/scripts/stoa-memento-data.sh"    "${HOME}/.local/bin/stoa-memento-data"
+_link "${STOA_DIR}/scripts/stoa-keybinds-bar.sh"    "${HOME}/.local/bin/stoa-keybinds-bar"
+_link "${STOA_DIR}/scripts/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-keybinds-toggle"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
-         "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data"
+         "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
+         "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle"
 
 # ── XDG MIME defaults (browser + apps) ──
 MIME_DIR="${HOME}/.local/share/applications"
@@ -154,4 +165,5 @@ echo -e "  ${S}  Super+N       Monitor (btop)${R}"
 echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+O       Notas (Obsidian)${R}"
 echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
+echo -e "  ${S}  Super+/       Atalhos na barra (toggle)${R}"
 echo ""
