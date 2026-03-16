@@ -68,6 +68,9 @@ STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop"
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
 
+# Clipboard — Wayland
+CLIPBOARD_PKGS="wl-clipboard cliphist"
+
 # Widgets (eww — Memento Mori)
 WIDGET_PKGS="eww"
 
@@ -79,11 +82,12 @@ THEME_PKGS="qt5ct qt6ct"
 
 # Áudio + utilidades
 UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl"
+UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl jq curl"
 
 # Shell e extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $WIDGET_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $CLIPBOARD_PKGS $WIDGET_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -93,6 +97,7 @@ echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Estoicos:   ${STOA_APPS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
+echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fontes:     ${FONT_PKGS}${R}"
 echo -e "  ${S}Tema:       ${THEME_PKGS}${R}"
 echo -e "  ${S}Áudio:      ${UTIL_PKGS}${R}"
@@ -145,6 +150,26 @@ if [ "$INSTALL_PKGS" = "s" ]; then
         echo -e "  ${O}[✓] Obsidian instalado.${R}"
     else
         echo -e "  ${S}[~] Obsidian já instalado.${R}"
+    fi
+
+    # Satty — Screenshot editor (AUR)
+    echo ""
+    if ! command -v satty &>/dev/null; then
+        echo -e "  ${F}Instalando Satty (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm satty
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm satty
+        else
+            echo -e "  ${S}Instalando Satty manualmente via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/satty.git "$_tmpdir/satty"
+            (cd "$_tmpdir/satty" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Satty instalado.${R}"
+    else
+        echo -e "  ${S}[~] Satty já instalado.${R}"
     fi
 else
     echo -e "  ${S}[~] Pacotes pulados.${R}"
@@ -218,9 +243,10 @@ echo -e "  ${B}  Hyprland (Wayland):   Hyprland${R}"
 echo -e "  ${B}  i3 (Xorg fallback):   startx${R}"
 echo ""
 echo -e "  ${F}Comandos do Stoa:${R}"
-echo -e "  ${S}  stoa-fetch  — System fetch estoico${R}"
-echo -e "  ${S}  stoa-walls  — Gerar wallpapers${R}"
-echo -e "  ${S}  stoa-memento — Memento Mori widget${R}"
+echo -e "  ${S}  stoa-fetch        — System fetch estoico${R}"
+echo -e "  ${S}  stoa-walls        — Gerar wallpapers${R}"
+echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
+echo -e "  ${S}  stoa-quotes-sync  — Buscar frases estoicas da internet${R}"
 echo ""
 echo -e "  ${O}\"O caminho do sábio está preparado.\" — Sêneca${R}"
 echo ""

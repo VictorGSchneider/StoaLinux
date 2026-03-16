@@ -13,6 +13,12 @@
     notification_limit = 5
 
     progress_bar = true
+    progress_bar_height = 8
+    progress_bar_frame_width = 1
+    progress_bar_min_width = 200
+    progress_bar_max_width = 280
+    progress_bar_corner_radius = 3
+    highlight = "#c49a5c"
     indicate_hidden = yes
     shrink = no
     separator_height = 2

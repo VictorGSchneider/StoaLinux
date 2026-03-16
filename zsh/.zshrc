@@ -4,29 +4,12 @@
 # ║   o que tem de fazer." — Epicteto                            ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# ── Citações Estoicas (exibida ao abrir o terminal) ──
-stoa_quotes=(
-    "A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio"
-    "Não sofras antes do tempo. — Sêneca"
-    "Não é o que te acontece, mas como reages ao que te acontece. — Epicteto"
-    "A riqueza consiste não em ter grandes posses, mas em ter poucas necessidades. — Epicteto"
-    "O impedimento à ação avança a ação. O que se interpõe no caminho torna-se o caminho. — Marco Aurélio"
-    "Temos duas orelhas e uma boca para ouvir o dobro do que falamos. — Zenão de Cítio"
-    "A virtude é o único bem. — Zenão de Cítio"
-    "Quem vive sem loucura não é tão sábio quanto pensa. — Sêneca"
-    "Sorte é o que acontece quando a preparação encontra a oportunidade. — Sêneca"
-    "Se queres melhorar, aceita parecer ignorante ou estúpido. — Epicteto"
-    "Perde quem se dá por perdido; a coragem não permite a fortuna adversa. — Sêneca"
-    "Ama o teu destino. — Nietzsche (inspirado nos estoicos)"
-    "A alma torna-se tingida pela cor dos seus pensamentos. — Marco Aurélio"
-    "Memento Mori — Lembra-te de que vais morrer."
-    "Amor Fati — Ama o teu destino."
-)
+# ── Citação Estoica (cada terminal recebe uma frase diferente) ──
 
-# ── Exibir citação ao iniciar ──
 _stoa_greeting() {
-    local idx=$(( RANDOM % ${#stoa_quotes[@]} + 1 ))
-    local quote="${stoa_quotes[$idx]}"
+    local quote=""
+    command -v stoa-quotes-sync &>/dev/null && quote=$(stoa-quotes-sync next 2>/dev/null)
+    quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
     echo ""
     echo "  \033[38;2;196;154;92m╔══════════════════════════════════════════════════════╗\033[0m"
     echo "  \033[38;2;196;154;92m║\033[0m  \033[38;2;212;207;196;3m${quote}\033[0m"

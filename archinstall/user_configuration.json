@@ -38,6 +38,8 @@
         "grim",
         "slurp",
         "maim",
+        "wl-clipboard",
+        "cliphist",
         "feh",
         "imagemagick",
         "brightnessctl",
@@ -54,6 +56,7 @@
         "pipewire-pulse",
         "pipewire-alsa",
         "wireplumber"
+        "base-devel"
     ],
     "parallel downloads": 5,
     "profile_config": {

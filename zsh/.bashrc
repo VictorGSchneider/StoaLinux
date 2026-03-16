@@ -22,10 +22,12 @@ stoa_quotes=(
     "Memento Mori — Lembra-te de que vais morrer."
     "Amor Fati — Ama o teu destino."
 )
+# ── Citação Estoica (cada terminal recebe uma frase diferente) ──
 
 _stoa_greeting() {
-    local idx=$(( RANDOM % ${#stoa_quotes[@]} ))
-    local quote="${stoa_quotes[$idx]}"
+    local quote=""
+    command -v stoa-quotes-sync &>/dev/null && quote=$(stoa-quotes-sync next 2>/dev/null)
+    quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
     echo ""
     echo -e "  \033[38;2;196;154;92m╔══════════════════════════════════════════════════════╗\033[0m"
     echo -e "  \033[38;2;196;154;92m║\033[0m  \033[38;2;212;207;196;3m${quote}\033[0m"
