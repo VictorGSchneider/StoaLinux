@@ -54,6 +54,8 @@ Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na
 | Memento Mori | `scripts/stoa-memento.sh` | Toggle do widget Memento Mori |
 | Memento Data | `scripts/stoa-memento-data.sh` | Dados JSON para o widget eww |
 | GPU Setup | `scripts/stoa-gpu-setup.sh` | Configuração automática CPU + GPU |
+| Keybinds Bar | `scripts/stoa-keybinds-bar.sh` | Atalhos na Waybar (toggle) |
+| Stoa Config | `stoa.conf` | Configurações do Stoa (keybinds, etc.) |
 | Cores | `colors.sh` | Referência central da paleta |
 
 ## Instalação
@@ -186,6 +188,7 @@ startx
 | `Super+D` | Launcher (Rofi) |
 | `Super+O` | Notas (Obsidian) |
 | `Super+M` | Memento Mori (eww widget) |
+| `Super+/` | Atalhos na barra (toggle) |
 | `Super+Q` | Fechar janela |
 | `Super+F` | Fullscreen |
 | `Super+HJKL` | Navegação vim |

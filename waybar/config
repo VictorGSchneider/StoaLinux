@@ -5,7 +5,7 @@
     "spacing": 0,
 
     "modules-left": ["hyprland/workspaces"],
-    "modules-center": [],
+    "modules-center": ["custom/keybinds"],
     "modules-right": [
         "disk",
         "network",
@@ -76,5 +76,12 @@
     "clock": {
         "format": " {:%a %d %b  %H:%M}",
         "tooltip-format": "<tt>{calendar}</tt>"
+    },
+
+    "custom/keybinds": {
+        "exec": "~/.local/bin/stoa-keybinds-bar",
+        "return-type": "json",
+        "interval": 5,
+        "tooltip": true
     }
 }
