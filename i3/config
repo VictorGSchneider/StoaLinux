@@ -140,18 +140,18 @@ mode "resize" {
 }
 bindsym $mod+r mode "resize"
 
-# ── Volume ──
-bindsym XF86AudioRaiseVolume exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
-bindsym XF86AudioLowerVolume exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-bindsym XF86AudioMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+# ── Volume (via stoa-osd) ──
+bindsym XF86AudioRaiseVolume exec --no-startup-id ~/.local/bin/stoa-osd volume-up
+bindsym XF86AudioLowerVolume exec --no-startup-id ~/.local/bin/stoa-osd volume-down
+bindsym XF86AudioMute exec --no-startup-id ~/.local/bin/stoa-osd volume-mute
 
-# ── Brilho ──
-bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set +10%
-bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
+# ── Brilho (via stoa-osd) ──
+bindsym XF86MonBrightnessUp exec --no-startup-id ~/.local/bin/stoa-osd brightness-up
+bindsym XF86MonBrightnessDown exec --no-startup-id ~/.local/bin/stoa-osd brightness-down
 
 # ── Screenshot ──
-bindsym Print exec --no-startup-id maim ~/Imagens/screenshot-$(date +%s).png
-bindsym $mod+Print exec --no-startup-id maim -s ~/Imagens/screenshot-$(date +%s).png
+bindsym Print exec --no-startup-id maim ~/Imagens/screenshots/screenshot-$(date +%s).png
+bindsym $mod+Print exec --no-startup-id maim -s ~/Imagens/screenshots/screenshot-$(date +%s).png
 
 # ── Autostart ──
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b

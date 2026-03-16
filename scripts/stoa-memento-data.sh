@@ -52,13 +52,14 @@ quote=""
 command -v stoa-quotes-sync &>/dev/null && quote=$(stoa-quotes-sync next 2>/dev/null)
 quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
 
-# Escapar aspas duplas no quote para JSON válido
+# Escapar aspas duplas para JSON válido
 quote_escaped="${quote//\"/\\\"}"
+name_escaped="${NAME//\"/\\\"}"
 
 # ── Output JSON ──
 cat <<JSON
 {
-    "name": "$NAME",
+    "name": "$name_escaped",
     "days_lived": $days_lived,
     "weeks_lived": $weeks_lived,
     "years_lived": $years_lived,

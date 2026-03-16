@@ -50,7 +50,19 @@
         "papirus-icon-theme",
         "git",
         "zsh",
-        "base-devel"
+        "eww",
+        "base-devel",
+        "pipewire",
+        "pipewire-pulse",
+        "pipewire-alsa",
+        "wireplumber",
+        "tesseract",
+        "tesseract-data-eng",
+        "tesseract-data-por",
+        "wtype",
+        "jq",
+        "curl",
+        "lsof"
     ],
     "parallel downloads": 5,
     "profile_config": {

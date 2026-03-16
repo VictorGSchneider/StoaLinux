@@ -263,4 +263,4 @@ startx
 
 ## Licença
 
-MIT
+GPL-3.0
