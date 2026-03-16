@@ -74,8 +74,8 @@ POWERTOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard cliphist"
 
-# Widgets (eww — Memento Mori)
-WIDGET_PKGS="eww"
+# Widgets (eww — AUR, Wayland)
+WIDGET_PKGS="eww-wayland"
 
 # Fontes e tema
 FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
@@ -89,7 +89,7 @@ UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq cu
 # Shell e extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $POWERTOOLS_PKGS $CLIPBOARD_PKGS $WIDGET_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $POWERTOOLS_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -104,7 +104,7 @@ echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fontes:     ${FONT_PKGS}${R}"
 echo -e "  ${S}Tema:       ${THEME_PKGS}${R}"
 echo -e "  ${S}Áudio:      ${UTIL_PKGS}${R}"
-echo -e "  ${S}Widgets:    ${WIDGET_PKGS}${R}"
+echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
 echo ""
 
@@ -173,6 +173,26 @@ if [ "$INSTALL_PKGS" = "s" ]; then
         echo -e "  ${O}[✓] Satty instalado.${R}"
     else
         echo -e "  ${S}[~] Satty já instalado.${R}"
+    fi
+
+    # eww — Widget system (AUR, Wayland)
+    echo ""
+    if ! command -v eww &>/dev/null; then
+        echo -e "  ${F}Instalando eww-wayland (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm eww-wayland
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm eww-wayland
+        else
+            echo -e "  ${S}Instalando eww-wayland manualmente via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/eww-wayland.git "$_tmpdir/eww-wayland"
+            (cd "$_tmpdir/eww-wayland" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] eww-wayland instalado.${R}"
+    else
+        echo -e "  ${S}[~] eww já instalado.${R}"
     fi
 else
     echo -e "  ${S}[~] Pacotes pulados.${R}"

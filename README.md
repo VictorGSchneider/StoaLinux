@@ -150,11 +150,8 @@ sudo pacman -S wl-clipboard cliphist
 # PowerTools (OCR, paste, etc.)
 sudo pacman -S tesseract tesseract-data-eng tesseract-data-por lsof wtype
 
-# Widgets
-sudo pacman -S eww
-
-# Brave Browser + Obsidian + Satty (AUR)
-yay -S brave-bin obsidian satty
+# AUR: Widgets, Browser, Notes, Screenshot editor
+yay -S eww-wayland brave-bin obsidian satty
 ```
 
 ### GPU + CPU Setup
