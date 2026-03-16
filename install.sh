@@ -95,7 +95,7 @@ _link "${STOA_DIR}/eww/eww.scss"  "${CONFIG_DIR}/eww/eww.scss"
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 
 # ── Diretório de screenshots ──
-mkdir -p "${HOME}/Imagens"
+mkdir -p "${HOME}/Imagens/screenshots"
 
 # ── Environment (toolkit unification) ──
 _link "${STOA_DIR}/environment/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
