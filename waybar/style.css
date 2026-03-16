@@ -76,6 +76,17 @@ window#waybar {
     color: @stone;
 }
 
+/* ── Clipboard ── */
+
+#custom-clipboard {
+    padding: 0 8px;
+    color: @fg_dim;
+}
+
+#custom-clipboard:hover {
+    color: @bronze;
+}
+
 /* ── Keybinds ── */
 
 #custom-keybinds {

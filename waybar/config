@@ -7,6 +7,7 @@
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["custom/keybinds", "hyprland/window"],
     "modules-right": [
+        "custom/clipboard",
         "disk",
         "network",
         "battery",
@@ -83,6 +84,13 @@
         "return-type": "json",
         "interval": 5,
         "tooltip": true
+    },
+
+    "custom/clipboard": {
+        "format": "",
+        "tooltip-format": "Clipboard (Super+V)",
+        "on-click": "cliphist list | rofi -dmenu -p 'Clipboard' -config ~/.config/rofi/config.rasi | cliphist decode | wl-copy",
+        "interval": "once"
     },
 
     "hyprland/window": {

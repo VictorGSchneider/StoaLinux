@@ -24,7 +24,7 @@ if [ "$STOA_SHOW_KEYBINDS" != "true" ]; then
 fi
 
 # Texto compacto para a barra
-TEXT="⏎ Term │ B Brave │ D Rofi │ E Arquivos │ N Monitor │ O Notas │ Q Fechar │ F Full │ HJKL Nav"
+TEXT="⏎ Term │ B Brave │ D Rofi │ E Arquivos │ N Monitor │ O Notas │ V Clipboard │ Q Fechar │ F Full │ HJKL Nav"
 
 # Tooltip completo
 TOOLTIP="╔═══ STOA KEYBINDS ═══╗\n"
@@ -35,6 +35,7 @@ TOOLTIP+="Super+E       Arquivos (lf)\n"
 TOOLTIP+="Super+N       Monitor (btop)\n"
 TOOLTIP+="Super+O       Obsidian\n"
 TOOLTIP+="Super+M       Memento Mori\n"
+TOOLTIP+="Super+V       Clipboard (histórico)\n"
 TOOLTIP+="Super+Q       Fechar janela\n"
 TOOLTIP+="Super+F       Fullscreen\n"
 TOOLTIP+="Super+Shift+Space  Flutuante\n"
@@ -44,7 +45,7 @@ TOOLTIP+="Super+Shift+HJKL  Mover janela\n"
 TOOLTIP+="Super+R       Modo resize\n"
 TOOLTIP+="Super+1-0     Workspaces I-X\n"
 TOOLTIP+="─────────────────────\n"
-TOOLTIP+="Print         Screenshot\n"
+TOOLTIP+="Print         Screenshot (satty)\n"
 TOOLTIP+="Super+Print   Screenshot (seleção)\n"
 TOOLTIP+="Super+/       Ocultar/mostrar atalhos\n"
 TOOLTIP+="╚═════════════════════╝"
