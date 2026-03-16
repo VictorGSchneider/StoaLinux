@@ -78,7 +78,7 @@ FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
 THEME_PKGS="qt5ct qt6ct"
 
 # Áudio + utilidades
-UTIL_PKGS="pipewire pipewire-pulse wireplumber brightnessctl"
+UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl"
 
 # Shell e extras
 SHELL_PKGS="zsh git base-devel"

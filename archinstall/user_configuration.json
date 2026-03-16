@@ -50,9 +50,9 @@
         "zsh",
         "eww",
         "base-devel",
-        "brightnessctl",
         "pipewire",
         "pipewire-pulse",
+        "pipewire-alsa",
         "wireplumber"
     ],
     "parallel downloads": 5,
