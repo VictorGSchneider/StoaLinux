@@ -63,15 +63,10 @@ _apply_stoa_theme() {
         hyprctl setcursor "${c:-Colloid-cursors}" 24 &>/dev/null
 }
 
-# ── Search (Pacman + AUR) ─────────────────────────────────────
+# ── Search (unified with source filter) ────────────────────────
 
-_search_install() {
-    local query
-    query=$(echo "" | _rofi "  Search (install)")
-    [ -z "$query" ] && return
-
-    _notify "Searching '$query'..."
-
+_search_pacman() {
+    local query="$1"
     local h; h=$(_helper)
     local results
 
@@ -81,11 +76,9 @@ _search_install() {
         results=$($h -Ss "$query" 2>/dev/null)
     fi
 
-    [ -z "$results" ] && { _notify "Nothing found"; return; }
+    [ -z "$results" ] && return
 
-    # Parse: "repo/name version (group)\n    description"
     local lines=()
-    local pkgs=()
     while IFS= read -r line1; do
         IFS= read -r line2 || true
         local repo_pkg ver desc
@@ -98,22 +91,54 @@ _search_install() {
         local status=""
         _is_installed "$pkg_name" && status="  [installed]"
 
-        local tag=""
-        [[ "$repo" == "aur" ]] && tag="AUR"
-        [ -n "$tag" ] && tag="($tag) "
+        local tag="[arch]"
+        [[ "$repo" == "aur" ]] && tag="[AUR]"
 
-        lines+=("${pkg_name}  ${tag}${ver}  ${desc:0:50}${status}")
-        pkgs+=("$pkg_name")
+        lines+=("${tag} ${pkg_name}  ${ver}  ${desc:0:45}${status}")
     done <<< "$results"
 
-    [ ${#lines[@]} -eq 0 ] && { _notify "Nothing found"; return; }
+    printf '%s\n' "${lines[@]}"
+}
 
-    local choice
-    choice=$(printf '%s\n' "${lines[@]}" | head -100 | _rofi "  Results ($query)")
-    [ -z "$choice" ] && return
+_search_flatpak_results() {
+    local query="$1"
+    command -v flatpak &>/dev/null || return
 
-    local sel_pkg
-    sel_pkg=$(echo "$choice" | awk '{print $1}')
+    local results
+    results=$(flatpak search "$query" --columns=name,application,description 2>/dev/null)
+    [ -z "$results" ] && return
+
+    while IFS=$'\t' read -r name app_id desc; do
+        [ -z "$name" ] && continue
+        local status=""
+        flatpak info "$app_id" &>/dev/null && status="  [installed]"
+        echo "[flatpak] ${name}  ${app_id}  ${desc:0:35}${status}"
+    done <<< "$results"
+}
+
+_search_snap_results() {
+    local query="$1"
+    command -v snap &>/dev/null || return
+
+    local results
+    results=$(snap find "$query" 2>/dev/null | tail -n +2)
+    [ -z "$results" ] && return
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name ver summary
+        name=$(echo "$line" | awk '{print $1}')
+        ver=$(echo "$line" | awk '{print $2}')
+        summary=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/ $//')
+        local status=""
+        snap list "$name" &>/dev/null 2>&1 && status="  [installed]"
+        echo "[snap] ${name}  ${ver}  ${summary:0:40}${status}"
+    done <<< "$results"
+}
+
+_handle_pacman_selection() {
+    local sel_pkg="$1"
+    local h; h=$(_helper)
 
     if _is_installed "$sel_pkg"; then
         local action
@@ -142,6 +167,159 @@ _search_install() {
         fi
         _is_installed "$sel_pkg" && _apply_stoa_theme && _notify "$sel_pkg installed"
     fi
+}
+
+_handle_flatpak_selection() {
+    local sel_id="$1"
+
+    if flatpak info "$sel_id" &>/dev/null; then
+        local action
+        action=$(_rofi_list "$sel_id [installed]" \
+            "  Run" \
+            "  Uninstall" \
+            "  App info")
+        case "$action" in
+            *Run*)       flatpak run "$sel_id" & disown ;;
+            *Uninstall*) _confirm "Remove $sel_id?" && _run_in_term "flatpak uninstall $sel_id" ;;
+            *info*)      flatpak info "$sel_id" 2>/dev/null | _rofi "  $sel_id" ;;
+        esac
+    else
+        _confirm "Install $sel_id from Flathub?" || return
+        _run_in_term "flatpak install flathub $sel_id"
+        _apply_stoa_theme
+        _notify "$sel_id installed (Flatpak)"
+    fi
+}
+
+_handle_snap_selection() {
+    local sel_pkg="$1"
+
+    if snap list "$sel_pkg" &>/dev/null 2>&1; then
+        local action
+        action=$(_rofi_list "$sel_pkg [installed]" \
+            "  Run" \
+            "  Remove" \
+            "  Info")
+        case "$action" in
+            *Run*)    snap run "$sel_pkg" & disown ;;
+            *Remove*) _confirm "Remove $sel_pkg?" && _run_in_term "sudo snap remove $sel_pkg" ;;
+            *Info*)   snap info "$sel_pkg" 2>/dev/null | _rofi "  $sel_pkg" ;;
+        esac
+    else
+        _confirm "Install $sel_pkg from Snap?" || return
+        _run_in_term "sudo snap install $sel_pkg"
+        _notify "$sel_pkg installed (Snap)"
+    fi
+}
+
+_search_install() {
+    # Source filter
+    local sources=("  All sources")
+    sources+=("  Arch official")
+    _has_aur && sources+=("  AUR")
+    command -v flatpak &>/dev/null && sources+=("  Flatpak (Flathub)")
+    command -v snap &>/dev/null && sources+=("  Snap Store")
+
+    local source_choice
+    source_choice=$(_rofi_list "  Filter by source" "${sources[@]}")
+    [ -z "$source_choice" ] && return
+
+    local query
+    query=$(echo "" | _rofi "  Search (install)")
+    [ -z "$query" ] && return
+
+    _notify "Searching '$query'..."
+
+    local all_results=""
+
+    case "$source_choice" in
+        *All*)
+            all_results+=$(_search_pacman "$query")
+            all_results+=$'\n'
+            all_results+=$(_search_flatpak_results "$query")
+            all_results+=$'\n'
+            all_results+=$(_search_snap_results "$query")
+            ;;
+        *"Arch official"*)
+            local results
+            results=$(pacman -Ss "$query" 2>/dev/null)
+            [ -n "$results" ] && {
+                local lines=()
+                while IFS= read -r line1; do
+                    IFS= read -r line2 || true
+                    local repo_pkg ver desc
+                    repo_pkg=$(echo "$line1" | awk '{print $1}')
+                    ver=$(echo "$line1" | awk '{print $2}')
+                    desc=$(echo "$line2" | sed 's/^[[:space:]]*//')
+                    local pkg_name="${repo_pkg#*/}"
+                    local repo="${repo_pkg%/*}"
+                    [[ "$repo" == "aur" ]] && continue
+                    local status=""
+                    _is_installed "$pkg_name" && status="  [installed]"
+                    lines+=("[arch] ${pkg_name}  ${ver}  ${desc:0:45}${status}")
+                done <<< "$results"
+                all_results=$(printf '%s\n' "${lines[@]}")
+            }
+            ;;
+        *AUR*)
+            local h; h=$(_helper)
+            local results
+            results=$($h -Ss "$query" 2>/dev/null)
+            [ -n "$results" ] && {
+                local lines=()
+                while IFS= read -r line1; do
+                    IFS= read -r line2 || true
+                    local repo_pkg ver desc
+                    repo_pkg=$(echo "$line1" | awk '{print $1}')
+                    ver=$(echo "$line1" | awk '{print $2}')
+                    desc=$(echo "$line2" | sed 's/^[[:space:]]*//')
+                    local pkg_name="${repo_pkg#*/}"
+                    local repo="${repo_pkg%/*}"
+                    [[ "$repo" != "aur" ]] && continue
+                    local status=""
+                    _is_installed "$pkg_name" && status="  [installed]"
+                    lines+=("[AUR] ${pkg_name}  ${ver}  ${desc:0:45}${status}")
+                done <<< "$results"
+                all_results=$(printf '%s\n' "${lines[@]}")
+            }
+            ;;
+        *Flatpak*)
+            all_results=$(_search_flatpak_results "$query")
+            ;;
+        *Snap*)
+            all_results=$(_search_snap_results "$query")
+            ;;
+    esac
+
+    # Remove empty lines
+    all_results=$(echo "$all_results" | sed '/^$/d')
+
+    [ -z "$all_results" ] && { _notify "Nothing found for '$query'"; return; }
+
+    local choice
+    choice=$(echo "$all_results" | head -120 | _rofi "  Results ($query)")
+    [ -z "$choice" ] && return
+
+    # Determine source from tag and dispatch
+    local tag
+    tag=$(echo "$choice" | awk '{print $1}')
+    local sel_pkg
+
+    case "$tag" in
+        "[arch]"|"[AUR]")
+            sel_pkg=$(echo "$choice" | awk '{print $2}')
+            _handle_pacman_selection "$sel_pkg"
+            ;;
+        "[flatpak]")
+            # app_id is the third field: [flatpak] Name  app.id  desc
+            sel_pkg=$(echo "$choice" | awk '{print $3}')
+            _handle_flatpak_selection "$sel_pkg"
+            ;;
+        "[snap]")
+            sel_pkg=$(echo "$choice" | awk '{print $2}')
+            _handle_snap_selection "$sel_pkg"
+            ;;
+    esac
 }
 
 # ── Installed packages ───────────────────────────────────────
@@ -925,15 +1103,15 @@ main() {
 
         local choice
         choice=$(_rofi_list "  Stoa Store (${sources})" \
-            "  Search & install (Pacman + AUR)" \
+            "  Search & install" \
             "  Installed packages" \
             "  Update system" \
             "  Cleanup" \
             "  System info" \
             "─────────────────────" \
-            "  Flatpak (Flathub)" \
-            "  Snap (Snap Store)" \
-            "  AppImage" \
+            "  Flatpak manager" \
+            "  Snap manager" \
+            "  AppImage manager" \
             "  DEB / RPM (convert)" \
             "─────────────────────" \
             "  Setup auto-theme hook" \
@@ -943,17 +1121,17 @@ main() {
 
         case "$choice" in
             *"Search & install"*) _search_install ;;
-            *Installed*)    _installed ;;
-            *Update*)       _update ;;
-            *Cleanup*)      _cleanup ;;
-            *info*)         _stats ;;
-            *Flatpak*)      menu_flatpak ;;
-            *Snap*)         menu_snap ;;
-            *AppImage*)     menu_appimage ;;
-            *DEB*)          menu_deb_rpm ;;
-            *auto-theme*)   _setup_hook ;;
-            *Re-apply*)     _apply_stoa_theme; _notify "Stoa theme applied" ;;
-            *"AUR helper"*) _install_aur_helper ;;
+            *Installed*)          _installed ;;
+            *Update*)             _update ;;
+            *Cleanup*)            _cleanup ;;
+            *info*)               _stats ;;
+            *"Flatpak manager"*)  menu_flatpak ;;
+            *"Snap manager"*)     menu_snap ;;
+            *"AppImage manager"*) menu_appimage ;;
+            *DEB*)                menu_deb_rpm ;;
+            *auto-theme*)         _setup_hook ;;
+            *Re-apply*)           _apply_stoa_theme; _notify "Stoa theme applied" ;;
+            *"AUR helper"*)       _install_aur_helper ;;
         esac
     done
 }
