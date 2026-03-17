@@ -874,26 +874,26 @@ main_menu() {
             "  Network" \
             "  VPN" \
             "  Bluetooth" \
+            "  Cloud Drive" \
             "  Wallpaper" \
             "  Theme" \
-            "  App Store" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
         [ -z "$choice" ] && exit 0
 
         case "$choice" in
-            *Display*)     menu_display ;;
-            *Audio*)       menu_audio ;;
-            *Network*)     menu_network ;;
-            *VPN*)         menu_vpn ;;
-            *Bluetooth*)   menu_bluetooth ;;
-            *Wallpaper*)   menu_wallpaper ;;
-            *Theme*)       menu_theme ;;
-            *"App Store"*) stoa-store & disown; exit 0 ;;
-            *Lock*)        menu_lockscreen ;;
-            *Stoa*)        menu_stoa ;;
-            *Power*)       menu_power ;;
+            *Display*)      menu_display ;;
+            *Audio*)        menu_audio ;;
+            *Network*)      menu_network ;;
+            *VPN*)          menu_vpn ;;
+            *Bluetooth*)    menu_bluetooth ;;
+            *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
+            *Wallpaper*)    menu_wallpaper ;;
+            *Theme*)        menu_theme ;;
+            *Lock*)         menu_lockscreen ;;
+            *Stoa*)         menu_stoa ;;
+            *Power*)        menu_power ;;
         esac
     done
 }

@@ -127,6 +127,7 @@ _link "${STOA_DIR}/scripts/stoa-thunar.sh"          "${HOME}/.local/bin/stoa-thu
 _link "${STOA_DIR}/scripts/stoa-face-setup.sh"      "${HOME}/.local/bin/stoa-face"
 _link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
 _link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
+_link "${STOA_DIR}/scripts/stoa-drive.sh"           "${HOME}/.local/bin/stoa-drive"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -136,7 +137,8 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-ocr" "${HOME}/.local/bin/stoa-rename" \
          "${HOME}/.local/bin/stoa-thunar" "${HOME}/.local/bin/stoa-face" \
          "${HOME}/.local/bin/stoa-settings" \
-         "${HOME}/.local/bin/stoa-store"
+         "${HOME}/.local/bin/stoa-store" \
+         "${HOME}/.local/bin/stoa-drive"
 
 # ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"

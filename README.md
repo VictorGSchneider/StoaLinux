@@ -1,10 +1,24 @@
 # StoaLinux
 
-Stoic dotfiles for Arch Linux — marble, bronze, parchment, stone.
-
-**Hyprland** (Wayland) + **i3** (Xorg fallback). Dark theme everywhere.
-
 > *"The happiness of your life depends upon the quality of your thoughts."* — Marcus Aurelius
+
+An Arch Linux setup inspired by Stoic philosophy. Every detail — from the color palette to the terminal prompt — is designed to foster focus, discipline, and clarity of mind.
+
+## Philosophy
+
+Stoicism teaches that we don't control what happens, but we control how we respond. StoaLinux brings that principle to the desktop: a system that doesn't distract, doesn't over-decorate, doesn't get in your way. It just works.
+
+The palette comes from the ancient world — marble, bronze, parchment, stone, terracotta — colors that evoke temples, statues, and manuscripts. The typography uses EB Garamond, a classical serif that reinforces this identity. Every terminal opens with a different Stoic quote. The Memento Mori widget reminds you that time is finite.
+
+This isn't minimalism for aesthetics. It's minimalism by principle: **only what serves, stays**.
+
+## What it is
+
+- **Arch Linux** with automated installation (from live ISO or existing Arch)
+- **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
+- Unified dark theme across GTK, Qt, Steam, Calibre, YACReader, and everything else
+- `stoa-*` scripts for wallpapers, settings, OCR, clipboard, GPU, and more
+- Memento Mori widget (eww) built into the desktop
 
 ## Palette
 
@@ -25,52 +39,6 @@ Stoic dotfiles for Arch Linux — marble, bronze, parchment, stone.
     <td><img src="https://img.shields.io/badge/Stone__%236e6a62-6e6a62?style=for-the-badge&labelColor=6e6a62&color=6e6a62" alt="#6e6a62"/></td>
   </tr>
 </table>
-
-## Structure
-
-```
-StoaLinux/
-├── config/         ← app dotfiles (~/.config/)
-│   ├── hypr/           hyprland.conf + hyprlock.conf
-│   ├── waybar/         config + style.css
-│   ├── i3/             config + i3status.conf
-│   ├── alacritty/      alacritty.toml
-│   ├── nvim/           init.vim + colors/stoa.vim
-│   ├── rofi/           config.rasi
-│   ├── dunst/          dunstrc
-│   ├── eww/            eww.yuck + eww.scss (Memento Mori)
-│   ├── picom/          picom.conf (Xorg)
-│   ├── thunar/         uca.xml (Stoatools actions)
-│   ├── zathura/        mpv/  imv/  lf/  btop/  neofetch/
-│   └── ...
-│
-├── theme/          ← visual identity
-│   ├── gtk-3.0/        settings.ini + stoa-gtk.css
-│   ├── gtk-4.0/        settings.ini + stoa-gtk.css
-│   ├── qt5ct/          qt5ct.conf
-│   ├── qt6ct/          qt6ct.conf
-│   ├── steam/          stoa-steam.css
-│   ├── calibre/        stoa-calibre.py
-│   ├── yacreader/      stoa-yacreader.qss
-│   ├── pacman-hooks/   auto-reapply theme on updates
-│   └── colors.sh       palette reference
-│
-├── shell/          ← shell configs
-│   ├── .zshrc          zsh with Stoic quotes + Ι prompt
-│   ├── .bashrc         bash alternative
-│   └── stoa-env.sh     env vars (GTK/Qt/cursor/Steam)
-│
-├── scripts/        ← stoa-* commands
-│
-├── setup/          ← installation
-│   ├── arch-install.sh     from live ISO
-│   ├── archinstall/        archinstall config
-│   └── post-install.sh     existing Arch
-│
-├── install.sh      ← dotfiles entry point
-├── stoa.conf       ← user settings
-└── README.md
-```
 
 ## Install
 
@@ -99,79 +67,51 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 
 ## Keybinds
 
-| Key | Action |
-|-----|--------|
-| `Super+Return` | Terminal (Alacritty) |
-| `Super+B` | Browser (Brave) |
-| `Super+C` | Calculator (Qalculate) |
-| `Super+D` | Launcher (Rofi) |
-| `Super+E` | Files (lf) |
-| `Super+Shift+E` | Files (Thunar) |
-| `Super+N` | Monitor (btop) |
-| `Super+O` | Notes (Obsidian) |
-| `Super+M` | Memento Mori |
-| `Super+I` | Settings panel |
-| `Super+A` | App store |
-| `Super+V` | Clipboard history |
-| `Super+Shift+V` | Clipboard pin |
-| `Super+Shift+T` | OCR (screen text) |
-| `Super+Shift+P` | Advanced paste |
-| `Super+/` | Keybinds bar |
-| `Super+Escape` | Lock screen |
-| `Super+Q` | Close |
-| `Super+F` | Fullscreen |
-| `Super+R` | Resize (HJKL) |
-| `Super+HJKL` | Navigate |
-| `Super+Shift+HJKL` | Move window |
-| `Super+1-0` | Workspaces I–X |
-| `Print` | Screenshot (full) |
-| `Super+Print` | Screenshot (area) |
+<table>
+  <tr><th>Key</th><th>Action</th><th>Key</th><th>Action</th></tr>
+  <tr><td><code>Super+Return</code></td><td>Terminal (Alacritty)</td><td><code>Super+Shift+V</code></td><td>Clipboard pin</td></tr>
+  <tr><td><code>Super+B</code></td><td>Browser (Brave)</td><td><code>Super+Shift+T</code></td><td>OCR (screen text)</td></tr>
+  <tr><td><code>Super+C</code></td><td>Calculator (Qalculate)</td><td><code>Super+Shift+P</code></td><td>Advanced paste</td></tr>
+  <tr><td><code>Super+D</code></td><td>Launcher (Rofi)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
+  <tr><td><code>Super+E</code></td><td>Files (lf)</td><td><code>Super+Escape</code></td><td>Lock screen</td></tr>
+  <tr><td><code>Super+Shift+E</code></td><td>Files (Thunar)</td><td><code>Super+Q</code></td><td>Close</td></tr>
+  <tr><td><code>Super+N</code></td><td>Monitor (btop)</td><td><code>Super+F</code></td><td>Fullscreen</td></tr>
+  <tr><td><code>Super+O</code></td><td>Notes (Obsidian)</td><td><code>Super+R</code></td><td>Resize (HJKL)</td></tr>
+  <tr><td><code>Super+M</code></td><td>Memento Mori</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
+  <tr><td><code>Super+I</code></td><td>Settings panel</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
+  <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
+  <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print / Super+Print</code></td><td>Screenshot</td></tr>
+</table>
 
-## Scripts
+## Scripts & Stoatools
 
-| Command | What it does |
-|---------|-------------|
-| `stoa-settings` | Settings panel — wallpaper, theme, GPU, face, lock |
-| `stoa-store` | Package manager — search, install, remove, update |
-| `stoa-fetch` | System fetch with temple ASCII |
-| `stoa-walls` | Wallpaper generator |
-| `stoa-memento` | Memento Mori widget |
-| `stoa-clipboard` | Clipboard with pinned favorites |
-| `stoa-osd` | Volume/brightness/caps OSD |
-| `stoa-quotes-sync` | Fetch Stoic quotes online |
-| `stoa-face` | Face recognition setup (howdy) |
-| `stoa-gpu-setup` | GPU + CPU driver setup |
-
-**Stoatools** (also Thunar right-click actions):
-
-| Command | What it does |
-|---------|-------------|
-| `stoa-ocr` | Extract text from screen/image |
-| `stoa-paste` | Paste as UPPER/lower/Title/snake/camel/JSON/Markdown |
-| `stoa-resize` | Batch resize images |
-| `stoa-rename` | Regex rename with preview |
-| `stoa-locksmith` | See who's locking a file |
+<table>
+  <tr><th>Script</th><th>What it does</th><th>Stoatool</th><th>What it does</th></tr>
+  <tr><td><code>stoa-settings</code></td><td>Settings panel</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
+  <tr><td><code>stoa-store</code></td><td>Package manager</td><td><code>stoa-paste</code></td><td>Paste as UPPER/lower/etc</td></tr>
+  <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
+  <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
+  <tr><td><code>stoa-memento</code></td><td>Memento Mori widget</td><td><code>stoa-locksmith</code></td><td>See who locks a file</td></tr>
+  <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
+  <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
+  <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
+  <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
+  <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
+</table>
 
 ## Apps
 
-| App | Purpose |
-|-----|---------|
-| Brave | Browser |
-| Obsidian | Notes |
-| Alacritty | Terminal |
-| Neovim | Editor |
-| Zathura | PDF |
-| mpv | Video/audio |
-| imv | Images |
-| lf / Thunar | Files |
-| btop | Monitor |
-| Qalculate | Calculator |
-| eww | Memento Mori widget |
-| Steam | Gaming (Proton) |
-| Calibre | eBooks |
-| YACReader | Comics |
-| Enpass | Passwords |
-| howdy | Face unlock |
+<table>
+  <tr><th>App</th><th>Purpose</th><th>App</th><th>Purpose</th></tr>
+  <tr><td>Brave</td><td>Browser</td><td>btop</td><td>Monitor</td></tr>
+  <tr><td>Obsidian</td><td>Notes</td><td>Qalculate</td><td>Calculator</td></tr>
+  <tr><td>Alacritty</td><td>Terminal</td><td>eww</td><td>Memento Mori widget</td></tr>
+  <tr><td>Neovim</td><td>Editor</td><td>Steam</td><td>Gaming (Proton)</td></tr>
+  <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
+  <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>
+  <tr><td>imv</td><td>Images</td><td>Enpass</td><td>Passwords</td></tr>
+  <tr><td>lf / Thunar</td><td>Files</td><td>howdy</td><td>Face unlock</td></tr>
+</table>
 
 ## Theme
 

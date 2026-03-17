@@ -77,6 +77,12 @@ SCREENSHOT_PKGS="grim slurp maim"
 # Stoatools (OCR, paste, resize, rename, locksmith)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
 
+# Cloud Drive (rclone — stream on-demand, Google Drive/OneDrive/Dropbox/S3)
+CLOUD_PKGS="rclone"
+
+# App Store (Flatpak — Flathub access from Stoa Store)
+STORE_PKGS="flatpak"
+
 # Lock screen
 LOCK_PKGS="hyprlock i3lock-color"
 
@@ -101,7 +107,7 @@ DEV_PKGS="github-cli"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -114,6 +120,8 @@ echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
 echo -e "  ${S}Gaming:     ${GAMING_PKGS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
 echo -e "  ${S}Stoatools:  ${STOATOOLS_PKGS}${R}"
+echo -e "  ${S}Cloud:      ${CLOUD_PKGS}${R}"
+echo -e "  ${S}Store:      ${STORE_PKGS}${R}"
 echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
@@ -440,6 +448,7 @@ echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
 echo -e "  ${S}  stoa-face setup   — Face recognition (Windows Hello-style)${R}"
 echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
 echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P2P${R}"
+echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDrive, etc)${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
 echo ""
 echo -e "  ${F}Leisure:${R}"
