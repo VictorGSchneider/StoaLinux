@@ -222,6 +222,27 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     else
         echo -e "  ${S}[~] Enpass already installed.${R}"
     fi
+
+    # howdy — Face recognition (AUR)
+    echo ""
+    if ! command -v howdy &>/dev/null; then
+        echo -e "  ${F}Installing howdy — face recognition (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm howdy
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm howdy
+        else
+            echo -e "  ${S}Installing howdy manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/howdy.git "$_tmpdir/howdy"
+            (cd "$_tmpdir/howdy" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] howdy installed.${R}"
+        echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
+    else
+        echo -e "  ${S}[~] howdy already installed.${R}"
+    fi
 else
     echo -e "  ${S}[~] Packages skipped.${R}"
 fi
@@ -298,6 +319,7 @@ echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"
 echo -e "  ${S}  stoa-walls        — Generate wallpapers${R}"
 echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
+echo -e "  ${S}  stoa-face setup   — Face recognition (Windows Hello-style)${R}"
 echo ""
 echo -e "  ${F}Stoatools (also available as Thunar right-click actions):${R}"
 echo -e "  ${S}  stoa-ocr          — Extract text from screen or image (OCR)${R}"
