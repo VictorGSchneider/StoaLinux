@@ -1,15 +1,15 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Memento Mori Data                             ║
-# ║  "Lembra-te de que vais morrer." — tradição estoica          ║
+# ║  "Remember that you will die." — Stoic tradition             ║
 # ║                                                              ║
-# ║  Gera dados JSON para o widget eww Memento Mori.            ║
-# ║  Lê ~/.config/stoa/memento.conf para configuração.           ║
+# ║  Generates JSON data for the eww Memento Mori widget.       ║
+# ║  Reads ~/.config/stoa/memento.conf for configuration.        ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/memento.conf"
 
-# ── Criar config padrão se não existir ──
+# ── Create default config if it doesn't exist ──
 if [ ! -f "$CONF" ]; then
     mkdir -p "$(dirname "$CONF")"
     cat > "$CONF" <<'DEFAULT'
@@ -17,42 +17,42 @@ NAME=Marcus
 BIRTH=1990-01-01
 LIFE_YEARS=80
 DEFAULT
-    echo "Arquivo criado: $CONF" >&2
-    echo "Edite com seus dados (nome, data de nascimento, expectativa de vida)." >&2
+    echo "File created: $CONF" >&2
+    echo "Edit with your data (name, date of birth, life expectancy)." >&2
 fi
 
-# ── Ler config ──
+# ── Read config ──
 source "$CONF"
 
 NAME="${NAME:-Marcus}"
 BIRTH="${BIRTH:-1990-01-01}"
 LIFE_YEARS="${LIFE_YEARS:-80}"
 
-# ── Cálculos ──
+# ── Calculations ──
 today=$(date +%s)
 birth=$(date -d "$BIRTH" +%s 2>/dev/null || date -d "${BIRTH}T00:00:00" +%s)
 
 days_lived=$(( (today - birth) / 86400 ))
 weeks_lived=$(( days_lived / 7 ))
 
-# Anos vividos com 1 casa decimal
+# Years lived with 1 decimal
 years_seconds=$(( today - birth ))
 years_lived=$(awk "BEGIN { printf \"%.1f\", $years_seconds / 31557600 }")
 
-# Progresso do ano atual
+# Current year progress
 year_start=$(date -d "$(date +%Y)-01-01" +%s)
 year_end=$(date -d "$(($(date +%Y) + 1))-01-01" +%s)
 year_pct=$(awk "BEGIN { printf \"%.1f\", ($today - $year_start) / ($year_end - $year_start) * 100 }")
 
-# Total de semanas na vida
+# Total weeks in lifetime
 total_weeks=$(( LIFE_YEARS * 52 ))
 
-# ── Frase estoica (consome a próxima da playlist) ──
+# ── Stoic quote (consumes next from playlist) ──
 quote=""
 command -v stoa-quotes-sync &>/dev/null && quote=$(stoa-quotes-sync next 2>/dev/null)
 quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
 
-# Escapar aspas duplas para JSON válido
+# Escape double quotes for valid JSON
 quote_escaped="${quote//\"/\\\"}"
 name_escaped="${NAME//\"/\\\"}"
 

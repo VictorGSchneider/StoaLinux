@@ -1,13 +1,13 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Clipboard Manager                             ║
-# ║  wl-clipboard + cliphist + rofi com favoritos                ║
+# ║  wl-clipboard + cliphist + rofi with pinned favorites        ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Uso:
-#   stoa-clipboard show    — Histórico (fixados no topo) → colar
-#   stoa-clipboard pin     — Fixar/desfixar item do histórico
-#   stoa-clipboard clear   — Limpar histórico (preserva fixados)
+# Usage:
+#   stoa-clipboard show    — History (pinned on top) → paste
+#   stoa-clipboard pin     — Pin/unpin item from history
+#   stoa-clipboard clear   — Clear history (preserves pinned)
 
 PINS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/stoa"
 PINS_FILE="${PINS_DIR}/clipboard-pins"
@@ -17,7 +17,7 @@ mkdir -p "$PINS_DIR"
 touch "$PINS_FILE"
 
 _show() {
-    # Monta lista: fixados no topo, depois histórico normal
+    # Build list: pinned on top, then normal history
     local pinned=""
     local history
 
@@ -34,7 +34,7 @@ _show() {
 
     [ -z "$choice" ] && exit 0
 
-    # Se é um item fixado, remover prefixo e copiar
+    # If it's a pinned item, remove prefix and copy
     if [[ "$choice" == "📌 "* ]]; then
         printf '%s' "${choice#📌 }" | wl-copy
     else
@@ -43,50 +43,50 @@ _show() {
 }
 
 _pin() {
-    # Mostra histórico + fixados para toggle
+    # Show history + pinned for toggle
     local history
     history=$(cliphist list)
 
     local pinned_display=""
     if [ -s "$PINS_FILE" ]; then
         while IFS= read -r line; do
-            pinned_display+="📌 [desfixar] ${line}"$'\n'
+            pinned_display+="📌 [unpin] ${line}"$'\n'
         done < "$PINS_FILE"
     fi
 
     local choice
-    choice=$(printf '%s%s' "$pinned_display" "$history" | rofi "${ROFI_ARGS[@]}" -p "📌 Fixar/Desfixar")
+    choice=$(printf '%s%s' "$pinned_display" "$history" | rofi "${ROFI_ARGS[@]}" -p "📌 Pin/Unpin")
 
     [ -z "$choice" ] && exit 0
 
-    if [[ "$choice" == "📌 [desfixar] "* ]]; then
-        # Desfixar: remover do arquivo de pins
-        local content="${choice#📌 \[desfixar\] }"
+    if [[ "$choice" == "📌 [unpin] "* ]]; then
+        # Unpin: remove from pins file
+        local content="${choice#📌 \[unpin\] }"
         grep -vFx "$content" "$PINS_FILE" > "${PINS_FILE}.tmp"
         mv "${PINS_FILE}.tmp" "$PINS_FILE"
-        notify-send -t 2000 "Clipboard" "Item desfixado"
+        notify-send -t 2000 "Clipboard" "Item unpinned"
     else
-        # Fixar: decodificar e adicionar
+        # Pin: decode and add
         local decoded
         decoded=$(printf '%s' "$choice" | cliphist decode)
-        # Não duplicar
+        # Don't duplicate
         if grep -qFx "$decoded" "$PINS_FILE" 2>/dev/null; then
-            notify-send -t 2000 "Clipboard" "Item já está fixado"
+            notify-send -t 2000 "Clipboard" "Item already pinned"
         else
             printf '%s\n' "$decoded" >> "$PINS_FILE"
-            notify-send -t 2000 "Clipboard" "Item fixado 📌"
+            notify-send -t 2000 "Clipboard" "Item pinned 📌"
         fi
     fi
 }
 
 _clear() {
     cliphist wipe
-    notify-send -t 2000 "Clipboard" "Histórico limpo (fixados preservados)"
+    notify-send -t 2000 "Clipboard" "History cleared (pinned preserved)"
 }
 
 case "${1:-show}" in
     show)  _show  ;;
     pin)   _pin   ;;
     clear) _clear ;;
-    *)     echo "Uso: stoa-clipboard {show|pin|clear}" ;;
+    *)     echo "Usage: stoa-clipboard {show|pin|clear}" ;;
 esac

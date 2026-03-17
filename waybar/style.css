@@ -1,6 +1,6 @@
 /* ╔══════════════════════════════════════════════════════════════╗ */
 /* ║  STOA LINUX — Waybar                                       ║ */
-/* ║  "Mede o que é mensurável." — Cleantes                     ║ */
+/* ║  "Measure what is measurable." — Cleanthes                 ║ */
 /* ╚══════════════════════════════════════════════════════════════╝ */
 
 @define-color bg         #211e19;
@@ -47,7 +47,7 @@ window#waybar {
     box-shadow: none;
 }
 
-/* ── Módulos ── */
+/* ── Modules ── */
 
 #disk,
 #network,

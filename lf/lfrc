@@ -1,9 +1,9 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — lf (file manager)                            ║
-# ║  "Ordena o que é teu." — Epicteto                          ║
+# ║  "Put in order what is yours." — Epictetus                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# ── Opções ──
+# ── Options ──
 set preview true
 set hidden true
 set drawbox true
@@ -14,7 +14,7 @@ set shell bash
 set shellopts '-eu'
 set ifs "\n"
 
-# ── Atalhos vim ──
+# ── Vim keybinds ──
 map <enter> open
 map D delete
 map x cut
@@ -25,7 +25,7 @@ map . set hidden!
 map R reload
 map q quit
 
-# ── Abrir arquivos ──
+# ── Open files ──
 cmd open ${{
     case $(file --mime-type "$f" -bL) in
         text/*|application/json) $EDITOR "$f" ;;
@@ -36,17 +36,17 @@ cmd open ${{
     esac
 }}
 
-# ── Criar diretório ──
+# ── Create directory ──
 cmd mkdir %{{
-    printf "Nome: "
+    printf "Name: "
     read name
     mkdir -p "$name"
 }}
 map a mkdir
 
-# ── Criar arquivo ──
+# ── Create file ──
 cmd mkfile %{{
-    printf "Nome: "
+    printf "Name: "
     read name
     touch "$name"
 }}

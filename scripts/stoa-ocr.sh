@@ -1,19 +1,19 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Text Extractor (OCR)                          ║
-# ║  Extrai texto de áreas da tela usando OCR                   ║
-# ║  Requer: grim, slurp, tesseract, wl-clipboard               ║
+# ║  Extract text from screen areas using OCR                   ║
+# ║  Requires: grim, slurp, tesseract, wl-clipboard              ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Uso:
-#   stoa-ocr            — seleciona área e copia texto extraído
-#   stoa-ocr file.png   — extrai texto de um arquivo de imagem
-#   stoa-ocr por        — seleciona área, OCR em português
-#   stoa-ocr eng        — seleciona área, OCR em inglês
+# Usage:
+#   stoa-ocr            — select area and copy extracted text
+#   stoa-ocr file.png   — extract text from an image file
+#   stoa-ocr por        — select area, OCR in Portuguese
+#   stoa-ocr eng        — select area, OCR in English
 
 TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
 
-# Detecta idioma: argumento ou default
+# Detect language: argument or default
 _get_lang() {
     local arg="$1"
     case "$arg" in
@@ -28,7 +28,7 @@ _ocr_from_file() {
     local lang="$2"
 
     if [ ! -f "$file" ]; then
-        notify-send -t 3000 "OCR" "Arquivo não encontrado: $file"
+        notify-send -t 3000 "OCR" "File not found: $file"
         exit 1
     fi
 
@@ -36,19 +36,19 @@ _ocr_from_file() {
     text=$(tesseract "$file" stdout -l "$lang" 2>/dev/null | sed '/^$/d')
 
     if [ -z "$text" ]; then
-        notify-send -t 3000 "OCR" "Nenhum texto detectado"
+        notify-send -t 3000 "OCR" "No text detected"
         exit 0
     fi
 
     printf '%s' "$text" | wl-copy
-    notify-send -t 3000 "OCR" "Texto extraído e copiado (${#text} chars)"
+    notify-send -t 3000 "OCR" "Text extracted and copied (${#text} chars)"
 }
 
 _ocr_from_screen() {
     local lang="$1"
     local tmpfile="${TMPDIR}/stoa-ocr-$$.png"
 
-    # Captura área da tela
+    # Capture screen area
     local geometry
     geometry=$(slurp 2>/dev/null)
     [ -z "$geometry" ] && exit 0
@@ -56,7 +56,7 @@ _ocr_from_screen() {
     grim -g "$geometry" "$tmpfile"
 
     if [ ! -f "$tmpfile" ]; then
-        notify-send -t 3000 "OCR" "Falha ao capturar tela"
+        notify-send -t 3000 "OCR" "Failed to capture screen"
         exit 1
     fi
 
@@ -64,13 +64,13 @@ _ocr_from_screen() {
     rm -f "$tmpfile"
 }
 
-# Verifica dependências
+# Check dependencies
 if ! command -v tesseract &>/dev/null; then
-    notify-send -t 5000 "OCR" "tesseract não instalado.\nInstale: sudo pacman -S tesseract tesseract-data-eng tesseract-data-por"
+    notify-send -t 5000 "OCR" "tesseract not installed.\nInstall: sudo pacman -S tesseract tesseract-data-eng tesseract-data-por"
     exit 1
 fi
 
-# Se primeiro argumento é um arquivo existente, OCR nele
+# If first argument is an existing file, OCR it
 if [ -n "$1" ] && [ -f "$1" ]; then
     lang=$(_get_lang "${2:-}")
     _ocr_from_file "$1" "$lang"

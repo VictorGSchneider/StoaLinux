@@ -1,30 +1,30 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Keybinds Toggle                               ║
-# ║  Alterna a exibição dos atalhos na Waybar                    ║
+# ║  Toggle keybinds display in Waybar                           ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 STOA_CONF="${STOA_DIR}/stoa.conf"
 
-# Garantir que o diretório e arquivo existam
+# Ensure directory and file exist
 mkdir -p "$STOA_DIR"
 if [ ! -f "$STOA_CONF" ]; then
     echo "STOA_SHOW_KEYBINDS=true" > "$STOA_CONF"
 fi
 
-# Ler valor atual
+# Read current value
 source "$STOA_CONF"
 CURRENT="${STOA_SHOW_KEYBINDS:-true}"
 
-# Alternar
+# Toggle
 if [ "$CURRENT" = "true" ]; then
     sed -i 's/^STOA_SHOW_KEYBINDS=.*/STOA_SHOW_KEYBINDS=false/' "$STOA_CONF"
-    notify-send -t 2000 "Stoa" "Atalhos na barra: desabilitados"
+    notify-send -t 2000 "Stoa" "Bar keybinds: disabled"
 else
     sed -i 's/^STOA_SHOW_KEYBINDS=.*/STOA_SHOW_KEYBINDS=true/' "$STOA_CONF"
-    notify-send -t 2000 "Stoa" "Atalhos na barra: habilitados"
+    notify-send -t 2000 "Stoa" "Bar keybinds: enabled"
 fi
 
-# Recarregar Waybar para aplicar
+# Reload Waybar to apply
 pkill -SIGUSR2 waybar

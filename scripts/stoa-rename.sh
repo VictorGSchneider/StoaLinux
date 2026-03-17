@@ -1,35 +1,35 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — PowerRename                                   ║
-# ║  Renomeia arquivos em lote com regex e preview               ║
-# ║  Requer: rofi                                                ║
+# ║  Batch rename files with regex and preview                   ║
+# ║  Requires: rofi                                              ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Uso:
-#   stoa-rename *.jpg               — renomeia com menu interativo
-#   stoa-rename -f "old" -r "new" *.jpg  — direto sem menu
-#   stoa-rename -f "\.jpeg$" -r ".jpg" -R ~/Fotos  — recursivo
+# Usage:
+#   stoa-rename *.jpg               — rename with interactive menu
+#   stoa-rename -f "old" -r "new" *.jpg  — direct without menu
+#   stoa-rename -f "\.jpeg$" -r ".jpg" -R ~/Photos  — recursive
 
 ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
 _usage() {
     cat <<EOF
-Uso: stoa-rename [opções] [arquivos...]
+Usage: stoa-rename [options] [files...]
 
-Opções:
-  -f PATTERN    Padrão regex para buscar
-  -r REPLACE    String de substituição
-  -R DIR        Modo recursivo (todos arquivos no diretório)
+Options:
+  -f PATTERN    Regex pattern to search
+  -r REPLACE    Replacement string
+  -R DIR        Recursive mode (all files in directory)
   -i            Case insensitive
-  -g            Substituir todas ocorrências (global)
-  -n            Dry run (apenas mostra, não renomeia)
-  -h            Mostrar esta ajuda
+  -g            Replace all occurrences (global)
+  -n            Dry run (show only, don't rename)
+  -h            Show this help
 
-Exemplos:
-  stoa-rename *.jpg                        Menu interativo
-  stoa-rename -f "IMG_" -r "foto_" *.jpg   Direto
+Examples:
+  stoa-rename *.jpg                        Interactive menu
+  stoa-rename -f "IMG_" -r "photo_" *.jpg  Direct
   stoa-rename -f "\d+" -r "001" -i *.png   Case insensitive
-  stoa-rename -f "\.jpeg$" -r ".jpg" -R .  Recursivo
+  stoa-rename -f "\.jpeg$" -r ".jpg" -R .  Recursive
 EOF
 }
 
@@ -54,7 +54,7 @@ while getopts "f:r:R:ignh" opt; do
 done
 shift $((OPTIND - 1))
 
-# Coleta arquivos
+# Collect files
 files=()
 if [ -n "$RECURSIVE_DIR" ]; then
     while IFS= read -r -d '' f; do
@@ -67,31 +67,31 @@ elif [ $# -gt 0 ]; then
 fi
 
 if [ ${#files[@]} -eq 0 ]; then
-    notify-send -t 3000 "PowerRename" "Nenhum arquivo selecionado"
-    echo "Nenhum arquivo selecionado."
+    notify-send -t 3000 "PowerRename" "No files selected"
+    echo "No files selected."
     exit 1
 fi
 
-# Menu interativo se não passou -f
+# Interactive menu if -f was not passed
 if [ -z "$FIND_PATTERN" ]; then
-    FIND_PATTERN=$(rofi "${ROFI_ARGS[@]}" -p "Buscar (regex)")
+    FIND_PATTERN=$(rofi "${ROFI_ARGS[@]}" -p "Find (regex)")
     [ -z "$FIND_PATTERN" ] && exit 0
 
-    REPLACE_STR=$(rofi "${ROFI_ARGS[@]}" -p "Substituir por")
-    # REPLACE_STR pode ser vazio (deletar match)
+    REPLACE_STR=$(rofi "${ROFI_ARGS[@]}" -p "Replace with")
+    # REPLACE_STR can be empty (delete match)
 
-    opts=$(printf "Aplicar renomeação\nCase insensitive\nSubstituir todas (global)\nDry run (apenas preview)" | \
-        rofi "${ROFI_ARGS[@]}" -p "Opções" -multi-select)
+    opts=$(printf "Apply rename\nCase insensitive\nReplace all (global)\nDry run (preview only)" | \
+        rofi "${ROFI_ARGS[@]}" -p "Options" -multi-select)
 
     [[ "$opts" == *"Case insensitive"* ]] && CASE_FLAG="I"
-    [[ "$opts" == *"todas"* ]] && GLOBAL_FLAG="g"
+    [[ "$opts" == *"all"* ]] && GLOBAL_FLAG="g"
     [[ "$opts" == *"Dry run"* ]] && DRY_RUN=true
 fi
 
-# Monta sed flags
+# Build sed flags
 SED_FLAGS="${CASE_FLAG}${GLOBAL_FLAG}"
 
-# Preview das mudanças
+# Preview changes
 preview=""
 changes=0
 declare -A rename_map
@@ -109,36 +109,36 @@ for f in "${files[@]}"; do
 done
 
 if [ $changes -eq 0 ]; then
-    notify-send -t 3000 "PowerRename" "Nenhum arquivo corresponde ao padrão"
+    notify-send -t 3000 "PowerRename" "No files match the pattern"
     exit 0
 fi
 
-# Mostra preview
+# Show preview
 if $DRY_RUN; then
     echo "$preview"
     echo "---"
-    echo "$changes arquivo(s) seriam renomeados (dry run)"
-    notify-send -t 5000 "PowerRename" "Dry run: $changes arquivo(s)\n(veja o terminal)"
+    echo "$changes file(s) would be renamed (dry run)"
+    notify-send -t 5000 "PowerRename" "Dry run: $changes file(s)\n(see terminal)"
     exit 0
 fi
 
-# Confirmação via rofi
-confirm=$(printf "Renomear %d arquivo(s)\nCancelar" "$changes" | \
+# Confirmation via rofi
+confirm=$(printf "Rename %d file(s)\nCancel" "$changes" | \
     rofi "${ROFI_ARGS[@]}" -p "Preview" -mesg "$(echo "$preview" | head -20)")
 
-if [[ "$confirm" != "Renomear"* ]]; then
+if [[ "$confirm" != "Rename"* ]]; then
     exit 0
 fi
 
-# Executa renomeação
+# Execute rename
 renamed=0
 for src in "${!rename_map[@]}"; do
     dst="${rename_map[$src]}"
     if [ -e "$dst" ]; then
-        notify-send -t 3000 "PowerRename" "Conflito: $(basename "$dst") já existe, pulando"
+        notify-send -t 3000 "PowerRename" "Conflict: $(basename "$dst") already exists, skipping"
         continue
     fi
     mv -- "$src" "$dst" && ((renamed++))
 done
 
-notify-send -t 3000 "PowerRename" "${renamed}/${changes} arquivo(s) renomeado(s)"
+notify-send -t 3000 "PowerRename" "${renamed}/${changes} file(s) renamed"

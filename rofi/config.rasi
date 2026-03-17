@@ -1,14 +1,14 @@
 /* ╔══════════════════════════════════════════════════════════════╗ */
 /* ║  STOA LINUX — Rofi                                          ║ */
-/* ║  "Escolhe, não sejas escolhido." — Epicteto                 ║ */
+/* ║  "Choose, do not be chosen." — Epictetus                    ║ */
 /* ╚══════════════════════════════════════════════════════════════╝ */
 
 configuration {
     modi:                "drun,run,window";
     show-icons:          true;
-    display-drun:        "  Iniciar";
-    display-run:         "  Executar";
-    display-window:      "  Janelas";
+    display-drun:        "  Launch";
+    display-run:         "  Run";
+    display-window:      "  Windows";
     font:                "JetBrains Mono 11";
 }
 
@@ -55,7 +55,7 @@ prompt {
 }
 
 entry {
-    placeholder:       "Buscar...";
+    placeholder:       "Search...";
     placeholder-color: @stone;
     text-color:        @fg;
 }

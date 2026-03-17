@@ -1,16 +1,16 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — OSD (On-Screen Display)                       ║
-# ║  Volume, brilho, CapsLock e NumLock via dunstify progress.   ║
+# ║  Volume, brightness, CapsLock and NumLock via dunstify.      ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Uso:
+# Usage:
 #   stoa-osd volume-up        stoa-osd volume-mute
 #   stoa-osd volume-down      stoa-osd brightness-up
 #   stoa-osd brightness-down  stoa-osd capslock
 #   stoa-osd numlock
 
-# IDs fixos para substituir notificações anteriores (sem empilhar)
+# Fixed IDs to replace previous notifications (no stacking)
 VOLUME_ID=9901
 BRIGHTNESS_ID=9902
 CAPSLOCK_ID=9903
@@ -31,7 +31,7 @@ osd_volume() {
     vol=$(echo "$vol" | awk '{printf "%.0f", $2 * 100}')
 
     if [ "$muted" -eq 1 ]; then
-        dunstify -r "$VOLUME_ID" -u low -t 1500 " Volume" "Mudo" -h int:value:0
+        dunstify -r "$VOLUME_ID" -u low -t 1500 " Volume" "Muted" -h int:value:0
     else
         local icon=""
         [ "$vol" -le 30 ] && icon=""
@@ -57,7 +57,7 @@ osd_brightness() {
         local icon=""
         [ "$pct" -le 30 ] && icon=""
         [ "$pct" -le 10 ] && icon=""
-        dunstify -r "$BRIGHTNESS_ID" -u low -t 1500 "$icon Brilho" "${pct}%" -h int:value:"$pct"
+        dunstify -r "$BRIGHTNESS_ID" -u low -t 1500 "$icon Brightness" "${pct}%" -h int:value:"$pct"
     fi
 }
 
@@ -93,9 +93,9 @@ osd_capslock() {
     state=$(_read_lock_state capslock)
 
     if [ "$state" -eq 1 ]; then
-        dunstify -r "$CAPSLOCK_ID" -u normal -t 2000 " CapsLock" "Ativado" -h int:value:100
+        dunstify -r "$CAPSLOCK_ID" -u normal -t 2000 " CapsLock" "Enabled" -h int:value:100
     else
-        dunstify -r "$CAPSLOCK_ID" -u low -t 1500 " CapsLock" "Desativado" -h int:value:0
+        dunstify -r "$CAPSLOCK_ID" -u low -t 1500 " CapsLock" "Disabled" -h int:value:0
     fi
 }
 
@@ -104,9 +104,9 @@ osd_numlock() {
     state=$(_read_lock_state numlock)
 
     if [ "$state" -eq 1 ]; then
-        dunstify -r "$NUMLOCK_ID" -u normal -t 2000 " NumLock" "Ativado" -h int:value:100
+        dunstify -r "$NUMLOCK_ID" -u normal -t 2000 " NumLock" "Enabled" -h int:value:100
     else
-        dunstify -r "$NUMLOCK_ID" -u low -t 1500 " NumLock" "Desativado" -h int:value:0
+        dunstify -r "$NUMLOCK_ID" -u low -t 1500 " NumLock" "Disabled" -h int:value:0
     fi
 }
 
@@ -119,7 +119,7 @@ case "$1" in
     capslock)        osd_capslock ;;
     numlock)         osd_numlock ;;
     *)
-        echo "Uso: stoa-osd {volume-up|volume-down|volume-mute|brightness-up|brightness-down|capslock|numlock}"
+        echo "Usage: stoa-osd {volume-up|volume-down|volume-mute|brightness-up|brightness-down|capslock|numlock}"
         exit 1
         ;;
 esac

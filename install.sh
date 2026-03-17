@@ -1,7 +1,7 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Instalador de Dotfiles                        ║
-# ║  "A ação é a marca da sabedoria." — Sêneca                  ║
+# ║  STOA LINUX — Dotfiles Installer                            ║
+# ║  "Action is the mark of wisdom." — Seneca                   ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 set -e
@@ -9,7 +9,7 @@ set -e
 STOA_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_DIR="${HOME}/.config"
 
-# Cores
+# Colors
 B='\033[38;2;196;154;92m'
 S='\033[38;2;110;106;98m'
 F='\033[38;2;212;207;196m'
@@ -19,8 +19,8 @@ R='\033[0m'
 
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════╗${R}"
-echo -e "  ${B}║     STOA LINUX — Instalador              ║${R}"
-echo -e "  ${B}║     Dotfiles Estoicos para Arch Linux     ║${R}"
+echo -e "  ${B}║     STOA LINUX — Installer               ║${R}"
+echo -e "  ${B}║     Stoic Dotfiles for Arch Linux         ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════╝${R}"
 echo ""
 
@@ -39,10 +39,10 @@ _link() {
     echo -e "  ${O}[+] ${dst}${R}"
 }
 
-echo -e "${F}Criando symlinks...${R}"
+echo -e "${F}Creating symlinks...${R}"
 echo ""
 
-# ── Hyprland (Wayland — primário) ──
+# ── Hyprland (Wayland — primary) ──
 _link "${STOA_DIR}/hyprland/hyprland.conf" "${CONFIG_DIR}/hypr/hyprland.conf"
 
 # ── Waybar ──
@@ -76,11 +76,11 @@ _link "${STOA_DIR}/neofetch/config.conf" "${CONFIG_DIR}/neofetch/config.conf"
 _link "${STOA_DIR}/gtk-3.0/settings.ini" "${CONFIG_DIR}/gtk-3.0/settings.ini"
 _link "${STOA_DIR}/gtk-4.0/settings.ini" "${CONFIG_DIR}/gtk-4.0/settings.ini"
 
-# ── Qt5/Qt6 (padronização com GTK) ──
+# ── Qt5/Qt6 (standardization with GTK) ──
 _link "${STOA_DIR}/qt5ct/qt5ct.conf" "${CONFIG_DIR}/qt5ct/qt5ct.conf"
 _link "${STOA_DIR}/qt6ct/qt6ct.conf" "${CONFIG_DIR}/qt6ct/qt6ct.conf"
 
-# ── Apps estoicos ──
+# ── Stoic apps ──
 _link "${STOA_DIR}/zathura/zathurarc"  "${CONFIG_DIR}/zathura/zathurarc"
 _link "${STOA_DIR}/mpv/mpv.conf"       "${CONFIG_DIR}/mpv/mpv.conf"
 _link "${STOA_DIR}/btop/btop.conf"     "${CONFIG_DIR}/btop/btop.conf"
@@ -94,18 +94,18 @@ _link "${STOA_DIR}/eww/eww.scss"  "${CONFIG_DIR}/eww/eww.scss"
 # ── Stoa wallpapers dir ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 
-# ── Diretório de screenshots ──
-mkdir -p "${HOME}/Imagens/screenshots"
+# ── Screenshots directory ──
+mkdir -p "${HOME}/Pictures/screenshots"
 
 # ── Environment (toolkit unification) ──
 _link "${STOA_DIR}/environment/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
 
-# ── Stoa config (preserva configurações do usuário) ──
+# ── Stoa config (preserves user settings) ──
 if [ ! -f "${CONFIG_DIR}/stoa/stoa.conf" ]; then
     cp "${STOA_DIR}/stoa.conf" "${CONFIG_DIR}/stoa/stoa.conf"
     echo -e "  ${O}[+] ${CONFIG_DIR}/stoa/stoa.conf${R}"
 else
-    echo -e "  ${S}[~] stoa.conf já existe (preservado)${R}"
+    echo -e "  ${S}[~] stoa.conf already exists (preserved)${R}"
 fi
 
 # ── Scripts ──
@@ -156,31 +156,31 @@ audio/mpeg=mpv.desktop
 audio/flac=mpv.desktop
 audio/ogg=mpv.desktop
 MIME
-    echo -e "  ${O}[+] mimeapps.list (Brave como browser padrão)${R}"
+    echo -e "  ${O}[+] mimeapps.list (Brave as default browser)${R}"
 fi
 
 echo ""
-echo -e "${F}Configurações do shell:${R}"
+echo -e "${F}Shell configuration:${R}"
 echo ""
 
-echo -e "  ${S}Os arquivos de shell não são linkados automaticamente.${R}"
-echo -e "  ${S}Para usar, adicione ao final do seu .zshrc ou .bashrc:${R}"
+echo -e "  ${S}Shell files are not linked automatically.${R}"
+echo -e "  ${S}To use, add to the end of your .zshrc or .bashrc:${R}"
 echo ""
 echo -e "  ${B}Zsh:${R}  source ${STOA_DIR}/zsh/.zshrc"
 echo -e "  ${B}Bash:${R} source ${STOA_DIR}/zsh/.bashrc"
 echo ""
 
-echo -e "  ${O}Pronto! O caminho do sábio está preparado.${R}"
+echo -e "  ${O}Done! The path of the wise is prepared.${R}"
 echo ""
-echo -e "  ${F}Atalhos:${R}"
+echo -e "  ${F}Keybinds:${R}"
 echo -e "  ${S}  Super+Return  Terminal (Alacritty)${R}"
 echo -e "  ${S}  Super+B       Browser (Brave)${R}"
-echo -e "  ${S}  Super+E       Arquivos (lf)${R}"
+echo -e "  ${S}  Super+E       Files (lf)${R}"
 echo -e "  ${S}  Super+N       Monitor (btop)${R}"
 echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
-echo -e "  ${S}  Super+O       Notas (Obsidian)${R}"
+echo -e "  ${S}  Super+O       Notes (Obsidian)${R}"
 echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
-echo -e "  ${S}  Super+/       Atalhos na barra (toggle)${R}"
-echo -e "  ${S}  Super+Shift+T OCR — extrair texto da tela${R}"
-echo -e "  ${S}  Super+Shift+P Colar com formatação avançada${R}"
+echo -e "  ${S}  Super+/       Bar keybinds (toggle)${R}"
+echo -e "  ${S}  Super+Shift+T OCR — extract text from screen${R}"
+echo -e "  ${S}  Super+Shift+P Advanced paste${R}"
 echo ""

@@ -1,9 +1,9 @@
 " ╔══════════════════════════════════════════════════════════════╗
 " ║  STOA LINUX — Neovim                                        ║
-" ║  "O impedimento à ação avança a ação." — Marco Aurélio      ║
+" ║  "The impediment to action advances action." — M. Aurelius  ║
 " ╚══════════════════════════════════════════════════════════════╝
 
-" ── Geral ──
+" ── General ──
 set termguicolors
 set number
 set relativenumber
@@ -15,34 +15,34 @@ set clipboard=unnamedplus
 set updatetime=300
 set timeoutlen=500
 
-" ── Indentação ──
+" ── Indentation ──
 set expandtab
 set shiftwidth=4
 set tabstop=4
 set smartindent
 
-" ── Busca ──
+" ── Search ──
 set ignorecase
 set smartcase
 set hlsearch
 set incsearch
 
-" ── Arquivos ──
+" ── Files ──
 set noswapfile
 set nobackup
 set undofile
 set undodir=~/.local/share/nvim/undo
 
-" ── Aparência ──
+" ── Appearance ──
 set fillchars=vert:│,fold:─,eob:\
 set showmode
 set showcmd
 set laststatus=2
 
-" ── Tema Estoico ──
+" ── Stoic Theme ──
 colorscheme stoa
 
-" ── Statusline Minimalista ──
+" ── Minimalist Statusline ──
 set statusline=
 set statusline+=\ %{toupper(mode())}
 set statusline+=\ │\ %f
@@ -52,26 +52,26 @@ set statusline+=%{&filetype}
 set statusline+=\ │\ %l:%c
 set statusline+=\ │\ %p%%\
 
-" ── Líder ──
+" ── Leader ──
 let mapleader = " "
 
-" ── Atalhos ──
+" ── Keybinds ──
 nnoremap <leader>w :w<CR>
 nnoremap <leader>q :q<CR>
 nnoremap <leader>h :noh<CR>
 nnoremap <leader>e :Explore<CR>
 
-" Navegação entre splits
+" Split navigation
 nnoremap <C-h> <C-w>h
 nnoremap <C-j> <C-w>j
 nnoremap <C-k> <C-w>k
 nnoremap <C-l> <C-w>l
 
-" Mover linhas em modo visual
+" Move lines in visual mode
 vnoremap J :m '>+1<CR>gv=gv
 vnoremap K :m '<-2<CR>gv=gv
 
-" Centralizar ao navegar
+" Center when navigating
 nnoremap <C-d> <C-d>zz
 nnoremap <C-u> <C-u>zz
 nnoremap n nzzzv

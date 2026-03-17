@@ -1,13 +1,13 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Quotes                                        ║
-# ║  "A riqueza consiste não em ter grandes posses, mas em ter  ║
-# ║   poucas necessidades." — Epicteto                          ║
+# ║  "Wealth consists not in having great possessions, but in   ║
+# ║   having few wants." — Epictetus                             ║
 # ║                                                              ║
-# ║  Banco:     ~/.local/share/stoa/quotes.json                  ║
-# ║  Playlist:  ~/.local/share/stoa/playlist (fila embaralhada)  ║
-# ║  Cada app consome a próxima frase via "next".                ║
-# ║  Sync: no boot + quando a playlist esvazia.                  ║
+# ║  Bank:      ~/.local/share/stoa/quotes.json                  ║
+# ║  Playlist:  ~/.local/share/stoa/playlist (shuffled queue)    ║
+# ║  Each app consumes the next quote via "next".                ║
+# ║  Sync: on boot + when the playlist runs out.                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 STOA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/stoa"
@@ -20,14 +20,14 @@ PLAYLIST_LOCK="$STOA_DIR/.playlist.lock"
 FETCH_COUNT=75
 FALLBACK="The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius"
 
-# ── Cores ──
+# ── Colors ──
 B='\033[38;2;196;154;92m'
 S='\033[38;2;110;106;98m'
 O='\033[38;2;138;154;108m'
 T='\033[38;2;179;107;90m'
 R='\033[0m'
 
-# ── Frases embutidas (seed inicial) ──
+# ── Built-in quotes (initial seed) ──
 _builtin_quotes() {
     cat <<'EOF'
 [
@@ -56,16 +56,16 @@ _builtin_quotes() {
   "Freedom is the only worthy goal in life. It is won by disregarding things that lie beyond our control. — Epictetus",
   "Memento Mori — Remember that you will die.",
   "Amor Fati — Love your fate.",
-  "A felicidade depende da qualidade dos teus pensamentos. — Marco Aurélio",
-  "Não sofras antes do tempo. — Sêneca",
-  "Não é o que te acontece, mas como reages ao que te acontece. — Epicteto",
-  "O impedimento à ação avança a ação. O que se interpõe no caminho torna-se o caminho. — Marco Aurélio",
-  "A virtude é o único bem. — Zenão de Cítio"
+  "Order is the first law of heaven. — Marcus Aurelius",
+  "Endure and renounce. — Epictetus",
+  "Action is the mark of wisdom. — Seneca",
+  "The path of the wise is prepared. — Seneca",
+  "Adapt yourself to the things among which your lot has been cast. — Marcus Aurelius"
 ]
 EOF
 }
 
-# ── Inicializar ──
+# ── Initialize ──
 _init() {
     mkdir -p "$STOA_DIR"
     [ -f "$QUOTES_FILE" ] || _builtin_quotes > "$QUOTES_FILE"
@@ -98,7 +98,7 @@ _add_quote() {
     tmp=$(jq --arg q "$q" '. + [$q]' "$QUOTES_FILE") && echo "$tmp" > "$QUOTES_FILE"
 }
 
-# ── Sync: busca frases novas ──
+# ── Sync: fetch new quotes ──
 _do_sync() {
     local interactive="${1:-false}"
     _init
@@ -120,10 +120,10 @@ _do_sync() {
                 added=$((added + 1))
                 [ "$interactive" = "true" ] && echo -e "  ${O}[+]${R} ${quote}"
             else
-                [ "$interactive" = "true" ] && echo -e "  ${S}[~]${R} (duplicada)"
+                [ "$interactive" = "true" ] && echo -e "  ${S}[~]${R} (duplicate)"
             fi
         else
-            [ "$interactive" = "true" ] && echo -e "  ${T}[!]${R} Falha #$i"
+            [ "$interactive" = "true" ] && echo -e "  ${T}[!]${R} Failed #$i"
         fi
         [ "$i" -lt "$FETCH_COUNT" ] && sleep 0.3
     done
@@ -134,16 +134,16 @@ _do_sync() {
         local total
         total=$(jq 'length' "$QUOTES_FILE")
         echo ""
-        echo -e "  ${B}Resultado:${R}"
-        echo -e "  ${S}  Buscadas:  ${tried}${R}"
-        echo -e "  ${S}  Novas:     ${added}${R}"
-        echo -e "  ${S}  Total:     ${total} frases${R}"
-        echo -e "  ${S}  Arquivo:   ${QUOTES_FILE}${R}"
+        echo -e "  ${B}Results:${R}"
+        echo -e "  ${S}  Fetched:  ${tried}${R}"
+        echo -e "  ${S}  New:      ${added}${R}"
+        echo -e "  ${S}  Total:    ${total} quotes${R}"
+        echo -e "  ${S}  File:     ${QUOTES_FILE}${R}"
         echo ""
     fi
 }
 
-# ── Playlist: embaralha índices ──
+# ── Playlist: shuffle indices ──
 _rebuild_playlist() {
     _init
     local total
@@ -152,7 +152,7 @@ _rebuild_playlist() {
     seq 0 $((total - 1)) | shuf > "$PLAYLIST_FILE"
 }
 
-# ── Detectar boot novo ──
+# ── Detect new boot ──
 _is_new_boot() {
     local current_boot
     current_boot=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo "unknown")
@@ -169,36 +169,36 @@ _is_new_boot() {
     return 1
 }
 
-# ── Next: consome a próxima frase da playlist ──
-# Cada chamada retorna uma frase diferente.
-# Sync automático no boot e quando a playlist esvazia.
+# ── Next: consume the next quote from the playlist ──
+# Each call returns a different quote.
+# Auto sync on boot and when the playlist runs out.
 _cmd_next() {
     _init
 
-    # Boot novo? Sync em background + reembaralhar
+    # New boot? Sync in background + reshuffle
     if _is_new_boot; then
         _rebuild_playlist
         ( _do_sync false && _rebuild_playlist ) &
         disown 2>/dev/null
     fi
 
-    # Sem playlist? Criar
+    # No playlist? Create one
     [ -f "$PLAYLIST_FILE" ] || _rebuild_playlist
 
-    # Lock para acesso atômico à playlist (evita 2 apps pegarem a mesma frase)
+    # Lock for atomic playlist access (prevents 2 apps from getting the same quote)
     local result
     result=$(
         (
             flock -w 2 200 || exit 1
 
-            # Playlist vazia? Todas consumidas → sync + rebuild
+            # Empty playlist? All consumed → sync + rebuild
             if [ ! -s "$PLAYLIST_FILE" ]; then
                 _rebuild_playlist
                 ( _do_sync false && _rebuild_playlist ) &
                 disown 2>/dev/null
             fi
 
-            # Pop primeiro índice
+            # Pop first index
             local idx
             idx=$(head -1 "$PLAYLIST_FILE" 2>/dev/null)
             sed -i '1d' "$PLAYLIST_FILE"
@@ -216,12 +216,12 @@ _cmd_remaining() { _init; [ -f "$PLAYLIST_FILE" ] && wc -l < "$PLAYLIST_FILE" ||
 
 _cmd_add() {
     local quote="$1"
-    [ -z "$quote" ] && { echo -e "  ${T}Uso: stoa-quotes-sync add \"Quote — Author\"${R}"; return 1; }
+    [ -z "$quote" ] && { echo -e "  ${T}Usage: stoa-quotes-sync add \"Quote — Author\"${R}"; return 1; }
     _init
     if _add_quote "$quote"; then
-        echo -e "  ${O}[+] Adicionada: ${quote}${R}"
+        echo -e "  ${O}[+] Added: ${quote}${R}"
     else
-        echo -e "  ${S}[~] Já existe: ${quote}${R}"
+        echo -e "  ${S}[~] Already exists: ${quote}${R}"
     fi
 }
 
@@ -229,41 +229,41 @@ _cmd_reset() {
     rm -f "$QUOTES_FILE" "$PLAYLIST_FILE" "$BOOT_ID_FILE"
     _init
     _rebuild_playlist
-    echo -e "  ${O}[✓] Resetado para $(jq 'length' "$QUOTES_FILE") frases embutidas.${R}"
+    echo -e "  ${O}[✓] Reset to $(jq 'length' "$QUOTES_FILE") built-in quotes.${R}"
 }
 
 _cmd_sync() {
-    command -v curl &>/dev/null || { echo -e "  ${T}[!] curl não encontrado.${R}"; exit 1; }
-    command -v jq &>/dev/null   || { echo -e "  ${T}[!] jq não encontrado.${R}"; exit 1; }
+    command -v curl &>/dev/null || { echo -e "  ${T}[!] curl not found.${R}"; exit 1; }
+    command -v jq &>/dev/null   || { echo -e "  ${T}[!] jq not found.${R}"; exit 1; }
     echo ""
     echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
-    echo -e "  ${B}║     STOA QUOTES — Buscando sabedoria...              ║${R}"
+    echo -e "  ${B}║     STOA QUOTES — Fetching wisdom...                 ║${R}"
     echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
     echo ""
     _do_sync true
     _rebuild_playlist
-    echo -e "  ${O}[✓] Playlist reembaralhada ($(wc -l < "$PLAYLIST_FILE") frases).${R}"
+    echo -e "  ${O}[✓] Playlist reshuffled ($(wc -l < "$PLAYLIST_FILE") quotes).${R}"
     echo ""
 }
 
 _cmd_help() {
     echo ""
-    echo -e "  ${B}stoa-quotes-sync${R} — Frases estoicas"
+    echo -e "  ${B}stoa-quotes-sync${R} — Stoic quotes"
     echo ""
-    echo -e "  ${S}Banco:     ${QUOTES_FILE}${R}"
+    echo -e "  ${S}Bank:      ${QUOTES_FILE}${R}"
     echo -e "  ${S}Playlist:  ${PLAYLIST_FILE}${R}"
     echo ""
-    echo -e "  ${S}Cada app pega uma frase diferente via \"next\".${R}"
-    echo -e "  ${S}Sync automático no boot e quando a playlist esvazia.${R}"
+    echo -e "  ${S}Each app gets a different quote via \"next\".${R}"
+    echo -e "  ${S}Auto sync on boot and when the playlist runs out.${R}"
     echo ""
-    echo -e "  ${S}Comandos:${R}"
-    echo -e "    ${O}stoa-quotes-sync${R}             Buscar frases agora"
-    echo -e "    ${O}stoa-quotes-sync next${R}        Próxima frase (consome da playlist)"
-    echo -e "    ${O}stoa-quotes-sync remaining${R}   Frases restantes na playlist"
-    echo -e "    ${O}stoa-quotes-sync list${R}        Listar todas do banco"
-    echo -e "    ${O}stoa-quotes-sync count${R}       Total no banco"
-    echo -e "    ${O}stoa-quotes-sync add \"...\"${R}   Adicionar frase manual"
-    echo -e "    ${O}stoa-quotes-sync reset${R}       Voltar às embutidas"
+    echo -e "  ${S}Commands:${R}"
+    echo -e "    ${O}stoa-quotes-sync${R}             Fetch quotes now"
+    echo -e "    ${O}stoa-quotes-sync next${R}        Next quote (consumes from playlist)"
+    echo -e "    ${O}stoa-quotes-sync remaining${R}   Remaining quotes in playlist"
+    echo -e "    ${O}stoa-quotes-sync list${R}        List all from bank"
+    echo -e "    ${O}stoa-quotes-sync count${R}       Total in bank"
+    echo -e "    ${O}stoa-quotes-sync add \"...\"${R}   Add quote manually"
+    echo -e "    ${O}stoa-quotes-sync reset${R}       Reset to built-in quotes"
     echo ""
 }
 
