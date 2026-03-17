@@ -168,5 +168,10 @@ exec --no-startup-id dunst -config ~/.config/dunst/dunstrc
 # ── Qalculate ──
 for_window [class="Qalculate-gtk"] floating enable, resize set 420 540, move position center
 
+# ── Steam ──
+for_window [class="steam" title="Friends List"] floating enable
+for_window [class="steam" title="Steam Settings"] floating enable
+assign [class="steam" title="Steam"] $ws9
+
 # ── eww Memento Mori ──
 for_window [title="memento"] floating enable, resize set 860 580, move position center

@@ -63,7 +63,10 @@ NOTES_PKGS="obsidian"
 APP_PKGS="alacritty neovim feh imagemagick"
 
 # Stoic apps (minimalist)
-STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish qalculate-gtk"
+STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish qalculate-gtk calibre"
+
+# Gaming — "Even a wise man needs rest." — Seneca
+GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
@@ -95,7 +98,7 @@ DEV_PKGS="github-cli"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $STOATOOLS_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -104,6 +107,7 @@ echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
+echo -e "  ${S}Gaming:     ${GAMING_PKGS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
 echo -e "  ${S}Stoatools:  ${STOATOOLS_PKGS}${R}"
 echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
@@ -120,6 +124,14 @@ read -rp "  Install packages? (y/n) [y]: " INSTALL_PKGS
 INSTALL_PKGS="${INSTALL_PKGS:-y}"
 
 if [ "$INSTALL_PKGS" = "y" ]; then
+    # Enable multilib repository (required for Steam/lib32 packages)
+    if ! grep -q "^\[multilib\]" /etc/pacman.conf 2>/dev/null; then
+        echo -e "  ${F}Enabling multilib repository (required for Steam)...${R}"
+        sudo sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
+        sudo pacman -Sy
+        echo -e "  ${O}[✓] multilib enabled.${R}"
+    fi
+
     sudo pacman -S --needed $ALL_PKGS
     echo -e "  ${O}[✓] Official packages installed.${R}"
 
@@ -221,6 +233,26 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${O}[✓] Enpass installed.${R}"
     else
         echo -e "  ${S}[~] Enpass already installed.${R}"
+    fi
+
+    # YACReader — Comic book reader (AUR)
+    echo ""
+    if ! command -v YACReader &>/dev/null; then
+        echo -e "  ${F}Installing YACReader (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm yacreader
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm yacreader
+        else
+            echo -e "  ${S}Installing YACReader manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/yacreader.git "$_tmpdir/yacreader"
+            (cd "$_tmpdir/yacreader" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] YACReader installed.${R}"
+    else
+        echo -e "  ${S}[~] YACReader already installed.${R}"
     fi
 
     # EB Garamond font (AUR)
@@ -382,6 +414,11 @@ echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
 echo -e "  ${S}  stoa-face setup   — Face recognition (Windows Hello-style)${R}"
 echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
+echo ""
+echo -e "  ${F}Leisure:${R}"
+echo -e "  ${S}  steam             — Gaming (Proton enabled for Windows games)${R}"
+echo -e "  ${S}  calibre           — eBook library manager and reader${R}"
+echo -e "  ${S}  YACReader         — Comic book reader (CBR/CBZ)${R}"
 echo ""
 echo -e "  ${F}Stoatools (also available as Thunar right-click actions):${R}"
 echo -e "  ${S}  stoa-ocr          — Extract text from screen or image (OCR)${R}"

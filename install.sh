@@ -99,6 +99,26 @@ _link "${STOA_DIR}/imv/config"         "${CONFIG_DIR}/imv/config"
 _link "${STOA_DIR}/eww/eww.yuck"  "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/eww/eww.scss"  "${CONFIG_DIR}/eww/eww.scss"
 
+# ── Calibre (eBook reader — Stoa theme) ──
+if [ -f "${STOA_DIR}/calibre/stoa-calibre.py" ]; then
+    python3 "${STOA_DIR}/calibre/stoa-calibre.py" 2>/dev/null && \
+        echo -e "  ${O}[+] Calibre Stoa theme applied${R}" || true
+fi
+
+# ── YACReader (Comic reader — Stoa Qt stylesheet) ──
+mkdir -p "${CONFIG_DIR}/YACReader"
+if [ -f "${STOA_DIR}/yacreader/stoa-yacreader.qss" ]; then
+    _link "${STOA_DIR}/yacreader/stoa-yacreader.qss" "${CONFIG_DIR}/YACReader/stoa-yacreader.qss"
+fi
+
+# ── Steam (custom CSS overlay) ──
+STEAM_CSS_DIR="${HOME}/.steam/steam/steamui"
+if [ -d "${HOME}/.steam" ]; then
+    mkdir -p "$STEAM_CSS_DIR"
+    cp "${STOA_DIR}/steam/stoa-steam.css" "${STEAM_CSS_DIR}/libraryroot.custom.css" 2>/dev/null && \
+        echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
+fi
+
 # ── Stoa wallpapers dir ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 
@@ -170,6 +190,14 @@ video/webm=mpv.desktop
 audio/mpeg=mpv.desktop
 audio/flac=mpv.desktop
 audio/ogg=mpv.desktop
+application/epub+zip=calibre-ebook-viewer.desktop
+application/x-mobipocket-ebook=calibre-ebook-viewer.desktop
+application/x-fictionbook+xml=calibre-ebook-viewer.desktop
+application/x-cbz=YACReader.desktop
+application/x-cbr=YACReader.desktop
+application/x-cb7=YACReader.desktop
+application/vnd.comicbook+zip=YACReader.desktop
+application/vnd.comicbook-rar=YACReader.desktop
 inode/directory=thunar.desktop
 MIME
     echo -e "  ${O}[+] mimeapps.list (Brave as default browser)${R}"

@@ -1,0 +1,70 @@
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  STOA LINUX — Steam Custom CSS                             ║
+   ║  "Even in leisure, virtue is present." — Seneca             ║
+   ║                                                              ║
+   ║  Override for Steam's Chromium-based UI.                     ║
+   ║  Placed in: ~/.steam/steam/steamui/libraryroot.custom.css   ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+
+:root {
+    /* ── Stoa palette ── */
+    --stoa-bg-dark:     #1a1714;
+    --stoa-bg:          #211e19;
+    --stoa-bg-light:    #2d2921;
+    --stoa-fg:          #d4cfc4;
+    --stoa-fg-dim:      #a89f91;
+    --stoa-bronze:      #c49a5c;
+    --stoa-gold:        #d4a84b;
+    --stoa-olive:       #8a9a6c;
+    --stoa-terracotta:  #b36b5a;
+    --stoa-stone:       #6e6a62;
+    --stoa-parchment:   #c4b08a;
+
+    /* ── Steam variable overrides ── */
+    --gpColor-Store-DarkTheme-Header: var(--stoa-bg-dark) !important;
+    --gpColor-Store-DarkTheme-TabSelected: var(--stoa-bronze) !important;
+}
+
+/* ── General background ── */
+.library_AppDetailsTransitionGroup_3by9P,
+.gamelistbar_GameListBarContainer_2ecls,
+.gamelistentry_HoverOverlay_1n2tG,
+.LibraryHeroBackground {
+    background-color: var(--stoa-bg) !important;
+}
+
+/* ── Sidebar ── */
+.gamelistbar_GameListBarContainer_2ecls {
+    background-color: var(--stoa-bg-dark) !important;
+}
+
+/* ── Accent color (buttons, highlights) ── */
+.DialogButton._DialogLayout.Primary,
+.gamelist_GameListItemActive_2BQDF {
+    background-color: var(--stoa-bronze) !important;
+    color: var(--stoa-bg-dark) !important;
+}
+
+/* ── Selection ── */
+::selection {
+    background-color: var(--stoa-bronze) !important;
+    color: var(--stoa-bg-dark) !important;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--stoa-bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--stoa-stone);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--stoa-fg-dim);
+}
