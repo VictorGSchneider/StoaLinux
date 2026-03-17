@@ -82,7 +82,7 @@
 
     "wireplumber": {
         "format": " {volume}%",
-        "format-muted": " mudo",
+        "format-muted": " muted",
         "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
         "on-scroll-down": "~/.local/bin/stoa-osd volume-down"

@@ -1,28 +1,28 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Arch Install                                  ║
-# ║  "A ação é a marca da sabedoria." — Sêneca                  ║
+# ║  "Action is the mark of wisdom." — Seneca                   ║
 # ║                                                              ║
-# ║  Usa o archinstall padrão com configuração StoaLinux.        ║
-# ║  Discos e usuário são configurados manualmente via TUI.      ║
+# ║  Uses the standard archinstall with StoaLinux config.        ║
+# ║  Disks and user are configured manually via TUI.             ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# USO (a partir do live ISO do Arch Linux):
+# USAGE (from Arch Linux live ISO):
 #
 #   curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
 #   chmod +x arch-install.sh
 #   ./arch-install.sh
 #
-# O que acontece:
-#   1. Baixa a config JSON do StoaLinux
-#   2. Abre o archinstall padrão com os pacotes pré-selecionados
-#      → Discos, usuário e senha são escolhidos por VOCÊ na TUI
-#      → Bootloader, pacotes, áudio, locale já vêm configurados
-#   3. Após o archinstall terminar, instala os dotfiles StoaLinux
+# What happens:
+#   1. Downloads StoaLinux JSON config
+#   2. Opens standard archinstall with pre-selected packages
+#      → Disks, user and password are chosen by YOU in the TUI
+#      → Bootloader, packages, audio, locale are already configured
+#   3. After archinstall finishes, installs StoaLinux dotfiles
 
 set -e
 
-# ── Cores ──
+# ── Colors ──
 B='\033[38;2;196;154;92m'
 S='\033[38;2;110;106;98m'
 F='\033[38;2;212;207;196m'
@@ -38,72 +38,72 @@ echo -e "  ${B}║     archinstall + Hyprland/Wayland + i3/Xorg          ║${R}
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
-# ── Verificar root ──
+# ── Check root ──
 if [ "$(id -u)" -ne 0 ]; then
-    echo -e "  ${T}[!] Execute como root (live ISO).${R}"
+    echo -e "  ${T}[!] Run as root (live ISO).${R}"
     exit 1
 fi
 
-# ── Verificar conexão ──
-echo -e "  ${S}Verificando conexão...${R}"
+# ── Check connection ──
+echo -e "  ${S}Checking connection...${R}"
 if ! ping -c 1 archlinux.org &>/dev/null; then
-    echo -e "  ${T}[!] Sem conexão. Conecte via:${R}"
-    echo -e "  ${S}    Wi-Fi:  iwctl station wlan0 connect NOME_DA_REDE${R}"
-    echo -e "  ${S}    Cabo:   dhcpcd${R}"
+    echo -e "  ${T}[!] No connection. Connect via:${R}"
+    echo -e "  ${S}    Wi-Fi:  iwctl station wlan0 connect NETWORK_NAME${R}"
+    echo -e "  ${S}    Cable:  dhcpcd${R}"
     exit 1
 fi
-echo -e "  ${O}[✓] Conectado.${R}"
+echo -e "  ${O}[✓] Connected.${R}"
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# FASE 1: Baixar config do StoaLinux
+# PHASE 1: Download StoaLinux config
 # ══════════════════════════════════════════════════════════════
 
 STOA_REPO="https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main"
 CONFIG_DIR="/tmp/stoa-archinstall"
 mkdir -p "$CONFIG_DIR"
 
-echo -e "  ${B}[1/4] Baixando configuração StoaLinux...${R}"
+echo -e "  ${B}[1/4] Downloading StoaLinux config...${R}"
 curl -sL "${STOA_REPO}/archinstall/user_configuration.json" -o "${CONFIG_DIR}/user_configuration.json"
-echo -e "  ${O}[✓] Config baixada.${R}"
+echo -e "  ${O}[✓] Config downloaded.${R}"
 echo ""
 
-# ── Mostrar o que vem pré-configurado ──
-echo -e "  ${F}Configuração pré-definida pelo StoaLinux:${R}"
-echo -e "  ${S}  Bootloader:  EFISTUB (boot direto via UEFI)${R}"
-echo -e "  ${S}  Áudio:       PipeWire${R}"
-echo -e "  ${S}  Rede:        NetworkManager${R}"
-echo -e "  ${S}  Locale:      pt_BR.UTF-8 / teclado br${R}"
+# ── Show what is pre-configured ──
+echo -e "  ${F}Pre-configured by StoaLinux:${R}"
+echo -e "  ${S}  Bootloader:  EFISTUB (direct UEFI boot)${R}"
+echo -e "  ${S}  Audio:       PipeWire${R}"
+echo -e "  ${S}  Network:     NetworkManager${R}"
+echo -e "  ${S}  Locale:      pt_BR.UTF-8 / keyboard br${R}"
 echo -e "  ${S}  Timezone:    America/Sao_Paulo${R}"
-echo -e "  ${S}  Pacotes:     Hyprland, Waybar, i3, Alacritty, Neovim, Rofi...${R}"
+echo -e "  ${S}  Packages:    Hyprland, Waybar, i3, Alacritty, Neovim, Rofi...${R}"
 echo ""
-echo -e "  ${F}Você configura na TUI do archinstall:${R}"
-echo -e "  ${B}  → Discos (particionamento e formatação)${R}"
-echo -e "  ${B}  → Usuário e senha${R}"
-echo -e "  ${B}  → Driver de vídeo (se necessário)${R}"
+echo -e "  ${F}You configure in archinstall TUI:${R}"
+echo -e "  ${B}  → Disks (partitioning and formatting)${R}"
+echo -e "  ${B}  → User and password${R}"
+echo -e "  ${B}  → Video driver (if needed)${R}"
 echo ""
-echo -e "  ${S}Todos os campos podem ser alterados na TUI.${R}"
+echo -e "  ${S}All fields can be changed in the TUI.${R}"
 echo ""
 
-read -rp "  Iniciar archinstall? (s/n) [s]: " START
-START="${START:-s}"
-if [ "$START" != "s" ]; then
-    echo -e "  ${S}Cancelado.${R}"
+read -rp "  Start archinstall? (y/n) [y]: " START
+START="${START:-y}"
+if [ "$START" != "y" ]; then
+    echo -e "  ${S}Cancelled.${R}"
     exit 0
 fi
 
 # ══════════════════════════════════════════════════════════════
-# FASE 2: Executar archinstall
+# PHASE 2: Run archinstall
 # ══════════════════════════════════════════════════════════════
 
 echo ""
-echo -e "  ${B}[2/4] Iniciando archinstall...${R}"
-echo -e "  ${S}Configure discos, usuário e driver de vídeo na TUI.${R}"
+echo -e "  ${B}[2/4] Starting archinstall...${R}"
+echo -e "  ${S}Configure disks, user and video driver in the TUI.${R}"
 echo ""
 
 archinstall --config "${CONFIG_DIR}/user_configuration.json"
 
-# ── Detectar sistema instalado ──
+# ── Detect installed system ──
 
 INSTALL_ROOT="/mnt/archinstall"
 if [ ! -d "$INSTALL_ROOT" ] || ! mountpoint -q "$INSTALL_ROOT" 2>/dev/null; then
@@ -111,8 +111,8 @@ if [ ! -d "$INSTALL_ROOT" ] || ! mountpoint -q "$INSTALL_ROOT" 2>/dev/null; then
 fi
 
 if ! mountpoint -q "$INSTALL_ROOT" 2>/dev/null; then
-    echo -e "  ${T}[!] Sistema não encontrado montado.${R}"
-    echo -e "  ${S}Execute o post-install.sh após o primeiro boot.${R}"
+    echo -e "  ${T}[!] Installed system not found mounted.${R}"
+    echo -e "  ${S}Run post-install.sh after first boot.${R}"
     exit 0
 fi
 
@@ -125,20 +125,20 @@ for userdir in "${INSTALL_ROOT}/home"/*/; do
 done
 
 if [ -z "$CREATED_USER" ]; then
-    echo -e "  ${T}[!] Nenhum usuário encontrado. Execute post-install.sh após o boot.${R}"
+    echo -e "  ${T}[!] No user found. Run post-install.sh after boot.${R}"
     exit 0
 fi
 
-echo -e "  ${S}Usuário detectado: ${B}${CREATED_USER}${R}"
+echo -e "  ${S}User detected: ${B}${CREATED_USER}${R}"
 
 # ══════════════════════════════════════════════════════════════
-# FASE 3: Instalar yay (AUR helper) + pacotes AUR
+# PHASE 3: Install yay (AUR helper) + AUR packages
 # ══════════════════════════════════════════════════════════════
 
 echo ""
-echo -e "  ${B}[3/4] Instalando yay (AUR helper)...${R}"
+echo -e "  ${B}[3/4] Installing yay (AUR helper)...${R}"
 
-# Garantir sudo sem senha temporariamente para makepkg no chroot
+# Ensure temporary passwordless sudo for makepkg in chroot
 arch-chroot "$INSTALL_ROOT" bash -c \
     "echo '${CREATED_USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/stoa-temp" 2>/dev/null
 
@@ -151,70 +151,70 @@ arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c '
 ' 2>/dev/null
 
 if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/null; then
-    echo -e "  ${O}[✓] yay instalado.${R}"
+    echo -e "  ${O}[✓] yay installed.${R}"
 
-    # ── Pacotes AUR ──
-    echo -e "  ${S}Instalando pacotes AUR: brave-bin, obsidian, eww-wayland, satty...${R}"
+    # ── AUR packages ──
+    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww-wayland, satty...${R}"
     arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
         "yay -S --needed --noconfirm brave-bin obsidian eww-wayland satty" 2>/dev/null || true
-    echo -e "  ${O}[✓] Pacotes AUR instalados.${R}"
+    echo -e "  ${O}[✓] AUR packages installed.${R}"
 else
-    echo -e "  ${T}[!] yay não pôde ser instalado no chroot.${R}"
-    echo -e "  ${S}Instale após o primeiro boot:${R}"
+    echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
+    echo -e "  ${S}Install after first boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
     echo -e "  ${B}    yay -S brave-bin obsidian eww-wayland satty${R}"
 fi
 
-# Remover sudo temporário
+# Remove temporary sudo
 arch-chroot "$INSTALL_ROOT" rm -f /etc/sudoers.d/stoa-temp 2>/dev/null
 
 # ══════════════════════════════════════════════════════════════
-# FASE 4: Instalar dotfiles StoaLinux
+# PHASE 4: Install StoaLinux dotfiles
 # ══════════════════════════════════════════════════════════════
 
 echo ""
-echo -e "  ${B}[4/4] Instalando dotfiles StoaLinux...${R}"
+echo -e "  ${B}[4/4] Installing StoaLinux dotfiles...${R}"
 
-# Clonar StoaLinux no home do usuário
+# Clone StoaLinux to user home
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
     "git clone https://github.com/VictorGSchneider/StoaLinux.git ~/StoaLinux" 2>/dev/null || true
 
-# Executar install.sh (cria symlinks dos dotfiles)
+# Run install.sh (creates dotfile symlinks)
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
     "cd ~/StoaLinux && chmod +x install.sh && bash install.sh" 2>/dev/null || true
 
-# Configurar zsh
+# Configure zsh
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
     "grep -q StoaLinux ~/.zshrc 2>/dev/null || echo 'source ~/StoaLinux/zsh/.zshrc' >> ~/.zshrc" 2>/dev/null || true
 
-# .xinitrc para fallback Xorg
+# .xinitrc for Xorg fallback
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
     "[ -f ~/.xinitrc ] || echo 'exec i3' > ~/.xinitrc" 2>/dev/null || true
 
-echo -e "  ${O}[✓] Dotfiles instalados para ${CREATED_USER}.${R}"
+echo -e "  ${O}[✓] Dotfiles installed for ${CREATED_USER}.${R}"
 
 # ── GPU + CPU Setup ──
 echo ""
-echo -e "  ${S}Para configurar GPU e microcode do processador:${R}"
+echo -e "  ${S}To configure GPU and CPU microcode:${R}"
 echo -e "  ${B}    cd ~/StoaLinux && ./scripts/stoa-gpu-setup.sh${R}"
 
 # ══════════════════════════════════════════════════════════════
-# Fim
+# End
 # ══════════════════════════════════════════════════════════════
 
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
-echo -e "  ${B}║     Instalação concluída!                            ║${R}"
+echo -e "  ${B}║     Installation complete!                            ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
-echo -e "  ${F}Após o reboot, faça login e inicie:${R}"
+echo -e "  ${F}After reboot, login and start:${R}"
 echo -e "  ${B}  Hyprland (Wayland):  Hyprland${R}"
 echo -e "  ${B}  i3 (Xorg fallback):  startx${R}"
 echo ""
-echo -e "  ${F}Atalhos:${R}"
+echo -e "  ${F}Shortcuts:${R}"
 echo -e "  ${S}  Super+Return  Terminal     Super+B  Brave${R}"
-echo -e "  ${S}  Super+D       Launcher     Super+E  Arquivos (lf)${R}"
-echo -e "  ${S}  Super+N       Monitor      Super+Q  Fechar janela${R}"
+echo -e "  ${S}  Super+D       Launcher     Super+E  Files (lf)${R}"
+echo -e "  ${S}  Super+N       Monitor      Super+Q  Close window${R}"
 echo ""
-echo -e "  ${O}\"O caminho do sábio está preparado.\" — Sêneca${R}"
+echo -e "  ${O}\"The path of the wise is prepared.\" — Seneca${R}"
 echo ""

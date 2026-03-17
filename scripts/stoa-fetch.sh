@@ -1,10 +1,10 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Stoa Fetch                                    ║
-# ║  Um fetch minimalista com estética estoica                   ║
+# ║  A minimalist fetch with Stoic aesthetics                    ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# Cores
+# Colors
 B='\033[38;2;196;154;92m'   # Bronze
 G='\033[38;2;212;168;75m'   # Gold
 S='\033[38;2;110;106;98m'   # Stone
@@ -29,14 +29,14 @@ echo ""
 echo -e "  ${B}        ╔═══╗${R}"
 echo -e "  ${B}        ║   ║${R}        ${G}${user}${R}"
 echo -e "  ${B}        ║   ║${R}        ${S}──────────────────${R}"
-echo -e "  ${B}   ╔════╩═══╩════╗${R}   ${B}Virtude ${S}› ${F}${os}${R}"
+echo -e "  ${B}   ╔════╩═══╩════╗${R}   ${B}Virtue  ${S}› ${F}${os}${R}"
 echo -e "  ${B}   ║             ║${R}   ${B}Logos   ${S}› ${F}${kernel}${R}"
-echo -e "  ${B}   ║      Σ      ║${R}   ${B}Tempo   ${S}› ${F}${uptime}${R}"
-echo -e "  ${B}   ║             ║${R}   ${B}Ágora   ${S}› ${F}${shell}${R}"
-echo -e "  ${B}   ╚═════════════╝${R}   ${B}Coluna  ${S}› ${F}${wm}${R}"
-echo -e "  ${B}   ║ ║ ║ ║ ║ ║ ║${R}   ${B}Pacotes ${S}› ${F}${pkgs}${R}"
-echo -e "  ${B}   ║ ║ ║ ║ ║ ║ ║${R}   ${B}Mente   ${S}› ${F}${cpu}${R}"
-echo -e "  ${B}   ║ ║ ║ ║ ║ ║ ║${R}   ${B}Memória ${S}› ${F}${mem_used}M / ${mem_total}M${R}"
+echo -e "  ${B}   ║      Σ      ║${R}   ${B}Uptime  ${S}› ${F}${uptime}${R}"
+echo -e "  ${B}   ║             ║${R}   ${B}Agora   ${S}› ${F}${shell}${R}"
+echo -e "  ${B}   ╚═════════════╝${R}   ${B}Column  ${S}› ${F}${wm}${R}"
+echo -e "  ${B}   ║ ║ ║ ║ ║ ║ ║${R}   ${B}Packages${S}› ${F}${pkgs}${R}"
+echo -e "  ${B}   ║ ║ ║ ║ ║ ║ ║${R}   ${B}Mind    ${S}› ${F}${cpu}${R}"
+echo -e "  ${B}   ║ ║ ║ ║ ║ ║ ║${R}   ${B}Memory  ${S}› ${F}${mem_used}M / ${mem_total}M${R}"
 echo -e "  ${B}  ═╩═╩═╩═╩═╩═╩═╩═${R}"
 echo -e "  ${B}  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀${R}"
 echo ""

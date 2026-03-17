@@ -1,23 +1,23 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — GPU + CPU Setup                               ║
-# ║  "Adapta-te às coisas com as quais o destino te uniu."      ║
-# ║                              — Marco Aurélio                 ║
+# ║  "Adapt yourself to the things among which your lot          ║
+# ║   has been cast."                  — Marcus Aurelius          ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# USO:
+# USAGE:
 #   chmod +x scripts/stoa-gpu-setup.sh
 #   ./scripts/stoa-gpu-setup.sh
 #
-# O que este script faz:
-#   1. Detecta CPU (AMD/Intel) e instala microcode correto
-#   2. Detecta GPU (NVIDIA/AMD/Intel) e instala drivers adequados
-#   3. Para NVIDIA: configura mkinitcpio, modprobe e env vars
-#   4. Para AMD/Intel GPU: confirma pacotes mesa/vulkan
+# What this script does:
+#   1. Detects CPU (AMD/Intel) and installs correct microcode
+#   2. Detects GPU (NVIDIA/AMD/Intel) and installs appropriate drivers
+#   3. For NVIDIA: configures mkinitcpio, modprobe, and env vars
+#   4. For AMD/Intel GPU: confirms mesa/vulkan packages
 
 set -e
 
-# ── Cores ──
+# ── Colors ──
 B='\033[38;2;196;154;92m'
 S='\033[38;2;110;106;98m'
 F='\033[38;2;212;207;196m'
@@ -31,19 +31,19 @@ echo -e "  ${B}║     STOA LINUX — GPU + CPU Setup                     ║${R
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
-# ── Verificar Arch ──
+# ── Check Arch ──
 if [ ! -f /etc/arch-release ]; then
-    echo -e "  ${T}[!] Este script é para Arch Linux.${R}"
+    echo -e "  ${T}[!] This script is for Arch Linux.${R}"
     exit 1
 fi
 
 if [ "$(id -u)" -eq 0 ]; then
-    echo -e "  ${T}[!] Não execute como root. O script usa sudo quando necessário.${R}"
+    echo -e "  ${T}[!] Do not run as root. The script uses sudo when necessary.${R}"
     exit 1
 fi
 
 # ══════════════════════════════════════════════════════════════
-# Funções de detecção
+# Detection functions
 # ══════════════════════════════════════════════════════════════
 
 detect_cpu() {
@@ -72,7 +72,7 @@ detect_gpu() {
 }
 
 get_gpu_name() {
-    lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1 | sed 's/.*: //' || echo "Desconhecida"
+    lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1 | sed 's/.*: //' || echo "Unknown"
 }
 
 detect_nvidia_generation() {
@@ -86,7 +86,7 @@ detect_nvidia_generation() {
 
     id_dec=$((16#${device_id}))
 
-    # Mapeamento aproximado por PCI device ID ranges
+    # Approximate mapping by PCI device ID ranges
     # Blackwell:    ≥0x2900 (GB2xx) — RTX 5000
     # Ada Lovelace: ≥0x2600 (AD1xx) — RTX 4000
     # Ampere:       ≥0x2200 (GA1xx) — RTX 3000
@@ -121,7 +121,7 @@ install_aur_package() {
     elif command -v paru &>/dev/null; then
         paru -S --needed --noconfirm "$pkg"
     else
-        echo -e "  ${S}Instalando ${pkg} manualmente via makepkg...${R}"
+        echo -e "  ${S}Installing ${pkg} manually via makepkg...${R}"
         local _tmpdir
         _tmpdir=$(mktemp -d)
         git clone "https://aur.archlinux.org/${pkg}.git" "$_tmpdir/$pkg"
@@ -131,15 +131,15 @@ install_aur_package() {
 }
 
 # ══════════════════════════════════════════════════════════════
-# [1/5] Detecção de hardware
+# [1/5] Hardware detection
 # ══════════════════════════════════════════════════════════════
 
-echo -e "  ${F}[1/5] Detectando hardware...${R}"
+echo -e "  ${F}[1/5] Detecting hardware...${R}"
 echo ""
 
 # ── CPU ──
 CPU_VENDOR=$(detect_cpu)
-CPU_MODEL=$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo "Desconhecido")
+CPU_MODEL=$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo "Unknown")
 CPU_UCODE_PKG=""
 
 case "$CPU_VENDOR" in
@@ -154,12 +154,12 @@ case "$CPU_VENDOR" in
         echo -e "  ${S}      Vendor: Intel → microcode: ${CPU_UCODE_PKG}${R}"
         ;;
     *)
-        echo -e "  ${T}CPU:  Vendor desconhecido${R}"
-        echo -e "  ${S}      Escolha o microcode:${R}"
+        echo -e "  ${T}CPU:  Unknown vendor${R}"
+        echo -e "  ${S}      Choose the microcode:${R}"
         echo -e "  ${S}        1) amd-ucode   (AMD)${R}"
         echo -e "  ${S}        2) intel-ucode  (Intel)${R}"
-        echo -e "  ${S}        3) Pular${R}"
-        read -rp "  Escolha [3]: " CPU_CHOICE
+        echo -e "  ${S}        3) Skip${R}"
+        read -rp "  Choose [3]: " CPU_CHOICE
         CPU_CHOICE="${CPU_CHOICE:-3}"
         case "$CPU_CHOICE" in
             1) CPU_UCODE_PKG="amd-ucode" ;;
@@ -186,17 +186,17 @@ case "$GPU_VENDOR" in
         NVIDIA_GEN=$(detect_nvidia_generation)
 
         echo -e "  ${B}GPU:${R}  ${F}${GPU_NAME}${R}"
-        echo -e "  ${S}      Vendor: NVIDIA — Geração: ${NVIDIA_GEN}${R}"
+        echo -e "  ${S}      Vendor: NVIDIA — Generation: ${NVIDIA_GEN}${R}"
 
         case "$NVIDIA_GEN" in
             blackwell|ada|ampere|turing)
                 NVIDIA_DRIVER="nvidia"
-                echo -e "  ${S}      Driver recomendado: nvidia (proprietário)${R}"
-                echo -e "  ${S}      Alternativa: nvidia-open (kernel aberto, Turing+)${R}"
+                echo -e "  ${S}      Recommended driver: nvidia (proprietary)${R}"
+                echo -e "  ${S}      Alternative: nvidia-open (open kernel modules, Turing+)${R}"
                 ;;
             pascal|maxwell)
                 NVIDIA_DRIVER="nvidia"
-                echo -e "  ${S}      Driver recomendado: nvidia (proprietário)${R}"
+                echo -e "  ${S}      Recommended driver: nvidia (proprietary)${R}"
                 ;;
             kepler)
                 IS_KEPLER=true
@@ -205,31 +205,31 @@ case "$GPU_VENDOR" in
                 echo -e "  ${S}      GTX 600/700 series${R}"
                 ;;
             legacy)
-                echo -e "  ${T}      GPU muito antiga — driver proprietário pode não existir.${R}"
-                echo -e "  ${S}      Recomendação: usar driver Nouveau (open-source).${R}"
+                echo -e "  ${T}      GPU too old — proprietary driver may not exist.${R}"
+                echo -e "  ${S}      Recommendation: use Nouveau driver (open-source).${R}"
                 IS_NVIDIA=false
                 GPU_DRIVER_PKGS=""
                 ;;
             *)
-                echo -e "  ${T}      Geração não detectada automaticamente.${R}"
+                echo -e "  ${T}      Generation not detected automatically.${R}"
                 ;;
         esac
 
-        # Confirmação / override
+        # Confirmation / override
         if $IS_NVIDIA; then
             echo ""
-            echo -e "  ${F}Confirmar driver '${NVIDIA_DRIVER}'? (s/n) [s]:${R}"
+            echo -e "  ${F}Confirm driver '${NVIDIA_DRIVER}'? (y/n) [y]:${R}"
             read -rp "  " CONFIRM_DRIVER
-            CONFIRM_DRIVER="${CONFIRM_DRIVER:-s}"
+            CONFIRM_DRIVER="${CONFIRM_DRIVER:-y}"
 
-            if [ "$CONFIRM_DRIVER" != "s" ]; then
+            if [ "$CONFIRM_DRIVER" != "y" ]; then
                 echo ""
-                echo -e "  ${F}Escolha o driver NVIDIA:${R}"
+                echo -e "  ${F}Choose NVIDIA driver:${R}"
                 echo -e "  ${S}    1) nvidia           (Maxwell/Pascal/Turing/Ampere/Ada/Blackwell)${R}"
-                echo -e "  ${S}    2) nvidia-open      (Turing+ — módulos kernel abertos)${R}"
+                echo -e "  ${S}    2) nvidia-open      (Turing+ — open kernel modules)${R}"
                 echo -e "  ${S}    3) nvidia-470xx-dkms (Kepler — GTX 600/700, AUR)${R}"
-                echo -e "  ${S}    4) Cancelar (usar Nouveau)${R}"
-                read -rp "  Escolha [1]: " DRIVER_CHOICE
+                echo -e "  ${S}    4) Cancel (use Nouveau)${R}"
+                read -rp "  Choose [1]: " DRIVER_CHOICE
                 DRIVER_CHOICE="${DRIVER_CHOICE:-1}"
 
                 case "$DRIVER_CHOICE" in
@@ -254,30 +254,30 @@ case "$GPU_VENDOR" in
         echo -e "  ${B}GPU:${R}  ${F}${GPU_NAME}${R}"
         echo -e "  ${S}      Vendor: AMD/Radeon${R}"
         echo -e "  ${S}      Drivers: mesa vulkan-radeon libva-mesa-driver${R}"
-        echo -e "  ${O}      (Geralmente já instalados — open-source funciona nativamente)${R}"
+        echo -e "  ${O}      (Usually already installed — open-source works natively)${R}"
         GPU_DRIVER_PKGS="mesa vulkan-radeon libva-mesa-driver"
         ;;
     intel)
         echo -e "  ${B}GPU:${R}  ${F}${GPU_NAME}${R}"
         echo -e "  ${S}      Vendor: Intel${R}"
         echo -e "  ${S}      Drivers: mesa vulkan-intel intel-media-driver${R}"
-        echo -e "  ${O}      (Geralmente já instalados — open-source funciona nativamente)${R}"
+        echo -e "  ${O}      (Usually already installed — open-source works natively)${R}"
         GPU_DRIVER_PKGS="mesa vulkan-intel intel-media-driver"
         ;;
     *)
-        echo -e "  ${T}GPU:  Não detectada${R}"
-        echo -e "  ${S}      Verifique com: lspci | grep -i vga${R}"
-        echo -e "  ${S}      Pulando configuração de GPU.${R}"
+        echo -e "  ${T}GPU:  Not detected${R}"
+        echo -e "  ${S}      Check with: lspci | grep -i vga${R}"
+        echo -e "  ${S}      Skipping GPU configuration.${R}"
         ;;
 esac
 
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# [2/5] Instalação de pacotes
+# [2/5] Package installation
 # ══════════════════════════════════════════════════════════════
 
-echo -e "  ${F}[2/5] Pacotes${R}"
+echo -e "  ${F}[2/5] Packages${R}"
 echo ""
 
 ALL_PKGS=""
@@ -286,95 +286,95 @@ ALL_PKGS=""
 ALL_PKGS=$(echo "$ALL_PKGS" | xargs) # trim
 
 if [ -z "$ALL_PKGS" ]; then
-    echo -e "  ${S}[~] Nenhum pacote para instalar.${R}"
+    echo -e "  ${S}[~] No packages to install.${R}"
 else
-    echo -e "  ${S}Pacotes: ${ALL_PKGS}${R}"
+    echo -e "  ${S}Packages: ${ALL_PKGS}${R}"
     if $IS_KEPLER; then
         echo -e "  ${T}  + ${NVIDIA_DRIVER} (AUR)${R}"
     fi
     echo ""
-    read -rp "  Instalar pacotes? (s/n) [s]: " INSTALL
-    INSTALL="${INSTALL:-s}"
+    read -rp "  Install packages? (y/n) [y]: " INSTALL
+    INSTALL="${INSTALL:-y}"
 
-    if [ "$INSTALL" = "s" ]; then
+    if [ "$INSTALL" = "y" ]; then
         sudo pacman -S --needed $ALL_PKGS
-        echo -e "  ${O}[✓] Pacotes oficiais instalados.${R}"
+        echo -e "  ${O}[✓] Official packages installed.${R}"
 
         # Kepler driver via AUR
         if $IS_KEPLER; then
             echo ""
-            echo -e "  ${F}Instalando ${NVIDIA_DRIVER} (AUR)...${R}"
+            echo -e "  ${F}Installing ${NVIDIA_DRIVER} (AUR)...${R}"
             install_aur_package "$NVIDIA_DRIVER"
-            echo -e "  ${O}[✓] ${NVIDIA_DRIVER} instalado.${R}"
+            echo -e "  ${O}[✓] ${NVIDIA_DRIVER} installed.${R}"
         fi
     else
-        echo -e "  ${S}[~] Pacotes pulados.${R}"
+        echo -e "  ${S}[~] Packages skipped.${R}"
     fi
 fi
 
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# [3/5] mkinitcpio — módulos NVIDIA early KMS (somente NVIDIA)
+# [3/5] mkinitcpio — NVIDIA early KMS modules (NVIDIA only)
 # ══════════════════════════════════════════════════════════════
 
 if $IS_NVIDIA; then
-    echo -e "  ${F}[3/5] Configurando mkinitcpio (early KMS)${R}"
+    echo -e "  ${F}[3/5] Configuring mkinitcpio (early KMS)${R}"
 
     MKINITCPIO="/etc/mkinitcpio.conf"
     NVIDIA_MODULES="nvidia nvidia_modeset nvidia_uvm nvidia_drm"
 
     if grep -q "nvidia" "$MKINITCPIO" 2>/dev/null; then
-        echo -e "  ${S}[~] Módulos NVIDIA já presentes no mkinitcpio.${R}"
+        echo -e "  ${S}[~] NVIDIA modules already present in mkinitcpio.${R}"
     else
-        echo -e "  ${S}Adicionando módulos: ${NVIDIA_MODULES}${R}"
+        echo -e "  ${S}Adding modules: ${NVIDIA_MODULES}${R}"
         sudo sed -i "s/^MODULES=(\(.*\))/MODULES=(\1 ${NVIDIA_MODULES})/" "$MKINITCPIO"
         sudo sed -i 's/MODULES=( /MODULES=(/' "$MKINITCPIO"
-        echo -e "  ${O}[✓] Módulos adicionados.${R}"
-        echo -e "  ${S}Regenerando initramfs...${R}"
+        echo -e "  ${O}[✓] Modules added.${R}"
+        echo -e "  ${S}Regenerating initramfs...${R}"
         sudo mkinitcpio -P
-        echo -e "  ${O}[✓] Initramfs regenerado.${R}"
+        echo -e "  ${O}[✓] Initramfs regenerated.${R}"
     fi
 else
-    echo -e "  ${S}[3/5] mkinitcpio — GPU não-NVIDIA, sem alterações necessárias.${R}"
+    echo -e "  ${S}[3/5] mkinitcpio — non-NVIDIA GPU, no changes needed.${R}"
 fi
 
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# [4/5] modprobe — nvidia_drm modeset (somente NVIDIA)
+# [4/5] modprobe — nvidia_drm modeset (NVIDIA only)
 # ══════════════════════════════════════════════════════════════
 
 if $IS_NVIDIA; then
-    echo -e "  ${F}[4/5] Configurando nvidia-drm modeset${R}"
+    echo -e "  ${F}[4/5] Configuring nvidia-drm modeset${R}"
 
     MODPROBE_CONF="/etc/modprobe.d/nvidia.conf"
     if [ -f "$MODPROBE_CONF" ] && grep -q "modeset=1" "$MODPROBE_CONF" 2>/dev/null; then
-        echo -e "  ${S}[~] nvidia-drm modeset já configurado.${R}"
+        echo -e "  ${S}[~] nvidia-drm modeset already configured.${R}"
     else
         echo "options nvidia_drm modeset=1 fbdev=1" | sudo tee "$MODPROBE_CONF" > /dev/null
-        echo -e "  ${O}[✓] /etc/modprobe.d/nvidia.conf criado.${R}"
+        echo -e "  ${O}[✓] /etc/modprobe.d/nvidia.conf created.${R}"
     fi
 else
-    echo -e "  ${S}[4/5] modprobe — GPU não-NVIDIA, sem alterações necessárias.${R}"
+    echo -e "  ${S}[4/5] modprobe — non-NVIDIA GPU, no changes needed.${R}"
 fi
 
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# [5/5] Variáveis de ambiente (somente NVIDIA)
+# [5/5] Environment variables (NVIDIA only)
 # ══════════════════════════════════════════════════════════════
 
 if $IS_NVIDIA; then
-    echo -e "  ${F}[5/5] Ativando variáveis NVIDIA no Hyprland e stoa-env${R}"
+    echo -e "  ${F}[5/5] Enabling NVIDIA variables in Hyprland and stoa-env${R}"
 
     STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
     HYPR_CONF="${STOA_DIR}/hyprland/hyprland.conf"
     ENV_FILE="${STOA_DIR}/environment/stoa-env.sh"
 
-    # Hyprland — adicionar env vars se ainda não existem
+    # Hyprland — add env vars if they don't exist yet
     if grep -q "LIBVA_DRIVER_NAME" "$HYPR_CONF" 2>/dev/null; then
-        echo -e "  ${S}[~] Variáveis NVIDIA já presentes no hyprland.conf.${R}"
+        echo -e "  ${S}[~] NVIDIA variables already present in hyprland.conf.${R}"
     else
         cat >> "$HYPR_CONF" << 'NVIDIA_EOF'
 
@@ -387,12 +387,12 @@ env = WLR_NO_HARDWARE_CURSORS, 1
 env = __GL_GSYNC_ALLOWED, 1
 env = __GL_VRR_ALLOWED, 1
 NVIDIA_EOF
-        echo -e "  ${O}[✓] Variáveis NVIDIA adicionadas ao hyprland.conf.${R}"
+        echo -e "  ${O}[✓] NVIDIA variables added to hyprland.conf.${R}"
     fi
 
-    # stoa-env.sh — descomentar as variáveis NVIDIA
+    # stoa-env.sh — uncomment NVIDIA variables
     if grep -q "^export LIBVA_DRIVER_NAME" "$ENV_FILE" 2>/dev/null; then
-        echo -e "  ${S}[~] Variáveis NVIDIA já ativas no stoa-env.sh.${R}"
+        echo -e "  ${S}[~] NVIDIA variables already active in stoa-env.sh.${R}"
     elif grep -q "# export LIBVA_DRIVER_NAME" "$ENV_FILE" 2>/dev/null; then
         sed -i 's/^# export LIBVA_DRIVER_NAME/export LIBVA_DRIVER_NAME/' "$ENV_FILE"
         sed -i 's/^# export __GLX_VENDOR_LIBRARY_NAME/export __GLX_VENDOR_LIBRARY_NAME/' "$ENV_FILE"
@@ -401,24 +401,24 @@ NVIDIA_EOF
         sed -i 's/^# export WLR_NO_HARDWARE_CURSORS/export WLR_NO_HARDWARE_CURSORS/' "$ENV_FILE"
         sed -i 's/^# export __GL_GSYNC_ALLOWED/export __GL_GSYNC_ALLOWED/' "$ENV_FILE"
         sed -i 's/^# export __GL_VRR_ALLOWED/export __GL_VRR_ALLOWED/' "$ENV_FILE"
-        echo -e "  ${O}[✓] Variáveis NVIDIA descomentadas no stoa-env.sh.${R}"
+        echo -e "  ${O}[✓] NVIDIA variables uncommented in stoa-env.sh.${R}"
     fi
 else
-    echo -e "  ${S}[5/5] Variáveis de ambiente — GPU não-NVIDIA, sem alterações necessárias.${R}"
+    echo -e "  ${S}[5/5] Environment variables — non-NVIDIA GPU, no changes needed.${R}"
 fi
 
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# Resumo
+# Summary
 # ══════════════════════════════════════════════════════════════
 
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
-echo -e "  ${B}║     Setup concluído!                                 ║${R}"
+echo -e "  ${B}║     Setup complete!                                  ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
-echo -e "  ${F}Hardware detectado:${R}"
+echo -e "  ${F}Detected hardware:${R}"
 echo -e "  ${S}  CPU: ${CPU_MODEL}${R}"
 echo -e "  ${S}  GPU: ${GPU_NAME}${R}"
 echo ""
@@ -430,25 +430,25 @@ if [ -n "$CPU_UCODE_PKG" ]; then
 fi
 
 if $IS_NVIDIA; then
-    echo -e "  ${F}NVIDIA configurado:${R}"
+    echo -e "  ${F}NVIDIA configured:${R}"
     echo -e "  ${S}  Driver: ${NVIDIA_DRIVER}${R}"
     echo -e "  ${S}  nvidia-utils, nvidia-settings, libva-nvidia-driver${R}"
-    echo -e "  ${S}  /etc/mkinitcpio.conf — módulos early KMS${R}"
+    echo -e "  ${S}  /etc/mkinitcpio.conf — early KMS modules${R}"
     echo -e "  ${S}  /etc/modprobe.d/nvidia.conf — DRM modeset + fbdev${R}"
-    echo -e "  ${S}  hyprland.conf — env vars NVIDIA/Wayland${R}"
-    echo -e "  ${S}  stoa-env.sh — env vars NVIDIA${R}"
+    echo -e "  ${S}  hyprland.conf — NVIDIA/Wayland env vars${R}"
+    echo -e "  ${S}  stoa-env.sh — NVIDIA env vars${R}"
     echo ""
-    echo -e "  ${T}Reinicie o sistema para aplicar as mudanças.${R}"
+    echo -e "  ${T}Reboot the system to apply changes.${R}"
 elif [ "$GPU_VENDOR" = "amd" ]; then
     echo -e "  ${F}AMD GPU:${R}"
     echo -e "  ${S}  mesa, vulkan-radeon, libva-mesa-driver${R}"
-    echo -e "  ${O}  Nenhuma configuração extra necessária para Wayland.${R}"
+    echo -e "  ${O}  No extra configuration needed for Wayland.${R}"
 elif [ "$GPU_VENDOR" = "intel" ]; then
     echo -e "  ${F}Intel GPU:${R}"
     echo -e "  ${S}  mesa, vulkan-intel, intel-media-driver${R}"
-    echo -e "  ${O}  Nenhuma configuração extra necessária para Wayland.${R}"
+    echo -e "  ${O}  No extra configuration needed for Wayland.${R}"
 fi
 
 echo ""
-echo -e "  ${O}\"Suporta e abstém-te.\" — Epicteto${R}"
+echo -e "  ${O}\"Endure and renounce.\" — Epictetus${R}"
 echo ""

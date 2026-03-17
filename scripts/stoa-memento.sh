@@ -1,7 +1,7 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Memento Mori Toggle                           ║
-# ║  "Lembra-te de que vais morrer." — tradição estoica          ║
+# ║  "Remember that you will die." — Stoic tradition             ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 WIDGET="memento"

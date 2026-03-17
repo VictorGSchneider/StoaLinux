@@ -1,10 +1,10 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Zsh                                           ║
-# ║  "Primeiro diga a si mesmo o que seria; depois faça         ║
-# ║   o que tem de fazer." — Epicteto                            ║
+# ║  "First say to yourself what you would be; and then do      ║
+# ║   what you have to do." — Epictetus                          ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# ── Citação Estoica (cada terminal recebe uma frase diferente) ──
+# ── Stoic Quote (each terminal gets a different quote) ──
 
 _stoa_greeting() {
     local quote=""
@@ -18,7 +18,7 @@ _stoa_greeting() {
 }
 _stoa_greeting
 
-# ── Histórico ──
+# ── History ──
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
 SAVEHIST=10000
@@ -27,7 +27,7 @@ setopt sharehistory
 setopt hist_ignore_dups
 setopt hist_ignore_space
 
-# ── Completar ──
+# ── Completion ──
 autoload -Uz compinit && compinit
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
@@ -36,8 +36,8 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 bindkey -v
 export KEYTIMEOUT=1
 
-# ── Prompt Estoico ──
-# Símbolo: coluna grega (Ι) em bronze
+# ── Stoic Prompt ──
+# Symbol: Greek column (Ι) in bronze
 autoload -Uz vcs_info
 precmd() { vcs_info }
 setopt prompt_subst
@@ -62,17 +62,17 @@ alias du='du -sh'
 alias free='free -h'
 alias cls='clear'
 
-# ── Ambiente Stoa (toolkits + apps padrão) ──
+# ── Stoa Environment (toolkits + default apps) ──
 [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa-env.sh" ] && \
     source "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa-env.sh"
 
-# ── Cores para ls ──
+# ── Colors for ls ──
 export LS_COLORS='di=38;2;196;154;92:ln=38;2;90;122;138:ex=38;2;138;154;108:*.tar=38;2;179;107;90:*.gz=38;2;179;107;90:*.zip=38;2;179;107;90:*.jpg=38;2;148;106;122:*.png=38;2;148;106;122:*.mp3=38;2;164;122;138:*.mp4=38;2;164;122;138'
 
-# ── Caminho ──
+# ── Path ──
 export PATH="$HOME/.local/bin:$PATH"
 
-# ── Man pages coloridas (paleta estoica) ──
+# ── Colored man pages (Stoic palette) ──
 export LESS_TERMCAP_mb=$'\e[1;38;2;179;107;90m'
 export LESS_TERMCAP_md=$'\e[1;38;2;196;154;92m'
 export LESS_TERMCAP_me=$'\e[0m'

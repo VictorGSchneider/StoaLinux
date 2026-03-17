@@ -1,13 +1,13 @@
 ;; ╔══════════════════════════════════════════════════════════════╗
 ;; ║  STOA LINUX — Memento Mori Widget (eww)                     ║
-;; ║  "Lembra-te de que vais morrer." — tradição estoica          ║
+;; ║  "Remember that you will die." — Stoic tradition             ║
 ;; ╚══════════════════════════════════════════════════════════════╝
 
-;; ── Variáveis (dados do script JSON) ──
+;; ── Variables (data from JSON script) ──
 (defpoll memento-data :interval "1200s"
   `~/.local/bin/stoa-memento-data`)
 
-;; ── Widget principal ──
+;; ── Main widget ──
 (defwidget memento-mori []
   (box :class "memento-container"
        :orientation "v"
@@ -18,7 +18,7 @@
          :space-evenly false
       (label :class "header-title" :text "MEMENTO MORI")
       (label :class "header-subtitle"
-             :text "Lembra-te de que vais morrer."))
+             :text "Remember that you will die."))
 
     ;; Stats
     (box :class "memento-stats"
@@ -27,15 +27,15 @@
       (box :class "stat-box" :orientation "v"
         (label :class "stat-value"
                :text {memento-data != "" ? jq(memento-data, ".days_lived") : "—"})
-        (label :class "stat-label" :text "dias vividos"))
+        (label :class "stat-label" :text "days lived"))
       (box :class "stat-box" :orientation "v"
         (label :class "stat-value"
                :text {memento-data != "" ? jq(memento-data, ".weeks_lived") : "—"})
-        (label :class "stat-label" :text "semanas vividas"))
+        (label :class "stat-label" :text "weeks lived"))
       (box :class "stat-box" :orientation "v"
         (label :class "stat-value"
                :text {memento-data != "" ? jq(memento-data, ".years_lived") : "—"})
-        (label :class "stat-label" :text "anos vividos")))
+        (label :class "stat-label" :text "years lived")))
 
     ;; Year progress
     (box :class "memento-year"
@@ -43,8 +43,8 @@
          :space-evenly false
       (label :class "year-label"
              :text {memento-data != "" ?
-               "Ano ${jq(memento-data, '.current_year')} — ${jq(memento-data, '.year_pct')}%" :
-               "Ano — %"})
+               "Year ${jq(memento-data, '.current_year')} — ${jq(memento-data, '.year_pct')}%" :
+               "Year — %"})
       (progress :class "year-bar"
                 :value {memento-data != "" ? jq(memento-data, ".year_pct") : 0}))
 
@@ -54,12 +54,12 @@
          :space-evenly false
       (label :class "weeks-info"
              :text {memento-data != "" ?
-               "${jq(memento-data, '.weeks_lived')} de ${jq(memento-data, '.total_weeks')} semanas" :
-               "— de — semanas"})
+               "${jq(memento-data, '.weeks_lived')} of ${jq(memento-data, '.total_weeks')} weeks" :
+               "— of — weeks"})
       (label :class "weeks-sub"
              :text {memento-data != "" ?
-               "Expectativa: ${jq(memento-data, '.life_years')} anos" :
-               "Expectativa: — anos"}))
+               "Life expectancy: ${jq(memento-data, '.life_years')} years" :
+               "Life expectancy: — years"}))
 
     ;; Quote
     (box :class "memento-quote"
@@ -74,7 +74,7 @@
              :text {memento-data != "" ?
                "${jq(memento-data, '.today')}" : "—"}))))
 
-;; ── Janela ──
+;; ── Window ──
 (defwindow memento
   :monitor 0
   :geometry (geometry :x "0%"

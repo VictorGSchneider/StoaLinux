@@ -1,8 +1,8 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Gerador de Wallpaper                          ║
-# ║  Gera wallpapers minimalistas com a paleta estoica           ║
-# ║  Requer: imagemagick                                         ║
+# ║  STOA LINUX — Wallpaper Generator                           ║
+# ║  Generates minimalist wallpapers with the Stoic palette      ║
+# ║  Requires: imagemagick                                       ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 WALLDIR="${HOME}/.config/stoa/wallpapers"
@@ -11,16 +11,16 @@ mkdir -p "$WALLDIR"
 WIDTH=1920
 HEIGHT=1080
 
-echo "Gerando wallpapers estoicos..."
+echo "Generating Stoic wallpapers..."
 
-# 1. Mármore — gradiente sutil
+# 1. Marble — subtle gradient
 magick -size ${WIDTH}x${HEIGHT} \
     gradient:"#2d2921-#1a1714" \
     -blur 0x2 \
     "$WALLDIR/marble.png"
 echo "  [+] marble.png"
 
-# 2. Pergaminho — tom quente
+# 2. Parchment — warm tone
 magick -size ${WIDTH}x${HEIGHT} \
     gradient:"#211e19-#1a1714" \
     -fill "#c49a5c" -draw "rectangle 0,$((HEIGHT/2-1)),${WIDTH},$((HEIGHT/2+1))" \
@@ -28,7 +28,7 @@ magick -size ${WIDTH}x${HEIGHT} \
     "$WALLDIR/parchment.png"
 echo "  [+] parchment.png"
 
-# 3. Coluna — linhas verticais minimalistas
+# 3. Columns — minimalist vertical lines
 magick -size ${WIDTH}x${HEIGHT} \
     xc:"#1a1714" \
     -fill "#2d2921" \
@@ -40,7 +40,7 @@ magick -size ${WIDTH}x${HEIGHT} \
     "$WALLDIR/columns.png"
 echo "  [+] columns.png"
 
-# 4. Minimalista com texto
+# 4. Minimalist with text
 magick -size ${WIDTH}x${HEIGHT} \
     xc:"#1a1714" \
     -gravity center \
@@ -51,8 +51,8 @@ magick -size ${WIDTH}x${HEIGHT} \
 echo "  [+] memento.png"
 
 echo ""
-echo "Wallpapers salvos em: $WALLDIR"
+echo "Wallpapers saved to: $WALLDIR"
 echo ""
-echo "Aplicar:"
+echo "Apply:"
 echo "  Hyprland (Wayland): swaybg -i $WALLDIR/marble.png -m fill"
 echo "  i3 (Xorg):          feh --bg-fill $WALLDIR/marble.png"

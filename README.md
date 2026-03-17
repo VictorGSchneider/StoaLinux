@@ -1,110 +1,110 @@
 # StoaLinux
 
-Dotfiles estoicos para Arch Linux. Uma personalização minimalista inspirada na filosofia estoica, com cores de mármore romano, bronze, pergaminho e pedra.
+Stoic dotfiles for Arch Linux. A minimalist customization inspired by Stoic philosophy, with colors of Roman marble, bronze, parchment, and stone.
 
-**Hyprland (Wayland)** como compositor primário, **i3 (Xorg)** como fallback. Apps minimalistas, Brave Browser, aparência unificada GTK/Qt.
+**Hyprland (Wayland)** as primary compositor, **i3 (Xorg)** as fallback. Minimalist apps, Brave Browser, unified GTK/Qt appearance.
 
-> *"A felicidade depende da qualidade dos teus pensamentos."* — Marco Aurélio
+> *"The happiness of your life depends upon the quality of your thoughts."* — Marcus Aurelius
 
-## Paleta de Cores
+## Color Palette
 
-| Cor | Hex | Inspiração |
-|-----|-----|------------|
-| Background | `#211e19` | Obsidiana / Carvão |
-| Foreground | `#d4cfc4` | Mármore claro |
-| Bronze | `#c49a5c` | Bronze romano |
-| Ouro | `#d4a84b` | Ouro imperial |
-| Pergaminho | `#c4b08a` | Pergaminho antigo |
-| Oliva | `#8a9a6c` | Folha de louro |
-| Terracota | `#b36b5a` | Terracota romana |
-| Azul | `#5a7a8a` | Mar Mediterrâneo |
-| Pedra | `#6e6a62` | Pedra polida |
+| Color | Hex | Inspiration |
+|-------|-----|-------------|
+| Background | `#211e19` | Obsidian / Charcoal |
+| Foreground | `#d4cfc4` | Light marble |
+| Bronze | `#c49a5c` | Roman bronze |
+| Gold | `#d4a84b` | Imperial gold |
+| Parchment | `#c4b08a` | Ancient parchment |
+| Olive | `#8a9a6c` | Laurel leaf |
+| Terracotta | `#b36b5a` | Roman terracotta |
+| Azure | `#5a7a8a` | Mediterranean Sea |
+| Stone | `#6e6a62` | Polished stone |
 
-## Componentes
+## Components
 
-| Componente | Arquivo | Descrição |
-|------------|---------|-----------|
-| **Hyprland** | `hyprland/hyprland.conf` | Compositor Wayland (primário) |
-| **Waybar** | `waybar/config`, `waybar/style.css` | Barra de status Wayland |
-| i3wm | `i3/config` | WM Xorg (fallback) |
-| i3status | `i3/i3status.conf` | Barra de status Xorg |
-| Picom | `picom/picom.conf` | Compositor Xorg (fallback) |
-| Alacritty | `alacritty/alacritty.toml` | Terminal com paleta estoica |
-| Neovim | `nvim/init.vim` | Editor com tema `stoa` |
-| Colorscheme | `nvim/colors/stoa.vim` | Tema de cores para Neovim |
-| Rofi | `rofi/config.rasi` | Launcher com bordas bronze |
-| Dunst | `dunst/dunstrc` | Notificações discretas |
-| **Brave** | (pacote AUR) | Browser padrão |
-| **Obsidian** | (pacote AUR) | Notas e segundo cérebro |
-| **eww** | `eww/eww.yuck`, `eww/eww.scss` | Widget Memento Mori |
-| **Zathura** | `zathura/zathurarc` | Leitor PDF com tema estoico |
-| **mpv** | `mpv/mpv.conf` | Player de vídeo minimalista |
-| **imv** | `imv/config` | Visualizador de imagens (Wayland) |
-| **lf** | `lf/lfrc` | File manager vim-style |
-| **btop** | `btop/btop.conf` | Monitor do sistema |
-| GTK 3.0 | `gtk-3.0/settings.ini` | Tema GTK dark |
-| GTK 4.0 | `gtk-4.0/settings.ini` | Tema GTK4 dark |
-| Qt5/Qt6 | `qt5ct/`, `qt6ct/` | Qt padronizado com GTK (Fusion dark) |
-| Environment | `environment/stoa-env.sh` | Variáveis de toolkit + apps padrão |
-| Neofetch | `neofetch/config.conf` | Fetch com nomes estoicos |
-| Zsh | `zsh/.zshrc` | Shell com citações e prompt Ι |
-| Bash | `zsh/.bashrc` | Alternativa Bash |
-| Stoa Config | `stoa.conf` | Configurações do Stoa (keybinds, etc.) |
-| Cores | `colors.sh` | Referência central da paleta |
+| Component | File | Description |
+|-----------|------|-------------|
+| **Hyprland** | `hyprland/hyprland.conf` | Wayland compositor (primary) |
+| **Waybar** | `waybar/config`, `waybar/style.css` | Wayland status bar |
+| i3wm | `i3/config` | Xorg WM (fallback) |
+| i3status | `i3/i3status.conf` | Xorg status bar |
+| Picom | `picom/picom.conf` | Xorg compositor (fallback) |
+| Alacritty | `alacritty/alacritty.toml` | Terminal with Stoic palette |
+| Neovim | `nvim/init.vim` | Editor with `stoa` theme |
+| Colorscheme | `nvim/colors/stoa.vim` | Neovim color theme |
+| Rofi | `rofi/config.rasi` | Launcher with bronze borders |
+| Dunst | `dunst/dunstrc` | Discrete notifications |
+| **Brave** | (AUR package) | Default browser |
+| **Obsidian** | (AUR package) | Notes and second brain |
+| **eww** | `eww/eww.yuck`, `eww/eww.scss` | Memento Mori widget |
+| **Zathura** | `zathura/zathurarc` | PDF reader with Stoic theme |
+| **mpv** | `mpv/mpv.conf` | Minimalist video player |
+| **imv** | `imv/config` | Image viewer (Wayland) |
+| **lf** | `lf/lfrc` | Vim-style file manager |
+| **btop** | `btop/btop.conf` | System monitor |
+| GTK 3.0 | `gtk-3.0/settings.ini` | GTK dark theme |
+| GTK 4.0 | `gtk-4.0/settings.ini` | GTK4 dark theme |
+| Qt5/Qt6 | `qt5ct/`, `qt6ct/` | Qt standardized with GTK (Fusion dark) |
+| Environment | `environment/stoa-env.sh` | Toolkit variables + default apps |
+| Neofetch | `neofetch/config.conf` | Fetch with Stoic names |
+| Zsh | `zsh/.zshrc` | Shell with quotes and Ι prompt |
+| Bash | `zsh/.bashrc` | Bash alternative |
+| Stoa Config | `stoa.conf` | Stoa settings (keybinds, etc.) |
+| Colors | `colors.sh` | Central palette reference |
 
-## Scripts & Ferramentas
+## Scripts & Tools
 
-| Script | Descrição |
-|--------|-----------|
-| `stoa-fetch` | System fetch com arte ASCII de templo grego |
-| `stoa-walls` | Gerador de wallpapers minimalistas (ImageMagick) |
-| `stoa-memento` | Toggle do widget Memento Mori (eww) |
-| `stoa-memento-data` | Dados JSON para o widget (dias/semanas/anos vividos) |
-| `stoa-gpu-setup` | Configuração automática CPU + GPU (NVIDIA/AMD/Intel) |
-| `stoa-keybinds-bar` | Atalhos na Waybar (módulo toggle) |
-| `stoa-osd` | OSD para volume, brilho, CapsLock/NumLock (1% incrementos) |
-| `stoa-clipboard` | Clipboard manager com favoritos fixados (wl-clipboard + cliphist + rofi) |
-| `stoa-quotes-sync` | Frases estoicas da internet com rotação playlist |
+| Script | Description |
+|--------|-------------|
+| `stoa-fetch` | System fetch with Greek temple ASCII art |
+| `stoa-walls` | Minimalist wallpaper generator (ImageMagick) |
+| `stoa-memento` | Toggle Memento Mori widget (eww) |
+| `stoa-memento-data` | JSON data for widget (days/weeks/years lived) |
+| `stoa-gpu-setup` | Automatic CPU + GPU setup (NVIDIA/AMD/Intel) |
+| `stoa-keybinds-bar` | Keybinds in Waybar (toggle module) |
+| `stoa-osd` | OSD for volume, brightness, CapsLock/NumLock (1% increments) |
+| `stoa-clipboard` | Clipboard manager with pinned favorites (wl-clipboard + cliphist + rofi) |
+| `stoa-quotes-sync` | Stoic quotes from the internet with playlist rotation |
 
 ### PowerTools
 
-Ferramentas inspiradas no Microsoft PowerToys, adaptadas para Linux/Wayland:
+Tools inspired by Microsoft PowerToys, adapted for Linux/Wayland:
 
-| Script | Equivalente PowerToys | Descrição |
-|--------|----------------------|-----------|
-| `stoa-locksmith` | File Locksmith | Descobre qual processo está travando um arquivo (`lsof` + rofi) |
-| `stoa-resize` | Image Resizer | Redimensiona múltiplas imagens de uma vez com presets (ImageMagick + rofi) |
-| `stoa-paste` | Advanced Paste | Cola clipboard em diferentes formatos: texto puro, MAIÚSCULAS, minúsculas, Title Case, snake_case, camelCase, JSON formatado, Markdown limpo |
-| `stoa-ocr` | Text Extractor | Extrai texto de áreas da tela usando OCR — suporta inglês e português (`grim` + `slurp` + `tesseract`) |
-| `stoa-rename` | PowerRename | Renomeia arquivos em lote com regex, preview via rofi, e proteção contra conflitos |
+| Script | PowerToys Equivalent | Description |
+|--------|---------------------|-------------|
+| `stoa-locksmith` | File Locksmith | Find which process is locking a file (`lsof` + rofi) |
+| `stoa-resize` | Image Resizer | Resize multiple images at once with presets (ImageMagick + rofi) |
+| `stoa-paste` | Advanced Paste | Paste clipboard in different formats: plain text, UPPERCASE, lowercase, Title Case, snake_case, camelCase, formatted JSON, clean Markdown |
+| `stoa-ocr` | Text Extractor | Extract text from screen areas using OCR — supports English and Portuguese (`grim` + `slurp` + `tesseract`) |
+| `stoa-rename` | PowerRename | Batch rename files with regex, rofi preview, and conflict protection |
 
-## Instalação
+## Installation
 
-### Opção 1: Arch Linux do zero (live ISO)
+### Option 1: Arch Linux from scratch (live ISO)
 
-Usa o `archinstall` padrão do Arch com uma config pré-definida do StoaLinux:
+Uses the standard `archinstall` with a pre-defined StoaLinux config:
 
 ```bash
-# No live ISO, com internet conectada:
+# From the live ISO, with internet connected:
 curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
 chmod +x arch-install.sh
 ./arch-install.sh
 ```
 
-O script abre o `archinstall` com pacotes e configurações pré-selecionados. **Você configura na TUI:**
-- Discos (particionamento e formatação)
-- Usuário e senha
-- Driver de vídeo
+The script opens `archinstall` with pre-selected packages and settings. **You configure in the TUI:**
+- Disks (partitioning and formatting)
+- User and password
+- Video driver
 
-**Pré-configurado pelo StoaLinux:**
-- Pacotes: Hyprland, Waybar, i3, Alacritty, Neovim, Rofi, PipeWire...
-- Locale: `pt_BR.UTF-8`, teclado `br`
-- Rede: NetworkManager
-- Após o archinstall, instala automaticamente os dotfiles
+**Pre-configured by StoaLinux:**
+- Packages: Hyprland, Waybar, i3, Alacritty, Neovim, Rofi, PipeWire...
+- Locale: `pt_BR.UTF-8`, keyboard `br`
+- Network: NetworkManager
+- After archinstall, automatically installs dotfiles
 
-### Opção 2: Arch Linux já instalado (post-install)
+### Option 2: Existing Arch Linux (post-install)
 
-Para um Arch já funcional, instala os pacotes e dotfiles:
+For an already working Arch, installs packages and dotfiles:
 
 ```bash
 git clone https://github.com/VictorGSchneider/StoaLinux.git
@@ -113,9 +113,9 @@ chmod +x post-install.sh
 ./post-install.sh
 ```
 
-### Opção 3: Apenas dotfiles (pacotes já instalados)
+### Option 3: Dotfiles only (packages already installed)
 
-Se já tem os pacotes e quer só os dotfiles:
+If you already have the packages and just want the dotfiles:
 
 ```bash
 git clone https://github.com/VictorGSchneider/StoaLinux.git
@@ -124,22 +124,22 @@ chmod +x install.sh
 ./install.sh
 ```
 
-### Dependências
+### Dependencies
 
 ```bash
-# Wayland (primário)
+# Wayland (primary)
 sudo pacman -S hyprland waybar swaybg xdg-desktop-portal-hyprland grim slurp
 
 # Xorg (fallback)
 sudo pacman -S i3-wm i3status xorg-server xorg-xinit picom maim feh
 
-# Apps estoicos
+# Stoic apps
 sudo pacman -S alacritty neovim rofi dunst zathura zathura-pdf-mupdf mpv imv lf btop
 
 # Toolkit unification (GTK/Qt)
 sudo pacman -S qt5ct qt6ct papirus-icon-theme imagemagick
 
-# Áudio, fontes, extras
+# Audio, fonts, extras
 sudo pacman -S pipewire pipewire-pulse wireplumber brightnessctl jq curl
 sudo pacman -S ttf-jetbrains-mono ttf-font-awesome
 sudo pacman -S zsh git base-devel
@@ -156,7 +156,7 @@ yay -S eww-wayland brave-bin obsidian satty
 
 ### GPU + CPU Setup
 
-Após a instalação, configure drivers de GPU e microcode do processador:
+After installation, configure GPU drivers and CPU microcode:
 
 ```bash
 cd StoaLinux
@@ -164,20 +164,20 @@ chmod +x scripts/stoa-gpu-setup.sh
 ./scripts/stoa-gpu-setup.sh
 ```
 
-O script detecta automaticamente:
-- **CPU**: AMD (`amd-ucode`) ou Intel (`intel-ucode`)
-- **GPU NVIDIA**: escolhe o driver correto para sua geração (`nvidia`, `nvidia-open`, `nvidia-470xx-dkms`)
-- **GPU AMD**: `mesa` + `vulkan-radeon` + `libva-mesa-driver`
-- **GPU Intel**: `mesa` + `vulkan-intel` + `intel-media-driver`
+The script automatically detects:
+- **CPU**: AMD (`amd-ucode`) or Intel (`intel-ucode`)
+- **NVIDIA GPU**: picks the correct driver for your generation (`nvidia`, `nvidia-open`, `nvidia-470xx-dkms`)
+- **AMD GPU**: `mesa` + `vulkan-radeon` + `libva-mesa-driver`
+- **Intel GPU**: `mesa` + `vulkan-intel` + `intel-media-driver`
 
-Para NVIDIA, também configura:
-- Módulos early KMS no mkinitcpio
+For NVIDIA, it also configures:
+- Early KMS modules in mkinitcpio
 - `nvidia-drm modeset=1 fbdev=1` via modprobe
-- Variáveis de ambiente NVIDIA no Hyprland e stoa-env.sh
+- NVIDIA environment variables in Hyprland and stoa-env.sh
 
 ### Shell
 
-O instalador **não** sobrescreve seu `.zshrc` / `.bashrc`. Adicione manualmente:
+The installer does **not** overwrite your `.zshrc` / `.bashrc`. Add manually:
 
 ```bash
 # Zsh
@@ -187,77 +187,77 @@ echo 'source ~/StoaLinux/zsh/.zshrc' >> ~/.zshrc
 echo 'source ~/StoaLinux/zsh/.bashrc' >> ~/.bashrc
 ```
 
-## Iniciar
+## Starting
 
 ```bash
-# Hyprland (Wayland — primário)
+# Hyprland (Wayland — primary)
 Hyprland
 
 # i3 (Xorg — fallback)
 startx
 ```
 
-## Atalhos
+## Keybinds
 
-| Tecla | Ação |
-|-------|------|
+| Key | Action |
+|-----|--------|
 | `Super+Return` | Terminal (Alacritty) |
 | `Super+B` | Browser (Brave) |
-| `Super+E` | Arquivos (lf) |
+| `Super+E` | Files (lf) |
 | `Super+N` | Monitor (btop) |
 | `Super+D` | Launcher (Rofi) |
-| `Super+O` | Notas (Obsidian) |
+| `Super+O` | Notes (Obsidian) |
 | `Super+M` | Memento Mori (eww widget) |
-| `Super+V` | Clipboard (histórico) |
-| `Super+Shift+V` | Clipboard (fixar/desfixar) |
-| `Super+Shift+T` | OCR — extrair texto da tela |
-| `Super+Shift+P` | Advanced Paste (formatos) |
-| `Super+/` | Atalhos na barra (toggle) |
-| `Super+Q` | Fechar janela |
+| `Super+V` | Clipboard (history) |
+| `Super+Shift+V` | Clipboard (pin/unpin) |
+| `Super+Shift+T` | OCR — extract text from screen |
+| `Super+Shift+P` | Advanced Paste (formats) |
+| `Super+/` | Bar keybinds (toggle) |
+| `Super+Q` | Close window |
 | `Super+F` | Fullscreen |
-| `Super+R` | Modo resize (HJKL) |
-| `Super+HJKL` | Navegação vim |
-| `Super+Shift+HJKL` | Mover janela |
+| `Super+R` | Resize mode (HJKL) |
+| `Super+HJKL` | Vim navigation |
+| `Super+Shift+HJKL` | Move window |
 | `Super+1-0` | Workspaces I-X |
-| `Print` | Screenshot tela inteira |
-| `Super+Print` | Screenshot seleção |
-| `Scroll na Waybar` | Volume +/- |
+| `Print` | Screenshot full screen |
+| `Super+Print` | Screenshot selection |
+| `Scroll on Waybar` | Volume +/- |
 | `XF86Audio*` | Volume (OSD) |
-| `XF86MonBrightness*` | Brilho (OSD) |
+| `XF86MonBrightness*` | Brightness (OSD) |
 
-## Funcionalidades
+## Features
 
-- **Hyprland** como compositor Wayland primário com animações suaves
-- **i3wm** como fallback Xorg com mesmos atalhos
-- **Brave Browser** como navegador padrão (privacidade + Wayland nativo)
-- **Obsidian** como app de notas e segundo cérebro (Markdown)
-- **Memento Mori** — widget eww com dias/semanas/anos vividos, progresso do ano e citação estoica
-- **Apps estoicos**: zathura (PDF), mpv (vídeo), imv (imagens), lf (arquivos), btop (monitor)
-- **Aparência unificada** — GTK e Qt usam mesmo tema escuro, fonte e ícones via qt5ct/qt6ct
-- **Workspaces em numerais romanos** (I, II, III... X)
-- **Citação estoica aleatória** ao abrir o terminal
-- **Quotes Sync** — busca frases estoicas de APIs externas com rotação playlist (cada app recebe uma frase diferente)
-- **OSD** — indicadores visuais para volume, brilho, CapsLock e NumLock com incrementos de 1%
-- **Clipboard Manager** — histórico com favoritos fixados via rofi
-- **PowerTools** — ferramentas inspiradas no PowerToys: locksmith, resize, paste, OCR, rename
-- **Prompt com coluna grega** (Ι) em bronze com branch git
-- **stoa-fetch** — system fetch com arte ASCII de templo grego
-- **stoa-walls** — gerador de wallpapers com ImageMagick
-- **Navegação vim** (hjkl) em Hyprland, i3 e lf
-- **Tema Neovim completo** com suporte a Treesitter
-- **Man pages coloridas** na paleta estoica
+- **Hyprland** as primary Wayland compositor with smooth animations
+- **i3wm** as Xorg fallback with same keybinds
+- **Brave Browser** as default browser (privacy + native Wayland)
+- **Obsidian** as notes and second brain app (Markdown)
+- **Memento Mori** — eww widget with days/weeks/years lived, year progress, and Stoic quote
+- **Stoic apps**: zathura (PDF), mpv (video), imv (images), lf (files), btop (monitor)
+- **Unified appearance** — GTK and Qt use same dark theme, font, and icons via qt5ct/qt6ct
+- **Workspaces in Roman numerals** (I, II, III... X)
+- **Random Stoic quote** when opening the terminal
+- **Quotes Sync** — fetches Stoic quotes from external APIs with playlist rotation (each app gets a different quote)
+- **OSD** — visual indicators for volume, brightness, CapsLock, and NumLock with 1% increments
+- **Clipboard Manager** — history with pinned favorites via rofi
+- **PowerTools** — tools inspired by PowerToys: locksmith, resize, paste, OCR, rename
+- **Greek column prompt** (Ι) in bronze with git branch
+- **stoa-fetch** — system fetch with Greek temple ASCII art
+- **stoa-walls** — wallpaper generator with ImageMagick
+- **Vim navigation** (hjkl) in Hyprland, i3, and lf
+- **Full Neovim theme** with Treesitter support
+- **Colored man pages** in the Stoic palette
 - **Screenshot** — grim+slurp+satty (Wayland) / maim (Xorg)
-- **XDG MIME** configurado — Brave para web, zathura para PDF, mpv para vídeo, imv para imagens
+- **XDG MIME** configured — Brave for web, zathura for PDF, mpv for video, imv for images
 
-## Filosofia do Design
+## Design Philosophy
 
-- **Simplicidade** — Nada supérfluo, cada elemento tem propósito
-- **Harmonia** — Cores naturais que não cansam os olhos
-- **Ordem** — Configuração limpa e bem documentada
-- **Virtude** — Funcional antes de bonito
+- **Simplicity** — Nothing superfluous, every element has a purpose
+- **Harmony** — Natural colors that don't strain the eyes
+- **Order** — Clean and well-documented configuration
+- **Virtue** — Functional before beautiful
 
-> *"A ordem é a primeira lei do céu."* — Marco Aurélio
+> *"Order is the first law of heaven."* — Marcus Aurelius
 
-## Licença
+## License
 
 GPL-3.0

@@ -1,25 +1,25 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Variáveis de Ambiente                        ║
-# ║  "A unidade é força." — Sêneca                              ║
+# ║  STOA LINUX — Environment Variables                         ║
+# ║  "Unity is strength." — Seneca                              ║
 # ║                                                              ║
-# ║  Padroniza toolkits (GTK, Qt, Electron) para aparência      ║
-# ║  consistente e define apps padrão.                           ║
+# ║  Standardizes toolkits (GTK, Qt, Electron) for consistent   ║
+# ║  appearance and defines default apps.                        ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# ── Tema escuro global ──
+# ── Global dark theme ──
 export GTK_THEME="Adwaita:dark"
 export GTK2_RC_FILES="/usr/share/themes/Adwaita-dark/gtk-2.0/gtkrc"
 
-# ── Qt usa qt5ct/qt6ct para respeitar tema escuro ──
+# ── Qt uses qt5ct/qt6ct to respect dark theme ──
 export QT_QPA_PLATFORMTHEME="qt5ct"
 export QT_STYLE_OVERRIDE="Fusion"
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
 
-# ── Electron/Chromium (Brave) em modo escuro ──
+# ── Electron/Chromium (Brave) in dark mode ──
 export ELECTRON_OZONE_PLATFORM_HINT="auto"
 
-# ── Apps padrão ──
+# ── Default apps ──
 export BROWSER="brave"
 export EDITOR="nvim"
 export VISUAL="nvim"
@@ -38,7 +38,7 @@ export XCURSOR_THEME="Adwaita"
 export XCURSOR_SIZE=24
 
 # ── NVIDIA (Wayland) ──
-# Descomente se usar GPU NVIDIA com Hyprland:
+# Uncomment if using NVIDIA GPU with Hyprland:
 # export LIBVA_DRIVER_NAME=nvidia
 # export __GLX_VENDOR_LIBRARY_NAME=nvidia
 # export GBM_BACKEND=nvidia-drm

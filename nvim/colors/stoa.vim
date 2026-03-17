@@ -1,6 +1,6 @@
 " ╔══════════════════════════════════════════════════════════════╗
 " ║  STOA LINUX — Neovim Colorscheme                            ║
-" ║  "Conhece a ti mesmo." — inscrito no Templo de Delfos       ║
+" ║  "Know thyself." — inscribed at the Temple of Delphi        ║
 " ╚══════════════════════════════════════════════════════════════╝
 
 set background=dark
@@ -20,7 +20,7 @@ let s:fg        = "#d4cfc4"
 let s:fg_dim    = "#a89f91"
 let s:fg_dark   = "#7a7267"
 
-" ── Acentos ──
+" ── Accents ──
 let s:bronze      = "#c49a5c"
 let s:gold        = "#d4a84b"
 let s:parchment   = "#c4b08a"
@@ -35,7 +35,7 @@ let s:azure       = "#5a7a8a"
 let s:sea         = "#4a6a7a"
 let s:magenta     = "#946a7a"
 
-" Função auxiliar
+" Helper function
 function! s:hi(group, fg, bg, attr)
     let l:cmd = "highlight " . a:group
     if a:fg != ""
@@ -100,7 +100,7 @@ call s:hi("DiffChange",    "",           "#2a2820",   "")
 call s:hi("DiffDelete",    s:rust,       "#2a2020",   "")
 call s:hi("DiffText",      "",           "#3a3525",   "bold")
 
-" ── Sintaxe ──
+" ── Syntax ──
 call s:hi("Comment",       s:fg_dark,    "",          "italic")
 call s:hi("Constant",      s:parchment,  "",          "")
 call s:hi("String",        s:olive,      "",          "")
@@ -142,7 +142,7 @@ call s:hi("Ignore",        s:stone,      "",          "")
 call s:hi("Error",         s:terracotta, s:bg_dark,   "bold")
 call s:hi("Todo",          s:gold,       s:bg_dark,   "bold")
 
-" ── Diagnósticos ──
+" ── Diagnostics ──
 call s:hi("DiagnosticError",   s:terracotta, "", "")
 call s:hi("DiagnosticWarn",    s:gold,       "", "")
 call s:hi("DiagnosticInfo",    s:azure,      "", "")

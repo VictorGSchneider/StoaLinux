@@ -1,10 +1,10 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Bash                                          ║
-# ║  "Primeiro diga a si mesmo o que seria; depois faça         ║
-# ║   o que tem de fazer." — Epicteto                            ║
+# ║  "First say to yourself what you would be; and then do      ║
+# ║   what you have to do." — Epictetus                          ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-# ── Citação Estoica (cada terminal recebe uma frase diferente) ──
+# ── Stoic Quote (each terminal gets a different quote) ──
 
 _stoa_greeting() {
     local quote=""
@@ -18,13 +18,13 @@ _stoa_greeting() {
 }
 _stoa_greeting
 
-# ── Histórico ──
+# ── History ──
 HISTCONTROL=ignoreboth
 HISTSIZE=10000
 HISTFILESIZE=20000
 shopt -s histappend
 
-# ── Prompt Estoico ──
+# ── Stoic Prompt ──
 _stoa_prompt() {
     local exit_code=$?
     local bronze='\[\033[38;2;196;154;92m\]'
@@ -62,11 +62,11 @@ alias du='du -sh'
 alias free='free -h'
 alias cls='clear'
 
-# ── Ambiente Stoa (toolkits + apps padrão) ──
+# ── Stoa Environment (toolkits + default apps) ──
 [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa-env.sh" ] && \
     source "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa-env.sh"
 
-# ── Cores ──
+# ── Colors ──
 export LS_COLORS='di=38;2;196;154;92:ln=38;2;90;122;138:ex=38;2;138;154;108:*.tar=38;2;179;107;90:*.gz=38;2;179;107;90:*.zip=38;2;179;107;90:*.jpg=38;2;148;106;122:*.png=38;2;148;106;122:*.mp3=38;2;164;122;138:*.mp4=38;2;164;122;138'
 
 export LESS_TERMCAP_mb=$'\e[1;38;2;179;107;90m'
@@ -77,5 +77,5 @@ export LESS_TERMCAP_so=$'\e[1;38;2;33;30;25;48;2;196;154;92m'
 export LESS_TERMCAP_ue=$'\e[0m'
 export LESS_TERMCAP_us=$'\e[4;38;2;138;154;108m'
 
-# ── Caminho ──
+# ── Path ──
 export PATH="$HOME/.local/bin:$PATH"

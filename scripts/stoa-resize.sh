@@ -1,34 +1,34 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Image Resizer                                 ║
-# ║  Redimensiona múltiplas imagens de uma vez                   ║
-# ║  Requer: imagemagick, rofi                                  ║
+# ║  Resize multiple images at once                              ║
+# ║  Requires: imagemagick, rofi                                ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Uso:
-#   stoa-resize img1.png img2.jpg ...   — redimensiona com menu
-#   stoa-resize *.png                   — glob funciona também
+# Usage:
+#   stoa-resize img1.png img2.jpg ...   — resize with menu
+#   stoa-resize *.png                   — glob works too
 
 ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
 PRESETS=(
-    "25%   — Miniatura"
-    "50%   — Metade"
-    "75%   — Três quartos"
+    "25%   — Thumbnail"
+    "50%   — Half"
+    "75%   — Three quarters"
     "1920x1080 — Full HD"
     "1280x720  — HD"
-    "800x600   — Pequena"
+    "800x600   — Small"
     "640x480   — Web"
-    "Personalizado..."
+    "Custom..."
 )
 
 if [ $# -eq 0 ]; then
-    echo "Uso: stoa-resize imagem1 [imagem2 ...]"
-    notify-send -t 3000 "Image Resizer" "Uso: stoa-resize imagem1 [imagem2 ...]"
+    echo "Usage: stoa-resize image1 [image2 ...]"
+    notify-send -t 3000 "Image Resizer" "Usage: stoa-resize image1 [image2 ...]"
     exit 1
 fi
 
-# Filtra apenas arquivos de imagem válidos
+# Filter valid image files only
 images=()
 for f in "$@"; do
     if [ -f "$f" ] && file --mime-type -b "$f" | grep -q "^image/"; then
@@ -37,25 +37,25 @@ for f in "$@"; do
 done
 
 if [ ${#images[@]} -eq 0 ]; then
-    notify-send -t 3000 "Image Resizer" "Nenhuma imagem válida encontrada"
+    notify-send -t 3000 "Image Resizer" "No valid images found"
     exit 1
 fi
 
-# Menu de tamanho
-choice=$(printf '%s\n' "${PRESETS[@]}" | rofi "${ROFI_ARGS[@]}" -p "Redimensionar ${#images[@]} imagem(ns)")
+# Size menu
+choice=$(printf '%s\n' "${PRESETS[@]}" | rofi "${ROFI_ARGS[@]}" -p "Resize ${#images[@]} image(s)")
 [ -z "$choice" ] && exit 0
 
-# Extrai dimensão
-if [[ "$choice" == "Personalizado..."* ]]; then
-    size=$(rofi "${ROFI_ARGS[@]}" -p "Tamanho (ex: 800x600 ou 50%)")
+# Extract dimension
+if [[ "$choice" == "Custom..."* ]]; then
+    size=$(rofi "${ROFI_ARGS[@]}" -p "Size (e.g. 800x600 or 50%)")
     [ -z "$size" ] && exit 0
 else
     size=$(echo "$choice" | awk '{print $1}')
 fi
 
-# Menu de destino
-dest=$(printf "Sobrescrever originais\nSalvar como cópia (_resized)\nSalvar em pasta resized/" | \
-    rofi "${ROFI_ARGS[@]}" -p "Destino")
+# Destination menu
+dest=$(printf "Overwrite originals\nSave as copy (_resized)\nSave to resized/ folder" | \
+    rofi "${ROFI_ARGS[@]}" -p "Destination")
 [ -z "$dest" ] && exit 0
 
 count=0
@@ -66,13 +66,13 @@ for img in "${images[@]}"; do
     ext="${base##*.}"
 
     case "$dest" in
-        "Sobrescrever"*)
+        "Overwrite"*)
             magick "$img" -resize "$size" "$img"
             ;;
-        "Salvar como cópia"*)
+        "Save as copy"*)
             magick "$img" -resize "$size" "${dir}/${name}_resized.${ext}"
             ;;
-        "Salvar em pasta"*)
+        "Save to"*)
             mkdir -p "${dir}/resized"
             magick "$img" -resize "$size" "${dir}/resized/${base}"
             ;;
@@ -80,4 +80,4 @@ for img in "${images[@]}"; do
     ((count++))
 done
 
-notify-send -t 3000 "Image Resizer" "${count} imagem(ns) redimensionada(s) para ${size}"
+notify-send -t 3000 "Image Resizer" "${count} image(s) resized to ${size}"
