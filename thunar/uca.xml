@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  STOA LINUX — Thunar Custom Actions (Stoatools)             ║
+  ║  "The tools of virtue are always at hand." — Seneca         ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<actions>
+
+  <action>
+    <icon>applications-utilities</icon>
+    <name>Stoatools</name>
+    <unique-id>stoatools-menu</unique-id>
+    <command>~/.local/bin/stoa-thunar %F</command>
+    <description>Open Stoatools menu (resize, rename, OCR, locksmith)</description>
+    <patterns>*</patterns>
+    <other-files/>
+    <text-files/>
+    <image-files/>
+    <audio-files/>
+    <video-files/>
+  </action>
+
+</actions>

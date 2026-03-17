@@ -80,6 +80,9 @@ _link "${STOA_DIR}/gtk-4.0/settings.ini" "${CONFIG_DIR}/gtk-4.0/settings.ini"
 _link "${STOA_DIR}/qt5ct/qt5ct.conf" "${CONFIG_DIR}/qt5ct/qt5ct.conf"
 _link "${STOA_DIR}/qt6ct/qt6ct.conf" "${CONFIG_DIR}/qt6ct/qt6ct.conf"
 
+# ── Thunar (Stoatools custom actions) ──
+_link "${STOA_DIR}/thunar/uca.xml" "${CONFIG_DIR}/Thunar/uca.xml"
+
 # ── Stoic apps ──
 _link "${STOA_DIR}/zathura/zathurarc"  "${CONFIG_DIR}/zathura/zathurarc"
 _link "${STOA_DIR}/mpv/mpv.conf"       "${CONFIG_DIR}/mpv/mpv.conf"
@@ -124,13 +127,15 @@ _link "${STOA_DIR}/scripts/stoa-resize.sh"       "${HOME}/.local/bin/stoa-resize
 _link "${STOA_DIR}/scripts/stoa-paste.sh"        "${HOME}/.local/bin/stoa-paste"
 _link "${STOA_DIR}/scripts/stoa-ocr.sh"          "${HOME}/.local/bin/stoa-ocr"
 _link "${STOA_DIR}/scripts/stoa-rename.sh"       "${HOME}/.local/bin/stoa-rename"
+_link "${STOA_DIR}/scripts/stoa-thunar.sh"      "${HOME}/.local/bin/stoa-thunar"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
          "${HOME}/.local/bin/stoa-osd" "${HOME}/.local/bin/stoa-clipboard" \
          "${HOME}/.local/bin/stoa-quotes-sync" "${HOME}/.local/bin/stoa-locksmith" \
          "${HOME}/.local/bin/stoa-resize" "${HOME}/.local/bin/stoa-paste" \
-         "${HOME}/.local/bin/stoa-ocr" "${HOME}/.local/bin/stoa-rename"
+         "${HOME}/.local/bin/stoa-ocr" "${HOME}/.local/bin/stoa-rename" \
+         "${HOME}/.local/bin/stoa-thunar"
 
 # ── XDG MIME defaults (browser + apps) ──
 MIME_DIR="${HOME}/.local/share/applications"
@@ -155,6 +160,7 @@ video/webm=mpv.desktop
 audio/mpeg=mpv.desktop
 audio/flac=mpv.desktop
 audio/ogg=mpv.desktop
+inode/directory=thunar.desktop
 MIME
     echo -e "  ${O}[+] mimeapps.list (Brave as default browser)${R}"
 fi
@@ -176,6 +182,7 @@ echo -e "  ${F}Keybinds:${R}"
 echo -e "  ${S}  Super+Return  Terminal (Alacritty)${R}"
 echo -e "  ${S}  Super+B       Browser (Brave)${R}"
 echo -e "  ${S}  Super+E       Files (lf)${R}"
+echo -e "  ${S}  Super+Shift+E Files (Thunar)${R}"
 echo -e "  ${S}  Super+N       Monitor (btop)${R}"
 echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+O       Notes (Obsidian)${R}"
