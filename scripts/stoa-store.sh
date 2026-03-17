@@ -184,7 +184,7 @@ _pkg_detail() {
             items+=("─────────────────────")
             items+=("  Reinstall")
             items+=("  Remove (keep deps)")
-            items+=("  Remove + unused deps")
+            items+=("  Complete removal (pkg + deps)")
             if [[ "$install_reason" == *"dependency"* ]]; then
                 items+=("  Mark as explicit")
             else
@@ -192,7 +192,7 @@ _pkg_detail() {
             fi
         else
             items+=("─────────────────────")
-            items+=("  Install")
+            items+=("  Install (with dependencies)")
             items+=("  Install as dependency")
         fi
         items+=("─────────────────────")
@@ -250,8 +250,8 @@ _pkg_detail() {
             *"Remove (keep"*)
                 _confirm "Remove $pkg (keep dependencies)?" && _run_in_term "sudo pacman -R $pkg"
                 ;;
-            *"Remove + unused"*)
-                _confirm "Remove $pkg + unused dependencies?" && _run_in_term "sudo pacman -Rns $pkg"
+            *"Complete removal"*)
+                _complete_removal "$pkg"
                 ;;
             *"Mark as explicit"*)
                 sudo pacman -D --asexplicit "$pkg" 2>/dev/null
@@ -272,16 +272,149 @@ _pkg_detail() {
                 _apply_stoa_theme
                 ;;
             *"Install"*)
-                _confirm "Install $pkg?" || continue
-                if [ "$h" = "pacman" ]; then
-                    _run_in_term "sudo pacman -S --needed $pkg"
-                else
-                    _run_in_term "$h -S --needed $pkg"
-                fi
-                _is_installed "$pkg" && _apply_stoa_theme && _notify "$pkg installed"
+                _install_with_deps_preview "$pkg"
                 ;;
         esac
     done
+}
+
+_install_with_deps_preview() {
+    local pkg="$1"
+    local h; h=$(_helper)
+
+    # Get list of dependencies that would be installed
+    local deps_info
+    deps_info=$(pacman -Si "$pkg" 2>/dev/null | grep "^Depends On" | sed 's/.*: //')
+
+    local new_deps=()
+    local already_installed=()
+    if [ -n "$deps_info" ] && [ "$deps_info" != "None" ]; then
+        for dep in $deps_info; do
+            local dep_name="${dep%%[><=]*}"
+            if _is_installed "$dep_name"; then
+                already_installed+=("  $dep_name  [already installed]")
+            else
+                new_deps+=("  $dep_name  [will install]")
+            fi
+        done
+    fi
+
+    local lines=()
+    lines+=("Package: $pkg")
+    lines+=("")
+
+    if [ ${#new_deps[@]} -gt 0 ]; then
+        lines+=("── New dependencies (${#new_deps[@]}) ──")
+        lines+=("${new_deps[@]}")
+    fi
+    if [ ${#already_installed[@]} -gt 0 ]; then
+        lines+=("── Already satisfied (${#already_installed[@]}) ──")
+        lines+=("${already_installed[@]}")
+    fi
+    if [ ${#new_deps[@]} -eq 0 ] && [ ${#already_installed[@]} -eq 0 ]; then
+        lines+=("No dependencies required")
+    fi
+    lines+=("")
+    lines+=("  Confirm install")
+    lines+=("  Cancel")
+
+    local confirm
+    confirm=$(printf '%s\n' "${lines[@]}" | _rofi "  Install $pkg")
+    [[ "$confirm" == *"Confirm"* ]] || return
+
+    if [ "$h" = "pacman" ]; then
+        _run_in_term "sudo pacman -S --needed $pkg"
+    else
+        _run_in_term "$h -S --needed $pkg"
+    fi
+    _is_installed "$pkg" && _apply_stoa_theme && _notify "$pkg installed"
+}
+
+_complete_removal() {
+    local pkg="$1"
+
+    # Get exclusive dependencies (deps that ONLY this package needs)
+    local deps
+    deps=$(pacman -Qi "$pkg" 2>/dev/null | grep "^Depends On" | sed 's/.*: //')
+
+    local safe_to_remove=()
+    local shared_deps=()
+    local conflict_details=()
+
+    if [ -n "$deps" ] && [ "$deps" != "None" ]; then
+        for dep in $deps; do
+            local dep_name="${dep%%[><=]*}"
+            # Skip if not installed
+            _is_installed "$dep_name" || continue
+
+            # Check who else needs this dependency
+            local rdeps
+            rdeps=$(pacman -Qi "$dep_name" 2>/dev/null | grep "^Required By" | sed 's/.*: //')
+
+            if [ -z "$rdeps" ] || [ "$rdeps" = "None" ]; then
+                safe_to_remove+=("$dep_name")
+            else
+                # Filter out the package being removed itself
+                local other_rdeps=""
+                for rd in $rdeps; do
+                    [ "$rd" != "$pkg" ] && other_rdeps+="$rd "
+                done
+                other_rdeps=$(echo "$other_rdeps" | sed 's/ $//')
+
+                if [ -z "$other_rdeps" ]; then
+                    safe_to_remove+=("$dep_name")
+                else
+                    shared_deps+=("$dep_name")
+                    conflict_details+=("  $dep_name → needed by: $other_rdeps")
+                fi
+            fi
+        done
+    fi
+
+    # Build the confirmation screen
+    local lines=()
+    lines+=("Package to remove: $pkg")
+    lines+=("")
+
+    if [ ${#safe_to_remove[@]} -gt 0 ]; then
+        lines+=("── Will also remove (${#safe_to_remove[@]} exclusive deps) ──")
+        for d in "${safe_to_remove[@]}"; do
+            lines+=("  $d")
+        done
+    fi
+
+    if [ ${#shared_deps[@]} -gt 0 ]; then
+        lines+=("")
+        lines+=("──  Shared deps (will NOT remove) ──")
+        for detail in "${conflict_details[@]}"; do
+            lines+=("$detail")
+        done
+    fi
+
+    local total_remove=$((1 + ${#safe_to_remove[@]}))
+    lines+=("")
+    lines+=("Total packages to remove: $total_remove")
+    lines+=("")
+    lines+=("  Confirm complete removal")
+    lines+=("  Remove only $pkg (keep deps)")
+    lines+=("  Cancel")
+
+    local confirm
+    confirm=$(printf '%s\n' "${lines[@]}" | _rofi "  Remove $pkg")
+
+    case "$confirm" in
+        *"Confirm complete"*)
+            local remove_list="$pkg"
+            for d in "${safe_to_remove[@]}"; do
+                remove_list+=" $d"
+            done
+            _run_in_term "sudo pacman -Rns $remove_list"
+            _is_installed "$pkg" || _notify "$pkg completely removed"
+            ;;
+        *"Remove only"*)
+            _run_in_term "sudo pacman -R $pkg"
+            ;;
+    esac
 }
 
 _show_deps() {
@@ -493,10 +626,6 @@ _search_install() {
     _has_aur && sources+=("  AUR")
     command -v flatpak &>/dev/null && sources+=("  Flatpak (Flathub)")
     command -v snap &>/dev/null && sources+=("  Snap Store")
-    command -v pip &>/dev/null && sources+=("  Python (PyPI)")
-    command -v npm &>/dev/null && sources+=("  Node.js (npm)")
-    command -v cargo &>/dev/null && sources+=("  Rust (crates.io)")
-    command -v gem &>/dev/null && sources+=("  Ruby (RubyGems)")
 
     local source_choice
     source_choice=$(_rofi_list "  Filter by source" "${sources[@]}")
@@ -567,53 +696,6 @@ _search_install() {
         *Snap*)
             all_results=$(_search_snap_results "$query")
             ;;
-        *"Python"*)
-            local pyresults
-            pyresults=$(pip index versions "$query" 2>/dev/null || pip search "$query" 2>/dev/null)
-            [ -n "$pyresults" ] && {
-                while IFS= read -r line; do
-                    [ -z "$line" ] && continue
-                    all_results+="[pip] ${line}"$'\n'
-                done <<< "$pyresults"
-            }
-            # Fallback: just show the package name
-            [ -z "$all_results" ] && all_results="[pip] $query  (install with pip)"
-            ;;
-        *"Node"*)
-            local npmresults
-            npmresults=$(npm search "$query" 2>/dev/null | tail -n +2 | head -40)
-            [ -n "$npmresults" ] && {
-                while IFS= read -r line; do
-                    [ -z "$line" ] && continue
-                    local name; name=$(echo "$line" | awk '{print $1}')
-                    local desc; desc=$(echo "$line" | awk '{for(i=2;i<=NF-3;i++) printf "%s ", $i}' | sed 's/ $//')
-                    all_results+="[npm] ${name}  ${desc:0:45}"$'\n'
-                done <<< "$npmresults"
-            }
-            ;;
-        *"Rust"*)
-            local crateresults
-            crateresults=$(cargo search "$query" 2>/dev/null | head -30)
-            [ -n "$crateresults" ] && {
-                while IFS= read -r line; do
-                    [ -z "$line" ] && continue
-                    [[ "$line" == "..."* ]] && continue
-                    local name; name=$(echo "$line" | awk '{print $1}')
-                    local desc; desc=$(echo "$line" | sed 's/.*# //')
-                    all_results+="[cargo] ${name}  ${desc:0:45}"$'\n'
-                done <<< "$crateresults"
-            }
-            ;;
-        *"Ruby"*)
-            local gemresults
-            gemresults=$(gem search "$query" 2>/dev/null | head -40)
-            [ -n "$gemresults" ] && {
-                while IFS= read -r line; do
-                    [ -z "$line" ] && continue
-                    all_results+="[gem] ${line}"$'\n'
-                done <<< "$gemresults"
-            }
-            ;;
     esac
 
     # Remove empty lines
@@ -642,27 +724,6 @@ _search_install() {
         "[snap]")
             sel_pkg=$(echo "$choice" | awk '{print $2}')
             _handle_snap_selection "$sel_pkg"
-            ;;
-        "[pip]")
-            sel_pkg=$(echo "$choice" | awk '{print $2}')
-            _confirm "pip install $sel_pkg?" && _run_in_term "pip install $sel_pkg"
-            ;;
-        "[npm]")
-            sel_pkg=$(echo "$choice" | awk '{print $2}')
-            local scope
-            scope=$(_rofi_list "npm install $sel_pkg" "  Global (-g)" "  Local (current dir)")
-            case "$scope" in
-                *Global*) _run_in_term "npm install -g $sel_pkg" ;;
-                *Local*)  _run_in_term "npm install $sel_pkg" ;;
-            esac
-            ;;
-        "[cargo]")
-            sel_pkg=$(echo "$choice" | awk '{print $2}')
-            _confirm "cargo install $sel_pkg?" && _run_in_term "cargo install $sel_pkg"
-            ;;
-        "[gem]")
-            sel_pkg=$(echo "$choice" | awk '{print $2}')
-            _confirm "gem install $sel_pkg?" && _run_in_term "gem install $sel_pkg"
             ;;
     esac
 }
@@ -2318,6 +2379,92 @@ _lang_r() {
     done
 }
 
+menu_developer() {
+    while true; do
+        # Count detected runtimes
+        local rt_count=0
+        command -v pip       &>/dev/null && ((rt_count++))
+        command -v pipx      &>/dev/null && ((rt_count++))
+        command -v npm       &>/dev/null && ((rt_count++))
+        command -v yarn      &>/dev/null && ((rt_count++))
+        command -v pnpm      &>/dev/null && ((rt_count++))
+        command -v cargo     &>/dev/null && ((rt_count++))
+        command -v gem       &>/dev/null && ((rt_count++))
+        command -v go        &>/dev/null && ((rt_count++))
+        command -v composer  &>/dev/null && ((rt_count++))
+        command -v dotnet    &>/dev/null && ((rt_count++))
+        command -v luarocks  &>/dev/null && ((rt_count++))
+        command -v cpan      &>/dev/null && ((rt_count++))
+        command -v ghcup     &>/dev/null && ((rt_count++))
+        command -v julia     &>/dev/null && ((rt_count++))
+        command -v R         &>/dev/null && ((rt_count++))
+
+        local choice
+        choice=$(_rofi_list "  Developer tools" \
+            "  Language packages ($rt_count runtimes)" \
+            "  Base development packages" \
+            "─────────────────────" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
+
+        case "$choice" in
+            *"Language"*)
+                menu_lang_packages
+                ;;
+            *"Base dev"*)
+                # Show base-devel and common dev tool groups
+                local dev_items=()
+                local groups=("base-devel")
+                for g in "${groups[@]}"; do
+                    local count
+                    count=$(pacman -Sg "$g" 2>/dev/null | wc -l)
+                    local installed=0
+                    while IFS= read -r line; do
+                        local p="${line#* }"
+                        _is_installed "$p" && ((installed++))
+                    done <<< "$(pacman -Sg "$g" 2>/dev/null)"
+                    dev_items+=("  $g  ($installed/$count installed)")
+                done
+
+                # Common dev tools check
+                local dev_tools=("git" "cmake" "meson" "ninja" "gdb" "valgrind" "strace" "docker" "podman")
+                dev_items+=("─────────────────────")
+                for tool in "${dev_tools[@]}"; do
+                    local status=""
+                    _is_installed "$tool" && status="  [installed]" || status="  [not installed]"
+                    dev_items+=("  $tool${status}")
+                done
+
+                local sel
+                sel=$(_rofi_list "  Dev packages" "${dev_items[@]}" "  Back")
+                [ -z "$sel" ] || [[ "$sel" == *Back* ]] && continue
+
+                local sel_name
+                sel_name=$(echo "$sel" | awk '{print $1}')
+
+                # Check if it's a group
+                if pacman -Sg "$sel_name" &>/dev/null; then
+                    local group_pkgs
+                    group_pkgs=$(pacman -Sg "$sel_name" 2>/dev/null | awk '{print $2}')
+                    local lines=()
+                    while IFS= read -r p; do
+                        local st=""
+                        _is_installed "$p" && st="  [installed]"
+                        lines+=("${p}${st}")
+                    done <<< "$group_pkgs"
+                    local pkg_sel
+                    pkg_sel=$(printf '%s\n' "${lines[@]}" | _rofi "  $sel_name")
+                    [ -z "$pkg_sel" ] && continue
+                    local pkg_name; pkg_name=$(echo "$pkg_sel" | awk '{print $1}')
+                    _pkg_detail "$pkg_name"
+                else
+                    _pkg_detail "$sel_name"
+                fi
+                ;;
+        esac
+    done
+}
+
 menu_lang_packages() {
     while true; do
         local available
@@ -2382,8 +2529,8 @@ main() {
             "  Snap manager" \
             "  AppImage manager" \
             "  DEB / RPM (convert)" \
-            "  Language packages" \
             "─────────────────────" \
+            "  Developer tools" \
             "  Setup auto-theme hook" \
             "  Re-apply Stoa theme" \
             "  Install AUR helper")
@@ -2399,7 +2546,7 @@ main() {
             *"Snap manager"*)      menu_snap ;;
             *"AppImage manager"*)  menu_appimage ;;
             *DEB*)                 menu_deb_rpm ;;
-            *"Language packages"*) menu_lang_packages ;;
+            *"Developer tools"*)   menu_developer ;;
             *auto-theme*)          _setup_hook ;;
             *Re-apply*)            _apply_stoa_theme; _notify "Stoa theme applied" ;;
             *"AUR helper"*)        _install_aur_helper ;;
