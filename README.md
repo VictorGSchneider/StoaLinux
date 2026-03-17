@@ -107,6 +107,9 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 
 ## Scripts
 
+<table>
+<tr><td>
+
 | Command | What it does |
 |---------|-------------|
 | `stoa-settings` | Settings panel — wallpaper, theme, GPU, face, lock |
@@ -114,21 +117,40 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 | `stoa-fetch` | System fetch with temple ASCII |
 | `stoa-walls` | Wallpaper generator |
 | `stoa-memento` | Memento Mori widget |
+
+</td><td>
+
+| Command | What it does |
+|---------|-------------|
 | `stoa-clipboard` | Clipboard with pinned favorites |
 | `stoa-osd` | Volume/brightness/caps OSD |
 | `stoa-quotes-sync` | Fetch Stoic quotes online |
 | `stoa-face` | Face recognition setup (howdy) |
 | `stoa-gpu-setup` | GPU + CPU driver setup |
 
+</td></tr>
+</table>
+
 **Stoatools** (also Thunar right-click actions):
+
+<table>
+<tr><td>
 
 | Command | What it does |
 |---------|-------------|
 | `stoa-ocr` | Extract text from screen/image |
-| `stoa-paste` | Paste as UPPER/lower/Title/snake/camel/JSON/Markdown |
+| `stoa-paste` | Paste as UPPER/lower/Title/snake/camel |
+| `stoa-locksmith` | See who's locking a file |
+
+</td><td>
+
+| Command | What it does |
+|---------|-------------|
 | `stoa-resize` | Batch resize images |
 | `stoa-rename` | Regex rename with preview |
-| `stoa-locksmith` | See who's locking a file |
+
+</td></tr>
+</table>
 
 ## Apps
 
