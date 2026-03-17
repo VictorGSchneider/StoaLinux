@@ -24,11 +24,12 @@ if [ "$STOA_SHOW_KEYBINDS" != "true" ]; then
 fi
 
 # Compact text for the bar
-TEXT="⏎ Term │ B Brave │ C Calc │ D Rofi │ E Files │ I Settings │ N Monitor │ O Notes │ V Clipboard │ Esc Lock │ Q Close │ F Full │ HJKL Nav"
+TEXT="⏎ Term │ A Store │ B Brave │ C Calc │ D Rofi │ E Files │ I Settings │ N Monitor │ O Notes │ V Clipboard │ Esc Lock │ Q Close │ F Full │ HJKL Nav"
 
 # Full tooltip
 TOOLTIP="╔═══ STOA KEYBINDS ═══╗\n"
 TOOLTIP+="Super+Enter   Terminal\n"
+TOOLTIP+="Super+A       App Store\n"
 TOOLTIP+="Super+B       Brave Browser\n"
 TOOLTIP+="Super+C       Calculator\n"
 TOOLTIP+="Super+D       Rofi (launcher)\n"

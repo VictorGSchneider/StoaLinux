@@ -133,6 +133,7 @@ _link "${STOA_DIR}/scripts/stoa-rename.sh"       "${HOME}/.local/bin/stoa-rename
 _link "${STOA_DIR}/scripts/stoa-thunar.sh"      "${HOME}/.local/bin/stoa-thunar"
 _link "${STOA_DIR}/scripts/stoa-face-setup.sh" "${HOME}/.local/bin/stoa-face"
 _link "${STOA_DIR}/scripts/stoa-settings.sh"   "${HOME}/.local/bin/stoa-settings"
+_link "${STOA_DIR}/scripts/stoa-store.sh"      "${HOME}/.local/bin/stoa-store"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -141,7 +142,8 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-resize" "${HOME}/.local/bin/stoa-paste" \
          "${HOME}/.local/bin/stoa-ocr" "${HOME}/.local/bin/stoa-rename" \
          "${HOME}/.local/bin/stoa-thunar" "${HOME}/.local/bin/stoa-face" \
-         "${HOME}/.local/bin/stoa-settings"
+         "${HOME}/.local/bin/stoa-settings" \
+         "${HOME}/.local/bin/stoa-store"
 
 # ── XDG MIME defaults (browser + apps) ──
 MIME_DIR="${HOME}/.local/share/applications"
@@ -195,6 +197,7 @@ echo -e "  ${S}  Super+N       Monitor (btop)${R}"
 echo -e "  ${S}  Super+O       Notes (Obsidian)${R}"
 echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
 echo -e "  ${S}  Super+I       Settings (rofi)${R}"
+echo -e "  ${S}  Super+A       App Store (rofi)${R}"
 echo -e "  ${S}  Super+Escape  Lock screen${R}"
 echo -e "  ${S}  Super+/       Bar keybinds (toggle)${R}"
 echo -e "  ${S}  Super+Shift+T OCR — extract text from screen${R}"

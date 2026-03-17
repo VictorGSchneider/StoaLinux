@@ -66,6 +66,7 @@ bindsym $mod+Shift+r restart
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'"
 
 # ── Apps ──
+bindsym $mod+a exec --no-startup-id ~/.local/bin/stoa-store
 bindsym $mod+b exec brave
 bindsym $mod+c exec qalculate-gtk
 bindsym $mod+n exec alacritty -e btop

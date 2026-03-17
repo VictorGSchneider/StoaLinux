@@ -731,6 +731,7 @@ main_menu() {
             "  Bluetooth" \
             "  Wallpaper" \
             "  Theme" \
+            "  App Store" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
@@ -743,6 +744,7 @@ main_menu() {
             *Bluetooth*)   menu_bluetooth ;;
             *Wallpaper*)   menu_wallpaper ;;
             *Theme*)       menu_theme ;;
+            *"App Store"*) stoa-store & disown; exit 0 ;;
             *Lock*)        menu_lockscreen ;;
             *Stoa*)        menu_stoa ;;
             *Power*)       menu_power ;;
