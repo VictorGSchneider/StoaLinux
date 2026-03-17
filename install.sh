@@ -42,91 +42,62 @@ _link() {
 echo -e "${F}Creating symlinks...${R}"
 echo ""
 
-# ── Hyprland (Wayland — primary) ──
-_link "${STOA_DIR}/hyprland/hyprland.conf" "${CONFIG_DIR}/hypr/hyprland.conf"
+# ── Window managers ──
+_link "${STOA_DIR}/config/hypr/hyprland.conf"   "${CONFIG_DIR}/hypr/hyprland.conf"
+_link "${STOA_DIR}/config/hypr/hyprlock.conf"   "${CONFIG_DIR}/hypr/hyprlock.conf"
+_link "${STOA_DIR}/config/waybar/config"        "${CONFIG_DIR}/waybar/config"
+_link "${STOA_DIR}/config/waybar/style.css"     "${CONFIG_DIR}/waybar/style.css"
+_link "${STOA_DIR}/config/i3/config"            "${CONFIG_DIR}/i3/config"
+_link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
+_link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"
 
-# ── Waybar ──
-_link "${STOA_DIR}/waybar/config"     "${CONFIG_DIR}/waybar/config"
-_link "${STOA_DIR}/waybar/style.css"  "${CONFIG_DIR}/waybar/style.css"
+# ── Apps ──
+_link "${STOA_DIR}/config/alacritty/alacritty.toml" "${CONFIG_DIR}/alacritty/alacritty.toml"
+_link "${STOA_DIR}/config/nvim/init.vim"            "${CONFIG_DIR}/nvim/init.vim"
+_link "${STOA_DIR}/config/nvim/colors/stoa.vim"     "${CONFIG_DIR}/nvim/colors/stoa.vim"
+_link "${STOA_DIR}/config/rofi/config.rasi"         "${CONFIG_DIR}/rofi/config.rasi"
+_link "${STOA_DIR}/config/dunst/dunstrc"            "${CONFIG_DIR}/dunst/dunstrc"
+_link "${STOA_DIR}/config/neofetch/config.conf"     "${CONFIG_DIR}/neofetch/config.conf"
+_link "${STOA_DIR}/config/zathura/zathurarc"        "${CONFIG_DIR}/zathura/zathurarc"
+_link "${STOA_DIR}/config/mpv/mpv.conf"             "${CONFIG_DIR}/mpv/mpv.conf"
+_link "${STOA_DIR}/config/btop/btop.conf"           "${CONFIG_DIR}/btop/btop.conf"
+_link "${STOA_DIR}/config/lf/lfrc"                  "${CONFIG_DIR}/lf/lfrc"
+_link "${STOA_DIR}/config/imv/config"               "${CONFIG_DIR}/imv/config"
+_link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xml"
+_link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
+_link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
 
-# ── i3 (Xorg — fallback) ──
-_link "${STOA_DIR}/i3/config"         "${CONFIG_DIR}/i3/config"
-_link "${STOA_DIR}/i3/i3status.conf"  "${CONFIG_DIR}/i3/i3status.conf"
+# ── Theme (GTK + Qt + Steam + Calibre + YACReader) ──
+_link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
+_link "${STOA_DIR}/theme/gtk-3.0/stoa-gtk.css"  "${CONFIG_DIR}/gtk-3.0/gtk.css"
+_link "${STOA_DIR}/theme/gtk-4.0/settings.ini"  "${CONFIG_DIR}/gtk-4.0/settings.ini"
+_link "${STOA_DIR}/theme/gtk-4.0/stoa-gtk.css"  "${CONFIG_DIR}/gtk-4.0/gtk.css"
+_link "${STOA_DIR}/theme/qt5ct/qt5ct.conf"      "${CONFIG_DIR}/qt5ct/qt5ct.conf"
+_link "${STOA_DIR}/theme/qt6ct/qt6ct.conf"      "${CONFIG_DIR}/qt6ct/qt6ct.conf"
 
-# ── Hyprlock (lock screen) ──
-_link "${STOA_DIR}/hyprlock/hyprlock.conf" "${CONFIG_DIR}/hypr/hyprlock.conf"
-
-# ── Picom (Xorg only) ──
-_link "${STOA_DIR}/picom/picom.conf" "${CONFIG_DIR}/picom/picom.conf"
-
-# ── Alacritty ──
-_link "${STOA_DIR}/alacritty/alacritty.toml" "${CONFIG_DIR}/alacritty/alacritty.toml"
-
-# ── Neovim ──
-_link "${STOA_DIR}/nvim/init.vim"         "${CONFIG_DIR}/nvim/init.vim"
-_link "${STOA_DIR}/nvim/colors/stoa.vim"  "${CONFIG_DIR}/nvim/colors/stoa.vim"
-
-# ── Rofi ──
-_link "${STOA_DIR}/rofi/config.rasi" "${CONFIG_DIR}/rofi/config.rasi"
-
-# ── Dunst ──
-_link "${STOA_DIR}/dunst/dunstrc" "${CONFIG_DIR}/dunst/dunstrc"
-
-# ── Neofetch ──
-_link "${STOA_DIR}/neofetch/config.conf" "${CONFIG_DIR}/neofetch/config.conf"
-
-# ── GTK 3.0 + 4.0 ──
-_link "${STOA_DIR}/gtk-3.0/settings.ini" "${CONFIG_DIR}/gtk-3.0/settings.ini"
-_link "${STOA_DIR}/gtk-3.0/stoa-gtk.css" "${CONFIG_DIR}/gtk-3.0/gtk.css"
-_link "${STOA_DIR}/gtk-4.0/settings.ini" "${CONFIG_DIR}/gtk-4.0/settings.ini"
-_link "${STOA_DIR}/gtk-4.0/stoa-gtk.css" "${CONFIG_DIR}/gtk-4.0/gtk.css"
-
-# ── Qt5/Qt6 (standardization with GTK) ──
-_link "${STOA_DIR}/qt5ct/qt5ct.conf" "${CONFIG_DIR}/qt5ct/qt5ct.conf"
-_link "${STOA_DIR}/qt6ct/qt6ct.conf" "${CONFIG_DIR}/qt6ct/qt6ct.conf"
-
-# ── Thunar (Stoatools custom actions) ──
-_link "${STOA_DIR}/thunar/uca.xml" "${CONFIG_DIR}/Thunar/uca.xml"
-
-# ── Stoic apps ──
-_link "${STOA_DIR}/zathura/zathurarc"  "${CONFIG_DIR}/zathura/zathurarc"
-_link "${STOA_DIR}/mpv/mpv.conf"       "${CONFIG_DIR}/mpv/mpv.conf"
-_link "${STOA_DIR}/btop/btop.conf"     "${CONFIG_DIR}/btop/btop.conf"
-_link "${STOA_DIR}/lf/lfrc"            "${CONFIG_DIR}/lf/lfrc"
-_link "${STOA_DIR}/imv/config"         "${CONFIG_DIR}/imv/config"
-
-# ── eww (Memento Mori widget) ──
-_link "${STOA_DIR}/eww/eww.yuck"  "${CONFIG_DIR}/eww/eww.yuck"
-_link "${STOA_DIR}/eww/eww.scss"  "${CONFIG_DIR}/eww/eww.scss"
-
-# ── Calibre (eBook reader — Stoa theme) ──
-if [ -f "${STOA_DIR}/calibre/stoa-calibre.py" ]; then
-    python3 "${STOA_DIR}/calibre/stoa-calibre.py" 2>/dev/null && \
+if [ -f "${STOA_DIR}/theme/calibre/stoa-calibre.py" ]; then
+    python3 "${STOA_DIR}/theme/calibre/stoa-calibre.py" 2>/dev/null && \
         echo -e "  ${O}[+] Calibre Stoa theme applied${R}" || true
 fi
 
-# ── YACReader (Comic reader — Stoa Qt stylesheet) ──
 mkdir -p "${CONFIG_DIR}/YACReader"
-if [ -f "${STOA_DIR}/yacreader/stoa-yacreader.qss" ]; then
-    _link "${STOA_DIR}/yacreader/stoa-yacreader.qss" "${CONFIG_DIR}/YACReader/stoa-yacreader.qss"
+if [ -f "${STOA_DIR}/theme/yacreader/stoa-yacreader.qss" ]; then
+    _link "${STOA_DIR}/theme/yacreader/stoa-yacreader.qss" "${CONFIG_DIR}/YACReader/stoa-yacreader.qss"
 fi
 
-# ── Steam (custom CSS overlay) ──
 STEAM_CSS_DIR="${HOME}/.steam/steam/steamui"
 if [ -d "${HOME}/.steam" ]; then
     mkdir -p "$STEAM_CSS_DIR"
-    cp "${STOA_DIR}/steam/stoa-steam.css" "${STEAM_CSS_DIR}/libraryroot.custom.css" 2>/dev/null && \
+    cp "${STOA_DIR}/theme/steam/stoa-steam.css" "${STEAM_CSS_DIR}/libraryroot.custom.css" 2>/dev/null && \
         echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
 fi
 
-# ── Stoa wallpapers dir ──
+# ── Stoa data dirs ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
-
-# ── Screenshots directory ──
 mkdir -p "${HOME}/Pictures/screenshots"
 
-# ── Environment (toolkit unification) ──
-_link "${STOA_DIR}/environment/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
+# ── Environment ──
+_link "${STOA_DIR}/shell/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
 
 # ── Stoa config (preserves user settings) ──
 if [ ! -f "${CONFIG_DIR}/stoa/stoa.conf" ]; then
@@ -145,17 +116,17 @@ _link "${STOA_DIR}/scripts/stoa-memento-data.sh"    "${HOME}/.local/bin/stoa-mem
 _link "${STOA_DIR}/scripts/stoa-keybinds-bar.sh"    "${HOME}/.local/bin/stoa-keybinds-bar"
 _link "${STOA_DIR}/scripts/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-keybinds-toggle"
 _link "${STOA_DIR}/scripts/stoa-osd.sh"             "${HOME}/.local/bin/stoa-osd"
-_link "${STOA_DIR}/scripts/stoa-clipboard.sh"      "${HOME}/.local/bin/stoa-clipboard"
-_link "${STOA_DIR}/scripts/stoa-quotes-sync.sh"   "${HOME}/.local/bin/stoa-quotes-sync"
-_link "${STOA_DIR}/scripts/stoa-locksmith.sh"    "${HOME}/.local/bin/stoa-locksmith"
-_link "${STOA_DIR}/scripts/stoa-resize.sh"       "${HOME}/.local/bin/stoa-resize"
-_link "${STOA_DIR}/scripts/stoa-paste.sh"        "${HOME}/.local/bin/stoa-paste"
-_link "${STOA_DIR}/scripts/stoa-ocr.sh"          "${HOME}/.local/bin/stoa-ocr"
-_link "${STOA_DIR}/scripts/stoa-rename.sh"       "${HOME}/.local/bin/stoa-rename"
-_link "${STOA_DIR}/scripts/stoa-thunar.sh"      "${HOME}/.local/bin/stoa-thunar"
-_link "${STOA_DIR}/scripts/stoa-face-setup.sh" "${HOME}/.local/bin/stoa-face"
-_link "${STOA_DIR}/scripts/stoa-settings.sh"   "${HOME}/.local/bin/stoa-settings"
-_link "${STOA_DIR}/scripts/stoa-store.sh"      "${HOME}/.local/bin/stoa-store"
+_link "${STOA_DIR}/scripts/stoa-clipboard.sh"       "${HOME}/.local/bin/stoa-clipboard"
+_link "${STOA_DIR}/scripts/stoa-quotes-sync.sh"     "${HOME}/.local/bin/stoa-quotes-sync"
+_link "${STOA_DIR}/scripts/stoa-locksmith.sh"       "${HOME}/.local/bin/stoa-locksmith"
+_link "${STOA_DIR}/scripts/stoa-resize.sh"          "${HOME}/.local/bin/stoa-resize"
+_link "${STOA_DIR}/scripts/stoa-paste.sh"           "${HOME}/.local/bin/stoa-paste"
+_link "${STOA_DIR}/scripts/stoa-ocr.sh"             "${HOME}/.local/bin/stoa-ocr"
+_link "${STOA_DIR}/scripts/stoa-rename.sh"          "${HOME}/.local/bin/stoa-rename"
+_link "${STOA_DIR}/scripts/stoa-thunar.sh"          "${HOME}/.local/bin/stoa-thunar"
+_link "${STOA_DIR}/scripts/stoa-face-setup.sh"      "${HOME}/.local/bin/stoa-face"
+_link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
+_link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -167,7 +138,7 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-settings" \
          "${HOME}/.local/bin/stoa-store"
 
-# ── XDG MIME defaults (browser + apps) ──
+# ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"
 mkdir -p "$MIME_DIR"
 if [ ! -f "${MIME_DIR}/mimeapps.list" ]; then
@@ -200,7 +171,7 @@ application/vnd.comicbook+zip=YACReader.desktop
 application/vnd.comicbook-rar=YACReader.desktop
 inode/directory=thunar.desktop
 MIME
-    echo -e "  ${O}[+] mimeapps.list (Brave as default browser)${R}"
+    echo -e "  ${O}[+] mimeapps.list${R}"
 fi
 
 echo ""
@@ -210,26 +181,9 @@ echo ""
 echo -e "  ${S}Shell files are not linked automatically.${R}"
 echo -e "  ${S}To use, add to the end of your .zshrc or .bashrc:${R}"
 echo ""
-echo -e "  ${B}Zsh:${R}  source ${STOA_DIR}/zsh/.zshrc"
-echo -e "  ${B}Bash:${R} source ${STOA_DIR}/zsh/.bashrc"
+echo -e "  ${B}Zsh:${R}  source ${STOA_DIR}/shell/.zshrc"
+echo -e "  ${B}Bash:${R} source ${STOA_DIR}/shell/.bashrc"
 echo ""
 
 echo -e "  ${O}Done! The path of the wise is prepared.${R}"
-echo ""
-echo -e "  ${F}Keybinds:${R}"
-echo -e "  ${S}  Super+Return  Terminal (Alacritty)${R}"
-echo -e "  ${S}  Super+B       Browser (Brave)${R}"
-echo -e "  ${S}  Super+C       Calculator (Qalculate)${R}"
-echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
-echo -e "  ${S}  Super+E       Files (lf)${R}"
-echo -e "  ${S}  Super+Shift+E Files (Thunar)${R}"
-echo -e "  ${S}  Super+N       Monitor (btop)${R}"
-echo -e "  ${S}  Super+O       Notes (Obsidian)${R}"
-echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
-echo -e "  ${S}  Super+I       Settings (rofi)${R}"
-echo -e "  ${S}  Super+A       App Store (rofi)${R}"
-echo -e "  ${S}  Super+Escape  Lock screen${R}"
-echo -e "  ${S}  Super+/       Bar keybinds (toggle)${R}"
-echo -e "  ${S}  Super+Shift+T OCR — extract text from screen${R}"
-echo -e "  ${S}  Super+Shift+P Advanced paste${R}"
 echo ""

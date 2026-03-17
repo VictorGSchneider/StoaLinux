@@ -185,7 +185,7 @@ arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
 
 # Configure zsh
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-    "grep -q StoaLinux ~/.zshrc 2>/dev/null || echo 'source ~/StoaLinux/zsh/.zshrc' >> ~/.zshrc" 2>/dev/null || true
+    "grep -q StoaLinux ~/.zshrc 2>/dev/null || echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc" 2>/dev/null || true
 
 # .xinitrc for Xorg fallback
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \

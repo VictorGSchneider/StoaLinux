@@ -369,8 +369,8 @@ if $IS_NVIDIA; then
     echo -e "  ${F}[5/5] Enabling NVIDIA variables in Hyprland and stoa-env${R}"
 
     STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-    HYPR_CONF="${STOA_DIR}/hyprland/hyprland.conf"
-    ENV_FILE="${STOA_DIR}/environment/stoa-env.sh"
+    HYPR_CONF="${STOA_DIR}/config/hypr/hyprland.conf"
+    ENV_FILE="${STOA_DIR}/shell/stoa-env.sh"
 
     # Hyprland — add env vars if they don't exist yet
     if grep -q "LIBVA_DRIVER_NAME" "$HYPR_CONF" 2>/dev/null; then
