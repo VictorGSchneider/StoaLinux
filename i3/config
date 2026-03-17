@@ -71,6 +71,7 @@ bindsym $mod+c exec qalculate-gtk
 bindsym $mod+n exec alacritty -e btop
 bindsym $mod+o exec obsidian
 bindsym $mod+m exec ~/.local/bin/stoa-memento
+bindsym $mod+i exec --no-startup-id ~/.local/bin/stoa-settings
 bindsym $mod+slash exec ~/.local/bin/stoa-keybinds-toggle
 
 # ── Lock Screen ──
