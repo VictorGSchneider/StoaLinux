@@ -105,49 +105,33 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 </td></tr>
 </table>
 
-## Scripts
+## Scripts & Stoatools
 
 <table>
 <tr><td>
 
-| Command | What it does |
+| Scripts | |
 |---------|-------------|
-| `stoa-settings` | Settings panel — wallpaper, theme, GPU, face, lock |
-| `stoa-store` | Package manager — search, install, remove, update |
-| `stoa-fetch` | System fetch with temple ASCII |
+| `stoa-settings` | Settings panel |
+| `stoa-store` | Package manager |
+| `stoa-fetch` | System fetch |
 | `stoa-walls` | Wallpaper generator |
 | `stoa-memento` | Memento Mori widget |
+| `stoa-clipboard` | Clipboard + pins |
+| `stoa-osd` | Volume/brightness OSD |
+| `stoa-quotes-sync` | Fetch quotes online |
+| `stoa-face` | Face unlock (howdy) |
+| `stoa-gpu-setup` | GPU + CPU drivers |
 
 </td><td>
 
-| Command | What it does |
+| Stoatools | |
 |---------|-------------|
-| `stoa-clipboard` | Clipboard with pinned favorites |
-| `stoa-osd` | Volume/brightness/caps OSD |
-| `stoa-quotes-sync` | Fetch Stoic quotes online |
-| `stoa-face` | Face recognition setup (howdy) |
-| `stoa-gpu-setup` | GPU + CPU driver setup |
-
-</td></tr>
-</table>
-
-**Stoatools** (also Thunar right-click actions):
-
-<table>
-<tr><td>
-
-| Command | What it does |
-|---------|-------------|
-| `stoa-ocr` | Extract text from screen/image |
-| `stoa-paste` | Paste as UPPER/lower/Title/snake/camel |
-| `stoa-locksmith` | See who's locking a file |
-
-</td><td>
-
-| Command | What it does |
-|---------|-------------|
+| `stoa-ocr` | Extract text from screen |
+| `stoa-paste` | Paste as UPPER/lower/etc |
 | `stoa-resize` | Batch resize images |
-| `stoa-rename` | Regex rename with preview |
+| `stoa-rename` | Regex rename + preview |
+| `stoa-locksmith` | See who locks a file |
 
 </td></tr>
 </table>
