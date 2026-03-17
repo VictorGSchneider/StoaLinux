@@ -1,12 +1,26 @@
 # StoaLinux
 
-Stoic dotfiles for Arch Linux — marble, bronze, parchment, stone.
-
-**Hyprland** (Wayland) + **i3** (Xorg fallback). Dark theme everywhere.
-
 > *"The happiness of your life depends upon the quality of your thoughts."* — Marcus Aurelius
 
-## Palette
+Uma distro Arch Linux inspirada na filosofia estoica. Cada detalhe — das cores ao prompt do terminal — foi pensado para criar um ambiente que convida ao foco, à disciplina e à clareza mental.
+
+## Filosofia
+
+O estoicismo ensina que não controlamos o que acontece, mas controlamos como reagimos. StoaLinux aplica esse princípio ao desktop: um sistema que não distrai, não enfeita em excesso, não te atrapalha. Só funciona.
+
+A paleta vem do mundo antigo — mármore, bronze, pergaminho, pedra, terracota — cores que remetem a templos, estátuas e manuscritos. A tipografia usa EB Garamond, uma serifa clássica que reforça essa identidade. Cada terminal abre com uma citação estoica diferente. O widget Memento Mori lembra que o tempo é finito.
+
+Não é minimalismo por estética. É minimalismo por princípio: **só o que serve fica**.
+
+## O que é
+
+- **Arch Linux** com instalação automatizada (do live ISO ou de um Arch existente)
+- **Hyprland** (Wayland) como compositor principal, **i3** como fallback Xorg
+- Tema escuro unificado em GTK, Qt, Steam, Calibre, YACReader e tudo mais
+- Scripts `stoa-*` para wallpapers, configurações, OCR, clipboard, GPU e mais
+- Memento Mori widget (eww) integrado ao desktop
+
+## Paleta
 
 <table>
   <tr>
@@ -25,52 +39,6 @@ Stoic dotfiles for Arch Linux — marble, bronze, parchment, stone.
     <td><img src="https://img.shields.io/badge/Stone__%236e6a62-6e6a62?style=for-the-badge&labelColor=6e6a62&color=6e6a62" alt="#6e6a62"/></td>
   </tr>
 </table>
-
-## Structure
-
-```
-StoaLinux/
-├── config/         ← app dotfiles (~/.config/)
-│   ├── hypr/           hyprland.conf + hyprlock.conf
-│   ├── waybar/         config + style.css
-│   ├── i3/             config + i3status.conf
-│   ├── alacritty/      alacritty.toml
-│   ├── nvim/           init.vim + colors/stoa.vim
-│   ├── rofi/           config.rasi
-│   ├── dunst/          dunstrc
-│   ├── eww/            eww.yuck + eww.scss (Memento Mori)
-│   ├── picom/          picom.conf (Xorg)
-│   ├── thunar/         uca.xml (Stoatools actions)
-│   ├── zathura/        mpv/  imv/  lf/  btop/  neofetch/
-│   └── ...
-│
-├── theme/          ← visual identity
-│   ├── gtk-3.0/        settings.ini + stoa-gtk.css
-│   ├── gtk-4.0/        settings.ini + stoa-gtk.css
-│   ├── qt5ct/          qt5ct.conf
-│   ├── qt6ct/          qt6ct.conf
-│   ├── steam/          stoa-steam.css
-│   ├── calibre/        stoa-calibre.py
-│   ├── yacreader/      stoa-yacreader.qss
-│   ├── pacman-hooks/   auto-reapply theme on updates
-│   └── colors.sh       palette reference
-│
-├── shell/          ← shell configs
-│   ├── .zshrc          zsh with Stoic quotes + Ι prompt
-│   ├── .bashrc         bash alternative
-│   └── stoa-env.sh     env vars (GTK/Qt/cursor/Steam)
-│
-├── scripts/        ← stoa-* commands
-│
-├── setup/          ← installation
-│   ├── arch-install.sh     from live ISO
-│   ├── archinstall/        archinstall config
-│   └── post-install.sh     existing Arch
-│
-├── install.sh      ← dotfiles entry point
-├── stoa.conf       ← user settings
-└── README.md
-```
 
 ## Install
 
