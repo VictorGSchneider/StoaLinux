@@ -63,13 +63,19 @@ NOTES_PKGS="obsidian"
 APP_PKGS="alacritty neovim feh imagemagick"
 
 # Stoic apps (minimalist)
-STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish"
+STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish qalculate-gtk calibre"
+
+# Gaming — "Even a wise man needs rest." — Seneca
+GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
 
 # Stoatools (OCR, paste, resize, rename, locksmith)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
+
+# Lock screen
+LOCK_PKGS="hyprlock i3lock-color"
 
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard cliphist"
@@ -78,7 +84,7 @@ CLIPBOARD_PKGS="wl-clipboard cliphist"
 WIDGET_PKGS="eww-wayland"
 
 # Fonts and theme
-FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
+FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome"
 
 # Toolkit unification (Qt = GTK appearance)
 THEME_PKGS="qt5ct qt6ct"
@@ -86,10 +92,13 @@ THEME_PKGS="qt5ct qt6ct"
 # Audio + utilities
 UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl"
 
+# Developer tools
+DEV_PKGS="github-cli"
+
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -98,13 +107,16 @@ echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
+echo -e "  ${S}Gaming:     ${GAMING_PKGS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
 echo -e "  ${S}Stoatools:  ${STOATOOLS_PKGS}${R}"
+echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
+echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
 echo ""
 
@@ -112,6 +124,14 @@ read -rp "  Install packages? (y/n) [y]: " INSTALL_PKGS
 INSTALL_PKGS="${INSTALL_PKGS:-y}"
 
 if [ "$INSTALL_PKGS" = "y" ]; then
+    # Enable multilib repository (required for Steam/lib32 packages)
+    if ! grep -q "^\[multilib\]" /etc/pacman.conf 2>/dev/null; then
+        echo -e "  ${F}Enabling multilib repository (required for Steam)...${R}"
+        sudo sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
+        sudo pacman -Sy
+        echo -e "  ${O}[✓] multilib enabled.${R}"
+    fi
+
     sudo pacman -S --needed $ALL_PKGS
     echo -e "  ${O}[✓] Official packages installed.${R}"
 
@@ -194,6 +214,127 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     else
         echo -e "  ${S}[~] eww already installed.${R}"
     fi
+
+    # Enpass — Password manager (AUR)
+    echo ""
+    if ! command -v enpass &>/dev/null; then
+        echo -e "  ${F}Installing Enpass (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm enpass-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm enpass-bin
+        else
+            echo -e "  ${S}Installing Enpass manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/enpass-bin.git "$_tmpdir/enpass-bin"
+            (cd "$_tmpdir/enpass-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Enpass installed.${R}"
+    else
+        echo -e "  ${S}[~] Enpass already installed.${R}"
+    fi
+
+    # YACReader — Comic book reader (AUR)
+    echo ""
+    if ! command -v YACReader &>/dev/null; then
+        echo -e "  ${F}Installing YACReader (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm yacreader
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm yacreader
+        else
+            echo -e "  ${S}Installing YACReader manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/yacreader.git "$_tmpdir/yacreader"
+            (cd "$_tmpdir/yacreader" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] YACReader installed.${R}"
+    else
+        echo -e "  ${S}[~] YACReader already installed.${R}"
+    fi
+
+    # EB Garamond font (AUR)
+    echo ""
+    if ! fc-list | grep -qi "EB Garamond" 2>/dev/null; then
+        echo -e "  ${F}Installing EB Garamond font (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm otf-eb-garamond
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm otf-eb-garamond
+        else
+            echo -e "  ${S}Installing EB Garamond manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/otf-eb-garamond.git "$_tmpdir/otf-eb-garamond"
+            (cd "$_tmpdir/otf-eb-garamond" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] EB Garamond installed.${R}"
+    else
+        echo -e "  ${S}[~] EB Garamond already installed.${R}"
+    fi
+
+    # Colloid icon theme (AUR)
+    echo ""
+    if [ ! -d /usr/share/icons/Colloid-dark ] && [ ! -d "$HOME/.local/share/icons/Colloid-dark" ]; then
+        echo -e "  ${F}Installing Colloid icon theme (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm colloid-icon-theme-git
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm colloid-icon-theme-git
+        else
+            echo -e "  ${S}Installing Colloid icons manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/colloid-icon-theme-git.git "$_tmpdir/colloid-icon-theme-git"
+            (cd "$_tmpdir/colloid-icon-theme-git" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Colloid icons installed.${R}"
+    else
+        echo -e "  ${S}[~] Colloid icons already installed.${R}"
+    fi
+
+    # Colloid cursors (AUR)
+    echo ""
+    if [ ! -d /usr/share/icons/Colloid-cursors ] && [ ! -d "$HOME/.local/share/icons/Colloid-cursors" ]; then
+        echo -e "  ${F}Installing Colloid cursors (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm colloid-cursors-git
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm colloid-cursors-git
+        else
+            echo -e "  ${S}Installing Colloid cursors manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/colloid-cursors-git.git "$_tmpdir/colloid-cursors-git"
+            (cd "$_tmpdir/colloid-cursors-git" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Colloid cursors installed.${R}"
+    else
+        echo -e "  ${S}[~] Colloid cursors already installed.${R}"
+    fi
+
+    # howdy — Face recognition (AUR)
+    echo ""
+    if ! command -v howdy &>/dev/null; then
+        echo -e "  ${F}Installing howdy — face recognition (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm howdy
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm howdy
+        else
+            echo -e "  ${S}Installing howdy manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/howdy.git "$_tmpdir/howdy"
+            (cd "$_tmpdir/howdy" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] howdy installed.${R}"
+        echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
+    else
+        echo -e "  ${S}[~] howdy already installed.${R}"
+    fi
 else
     echo -e "  ${S}[~] Packages skipped.${R}"
 fi
@@ -270,6 +411,14 @@ echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"
 echo -e "  ${S}  stoa-walls        — Generate wallpapers${R}"
 echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
+echo -e "  ${S}  stoa-face setup   — Face recognition (Windows Hello-style)${R}"
+echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
+echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
+echo ""
+echo -e "  ${F}Leisure:${R}"
+echo -e "  ${S}  steam             — Gaming (Proton enabled for Windows games)${R}"
+echo -e "  ${S}  calibre           — eBook library manager and reader${R}"
+echo -e "  ${S}  YACReader         — Comic book reader (CBR/CBZ)${R}"
 echo ""
 echo -e "  ${F}Stoatools (also available as Thunar right-click actions):${R}"
 echo -e "  ${S}  stoa-ocr          — Extract text from screen or image (OCR)${R}"

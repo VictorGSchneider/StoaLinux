@@ -34,8 +34,12 @@ export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 
 # ── Cursor ──
-export XCURSOR_THEME="Adwaita"
+export XCURSOR_THEME="Colloid-cursors"
 export XCURSOR_SIZE=24
+
+# ── Gaming (Steam) ──
+export STEAM_FORCE_DESKTOPUI_SCALING=1
+export PROTON_ENABLE_NVAPI=1
 
 # ── NVIDIA (Wayland) ──
 # Uncomment if using NVIDIA GPU with Hyprland:

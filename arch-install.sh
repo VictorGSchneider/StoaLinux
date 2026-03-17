@@ -154,15 +154,15 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     echo -e "  ${O}[✓] yay installed.${R}"
 
     # ── AUR packages ──
-    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww-wayland, satty...${R}"
+    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww-wayland, satty, enpass-bin, howdy...${R}"
     arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-        "yay -S --needed --noconfirm brave-bin obsidian eww-wayland satty" 2>/dev/null || true
+        "yay -S --needed --noconfirm brave-bin obsidian eww-wayland satty enpass-bin howdy" 2>/dev/null || true
     echo -e "  ${O}[✓] AUR packages installed.${R}"
 else
     echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
     echo -e "  ${S}Install after first boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
-    echo -e "  ${B}    yay -S brave-bin obsidian eww-wayland satty${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian eww-wayland satty enpass-bin howdy${R}"
 fi
 
 # Remove temporary sudo
@@ -213,8 +213,9 @@ echo -e "  ${B}  i3 (Xorg fallback):  startx${R}"
 echo ""
 echo -e "  ${F}Shortcuts:${R}"
 echo -e "  ${S}  Super+Return  Terminal     Super+B  Brave${R}"
-echo -e "  ${S}  Super+D       Launcher     Super+E  Files (lf)${R}"
-echo -e "  ${S}  Super+N       Monitor      Super+Q  Close window${R}"
+echo -e "  ${S}  Super+C       Calculator   Super+D  Launcher${R}"
+echo -e "  ${S}  Super+E       Files (lf)   Super+N  Monitor${R}"
+echo -e "  ${S}  Super+Escape  Lock screen  Super+Q  Close window${R}"
 echo ""
 echo -e "  ${O}\"The path of the wise is prepared.\" — Seneca${R}"
 echo ""

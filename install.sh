@@ -53,6 +53,9 @@ _link "${STOA_DIR}/waybar/style.css"  "${CONFIG_DIR}/waybar/style.css"
 _link "${STOA_DIR}/i3/config"         "${CONFIG_DIR}/i3/config"
 _link "${STOA_DIR}/i3/i3status.conf"  "${CONFIG_DIR}/i3/i3status.conf"
 
+# ── Hyprlock (lock screen) ──
+_link "${STOA_DIR}/hyprlock/hyprlock.conf" "${CONFIG_DIR}/hypr/hyprlock.conf"
+
 # ── Picom (Xorg only) ──
 _link "${STOA_DIR}/picom/picom.conf" "${CONFIG_DIR}/picom/picom.conf"
 
@@ -74,7 +77,9 @@ _link "${STOA_DIR}/neofetch/config.conf" "${CONFIG_DIR}/neofetch/config.conf"
 
 # ── GTK 3.0 + 4.0 ──
 _link "${STOA_DIR}/gtk-3.0/settings.ini" "${CONFIG_DIR}/gtk-3.0/settings.ini"
+_link "${STOA_DIR}/gtk-3.0/stoa-gtk.css" "${CONFIG_DIR}/gtk-3.0/gtk.css"
 _link "${STOA_DIR}/gtk-4.0/settings.ini" "${CONFIG_DIR}/gtk-4.0/settings.ini"
+_link "${STOA_DIR}/gtk-4.0/stoa-gtk.css" "${CONFIG_DIR}/gtk-4.0/gtk.css"
 
 # ── Qt5/Qt6 (standardization with GTK) ──
 _link "${STOA_DIR}/qt5ct/qt5ct.conf" "${CONFIG_DIR}/qt5ct/qt5ct.conf"
@@ -93,6 +98,26 @@ _link "${STOA_DIR}/imv/config"         "${CONFIG_DIR}/imv/config"
 # ── eww (Memento Mori widget) ──
 _link "${STOA_DIR}/eww/eww.yuck"  "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/eww/eww.scss"  "${CONFIG_DIR}/eww/eww.scss"
+
+# ── Calibre (eBook reader — Stoa theme) ──
+if [ -f "${STOA_DIR}/calibre/stoa-calibre.py" ]; then
+    python3 "${STOA_DIR}/calibre/stoa-calibre.py" 2>/dev/null && \
+        echo -e "  ${O}[+] Calibre Stoa theme applied${R}" || true
+fi
+
+# ── YACReader (Comic reader — Stoa Qt stylesheet) ──
+mkdir -p "${CONFIG_DIR}/YACReader"
+if [ -f "${STOA_DIR}/yacreader/stoa-yacreader.qss" ]; then
+    _link "${STOA_DIR}/yacreader/stoa-yacreader.qss" "${CONFIG_DIR}/YACReader/stoa-yacreader.qss"
+fi
+
+# ── Steam (custom CSS overlay) ──
+STEAM_CSS_DIR="${HOME}/.steam/steam/steamui"
+if [ -d "${HOME}/.steam" ]; then
+    mkdir -p "$STEAM_CSS_DIR"
+    cp "${STOA_DIR}/steam/stoa-steam.css" "${STEAM_CSS_DIR}/libraryroot.custom.css" 2>/dev/null && \
+        echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
+fi
 
 # ── Stoa wallpapers dir ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
@@ -128,6 +153,9 @@ _link "${STOA_DIR}/scripts/stoa-paste.sh"        "${HOME}/.local/bin/stoa-paste"
 _link "${STOA_DIR}/scripts/stoa-ocr.sh"          "${HOME}/.local/bin/stoa-ocr"
 _link "${STOA_DIR}/scripts/stoa-rename.sh"       "${HOME}/.local/bin/stoa-rename"
 _link "${STOA_DIR}/scripts/stoa-thunar.sh"      "${HOME}/.local/bin/stoa-thunar"
+_link "${STOA_DIR}/scripts/stoa-face-setup.sh" "${HOME}/.local/bin/stoa-face"
+_link "${STOA_DIR}/scripts/stoa-settings.sh"   "${HOME}/.local/bin/stoa-settings"
+_link "${STOA_DIR}/scripts/stoa-store.sh"      "${HOME}/.local/bin/stoa-store"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -135,7 +163,9 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-quotes-sync" "${HOME}/.local/bin/stoa-locksmith" \
          "${HOME}/.local/bin/stoa-resize" "${HOME}/.local/bin/stoa-paste" \
          "${HOME}/.local/bin/stoa-ocr" "${HOME}/.local/bin/stoa-rename" \
-         "${HOME}/.local/bin/stoa-thunar"
+         "${HOME}/.local/bin/stoa-thunar" "${HOME}/.local/bin/stoa-face" \
+         "${HOME}/.local/bin/stoa-settings" \
+         "${HOME}/.local/bin/stoa-store"
 
 # ── XDG MIME defaults (browser + apps) ──
 MIME_DIR="${HOME}/.local/share/applications"
@@ -160,6 +190,14 @@ video/webm=mpv.desktop
 audio/mpeg=mpv.desktop
 audio/flac=mpv.desktop
 audio/ogg=mpv.desktop
+application/epub+zip=calibre-ebook-viewer.desktop
+application/x-mobipocket-ebook=calibre-ebook-viewer.desktop
+application/x-fictionbook+xml=calibre-ebook-viewer.desktop
+application/x-cbz=YACReader.desktop
+application/x-cbr=YACReader.desktop
+application/x-cb7=YACReader.desktop
+application/vnd.comicbook+zip=YACReader.desktop
+application/vnd.comicbook-rar=YACReader.desktop
 inode/directory=thunar.desktop
 MIME
     echo -e "  ${O}[+] mimeapps.list (Brave as default browser)${R}"
@@ -181,12 +219,16 @@ echo ""
 echo -e "  ${F}Keybinds:${R}"
 echo -e "  ${S}  Super+Return  Terminal (Alacritty)${R}"
 echo -e "  ${S}  Super+B       Browser (Brave)${R}"
+echo -e "  ${S}  Super+C       Calculator (Qalculate)${R}"
+echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+E       Files (lf)${R}"
 echo -e "  ${S}  Super+Shift+E Files (Thunar)${R}"
 echo -e "  ${S}  Super+N       Monitor (btop)${R}"
-echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+O       Notes (Obsidian)${R}"
 echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
+echo -e "  ${S}  Super+I       Settings (rofi)${R}"
+echo -e "  ${S}  Super+A       App Store (rofi)${R}"
+echo -e "  ${S}  Super+Escape  Lock screen${R}"
 echo -e "  ${S}  Super+/       Bar keybinds (toggle)${R}"
 echo -e "  ${S}  Super+Shift+T OCR — extract text from screen${R}"
 echo -e "  ${S}  Super+Shift+P Advanced paste${R}"

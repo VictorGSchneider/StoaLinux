@@ -24,14 +24,17 @@ if [ "$STOA_SHOW_KEYBINDS" != "true" ]; then
 fi
 
 # Compact text for the bar
-TEXT="⏎ Term │ B Brave │ D Rofi │ E Files │ N Monitor │ O Notes │ V Clipboard │ Q Close │ F Full │ HJKL Nav"
+TEXT="⏎ Term │ A Store │ B Brave │ C Calc │ D Rofi │ E Files │ I Settings │ N Monitor │ O Notes │ V Clipboard │ Esc Lock │ Q Close │ F Full │ HJKL Nav"
 
 # Full tooltip
 TOOLTIP="╔═══ STOA KEYBINDS ═══╗\n"
 TOOLTIP+="Super+Enter   Terminal\n"
+TOOLTIP+="Super+A       App Store\n"
 TOOLTIP+="Super+B       Brave Browser\n"
+TOOLTIP+="Super+C       Calculator\n"
 TOOLTIP+="Super+D       Rofi (launcher)\n"
 TOOLTIP+="Super+E       Files (lf)\n"
+TOOLTIP+="Super+I       Settings\n"
 TOOLTIP+="Super+N       Monitor (btop)\n"
 TOOLTIP+="Super+O       Obsidian\n"
 TOOLTIP+="Super+M       Memento Mori\n"
@@ -39,6 +42,7 @@ TOOLTIP+="Super+V       Clipboard (history)\n"
 TOOLTIP+="Super+Shift+V Pin clipboard item\n"
 TOOLTIP+="Super+Shift+T OCR (text extractor)\n"
 TOOLTIP+="Super+Shift+P Advanced Paste\n"
+TOOLTIP+="Super+Escape  Lock screen\n"
 TOOLTIP+="Super+Q       Close window\n"
 TOOLTIP+="Super+F       Fullscreen\n"
 TOOLTIP+="Super+Shift+Space  Floating\n"

@@ -1,0 +1,262 @@
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  STOA LINUX — YACReader Custom Stylesheet                  ║
+   ║  "Even in leisure, virtue is present." — Seneca             ║
+   ║                                                              ║
+   ║  Qt stylesheet for YACReader/YACReaderLibrary.              ║
+   ║  Stoic palette: bronze, marble, parchment, stone.           ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+
+/* ── Base ── */
+QWidget {
+    background-color: #211e19;
+    color: #d4cfc4;
+    font-family: "EB Garamond";
+    font-size: 11pt;
+}
+
+QMainWindow {
+    background-color: #211e19;
+}
+
+/* ── Menu Bar ── */
+QMenuBar {
+    background-color: #1a1714;
+    color: #d4cfc4;
+    border-bottom: 1px solid #6e6a62;
+}
+
+QMenuBar::item:selected {
+    background-color: #2d2921;
+    color: #c49a5c;
+}
+
+QMenu {
+    background-color: #2d2921;
+    color: #d4cfc4;
+    border: 1px solid #6e6a62;
+}
+
+QMenu::item:selected {
+    background-color: #c49a5c;
+    color: #1a1714;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #6e6a62;
+}
+
+/* ── Toolbar ── */
+QToolBar {
+    background-color: #1a1714;
+    border-bottom: 1px solid #6e6a62;
+    spacing: 4px;
+}
+
+QToolButton {
+    background-color: transparent;
+    color: #d4cfc4;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+QToolButton:hover {
+    background-color: #2d2921;
+    color: #c49a5c;
+}
+
+QToolButton:pressed {
+    background-color: #c49a5c;
+    color: #1a1714;
+}
+
+/* ── Buttons ── */
+QPushButton {
+    background-color: #2d2921;
+    color: #d4cfc4;
+    border: 1px solid #6e6a62;
+    padding: 6px 16px;
+    border-radius: 3px;
+}
+
+QPushButton:hover {
+    background-color: #3a362e;
+    color: #c4b08a;
+}
+
+QPushButton:pressed {
+    background-color: #c49a5c;
+    color: #1a1714;
+}
+
+/* ── Input ── */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: #1a1714;
+    color: #d4cfc4;
+    border: 1px solid #6e6a62;
+    border-radius: 3px;
+    padding: 4px;
+    selection-background-color: #c49a5c;
+    selection-color: #1a1714;
+}
+
+QLineEdit:focus, QTextEdit:focus {
+    border-color: #c49a5c;
+}
+
+/* ── Scroll Bar ── */
+QScrollBar:vertical {
+    background-color: #1a1714;
+    width: 10px;
+    border: none;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #6e6a62;
+    border-radius: 4px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #9e9a92;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background-color: #1a1714;
+    height: 10px;
+    border: none;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #6e6a62;
+    border-radius: 4px;
+    min-width: 30px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: #9e9a92;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+/* ── List / Tree View ── */
+QListView, QTreeView, QTableView {
+    background-color: #1a1714;
+    color: #d4cfc4;
+    alternate-background-color: #211e19;
+    border: 1px solid #6e6a62;
+    selection-background-color: #c49a5c;
+    selection-color: #1a1714;
+}
+
+QListView::item:hover, QTreeView::item:hover {
+    background-color: #2d2921;
+}
+
+QHeaderView::section {
+    background-color: #1a1714;
+    color: #a89f91;
+    border: none;
+    border-bottom: 1px solid #6e6a62;
+    padding: 4px 8px;
+}
+
+/* ── Tab Widget ── */
+QTabWidget::pane {
+    border: 1px solid #6e6a62;
+    background-color: #211e19;
+}
+
+QTabBar::tab {
+    background-color: #1a1714;
+    color: #a89f91;
+    padding: 6px 16px;
+    border: 1px solid #6e6a62;
+    border-bottom: none;
+}
+
+QTabBar::tab:selected {
+    background-color: #211e19;
+    color: #c49a5c;
+    border-bottom: 2px solid #c49a5c;
+}
+
+/* ── Status Bar ── */
+QStatusBar {
+    background-color: #1a1714;
+    color: #a89f91;
+    border-top: 1px solid #6e6a62;
+}
+
+/* ── Tooltip ── */
+QToolTip {
+    background-color: #2d2921;
+    color: #d4cfc4;
+    border: 1px solid #6e6a62;
+    padding: 4px;
+}
+
+/* ── Slider ── */
+QSlider::groove:horizontal {
+    background-color: #1a1714;
+    height: 6px;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    background-color: #c49a5c;
+    width: 14px;
+    height: 14px;
+    margin: -4px 0;
+    border-radius: 7px;
+}
+
+QSlider::sub-page:horizontal {
+    background-color: #c49a5c;
+    border-radius: 3px;
+}
+
+/* ── Progress Bar ── */
+QProgressBar {
+    background-color: #1a1714;
+    border: 1px solid #6e6a62;
+    border-radius: 3px;
+    text-align: center;
+    color: #d4cfc4;
+}
+
+QProgressBar::chunk {
+    background-color: #c49a5c;
+    border-radius: 2px;
+}
+
+/* ── Splitter ── */
+QSplitter::handle {
+    background-color: #6e6a62;
+}
+
+/* ── Dock Widget ── */
+QDockWidget {
+    titlebar-close-icon: none;
+    titlebar-normal-icon: none;
+}
+
+QDockWidget::title {
+    background-color: #1a1714;
+    color: #c49a5c;
+    padding: 6px;
+    border-bottom: 1px solid #6e6a62;
+}
+
+/* ── Comic View background ── */
+QGraphicsView {
+    background-color: #1a1714;
+    border: none;
+}

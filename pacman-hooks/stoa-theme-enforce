@@ -1,0 +1,54 @@
+#!/bin/bash
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — Post-Install Theme Enforcement                ║
+# ║  Pacman hook: auto-applies Stoa appearance after any install ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+REAL_USER="${SUDO_USER:-$USER}"
+REAL_HOME=$(eval echo "~${REAL_USER}")
+
+gtk3="${REAL_HOME}/.config/gtk-3.0/settings.ini"
+gtk4="${REAL_HOME}/.config/gtk-4.0/settings.ini"
+
+[ ! -f "$gtk3" ] && exit 0
+
+gtk_theme=$(grep "^gtk-theme-name" "$gtk3" 2>/dev/null | cut -d= -f2)
+icon_theme=$(grep "^gtk-icon-theme-name" "$gtk3" 2>/dev/null | cut -d= -f2)
+cursor_theme=$(grep "^gtk-cursor-theme-name" "$gtk3" 2>/dev/null | cut -d= -f2)
+font_name=$(grep "^gtk-font-name" "$gtk3" 2>/dev/null | cut -d= -f2)
+
+gtk_theme="${gtk_theme:-Adwaita-dark}"
+icon_theme="${icon_theme:-Colloid-dark}"
+cursor_theme="${cursor_theme:-Colloid-cursors}"
+font_name="${font_name:-EB Garamond 11}"
+
+# Sync GTK 4.0
+if [ -f "$gtk4" ]; then
+    sed -i "s/^gtk-theme-name=.*/gtk-theme-name=${gtk_theme}/" "$gtk4"
+    sed -i "s/^gtk-icon-theme-name=.*/gtk-icon-theme-name=${icon_theme}/" "$gtk4"
+    sed -i "s/^gtk-cursor-theme-name=.*/gtk-cursor-theme-name=${cursor_theme}/" "$gtk4"
+    sed -i "s/^gtk-font-name=.*/gtk-font-name=${font_name}/" "$gtk4"
+fi
+
+# Apply via gsettings (as user)
+if command -v gsettings &>/dev/null; then
+    su - "$REAL_USER" -c "
+        export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$(id -u)/bus
+        gsettings set org.gnome.desktop.interface gtk-theme '$gtk_theme' 2>/dev/null
+        gsettings set org.gnome.desktop.interface icon-theme '$icon_theme' 2>/dev/null
+        gsettings set org.gnome.desktop.interface cursor-theme '$cursor_theme' 2>/dev/null
+        gsettings set org.gnome.desktop.interface cursor-size 24 2>/dev/null
+        gsettings set org.gnome.desktop.interface font-name '$font_name' 2>/dev/null
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null
+    " 2>/dev/null
+fi
+
+# Apply via dconf (Flatpak apps)
+if command -v dconf &>/dev/null; then
+    su - "$REAL_USER" -c "
+        export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$(id -u)/bus
+        dconf write /org/gnome/desktop/interface/gtk-theme \"'${gtk_theme}'\" 2>/dev/null
+        dconf write /org/gnome/desktop/interface/icon-theme \"'${icon_theme}'\" 2>/dev/null
+        dconf write /org/gnome/desktop/interface/color-scheme \"'prefer-dark'\" 2>/dev/null
+    " 2>/dev/null
+fi
