@@ -637,6 +637,145 @@ menu_lockscreen() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   VPN (ProtonVPN)
+# ══════════════════════════════════════════════════════════════
+
+_vpn_status() {
+    if ! command -v protonvpn-cli &>/dev/null; then
+        echo "Not installed"
+        return
+    fi
+    local st
+    st=$(protonvpn-cli s 2>/dev/null | grep "Status:" | awk '{print $2}')
+    if [ "$st" = "Connected" ]; then
+        local server country
+        server=$(protonvpn-cli s 2>/dev/null | grep "Server:" | awk '{print $2}')
+        country=$(protonvpn-cli s 2>/dev/null | grep "Country:" | awk '{$1=""; print substr($0,2)}')
+        echo "Connected ($server — $country)"
+    else
+        echo "Disconnected"
+    fi
+}
+
+_vpn_connect_fastest() {
+    _notify "Connecting to fastest server..."
+    protonvpn-cli c -f 2>/dev/null \
+        && _notify "VPN: Connected (fastest)" \
+        || _notify "VPN: Connection failed"
+}
+
+_vpn_connect_country() {
+    local countries
+    countries=$(_rofi_select "  Country" \
+        "US  United States" \
+        "BR  Brazil" \
+        "JP  Japan" \
+        "NL  Netherlands" \
+        "CH  Switzerland" \
+        "DE  Germany" \
+        "GB  United Kingdom" \
+        "FR  France" \
+        "CA  Canada" \
+        "SE  Sweden" \
+        "AU  Australia" \
+        "SG  Singapore")
+    [ -z "$countries" ] && return
+
+    local code
+    code=$(echo "$countries" | awk '{print $1}')
+    _notify "Connecting to $code..."
+    protonvpn-cli c --cc "$code" 2>/dev/null \
+        && _notify "VPN: Connected ($code)" \
+        || _notify "VPN: Connection failed"
+}
+
+_vpn_connect_p2p() {
+    _notify "Connecting to P2P server..."
+    protonvpn-cli c --p2p 2>/dev/null \
+        && _notify "VPN: Connected (P2P)" \
+        || _notify "VPN: Connection failed"
+}
+
+_vpn_connect_secure_core() {
+    _notify "Connecting to Secure Core..."
+    protonvpn-cli c --sc 2>/dev/null \
+        && _notify "VPN: Connected (Secure Core)" \
+        || _notify "VPN: Connection failed"
+}
+
+_vpn_disconnect() {
+    protonvpn-cli d 2>/dev/null
+    _notify "VPN: Disconnected"
+}
+
+_vpn_reconnect() {
+    _notify "Reconnecting..."
+    protonvpn-cli r 2>/dev/null \
+        && _notify "VPN: Reconnected" \
+        || _notify "VPN: Reconnect failed"
+}
+
+_vpn_killswitch() {
+    local choice
+    choice=$(_rofi_select "  Kill Switch" \
+        "  Enable (block traffic if VPN drops)" \
+        "  Disable" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *Enable*)
+            protonvpn-cli ks --on 2>/dev/null
+            _notify "Kill Switch: enabled"
+            ;;
+        *Disable*)
+            protonvpn-cli ks --off 2>/dev/null
+            _notify "Kill Switch: disabled"
+            ;;
+    esac
+}
+
+menu_vpn() {
+    if ! command -v protonvpn-cli &>/dev/null; then
+        _notify "ProtonVPN CLI not installed. Run post-install.sh or: yay -S protonvpn-cli"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_vpn_status)
+
+        local choice
+        choice=$(_rofi_select "  VPN ($status)" \
+            "  Quick connect (fastest)" \
+            "  Connect by country" \
+            "  Connect P2P" \
+            "  Connect Secure Core" \
+            "  Reconnect" \
+            "  Disconnect" \
+            "  Kill Switch" \
+            "  Status details" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *fastest*)     _vpn_connect_fastest ;;
+            *country*)     _vpn_connect_country ;;
+            *P2P*)         _vpn_connect_p2p ;;
+            *Secure*)      _vpn_connect_secure_core ;;
+            *Reconnect*)   _vpn_reconnect ;;
+            *Disconnect*)  _vpn_disconnect ;;
+            *Kill*)        _vpn_killswitch ;;
+            *Status*)
+                local details
+                details=$(protonvpn-cli s 2>/dev/null)
+                echo "$details" | "${ROFI[@]}" -p "  VPN Status"
+                ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -733,6 +872,7 @@ main_menu() {
             "  Display" \
             "  Audio" \
             "  Network" \
+            "  VPN" \
             "  Bluetooth" \
             "  Wallpaper" \
             "  Theme" \
@@ -746,6 +886,7 @@ main_menu() {
             *Display*)     menu_display ;;
             *Audio*)       menu_audio ;;
             *Network*)     menu_network ;;
+            *VPN*)         menu_vpn ;;
             *Bluetooth*)   menu_bluetooth ;;
             *Wallpaper*)   menu_wallpaper ;;
             *Theme*)       menu_theme ;;
