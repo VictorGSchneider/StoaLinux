@@ -65,7 +65,15 @@
         "lsof",
         "thunar",
         "thunar-volman",
-        "gvfs"
+        "thunar-archive-plugin",
+        "thunar-media-tags-plugin",
+        "thunar-shares-plugin",
+        "thunar-vcs-plugin",
+        "tumbler",
+        "ffmpegthumbnailer",
+        "gvfs",
+        "gvfs-mtp",
+        "catfish"
     ],
     "parallel downloads": 5,
     "profile_config": {
