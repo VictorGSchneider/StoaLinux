@@ -4,11 +4,12 @@
 # ║  "Wealth is the slave of a wise man." — Seneca               ║
 # ║                                                              ║
 # ║  Full package manager via rofi.                              ║
-# ║  Repos oficiais + AUR. Instalar, remover, atualizar.        ║
+# ║  Pacman + AUR + Flatpak + Snap + AppImage + DEB/RPM.        ║
 # ║  Auto-aplica tema Stoa em tudo que for instalado.           ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 ROFI="rofi -dmenu -i -config ${HOME}/.config/rofi/config.rasi"
+APPIMAGE_DIR="${HOME}/Applications"
 
 # ── Helpers ──────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ _apply_stoa_theme() {
         hyprctl setcursor "${c:-Colloid-cursors}" 24 &>/dev/null
 }
 
-# ── Search ───────────────────────────────────────────────────
+# ── Search (Pacman + AUR) ─────────────────────────────────────
 
 _search_install() {
     local query
@@ -198,11 +199,17 @@ _installed() {
 
 _update() {
     local h; h=$(_helper)
+
+    local items=(
+        "  Full system update (pacman + AUR)"
+        "  Check for updates"
+        "  Update mirrors (reflector)"
+    )
+    command -v flatpak &>/dev/null && items+=("  Update Flatpak apps")
+    command -v snap &>/dev/null && items+=("  Update Snap packages")
+
     local action
-    action=$(_rofi_list "  Update" \
-        "  Full system update" \
-        "  Check for updates" \
-        "  Update mirrors (reflector)")
+    action=$(_rofi_list "  Update" "${items[@]}")
     [ -z "$action" ] && return
 
     case "$action" in
@@ -236,17 +243,29 @@ _update() {
             _run_in_term "sudo reflector --latest 10 --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syy"
             _notify "Mirrors updated"
             ;;
+        *Flatpak*)
+            _run_in_term "flatpak update"
+            _notify "Flatpak apps updated"
+            ;;
+        *Snap*)
+            _run_in_term "sudo snap refresh"
+            _notify "Snap packages updated"
+            ;;
     esac
 }
 
 # ── Cleanup ──────────────────────────────────────────────────
 
 _cleanup() {
+    local items=(
+        "  Remove orphans"
+        "  Clean package cache"
+        "  Clean all cached packages"
+    )
+    command -v flatpak &>/dev/null && items+=("  Clean unused Flatpak runtimes")
+
     local action
-    action=$(_rofi_list "  Cleanup" \
-        "  Remove orphans" \
-        "  Clean package cache" \
-        "  Clean all cached packages")
+    action=$(_rofi_list "  Cleanup" "${items[@]}")
     [ -z "$action" ] && return
 
     case "$action" in
@@ -273,6 +292,10 @@ _cleanup() {
             _run_in_term "sudo pacman -Scc"
             _notify "All cache cleaned"
             ;;
+        *Flatpak*)
+            _run_in_term "flatpak uninstall --unused"
+            _notify "Unused Flatpak runtimes removed"
+            ;;
     esac
 }
 
@@ -290,15 +313,33 @@ _stats() {
     local hook_status="not installed"
     [ -f /etc/pacman.d/hooks/stoa-theme.hook ] && hook_status="active"
 
-    printf '%s\n' \
-        "Total packages:     $total" \
-        "Explicitly installed: $explicit" \
-        "AUR / foreign:      $foreign" \
-        "Orphans:            $orphans" \
-        "Cache size:         $cache_size" \
-        "AUR helper:         $h" \
-        "Auto-theme hook:    $hook_status" \
-    | _rofi "  System info"
+    local lines=(
+        "Pacman packages:    $total"
+        "Explicitly installed: $explicit"
+        "AUR / foreign:      $foreign"
+        "Orphans:            $orphans"
+        "Cache size:         $cache_size"
+        "AUR helper:         $h"
+        "Auto-theme hook:    $hook_status"
+    )
+
+    if command -v flatpak &>/dev/null; then
+        local fp_count
+        fp_count=$(flatpak list --app 2>/dev/null | wc -l)
+        lines+=("Flatpak apps:       $fp_count")
+    fi
+
+    if command -v snap &>/dev/null; then
+        local sn_count
+        sn_count=$(snap list 2>/dev/null | tail -n +2 | wc -l)
+        lines+=("Snap packages:      $sn_count")
+    fi
+
+    local ai_count=0
+    [ -d "$APPIMAGE_DIR" ] && ai_count=$(find "$APPIMAGE_DIR" -maxdepth 1 -name "*.AppImage" 2>/dev/null | wc -l)
+    lines+=("AppImages:          $ai_count")
+
+    printf '%s\n' "${lines[@]}" | _rofi "  System info"
 }
 
 # ── Pacman hook setup ────────────────────────────────────────
@@ -379,6 +420,496 @@ _install_aur_helper() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   FLATPAK
+# ══════════════════════════════════════════════════════════════
+
+_flatpak_setup() {
+    if command -v flatpak &>/dev/null; then
+        # Ensure Flathub is added
+        if ! flatpak remotes 2>/dev/null | grep -q flathub; then
+            _notify "Adding Flathub repository..."
+            flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null
+        fi
+        return 0
+    fi
+
+    local choice
+    choice=$(_rofi_list "Flatpak not installed" \
+        "  Install Flatpak" \
+        "  Back")
+    [[ "$choice" == *Install* ]] || return 1
+
+    _run_in_term "sudo pacman -S --needed flatpak && flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
+    command -v flatpak &>/dev/null || { _notify "Flatpak installation failed"; return 1; }
+    _notify "Flatpak installed! Flathub added."
+    return 0
+}
+
+_flatpak_search() {
+    local query
+    query=$(echo "" | _rofi "  Search Flathub")
+    [ -z "$query" ] && return
+
+    _notify "Searching Flathub for '$query'..."
+
+    local results
+    results=$(flatpak search "$query" --columns=name,application,description 2>/dev/null)
+    [ -z "$results" ] && { _notify "Nothing found on Flathub"; return; }
+
+    local lines=()
+    while IFS=$'\t' read -r name app_id desc; do
+        [ -z "$name" ] && continue
+        local status=""
+        flatpak info "$app_id" &>/dev/null && status="  [installed]"
+        lines+=("${name}  ${app_id}  ${desc:0:40}${status}")
+    done <<< "$results"
+
+    [ ${#lines[@]} -eq 0 ] && { _notify "Nothing found"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | head -80 | _rofi "  Flathub ($query)")
+    [ -z "$choice" ] && return
+
+    local sel_id
+    sel_id=$(echo "$choice" | awk '{print $2}')
+
+    if flatpak info "$sel_id" &>/dev/null; then
+        local action
+        action=$(_rofi_list "$sel_id [installed]" \
+            "  Run" \
+            "  Uninstall" \
+            "  App info")
+        case "$action" in
+            *Run*)       flatpak run "$sel_id" & disown ;;
+            *Uninstall*) _confirm "Remove $sel_id?" && _run_in_term "flatpak uninstall $sel_id" ;;
+            *info*)      flatpak info "$sel_id" 2>/dev/null | _rofi "  $sel_id" ;;
+        esac
+    else
+        _confirm "Install $sel_id from Flathub?" || return
+        _run_in_term "flatpak install flathub $sel_id"
+        _apply_stoa_theme
+        _notify "$sel_id installed (Flatpak)"
+    fi
+}
+
+_flatpak_installed() {
+    local apps
+    apps=$(flatpak list --app --columns=name,application 2>/dev/null)
+    [ -z "$apps" ] && { _notify "No Flatpak apps installed"; return; }
+
+    local lines=()
+    while IFS=$'\t' read -r name app_id; do
+        [ -z "$name" ] && continue
+        lines+=("${name}  ${app_id}")
+    done <<< "$apps"
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | _rofi "  Flatpak apps")
+    [ -z "$choice" ] && return
+
+    local sel_id
+    sel_id=$(echo "$choice" | awk '{print $NF}')
+
+    local action
+    action=$(_rofi_list "$sel_id" \
+        "  Run" \
+        "  Uninstall" \
+        "  App info")
+    [ -z "$action" ] && return
+
+    case "$action" in
+        *Run*)       flatpak run "$sel_id" & disown ;;
+        *Uninstall*) _confirm "Remove $sel_id?" && _run_in_term "flatpak uninstall $sel_id" ;;
+        *info*)      flatpak info "$sel_id" 2>/dev/null | _rofi "  $sel_id" ;;
+    esac
+}
+
+menu_flatpak() {
+    _flatpak_setup || return
+
+    while true; do
+        local app_count
+        app_count=$(flatpak list --app 2>/dev/null | wc -l)
+
+        local choice
+        choice=$(_rofi_list "  Flatpak ($app_count apps)" \
+            "  Search & install (Flathub)" \
+            "  Installed apps" \
+            "  Update all" \
+            "  Clean unused runtimes" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
+
+        case "$choice" in
+            *Search*)   _flatpak_search ;;
+            *Installed*) _flatpak_installed ;;
+            *Update*)   _run_in_term "flatpak update"; _notify "Flatpak updated" ;;
+            *Clean*)    _run_in_term "flatpak uninstall --unused"; _notify "Cleanup done" ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   SNAP
+# ══════════════════════════════════════════════════════════════
+
+_snap_setup() {
+    if command -v snap &>/dev/null; then
+        return 0
+    fi
+
+    local choice
+    choice=$(_rofi_list "Snap not installed" \
+        "  Install Snap (snapd from AUR)" \
+        "  Back")
+    [[ "$choice" == *Install* ]] || return 1
+
+    if ! _has_aur; then
+        _notify "AUR helper needed to install snapd. Install yay or paru first."
+        return 1
+    fi
+
+    local h; h=$(_helper)
+    _run_in_term "$h -S --needed snapd && sudo systemctl enable --now snapd.socket && sudo ln -sf /var/lib/snapd/snap /snap 2>/dev/null"
+    command -v snap &>/dev/null || { _notify "Snap installation failed. Reboot may be required."; return 1; }
+    _notify "Snap installed! snapd.socket enabled."
+    return 0
+}
+
+_snap_search() {
+    local query
+    query=$(echo "" | _rofi "  Search Snap Store")
+    [ -z "$query" ] && return
+
+    _notify "Searching Snap Store for '$query'..."
+
+    local results
+    results=$(snap find "$query" 2>/dev/null | tail -n +2)
+    [ -z "$results" ] && { _notify "Nothing found on Snap Store"; return; }
+
+    local lines=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name ver publisher summary
+        name=$(echo "$line" | awk '{print $1}')
+        ver=$(echo "$line" | awk '{print $2}')
+        publisher=$(echo "$line" | awk '{print $3}')
+        summary=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/ $//')
+        lines+=("${name}  ${ver}  ${publisher}  ${summary:0:40}")
+    done <<< "$results"
+
+    [ ${#lines[@]} -eq 0 ] && { _notify "Nothing found"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | head -80 | _rofi "  Snap ($query)")
+    [ -z "$choice" ] && return
+
+    local sel_pkg
+    sel_pkg=$(echo "$choice" | awk '{print $1}')
+
+    if snap list "$sel_pkg" &>/dev/null; then
+        local action
+        action=$(_rofi_list "$sel_pkg [installed]" \
+            "  Run" \
+            "  Remove" \
+            "  Info")
+        case "$action" in
+            *Run*)    snap run "$sel_pkg" & disown ;;
+            *Remove*) _confirm "Remove $sel_pkg?" && _run_in_term "sudo snap remove $sel_pkg" ;;
+            *Info*)   snap info "$sel_pkg" 2>/dev/null | _rofi "  $sel_pkg" ;;
+        esac
+    else
+        _confirm "Install $sel_pkg from Snap?" || return
+        _run_in_term "sudo snap install $sel_pkg"
+        _notify "$sel_pkg installed (Snap)"
+    fi
+}
+
+_snap_installed() {
+    local apps
+    apps=$(snap list 2>/dev/null | tail -n +2)
+    [ -z "$apps" ] && { _notify "No Snap packages installed"; return; }
+
+    local lines=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name ver
+        name=$(echo "$line" | awk '{print $1}')
+        ver=$(echo "$line" | awk '{print $2}')
+        lines+=("${name}  ${ver}")
+    done <<< "$apps"
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | _rofi "  Snap packages")
+    [ -z "$choice" ] && return
+
+    local sel_pkg
+    sel_pkg=$(echo "$choice" | awk '{print $1}')
+
+    local action
+    action=$(_rofi_list "$sel_pkg" \
+        "  Run" \
+        "  Remove" \
+        "  Info")
+    [ -z "$action" ] && return
+
+    case "$action" in
+        *Run*)    snap run "$sel_pkg" & disown ;;
+        *Remove*) _confirm "Remove $sel_pkg?" && _run_in_term "sudo snap remove $sel_pkg" ;;
+        *Info*)   snap info "$sel_pkg" 2>/dev/null | _rofi "  $sel_pkg" ;;
+    esac
+}
+
+menu_snap() {
+    _snap_setup || return
+
+    while true; do
+        local pkg_count
+        pkg_count=$(snap list 2>/dev/null | tail -n +2 | wc -l)
+
+        local choice
+        choice=$(_rofi_list "  Snap ($pkg_count pkgs)" \
+            "  Search & install (Snap Store)" \
+            "  Installed packages" \
+            "  Update all" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
+
+        case "$choice" in
+            *Search*)    _snap_search ;;
+            *Installed*) _snap_installed ;;
+            *Update*)    _run_in_term "sudo snap refresh"; _notify "Snap updated" ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   APPIMAGE
+# ══════════════════════════════════════════════════════════════
+
+_appimage_list() {
+    [ ! -d "$APPIMAGE_DIR" ] && return
+    find "$APPIMAGE_DIR" -maxdepth 1 -name "*.AppImage" -printf '%f\n' 2>/dev/null | sort
+}
+
+_appimage_run() {
+    local apps
+    apps=$(_appimage_list)
+    [ -z "$apps" ] && { _notify "No AppImages in ~/Applications"; return; }
+
+    local choice
+    choice=$(echo "$apps" | _rofi "  Run AppImage")
+    [ -z "$choice" ] && return
+
+    chmod +x "${APPIMAGE_DIR}/${choice}" 2>/dev/null
+    "${APPIMAGE_DIR}/${choice}" & disown
+    _notify "Launched: $choice"
+}
+
+_appimage_add_file() {
+    local path
+    path=$(echo "" | _rofi "  Path to .AppImage file")
+    [ -z "$path" ] && return
+
+    # Expand ~ if present
+    path="${path/#\~/$HOME}"
+
+    if [ ! -f "$path" ]; then
+        _notify "File not found: $path"
+        return
+    fi
+
+    if [[ "$path" != *.AppImage ]]; then
+        _notify "File must end in .AppImage"
+        return
+    fi
+
+    mkdir -p "$APPIMAGE_DIR"
+    local basename
+    basename=$(basename "$path")
+    cp "$path" "${APPIMAGE_DIR}/${basename}"
+    chmod +x "${APPIMAGE_DIR}/${basename}"
+    _notify "Added: $basename"
+
+    _confirm "Create desktop shortcut for $basename?" && _appimage_create_desktop "$basename"
+}
+
+_appimage_create_desktop() {
+    local appimage="$1"
+    local name="${appimage%.AppImage}"
+
+    local desktop_dir="${HOME}/.local/share/applications"
+    mkdir -p "$desktop_dir"
+
+    cat > "${desktop_dir}/appimage-${name}.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=${name}
+Exec=${APPIMAGE_DIR}/${appimage}
+Icon=application-x-executable
+Terminal=false
+Categories=Utility;
+Comment=AppImage: ${appimage}
+EOF
+
+    _notify "Shortcut created for $name"
+}
+
+_appimage_remove() {
+    local apps
+    apps=$(_appimage_list)
+    [ -z "$apps" ] && { _notify "No AppImages in ~/Applications"; return; }
+
+    local choice
+    choice=$(echo "$apps" | _rofi "  Remove AppImage")
+    [ -z "$choice" ] && return
+
+    _confirm "Remove $choice?" || return
+
+    rm -f "${APPIMAGE_DIR}/${choice}"
+    local name="${choice%.AppImage}"
+    rm -f "${HOME}/.local/share/applications/appimage-${name}.desktop" 2>/dev/null
+    _notify "Removed: $choice"
+}
+
+menu_appimage() {
+    while true; do
+        mkdir -p "$APPIMAGE_DIR"
+        local count
+        count=$(_appimage_list | wc -l)
+
+        local choice
+        choice=$(_rofi_list "  AppImage ($count apps)" \
+            "  Run AppImage" \
+            "  Add from file" \
+            "  Create desktop shortcut" \
+            "  Remove AppImage" \
+            "  Open ~/Applications" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
+
+        case "$choice" in
+            *Run*)
+                _appimage_run
+                ;;
+            *"Add from"*)
+                _appimage_add_file
+                ;;
+            *"desktop shortcut"*)
+                local apps
+                apps=$(_appimage_list)
+                [ -z "$apps" ] && { _notify "No AppImages"; continue; }
+                local sel
+                sel=$(echo "$apps" | _rofi "  Create shortcut for")
+                [ -n "$sel" ] && _appimage_create_desktop "$sel"
+                ;;
+            *Remove*)
+                _appimage_remove
+                ;;
+            *Open*)
+                thunar "$APPIMAGE_DIR" & disown
+                ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   DEB / RPM  (convert via debtap)
+# ══════════════════════════════════════════════════════════════
+
+_debtap_setup() {
+    if command -v debtap &>/dev/null; then
+        return 0
+    fi
+
+    local choice
+    choice=$(_rofi_list "debtap not installed" \
+        "  Install debtap (AUR)" \
+        "  Back")
+    [[ "$choice" == *Install* ]] || return 1
+
+    if ! _has_aur; then
+        _notify "AUR helper needed to install debtap. Install yay or paru first."
+        return 1
+    fi
+
+    local h; h=$(_helper)
+    _run_in_term "$h -S --needed debtap && sudo debtap -u"
+    command -v debtap &>/dev/null || { _notify "debtap installation failed"; return 1; }
+    _notify "debtap installed and database updated"
+    return 0
+}
+
+_install_deb() {
+    local path
+    path=$(echo "" | _rofi "  Path to .deb file")
+    [ -z "$path" ] && return
+    path="${path/#\~/$HOME}"
+
+    if [ ! -f "$path" ]; then
+        _notify "File not found: $path"
+        return
+    fi
+
+    if [[ "$path" != *.deb ]]; then
+        _notify "File must be a .deb package"
+        return
+    fi
+
+    _notify "Converting .deb to Arch package..."
+    _run_in_term "cd /tmp && debtap -Q '$path' && sudo pacman -U /tmp/*.pkg.tar* && rm -f /tmp/*.pkg.tar*"
+    _apply_stoa_theme
+    _notify "DEB package installed"
+}
+
+_install_rpm() {
+    if ! command -v rpmextract &>/dev/null; then
+        _notify "rpmextract not found. Installing..."
+        _run_in_term "sudo pacman -S --needed rpmextract"
+    fi
+
+    local path
+    path=$(echo "" | _rofi "  Path to .rpm file")
+    [ -z "$path" ] && return
+    path="${path/#\~/$HOME}"
+
+    if [ ! -f "$path" ]; then
+        _notify "File not found: $path"
+        return
+    fi
+
+    if [[ "$path" != *.rpm ]]; then
+        _notify "File must be a .rpm package"
+        return
+    fi
+
+    _notify "Converting .rpm to Arch package..."
+    _run_in_term "cd /tmp && debtap -Q '$path' && sudo pacman -U /tmp/*.pkg.tar* && rm -f /tmp/*.pkg.tar*"
+    _apply_stoa_theme
+    _notify "RPM package installed"
+}
+
+menu_deb_rpm() {
+    _debtap_setup || return
+
+    while true; do
+        local choice
+        choice=$(_rofi_list "  DEB / RPM" \
+            "  Install .deb package" \
+            "  Install .rpm package" \
+            "  Update debtap database" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
+
+        case "$choice" in
+            *.deb*)     _install_deb ;;
+            *.rpm*)     _install_rpm ;;
+            *Update*)   _run_in_term "sudo debtap -u"; _notify "debtap database updated" ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   MAIN
 # ══════════════════════════════════════════════════════════════
 
@@ -388,13 +919,22 @@ main() {
         local aur_tag=""
         _has_aur && aur_tag=" + AUR"
 
+        local sources="${h}${aur_tag}"
+        command -v flatpak &>/dev/null && sources+=" + Flatpak"
+        command -v snap &>/dev/null && sources+=" + Snap"
+
         local choice
-        choice=$(_rofi_list "  Stoa Store (${h}${aur_tag})" \
-            "  Search & install" \
+        choice=$(_rofi_list "  Stoa Store (${sources})" \
+            "  Search & install (Pacman + AUR)" \
             "  Installed packages" \
             "  Update system" \
             "  Cleanup" \
             "  System info" \
+            "─────────────────────" \
+            "  Flatpak (Flathub)" \
+            "  Snap (Snap Store)" \
+            "  AppImage" \
+            "  DEB / RPM (convert)" \
             "─────────────────────" \
             "  Setup auto-theme hook" \
             "  Re-apply Stoa theme" \
@@ -402,14 +942,18 @@ main() {
         [ -z "$choice" ] && exit 0
 
         case "$choice" in
-            *Search*)       _search_install ;;
+            *"Search & install"*) _search_install ;;
             *Installed*)    _installed ;;
             *Update*)       _update ;;
             *Cleanup*)      _cleanup ;;
             *info*)         _stats ;;
+            *Flatpak*)      menu_flatpak ;;
+            *Snap*)         menu_snap ;;
+            *AppImage*)     menu_appimage ;;
+            *DEB*)          menu_deb_rpm ;;
             *auto-theme*)   _setup_hook ;;
             *Re-apply*)     _apply_stoa_theme; _notify "Stoa theme applied" ;;
-            *AUR*)          _install_aur_helper ;;
+            *"AUR helper"*) _install_aur_helper ;;
         esac
     done
 }
