@@ -877,7 +877,6 @@ main_menu() {
             "  Cloud Drive" \
             "  Wallpaper" \
             "  Theme" \
-            "  App Store" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
@@ -892,7 +891,6 @@ main_menu() {
             *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;
             *Theme*)        menu_theme ;;
-            *"App Store"*)  stoa-store & disown; exit 0 ;;
             *Lock*)         menu_lockscreen ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
