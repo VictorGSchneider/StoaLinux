@@ -59,6 +59,9 @@ UI_PKGS="rofi dunst"
 BROWSER_PKGS="brave-bin"
 NOTES_PKGS="obsidian"
 
+# VPN (AUR)
+VPN_PKGS="protonvpn-cli"
+
 # Terminal, editor, wallpapers
 APP_PKGS="alacritty neovim feh imagemagick"
 
@@ -105,6 +108,7 @@ echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
+echo -e "  ${S}VPN:        ${VPN_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
 echo -e "  ${S}Gaming:     ${GAMING_PKGS}${R}"
@@ -335,6 +339,28 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     else
         echo -e "  ${S}[~] howdy already installed.${R}"
     fi
+
+    # ProtonVPN CLI (AUR) — "The wise man guards his retreat." — Seneca
+    echo ""
+    if ! command -v protonvpn-cli &>/dev/null; then
+        echo -e "  ${F}Installing ProtonVPN CLI (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm protonvpn-cli
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm protonvpn-cli
+        else
+            echo -e "  ${S}Installing ProtonVPN CLI manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/protonvpn-cli.git "$_tmpdir/protonvpn-cli"
+            (cd "$_tmpdir/protonvpn-cli" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] ProtonVPN CLI installed.${R}"
+        echo -e "  ${S}    To login: protonvpn-cli login <username>${R}"
+        echo -e "  ${S}    Or use: Super+I → VPN${R}"
+    else
+        echo -e "  ${S}[~] ProtonVPN CLI already installed.${R}"
+    fi
 else
     echo -e "  ${S}[~] Packages skipped.${R}"
 fi
@@ -413,6 +439,7 @@ echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
 echo -e "  ${S}  stoa-face setup   — Face recognition (Windows Hello-style)${R}"
 echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
+echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P2P${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
 echo ""
 echo -e "  ${F}Leisure:${R}"
