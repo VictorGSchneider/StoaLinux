@@ -1,0 +1,121 @@
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  STOA LINUX — GTK 4.0 Custom Theme                         ║
+   ║  "Beauty belongs to character." — Marcus Aurelius            ║
+   ║                                                              ║
+   ║  Overrides Adwaita-dark with Stoic palette:                  ║
+   ║  Roman marble, bronze, parchment, and stone.                 ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+
+/* ── Color Definitions ── */
+@define-color stoa_bg_dark     #1a1714;
+@define-color stoa_bg          #211e19;
+@define-color stoa_bg_light    #2d2921;
+@define-color stoa_fg          #d4cfc4;
+@define-color stoa_fg_dim      #a89f91;
+@define-color stoa_fg_dark     #7a7267;
+@define-color stoa_bronze      #c49a5c;
+@define-color stoa_gold        #d4a84b;
+@define-color stoa_parchment   #c4b08a;
+@define-color stoa_olive       #8a9a6c;
+@define-color stoa_laurel      #6b7f52;
+@define-color stoa_terracotta  #b36b5a;
+@define-color stoa_azure       #5a7a8a;
+@define-color stoa_stone       #6e6a62;
+@define-color stoa_marble      #9e9a92;
+
+/* ── Libadwaita overrides ── */
+@define-color accent_bg_color        @stoa_bronze;
+@define-color accent_fg_color        @stoa_bg_dark;
+@define-color accent_color           @stoa_bronze;
+
+@define-color window_bg_color        @stoa_bg;
+@define-color window_fg_color        @stoa_fg;
+
+@define-color view_bg_color          @stoa_bg_dark;
+@define-color view_fg_color          @stoa_fg;
+
+@define-color headerbar_bg_color     @stoa_bg_dark;
+@define-color headerbar_fg_color     @stoa_fg;
+@define-color headerbar_backdrop_color @stoa_bg_dark;
+
+@define-color sidebar_bg_color       @stoa_bg_dark;
+@define-color sidebar_fg_color       @stoa_fg;
+@define-color sidebar_backdrop_color @stoa_bg_dark;
+
+@define-color card_bg_color          @stoa_bg_light;
+@define-color card_fg_color          @stoa_fg;
+
+@define-color popover_bg_color       @stoa_bg_light;
+@define-color popover_fg_color       @stoa_fg;
+
+@define-color dialog_bg_color        @stoa_bg;
+@define-color dialog_fg_color        @stoa_fg;
+
+@define-color shade_color            rgba(0, 0, 0, 0.36);
+@define-color scrollbar_outline_color rgba(0, 0, 0, 0.5);
+
+@define-color error_bg_color         @stoa_terracotta;
+@define-color error_fg_color         @stoa_fg;
+@define-color error_color            @stoa_terracotta;
+
+@define-color warning_bg_color       @stoa_gold;
+@define-color warning_fg_color       @stoa_bg_dark;
+@define-color warning_color          @stoa_gold;
+
+@define-color success_bg_color       @stoa_olive;
+@define-color success_fg_color       @stoa_bg_dark;
+@define-color success_color          @stoa_olive;
+
+@define-color destructive_bg_color   @stoa_terracotta;
+@define-color destructive_fg_color   @stoa_fg;
+@define-color destructive_color      @stoa_terracotta;
+
+@define-color suggested_action_bg    @stoa_bronze;
+@define-color suggested_action_fg    @stoa_bg_dark;
+
+/* ── Scrollbar ── */
+scrollbar slider {
+    background-color: @stoa_stone;
+    border-radius: 3px;
+}
+
+scrollbar slider:hover {
+    background-color: @stoa_marble;
+}
+
+/* ── Selection ── */
+*:selected,
+selection {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── Sidebar row ── */
+.navigation-sidebar row:selected {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── Notebook tabs ── */
+tabbar tab:checked {
+    border-bottom: 2px solid @stoa_bronze;
+}
+
+/* ── Switch ── */
+switch:checked {
+    background-color: @stoa_olive;
+}
+
+/* ── Progress / Scale ── */
+progressbar > trough > progress {
+    background-color: @stoa_bronze;
+}
+
+scale > trough > highlight {
+    background-color: @stoa_bronze;
+}
+
+/* ── Separator ── */
+separator {
+    background-color: @stoa_stone;
+}

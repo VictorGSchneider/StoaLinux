@@ -77,7 +77,9 @@ _link "${STOA_DIR}/neofetch/config.conf" "${CONFIG_DIR}/neofetch/config.conf"
 
 # ── GTK 3.0 + 4.0 ──
 _link "${STOA_DIR}/gtk-3.0/settings.ini" "${CONFIG_DIR}/gtk-3.0/settings.ini"
+_link "${STOA_DIR}/gtk-3.0/gtk.css"      "${CONFIG_DIR}/gtk-3.0/gtk.css"
 _link "${STOA_DIR}/gtk-4.0/settings.ini" "${CONFIG_DIR}/gtk-4.0/settings.ini"
+_link "${STOA_DIR}/gtk-4.0/gtk.css"      "${CONFIG_DIR}/gtk-4.0/gtk.css"
 
 # ── Qt5/Qt6 (standardization with GTK) ──
 _link "${STOA_DIR}/qt5ct/qt5ct.conf" "${CONFIG_DIR}/qt5ct/qt5ct.conf"

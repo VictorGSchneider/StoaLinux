@@ -20,7 +20,7 @@ font_name=$(grep "^gtk-font-name" "$gtk3" 2>/dev/null | cut -d= -f2)
 gtk_theme="${gtk_theme:-Adwaita-dark}"
 icon_theme="${icon_theme:-Papirus-Dark}"
 cursor_theme="${cursor_theme:-Adwaita}"
-font_name="${font_name:-JetBrains Mono 10}"
+font_name="${font_name:-Noto Serif 10}"
 
 # Sync GTK 4.0
 if [ -f "$gtk4" ]; then

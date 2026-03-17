@@ -55,7 +55,7 @@ _apply_stoa_theme() {
         gsettings set org.gnome.desktop.interface gtk-theme    "${t:-Adwaita-dark}"    2>/dev/null
         gsettings set org.gnome.desktop.interface icon-theme   "${i:-Papirus-Dark}"    2>/dev/null
         gsettings set org.gnome.desktop.interface cursor-theme "${c:-Adwaita}"         2>/dev/null
-        gsettings set org.gnome.desktop.interface font-name    "${f:-JetBrains Mono 10}" 2>/dev/null
+        gsettings set org.gnome.desktop.interface font-name    "${f:-Noto Serif 10}" 2>/dev/null
         gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"           2>/dev/null
     fi
     [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null && \

@@ -81,7 +81,7 @@ CLIPBOARD_PKGS="wl-clipboard cliphist"
 WIDGET_PKGS="eww-wayland"
 
 # Fonts and theme
-FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome papirus-icon-theme"
+FONT_PKGS="ttf-jetbrains-mono noto-fonts ttf-font-awesome papirus-icon-theme"
 
 # Toolkit unification (Qt = GTK appearance)
 THEME_PKGS="qt5ct qt6ct"

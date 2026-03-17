@@ -9,7 +9,7 @@ configuration {
     display-drun:        "  Launch";
     display-run:         "  Run";
     display-window:      "  Windows";
-    font:                "JetBrains Mono 11";
+    font:                "Noto Serif 11";
 }
 
 * {

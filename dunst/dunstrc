@@ -31,7 +31,7 @@
     frame_width = 2
     corner_radius = 4
 
-    font = JetBrains Mono 10
+    font = Noto Serif 10
     line_height = 4
     markup = full
     format = "<b>%s</b>\n%b"

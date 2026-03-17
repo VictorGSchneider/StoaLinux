@@ -1,0 +1,311 @@
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  STOA LINUX — GTK 3.0 Custom Theme                         ║
+   ║  "Beauty belongs to character." — Marcus Aurelius            ║
+   ║                                                              ║
+   ║  Overrides Adwaita-dark with Stoic palette:                  ║
+   ║  Roman marble, bronze, parchment, and stone.                 ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+
+/* ── Color Definitions ── */
+@define-color stoa_bg_dark     #1a1714;
+@define-color stoa_bg          #211e19;
+@define-color stoa_bg_light    #2d2921;
+@define-color stoa_fg          #d4cfc4;
+@define-color stoa_fg_dim      #a89f91;
+@define-color stoa_fg_dark     #7a7267;
+@define-color stoa_bronze      #c49a5c;
+@define-color stoa_gold        #d4a84b;
+@define-color stoa_parchment   #c4b08a;
+@define-color stoa_olive       #8a9a6c;
+@define-color stoa_laurel      #6b7f52;
+@define-color stoa_terracotta  #b36b5a;
+@define-color stoa_azure       #5a7a8a;
+@define-color stoa_stone       #6e6a62;
+@define-color stoa_marble      #9e9a92;
+
+/* ── Base Colors ── */
+@define-color theme_bg_color          @stoa_bg;
+@define-color theme_fg_color          @stoa_fg;
+@define-color theme_base_color        @stoa_bg_dark;
+@define-color theme_text_color        @stoa_fg;
+@define-color theme_selected_bg_color @stoa_bronze;
+@define-color theme_selected_fg_color @stoa_bg_dark;
+@define-color theme_tooltip_bg_color  @stoa_bg_light;
+@define-color theme_tooltip_fg_color  @stoa_fg;
+
+/* ── Insensitive (disabled) ── */
+@define-color insensitive_bg_color    @stoa_bg_light;
+@define-color insensitive_fg_color    @stoa_fg_dark;
+
+/* ── Header bar / Title bar ── */
+@define-color theme_header_bg         @stoa_bg_dark;
+@define-color theme_header_fg         @stoa_fg;
+
+/* ── Sidebar ── */
+@define-color theme_sidebar_bg        @stoa_bg_dark;
+@define-color theme_sidebar_fg        @stoa_fg;
+
+/* ── Error / Warning / Success ── */
+@define-color error_color             @stoa_terracotta;
+@define-color warning_color           @stoa_gold;
+@define-color success_color           @stoa_olive;
+
+/* ── Links ── */
+@define-color link_color              @stoa_azure;
+
+/* ── Window ── */
+window {
+    background-color: @stoa_bg;
+    color: @stoa_fg;
+}
+
+/* ── Header Bar ── */
+headerbar,
+.titlebar {
+    background-color: @stoa_bg_dark;
+    color: @stoa_fg;
+    border-bottom: 1px solid @stoa_stone;
+}
+
+headerbar:backdrop,
+.titlebar:backdrop {
+    background-color: @stoa_bg_dark;
+    color: @stoa_fg_dim;
+}
+
+/* ── Menu Bar ── */
+menubar {
+    background-color: @stoa_bg_dark;
+    color: @stoa_fg;
+}
+
+/* ── Buttons ── */
+button {
+    background-image: none;
+    background-color: @stoa_bg_light;
+    color: @stoa_fg;
+    border-color: @stoa_stone;
+    border-radius: 3px;
+}
+
+button:hover {
+    background-color: shade(@stoa_bg_light, 1.2);
+    color: @stoa_parchment;
+}
+
+button:active,
+button:checked {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+button:disabled {
+    background-color: @stoa_bg;
+    color: @stoa_fg_dark;
+}
+
+/* ── Suggested / Destructive actions ── */
+button.suggested-action {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+button.suggested-action:hover {
+    background-color: @stoa_gold;
+}
+
+button.destructive-action {
+    background-color: @stoa_terracotta;
+    color: @stoa_fg;
+}
+
+button.destructive-action:hover {
+    background-color: shade(@stoa_terracotta, 1.15);
+}
+
+/* ── Text Entry ── */
+entry {
+    background-color: @stoa_bg_dark;
+    color: @stoa_fg;
+    border-color: @stoa_stone;
+    caret-color: @stoa_bronze;
+}
+
+entry:focus {
+    border-color: @stoa_bronze;
+}
+
+/* ── Selection ── */
+*:selected,
+selection {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── Scrollbar ── */
+scrollbar slider {
+    background-color: @stoa_stone;
+    border-radius: 3px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+scrollbar slider:hover {
+    background-color: @stoa_marble;
+}
+
+scrollbar trough {
+    background-color: @stoa_bg_dark;
+}
+
+/* ── Sidebar / Nautilus / Thunar ── */
+.sidebar,
+placessidebar,
+.navigation-sidebar {
+    background-color: @stoa_bg_dark;
+    color: @stoa_fg;
+}
+
+.sidebar row:selected,
+placessidebar row:selected {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── Notebook / Tabs ── */
+notebook header {
+    background-color: @stoa_bg_dark;
+}
+
+notebook tab {
+    background-color: @stoa_bg;
+    color: @stoa_fg_dim;
+}
+
+notebook tab:checked {
+    background-color: @stoa_bg_light;
+    color: @stoa_bronze;
+    border-bottom: 2px solid @stoa_bronze;
+}
+
+/* ── Tooltip ── */
+tooltip,
+tooltip.background {
+    background-color: @stoa_bg_light;
+    color: @stoa_fg;
+    border: 1px solid @stoa_stone;
+}
+
+/* ── Switch (toggle) ── */
+switch {
+    background-color: @stoa_bg_light;
+    border-color: @stoa_stone;
+}
+
+switch:checked {
+    background-color: @stoa_olive;
+}
+
+switch slider {
+    background-color: @stoa_fg;
+}
+
+/* ── Progress Bar ── */
+progressbar trough {
+    background-color: @stoa_bg_dark;
+}
+
+progressbar progress {
+    background-color: @stoa_bronze;
+}
+
+/* ── Scale / Slider ── */
+scale trough {
+    background-color: @stoa_bg_dark;
+}
+
+scale highlight {
+    background-color: @stoa_bronze;
+}
+
+scale slider {
+    background-color: @stoa_fg;
+}
+
+/* ── Check / Radio buttons ── */
+checkbutton check,
+radiobutton radio {
+    background-color: @stoa_bg_dark;
+    border-color: @stoa_stone;
+}
+
+checkbutton check:checked,
+radiobutton radio:checked {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── List / Tree view ── */
+treeview,
+list,
+.view {
+    background-color: @stoa_bg_dark;
+    color: @stoa_fg;
+}
+
+treeview:hover,
+list row:hover {
+    background-color: @stoa_bg_light;
+}
+
+treeview:selected,
+list row:selected {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── Popover / Menu ── */
+popover,
+popover.background,
+.context-menu {
+    background-color: @stoa_bg_light;
+    color: @stoa_fg;
+    border: 1px solid @stoa_stone;
+}
+
+modelbutton:hover {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── Info bar ── */
+.info {
+    background-color: @stoa_azure;
+    color: @stoa_fg;
+}
+
+.warning {
+    background-color: @stoa_gold;
+    color: @stoa_bg_dark;
+}
+
+.error {
+    background-color: @stoa_terracotta;
+    color: @stoa_fg;
+}
+
+/* ── Calendar ── */
+calendar {
+    background-color: @stoa_bg;
+    color: @stoa_fg;
+}
+
+calendar:selected {
+    background-color: @stoa_bronze;
+    color: @stoa_bg_dark;
+}
+
+/* ── Separator ── */
+separator {
+    background-color: @stoa_stone;
+}
