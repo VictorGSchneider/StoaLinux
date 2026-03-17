@@ -345,7 +345,7 @@ echo ""
 echo -e "  ${F}Installing dotfiles...${R}"
 echo ""
 
-STOA_DIR="$(cd "$(dirname "$0")" && pwd)"
+STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 bash "${STOA_DIR}/install.sh"
 
 # ── Shell ──
@@ -362,7 +362,7 @@ case "$SHELL_CHOICE" in
     1)
         ZSHRC="$HOME/.zshrc"
         if ! grep -q "StoaLinux" "$ZSHRC" 2>/dev/null; then
-            echo "source ${STOA_DIR}/zsh/.zshrc" >> "$ZSHRC"
+            echo "source ${STOA_DIR}/shell/.zshrc" >> "$ZSHRC"
             echo -e "  ${O}[✓] .zshrc configured.${R}"
         else
             echo -e "  ${S}[~] .zshrc already contains StoaLinux.${R}"
@@ -376,7 +376,7 @@ case "$SHELL_CHOICE" in
     2)
         BASHRC="$HOME/.bashrc"
         if ! grep -q "StoaLinux" "$BASHRC" 2>/dev/null; then
-            echo "source ${STOA_DIR}/zsh/.bashrc" >> "$BASHRC"
+            echo "source ${STOA_DIR}/shell/.bashrc" >> "$BASHRC"
             echo -e "  ${O}[✓] .bashrc configured.${R}"
         else
             echo -e "  ${S}[~] .bashrc already contains StoaLinux.${R}"
