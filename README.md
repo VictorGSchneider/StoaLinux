@@ -40,7 +40,8 @@ Stoic dotfiles for Arch Linux. A minimalist customization inspired by Stoic phil
 | **Zathura** | `zathura/zathurarc` | PDF reader with Stoic theme |
 | **mpv** | `mpv/mpv.conf` | Minimalist video player |
 | **imv** | `imv/config` | Image viewer (Wayland) |
-| **lf** | `lf/lfrc` | Vim-style file manager |
+| **lf** | `lf/lfrc` | Vim-style file manager (terminal) |
+| **Thunar** | — | GUI file manager with volume management |
 | **btop** | `btop/btop.conf` | System monitor |
 | GTK 3.0 | `gtk-3.0/settings.ini` | GTK dark theme |
 | GTK 4.0 | `gtk-4.0/settings.ini` | GTK4 dark theme |
@@ -204,6 +205,7 @@ startx
 | `Super+Return` | Terminal (Alacritty) |
 | `Super+B` | Browser (Brave) |
 | `Super+E` | Files (lf) |
+| `Super+Shift+E` | Files (Thunar) |
 | `Super+N` | Monitor (btop) |
 | `Super+D` | Launcher (Rofi) |
 | `Super+O` | Notes (Obsidian) |
@@ -232,7 +234,7 @@ startx
 - **Brave Browser** as default browser (privacy + native Wayland)
 - **Obsidian** as notes and second brain app (Markdown)
 - **Memento Mori** — eww widget with days/weeks/years lived, year progress, and Stoic quote
-- **Stoic apps**: zathura (PDF), mpv (video), imv (images), lf (files), btop (monitor)
+- **Stoic apps**: zathura (PDF), mpv (video), imv (images), lf (files), Thunar (GUI files), btop (monitor)
 - **Unified appearance** — GTK and Qt use same dark theme, font, and icons via qt5ct/qt6ct
 - **Workspaces in Roman numerals** (I, II, III... X)
 - **Random Stoic quote** when opening the terminal

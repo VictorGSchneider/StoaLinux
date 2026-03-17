@@ -62,7 +62,10 @@
         "wtype",
         "jq",
         "curl",
-        "lsof"
+        "lsof",
+        "thunar",
+        "thunar-volman",
+        "gvfs"
     ],
     "parallel downloads": 5,
     "profile_config": {

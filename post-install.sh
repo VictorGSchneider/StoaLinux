@@ -63,7 +63,7 @@ NOTES_PKGS="obsidian"
 APP_PKGS="alacritty neovim feh imagemagick"
 
 # Stoic apps (minimalist)
-STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop"
+STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman gvfs"
 
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"

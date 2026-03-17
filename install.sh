@@ -155,6 +155,7 @@ video/webm=mpv.desktop
 audio/mpeg=mpv.desktop
 audio/flac=mpv.desktop
 audio/ogg=mpv.desktop
+inode/directory=thunar.desktop
 MIME
     echo -e "  ${O}[+] mimeapps.list (Brave as default browser)${R}"
 fi
@@ -176,6 +177,7 @@ echo -e "  ${F}Keybinds:${R}"
 echo -e "  ${S}  Super+Return  Terminal (Alacritty)${R}"
 echo -e "  ${S}  Super+B       Browser (Brave)${R}"
 echo -e "  ${S}  Super+E       Files (lf)${R}"
+echo -e "  ${S}  Super+Shift+E Files (Thunar)${R}"
 echo -e "  ${S}  Super+N       Monitor (btop)${R}"
 echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+O       Notes (Obsidian)${R}"
