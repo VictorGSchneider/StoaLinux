@@ -2,25 +2,25 @@
 
 > *"The happiness of your life depends upon the quality of your thoughts."* — Marcus Aurelius
 
-Uma distro Arch Linux inspirada na filosofia estoica. Cada detalhe — das cores ao prompt do terminal — foi pensado para criar um ambiente que convida ao foco, à disciplina e à clareza mental.
+An Arch Linux setup inspired by Stoic philosophy. Every detail — from the color palette to the terminal prompt — is designed to foster focus, discipline, and clarity of mind.
 
-## Filosofia
+## Philosophy
 
-O estoicismo ensina que não controlamos o que acontece, mas controlamos como reagimos. StoaLinux aplica esse princípio ao desktop: um sistema que não distrai, não enfeita em excesso, não te atrapalha. Só funciona.
+Stoicism teaches that we don't control what happens, but we control how we respond. StoaLinux brings that principle to the desktop: a system that doesn't distract, doesn't over-decorate, doesn't get in your way. It just works.
 
-A paleta vem do mundo antigo — mármore, bronze, pergaminho, pedra, terracota — cores que remetem a templos, estátuas e manuscritos. A tipografia usa EB Garamond, uma serifa clássica que reforça essa identidade. Cada terminal abre com uma citação estoica diferente. O widget Memento Mori lembra que o tempo é finito.
+The palette comes from the ancient world — marble, bronze, parchment, stone, terracotta — colors that evoke temples, statues, and manuscripts. The typography uses EB Garamond, a classical serif that reinforces this identity. Every terminal opens with a different Stoic quote. The Memento Mori widget reminds you that time is finite.
 
-Não é minimalismo por estética. É minimalismo por princípio: **só o que serve fica**.
+This isn't minimalism for aesthetics. It's minimalism by principle: **only what serves, stays**.
 
-## O que é
+## What it is
 
-- **Arch Linux** com instalação automatizada (do live ISO ou de um Arch existente)
-- **Hyprland** (Wayland) como compositor principal, **i3** como fallback Xorg
-- Tema escuro unificado em GTK, Qt, Steam, Calibre, YACReader e tudo mais
-- Scripts `stoa-*` para wallpapers, configurações, OCR, clipboard, GPU e mais
-- Memento Mori widget (eww) integrado ao desktop
+- **Arch Linux** with automated installation (from live ISO or existing Arch)
+- **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
+- Unified dark theme across GTK, Qt, Steam, Calibre, YACReader, and everything else
+- `stoa-*` scripts for wallpapers, settings, OCR, clipboard, GPU, and more
+- Memento Mori widget (eww) built into the desktop
 
-## Paleta
+## Palette
 
 <table>
   <tr>
@@ -67,6 +67,9 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 
 ## Keybinds
 
+<table>
+<tr><td>
+
 | Key | Action |
 |-----|--------|
 | `Super+Return` | Terminal (Alacritty) |
@@ -81,6 +84,11 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 | `Super+I` | Settings panel |
 | `Super+A` | App store |
 | `Super+V` | Clipboard history |
+
+</td><td>
+
+| Key | Action |
+|-----|--------|
 | `Super+Shift+V` | Clipboard pin |
 | `Super+Shift+T` | OCR (screen text) |
 | `Super+Shift+P` | Advanced paste |
@@ -92,8 +100,10 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 | `Super+HJKL` | Navigate |
 | `Super+Shift+HJKL` | Move window |
 | `Super+1-0` | Workspaces I–X |
-| `Print` | Screenshot (full) |
-| `Super+Print` | Screenshot (area) |
+| `Print` / `Super+Print` | Screenshot |
+
+</td></tr>
+</table>
 
 ## Scripts
 
@@ -122,6 +132,9 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 
 ## Apps
 
+<table>
+<tr><td>
+
 | App | Purpose |
 |-----|---------|
 | Brave | Browser |
@@ -132,6 +145,11 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 | mpv | Video/audio |
 | imv | Images |
 | lf / Thunar | Files |
+
+</td><td>
+
+| App | Purpose |
+|-----|---------|
 | btop | Monitor |
 | Qalculate | Calculator |
 | eww | Memento Mori widget |
@@ -140,6 +158,9 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 | YACReader | Comics |
 | Enpass | Passwords |
 | howdy | Face unlock |
+
+</td></tr>
+</table>
 
 ## Theme
 
