@@ -34,7 +34,7 @@ export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 
 # ── Cursor ──
-export XCURSOR_THEME="Adwaita"
+export XCURSOR_THEME="Colloid-cursors"
 export XCURSOR_SIZE=24
 
 # ── NVIDIA (Wayland) ──

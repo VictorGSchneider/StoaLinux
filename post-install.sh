@@ -81,7 +81,7 @@ CLIPBOARD_PKGS="wl-clipboard cliphist"
 WIDGET_PKGS="eww-wayland"
 
 # Fonts and theme
-FONT_PKGS="ttf-jetbrains-mono noto-fonts ttf-font-awesome papirus-icon-theme"
+FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome"
 
 # Toolkit unification (Qt = GTK appearance)
 THEME_PKGS="qt5ct qt6ct"
@@ -221,6 +221,66 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${O}[✓] Enpass installed.${R}"
     else
         echo -e "  ${S}[~] Enpass already installed.${R}"
+    fi
+
+    # EB Garamond font (AUR)
+    echo ""
+    if ! fc-list | grep -qi "EB Garamond" 2>/dev/null; then
+        echo -e "  ${F}Installing EB Garamond font (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm otf-eb-garamond
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm otf-eb-garamond
+        else
+            echo -e "  ${S}Installing EB Garamond manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/otf-eb-garamond.git "$_tmpdir/otf-eb-garamond"
+            (cd "$_tmpdir/otf-eb-garamond" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] EB Garamond installed.${R}"
+    else
+        echo -e "  ${S}[~] EB Garamond already installed.${R}"
+    fi
+
+    # Colloid icon theme (AUR)
+    echo ""
+    if [ ! -d /usr/share/icons/Colloid-dark ] && [ ! -d "$HOME/.local/share/icons/Colloid-dark" ]; then
+        echo -e "  ${F}Installing Colloid icon theme (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm colloid-icon-theme-git
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm colloid-icon-theme-git
+        else
+            echo -e "  ${S}Installing Colloid icons manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/colloid-icon-theme-git.git "$_tmpdir/colloid-icon-theme-git"
+            (cd "$_tmpdir/colloid-icon-theme-git" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Colloid icons installed.${R}"
+    else
+        echo -e "  ${S}[~] Colloid icons already installed.${R}"
+    fi
+
+    # Colloid cursors (AUR)
+    echo ""
+    if [ ! -d /usr/share/icons/Colloid-cursors ] && [ ! -d "$HOME/.local/share/icons/Colloid-cursors" ]; then
+        echo -e "  ${F}Installing Colloid cursors (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm colloid-cursors-git
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm colloid-cursors-git
+        else
+            echo -e "  ${S}Installing Colloid cursors manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/colloid-cursors-git.git "$_tmpdir/colloid-cursors-git"
+            (cd "$_tmpdir/colloid-cursors-git" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Colloid cursors installed.${R}"
+    else
+        echo -e "  ${S}[~] Colloid cursors already installed.${R}"
     fi
 
     # howdy — Face recognition (AUR)

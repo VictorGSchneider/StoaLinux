@@ -556,7 +556,7 @@ _theme_font_size() {
     # Read current font family from settings.ini
     local current_font
     current_font=$(grep "^gtk-font-name" "$gtk3" 2>/dev/null | sed 's/^gtk-font-name=\s*//' | sed 's/\s*[0-9]*$//')
-    current_font="${current_font:-Noto Serif}"
+    current_font="${current_font:-EB Garamond}"
 
     [ -f "$gtk3" ] && sed -i "s/^gtk-font-name=.*/gtk-font-name=${current_font} ${choice}/" "$gtk3"
 

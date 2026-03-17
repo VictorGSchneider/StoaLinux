@@ -53,13 +53,13 @@ _apply_stoa_theme() {
     f=$(grep "^gtk-font-name"        "$gtk3" | cut -d= -f2)
     if command -v gsettings &>/dev/null; then
         gsettings set org.gnome.desktop.interface gtk-theme    "${t:-Adwaita-dark}"    2>/dev/null
-        gsettings set org.gnome.desktop.interface icon-theme   "${i:-Papirus-Dark}"    2>/dev/null
-        gsettings set org.gnome.desktop.interface cursor-theme "${c:-Adwaita}"         2>/dev/null
-        gsettings set org.gnome.desktop.interface font-name    "${f:-Noto Serif 10}" 2>/dev/null
+        gsettings set org.gnome.desktop.interface icon-theme   "${i:-Colloid-dark}"    2>/dev/null
+        gsettings set org.gnome.desktop.interface cursor-theme "${c:-Colloid-cursors}" 2>/dev/null
+        gsettings set org.gnome.desktop.interface font-name    "${f:-EB Garamond 11}" 2>/dev/null
         gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"           2>/dev/null
     fi
     [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null && \
-        hyprctl setcursor "${c:-Adwaita}" 24 &>/dev/null
+        hyprctl setcursor "${c:-Colloid-cursors}" 24 &>/dev/null
 }
 
 # ── Search ───────────────────────────────────────────────────

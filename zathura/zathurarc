@@ -4,7 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════╝
 
 # ── Appearance ──
-set font                "Noto Serif 10"
+set font                "EB Garamond 11"
 set default-bg          "#211e19"
 set default-fg          "#d4cfc4"
 set statusbar-bg        "#2d2921"

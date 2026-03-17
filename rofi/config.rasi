@@ -9,7 +9,7 @@ configuration {
     display-drun:        "  Launch";
     display-run:         "  Run";
     display-window:      "  Windows";
-    font:                "Noto Serif 11";
+    font:                "EB Garamond 12";
 }
 
 * {

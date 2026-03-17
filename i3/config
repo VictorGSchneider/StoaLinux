@@ -6,7 +6,7 @@
 set $mod Mod4
 
 # ── Fonts ──
-font pango:Noto Serif 10
+font pango:EB Garamond 11
 
 # ── Stoic Palette ──
 set $bg         #211e19
