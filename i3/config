@@ -67,10 +67,14 @@ bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg e
 
 # ── Apps ──
 bindsym $mod+b exec brave
+bindsym $mod+c exec qalculate-gtk
 bindsym $mod+n exec alacritty -e btop
 bindsym $mod+o exec obsidian
 bindsym $mod+m exec ~/.local/bin/stoa-memento
 bindsym $mod+slash exec ~/.local/bin/stoa-keybinds-toggle
+
+# ── Lock Screen ──
+bindsym $mod+Escape exec --no-startup-id i3lock-color --blur 5 --ring-color=c49a5c --inside-color=211e19cc --line-uses-inside --keyhl-color=8a9a6c --bshl-color=b36b5a --separator-color=6e6a62 --time-color=c49a5c --date-color=d4cfc4aa --verif-color=8a9a6c --wrong-color=b36b5a --clock --time-str="%H:%M" --date-str="%A, %d %B" --time-font="JetBrains Mono" --date-font="JetBrains Mono"
 
 # ── Navigation ──
 bindsym $mod+h focus left
@@ -158,6 +162,9 @@ bindsym $mod+Print exec --no-startup-id maim -s ~/Pictures/screenshots/screensho
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b
 exec_always --no-startup-id feh --bg-fill ~/.config/stoa/wallpapers/marble.png
 exec --no-startup-id dunst -config ~/.config/dunst/dunstrc
+
+# ── Qalculate ──
+for_window [class="Qalculate-gtk"] floating enable, resize set 420 540, move position center
 
 # ── eww Memento Mori ──
 for_window [title="memento"] floating enable, resize set 860 580, move position center

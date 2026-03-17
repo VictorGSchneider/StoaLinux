@@ -63,13 +63,16 @@ NOTES_PKGS="obsidian"
 APP_PKGS="alacritty neovim feh imagemagick"
 
 # Stoic apps (minimalist)
-STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish"
+STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish qalculate-gtk"
 
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
 
 # Stoatools (OCR, paste, resize, rename, locksmith)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
+
+# Lock screen
+LOCK_PKGS="hyprlock i3lock-color"
 
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard cliphist"
@@ -86,10 +89,13 @@ THEME_PKGS="qt5ct qt6ct"
 # Audio + utilities
 UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl"
 
+# Developer tools
+DEV_PKGS="github-cli"
+
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $STOATOOLS_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -100,11 +106,13 @@ echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
 echo -e "  ${S}Stoatools:  ${STOATOOLS_PKGS}${R}"
+echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
+echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
 echo ""
 
@@ -193,6 +201,26 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${O}[✓] eww-wayland installed.${R}"
     else
         echo -e "  ${S}[~] eww already installed.${R}"
+    fi
+
+    # Enpass — Password manager (AUR)
+    echo ""
+    if ! command -v enpass &>/dev/null; then
+        echo -e "  ${F}Installing Enpass (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm enpass-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm enpass-bin
+        else
+            echo -e "  ${S}Installing Enpass manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/enpass-bin.git "$_tmpdir/enpass-bin"
+            (cd "$_tmpdir/enpass-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Enpass installed.${R}"
+    else
+        echo -e "  ${S}[~] Enpass already installed.${R}"
     fi
 else
     echo -e "  ${S}[~] Packages skipped.${R}"

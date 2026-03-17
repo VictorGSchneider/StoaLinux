@@ -53,6 +53,9 @@ _link "${STOA_DIR}/waybar/style.css"  "${CONFIG_DIR}/waybar/style.css"
 _link "${STOA_DIR}/i3/config"         "${CONFIG_DIR}/i3/config"
 _link "${STOA_DIR}/i3/i3status.conf"  "${CONFIG_DIR}/i3/i3status.conf"
 
+# ── Hyprlock (lock screen) ──
+_link "${STOA_DIR}/hyprlock/hyprlock.conf" "${CONFIG_DIR}/hypr/hyprlock.conf"
+
 # ── Picom (Xorg only) ──
 _link "${STOA_DIR}/picom/picom.conf" "${CONFIG_DIR}/picom/picom.conf"
 
@@ -181,12 +184,14 @@ echo ""
 echo -e "  ${F}Keybinds:${R}"
 echo -e "  ${S}  Super+Return  Terminal (Alacritty)${R}"
 echo -e "  ${S}  Super+B       Browser (Brave)${R}"
+echo -e "  ${S}  Super+C       Calculator (Qalculate)${R}"
+echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+E       Files (lf)${R}"
 echo -e "  ${S}  Super+Shift+E Files (Thunar)${R}"
 echo -e "  ${S}  Super+N       Monitor (btop)${R}"
-echo -e "  ${S}  Super+D       Launcher (Rofi)${R}"
 echo -e "  ${S}  Super+O       Notes (Obsidian)${R}"
 echo -e "  ${S}  Super+M       Memento Mori (eww)${R}"
+echo -e "  ${S}  Super+Escape  Lock screen${R}"
 echo -e "  ${S}  Super+/       Bar keybinds (toggle)${R}"
 echo -e "  ${S}  Super+Shift+T OCR — extract text from screen${R}"
 echo -e "  ${S}  Super+Shift+P Advanced paste${R}"

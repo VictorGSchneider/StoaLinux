@@ -73,7 +73,11 @@
         "ffmpegthumbnailer",
         "gvfs",
         "gvfs-mtp",
-        "catfish"
+        "catfish",
+        "qalculate-gtk",
+        "hyprlock",
+        "i3lock-color",
+        "github-cli"
     ],
     "parallel downloads": 5,
     "profile_config": {
