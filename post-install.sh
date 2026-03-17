@@ -68,8 +68,8 @@ STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar
 # Screenshot — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim"
 
-# PowerTools (OCR, paste, etc.)
-POWERTOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
+# Stoatools (OCR, paste, resize, rename, locksmith)
+STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
 
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard cliphist"
@@ -89,7 +89,7 @@ UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq cu
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $POWERTOOLS_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -99,7 +99,7 @@ echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
-echo -e "  ${S}PowerTools: ${POWERTOOLS_PKGS}${R}"
+echo -e "  ${S}Stoatools:  ${STOATOOLS_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
@@ -270,7 +270,9 @@ echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"
 echo -e "  ${S}  stoa-walls        — Generate wallpapers${R}"
 echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
-echo -e "  ${S}  stoa-ocr          — Extract text from the screen (OCR)${R}"
+echo ""
+echo -e "  ${F}Stoatools (also available as Thunar right-click actions):${R}"
+echo -e "  ${S}  stoa-ocr          — Extract text from screen or image (OCR)${R}"
 echo -e "  ${S}  stoa-paste        — Paste with advanced formatting${R}"
 echo -e "  ${S}  stoa-resize       — Batch resize images${R}"
 echo -e "  ${S}  stoa-rename       — Rename files with regex${R}"

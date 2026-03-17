@@ -1,6 +1,6 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — PowerRename                                   ║
+# ║  STOA LINUX — Stoatools Rename                               ║
 # ║  Batch rename files with regex and preview                   ║
 # ║  Requires: rofi                                              ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -67,7 +67,7 @@ elif [ $# -gt 0 ]; then
 fi
 
 if [ ${#files[@]} -eq 0 ]; then
-    notify-send -t 3000 "PowerRename" "No files selected"
+    notify-send -t 3000 "Stoatools Rename" "No files selected"
     echo "No files selected."
     exit 1
 fi
@@ -109,7 +109,7 @@ for f in "${files[@]}"; do
 done
 
 if [ $changes -eq 0 ]; then
-    notify-send -t 3000 "PowerRename" "No files match the pattern"
+    notify-send -t 3000 "Stoatools Rename" "No files match the pattern"
     exit 0
 fi
 
@@ -118,7 +118,7 @@ if $DRY_RUN; then
     echo "$preview"
     echo "---"
     echo "$changes file(s) would be renamed (dry run)"
-    notify-send -t 5000 "PowerRename" "Dry run: $changes file(s)\n(see terminal)"
+    notify-send -t 5000 "Stoatools Rename" "Dry run: $changes file(s)\n(see terminal)"
     exit 0
 fi
 
@@ -135,10 +135,10 @@ renamed=0
 for src in "${!rename_map[@]}"; do
     dst="${rename_map[$src]}"
     if [ -e "$dst" ]; then
-        notify-send -t 3000 "PowerRename" "Conflict: $(basename "$dst") already exists, skipping"
+        notify-send -t 3000 "Stoatools Rename" "Conflict: $(basename "$dst") already exists, skipping"
         continue
     fi
     mv -- "$src" "$dst" && ((renamed++))
 done
 
-notify-send -t 3000 "PowerRename" "${renamed}/${changes} file(s) renamed"
+notify-send -t 3000 "Stoatools Rename" "${renamed}/${changes} file(s) renamed"

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  STOA LINUX — Thunar Custom Actions (Stoatools)             ║
+  ║  "The tools of virtue are always at hand." — Seneca         ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<actions>
+
+  <!-- Stoatools: Resize Images -->
+  <action>
+    <icon>image-x-generic</icon>
+    <name>Stoatools: Resize</name>
+    <submenu>Stoatools</submenu>
+    <unique-id>stoa-resize</unique-id>
+    <command>~/.local/bin/stoa-resize %F</command>
+    <description>Resize selected images with presets</description>
+    <patterns>*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff;*.tif;*.gif</patterns>
+    <image-files/>
+  </action>
+
+  <!-- Stoatools: Rename Files -->
+  <action>
+    <icon>edit-find-replace</icon>
+    <name>Stoatools: Rename</name>
+    <submenu>Stoatools</submenu>
+    <unique-id>stoa-rename</unique-id>
+    <command>~/.local/bin/stoa-rename %F</command>
+    <description>Batch rename files with regex and preview</description>
+    <patterns>*</patterns>
+    <other-files/>
+    <text-files/>
+    <image-files/>
+    <audio-files/>
+    <video-files/>
+  </action>
+
+  <!-- Stoatools: OCR (Extract Text) -->
+  <action>
+    <icon>document-edit</icon>
+    <name>Stoatools: OCR</name>
+    <submenu>Stoatools</submenu>
+    <unique-id>stoa-ocr</unique-id>
+    <command>~/.local/bin/stoa-ocr %f</command>
+    <description>Extract text from image via OCR and copy to clipboard</description>
+    <patterns>*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff;*.tif</patterns>
+    <image-files/>
+  </action>
+
+  <!-- Stoatools: Locksmith -->
+  <action>
+    <icon>dialog-password</icon>
+    <name>Stoatools: Locksmith</name>
+    <submenu>Stoatools</submenu>
+    <unique-id>stoa-locksmith</unique-id>
+    <command>~/.local/bin/stoa-locksmith %f</command>
+    <description>Find which process is using this file</description>
+    <patterns>*</patterns>
+    <other-files/>
+    <text-files/>
+    <image-files/>
+    <audio-files/>
+    <video-files/>
+  </action>
+
+</actions>

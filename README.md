@@ -67,17 +67,23 @@ Stoic dotfiles for Arch Linux. A minimalist customization inspired by Stoic phil
 | `stoa-clipboard` | Clipboard manager with pinned favorites (wl-clipboard + cliphist + rofi) |
 | `stoa-quotes-sync` | Stoic quotes from the internet with playlist rotation |
 
-### PowerTools
+### Stoatools
 
-Tools inspired by Microsoft PowerToys, adapted for Linux/Wayland:
+Utility tools integrated with the desktop and Thunar file manager:
 
-| Script | PowerToys Equivalent | Description |
-|--------|---------------------|-------------|
-| `stoa-locksmith` | File Locksmith | Find which process is locking a file (`lsof` + rofi) |
-| `stoa-resize` | Image Resizer | Resize multiple images at once with presets (ImageMagick + rofi) |
-| `stoa-paste` | Advanced Paste | Paste clipboard in different formats: plain text, UPPERCASE, lowercase, Title Case, snake_case, camelCase, formatted JSON, clean Markdown |
-| `stoa-ocr` | Text Extractor | Extract text from screen areas using OCR — supports English and Portuguese (`grim` + `slurp` + `tesseract`) |
-| `stoa-rename` | PowerRename | Batch rename files with regex, rofi preview, and conflict protection |
+| Script | Description |
+|--------|-------------|
+| `stoa-locksmith` | Find which process is locking a file (`lsof` + rofi) |
+| `stoa-resize` | Resize multiple images at once with presets (ImageMagick + rofi) |
+| `stoa-paste` | Paste clipboard in different formats: plain, UPPERCASE, lowercase, Title Case, snake_case, camelCase, JSON, Markdown |
+| `stoa-ocr` | Extract text from screen areas or image files using OCR (`tesseract`) |
+| `stoa-rename` | Batch rename files with regex, rofi preview, and conflict protection |
+
+Stoatools with Thunar integration (right-click custom actions):
+- **Resize images** — select images in Thunar, right-click → Stoatools: Resize
+- **Rename files** — select files, right-click → Stoatools: Rename
+- **OCR image** — select an image, right-click → Stoatools: OCR
+- **Locksmith** — select a file, right-click → Stoatools: Locksmith
 
 ## Installation
 
@@ -148,7 +154,7 @@ sudo pacman -S zsh git base-devel
 # Clipboard
 sudo pacman -S wl-clipboard cliphist
 
-# PowerTools (OCR, paste, etc.)
+# Stoatools (OCR, paste, resize, rename, locksmith)
 sudo pacman -S tesseract tesseract-data-eng tesseract-data-por lsof wtype
 
 # AUR: Widgets, Browser, Notes, Screenshot editor
@@ -241,7 +247,7 @@ startx
 - **Quotes Sync** — fetches Stoic quotes from external APIs with playlist rotation (each app gets a different quote)
 - **OSD** — visual indicators for volume, brightness, CapsLock, and NumLock with 1% increments
 - **Clipboard Manager** — history with pinned favorites via rofi
-- **PowerTools** — tools inspired by PowerToys: locksmith, resize, paste, OCR, rename
+- **Stoatools** — utility tools (locksmith, resize, paste, OCR, rename) with Thunar integration
 - **Greek column prompt** (Ι) in bronze with git branch
 - **stoa-fetch** — system fetch with Greek temple ASCII art
 - **stoa-walls** — wallpaper generator with ImageMagick

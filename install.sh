@@ -80,6 +80,9 @@ _link "${STOA_DIR}/gtk-4.0/settings.ini" "${CONFIG_DIR}/gtk-4.0/settings.ini"
 _link "${STOA_DIR}/qt5ct/qt5ct.conf" "${CONFIG_DIR}/qt5ct/qt5ct.conf"
 _link "${STOA_DIR}/qt6ct/qt6ct.conf" "${CONFIG_DIR}/qt6ct/qt6ct.conf"
 
+# ── Thunar (Stoatools custom actions) ──
+_link "${STOA_DIR}/thunar/uca.xml" "${CONFIG_DIR}/Thunar/uca.xml"
+
 # ── Stoic apps ──
 _link "${STOA_DIR}/zathura/zathurarc"  "${CONFIG_DIR}/zathura/zathurarc"
 _link "${STOA_DIR}/mpv/mpv.conf"       "${CONFIG_DIR}/mpv/mpv.conf"
