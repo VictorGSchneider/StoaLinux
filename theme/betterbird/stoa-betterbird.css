@@ -1,0 +1,314 @@
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  STOA LINUX — Betterbird Custom CSS (userChrome + userContent)
+   ║  "Letters are our absent friends." — Seneca                  ║
+   ║                                                              ║
+   ║  Stoic palette for Betterbird (Thunderbird fork).            ║
+   ║  Placed in: ~/.betterbird/PROFILE/chrome/userChrome.css      ║
+   ║             ~/.betterbird/PROFILE/chrome/userContent.css      ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+
+/* ── Stoa palette ── */
+:root {
+    --stoa-bg-dark:     #1a1714;
+    --stoa-bg:          #211e19;
+    --stoa-bg-light:    #2d2921;
+    --stoa-fg:          #d4cfc4;
+    --stoa-fg-dim:      #a89f91;
+    --stoa-bronze:      #c49a5c;
+    --stoa-gold:        #d4a84b;
+    --stoa-olive:       #8a9a6c;
+    --stoa-terracotta:  #b36b5a;
+    --stoa-stone:       #6e6a62;
+    --stoa-parchment:   #c4b08a;
+    --stoa-azure:       #5a7a8a;
+}
+
+/* ── General backgrounds ── */
+#messengerWindow,
+#msgHeaderView,
+#messagepane,
+#threadTree,
+#folderTree,
+#tabmail-container,
+.contentTabInstance {
+    background-color: var(--stoa-bg) !important;
+    color: var(--stoa-fg) !important;
+}
+
+/* ── Menu bar ── */
+#toolbar-menubar,
+#mail-bar3,
+menubar {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg) !important;
+    border-bottom: 1px solid var(--stoa-stone) !important;
+}
+
+menubar > menu[open="true"] > menupopup,
+menupopup {
+    background-color: var(--stoa-bg-light) !important;
+    color: var(--stoa-fg) !important;
+    border: 1px solid var(--stoa-stone) !important;
+}
+
+menuitem:hover,
+menu:hover {
+    background-color: var(--stoa-bronze) !important;
+    color: var(--stoa-bg-dark) !important;
+}
+
+menuseparator {
+    border-color: var(--stoa-stone) !important;
+}
+
+/* ── Toolbar ── */
+#mail-bar3,
+.toolbar,
+#tabs-toolbar,
+#unified-toolbar-container,
+.unified-toolbar {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg) !important;
+}
+
+toolbarbutton:hover {
+    background-color: var(--stoa-bg-light) !important;
+    color: var(--stoa-bronze) !important;
+}
+
+/* ── Tab bar ── */
+#tabmail-tabs .tabmail-tab {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg-dim) !important;
+}
+
+#tabmail-tabs .tabmail-tab[selected="true"] {
+    background-color: var(--stoa-bg) !important;
+    color: var(--stoa-bronze) !important;
+    border-bottom: 2px solid var(--stoa-bronze) !important;
+}
+
+/* ── Folder pane (left sidebar) ── */
+#folderTree {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg) !important;
+}
+
+#folderTree treechildren::-moz-tree-row(selected) {
+    background-color: var(--stoa-bronze) !important;
+}
+
+#folderTree treechildren::-moz-tree-cell-text(selected) {
+    color: var(--stoa-bg-dark) !important;
+}
+
+#folderTree treechildren::-moz-tree-row(hover) {
+    background-color: var(--stoa-bg-light) !important;
+}
+
+#folderTree treechildren::-moz-tree-cell-text {
+    color: var(--stoa-fg) !important;
+}
+
+/* Unread count badge */
+#folderTree treechildren::-moz-tree-cell-text(hasUnreadMessages-true) {
+    color: var(--stoa-gold) !important;
+    font-weight: bold !important;
+}
+
+/* ── Thread pane (message list) ── */
+#threadTree {
+    background-color: var(--stoa-bg) !important;
+    color: var(--stoa-fg) !important;
+}
+
+#threadTree treechildren::-moz-tree-row(selected) {
+    background-color: var(--stoa-bronze) !important;
+}
+
+#threadTree treechildren::-moz-tree-cell-text(selected) {
+    color: var(--stoa-bg-dark) !important;
+}
+
+#threadTree treechildren::-moz-tree-row(hover) {
+    background-color: var(--stoa-bg-light) !important;
+}
+
+#threadTree treechildren::-moz-tree-row(odd) {
+    background-color: var(--stoa-bg-dark) !important;
+}
+
+/* Unread messages */
+#threadTree treechildren::-moz-tree-cell-text(unread) {
+    color: var(--stoa-gold) !important;
+    font-weight: bold !important;
+}
+
+/* Flagged/starred messages */
+#threadTree treechildren::-moz-tree-cell-text(flagged) {
+    color: var(--stoa-terracotta) !important;
+}
+
+/* ── Message header ── */
+#msgHeaderView {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg) !important;
+    border-bottom: 1px solid var(--stoa-stone) !important;
+}
+
+.headerValue {
+    color: var(--stoa-fg) !important;
+}
+
+.msgHeaderView-button {
+    background-color: var(--stoa-bg-light) !important;
+    color: var(--stoa-fg) !important;
+    border: 1px solid var(--stoa-stone) !important;
+    border-radius: 3px !important;
+}
+
+.msgHeaderView-button:hover {
+    background-color: var(--stoa-bronze) !important;
+    color: var(--stoa-bg-dark) !important;
+}
+
+/* ── Message content ── */
+#messagepanebox {
+    background-color: var(--stoa-bg) !important;
+}
+
+/* ── Compose window ── */
+#msgcomposeWindow,
+#MsgHeadersToolbar,
+#composeContentBox,
+#content-frame {
+    background-color: var(--stoa-bg) !important;
+    color: var(--stoa-fg) !important;
+}
+
+#msgSubject {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg) !important;
+    border: 1px solid var(--stoa-stone) !important;
+    border-radius: 3px !important;
+}
+
+#msgSubject:focus {
+    border-color: var(--stoa-bronze) !important;
+}
+
+/* Address fields */
+.address-container {
+    background-color: var(--stoa-bg-dark) !important;
+}
+
+.address-pill {
+    background-color: var(--stoa-bg-light) !important;
+    color: var(--stoa-fg) !important;
+    border: 1px solid var(--stoa-stone) !important;
+    border-radius: 3px !important;
+}
+
+.address-pill:hover {
+    border-color: var(--stoa-bronze) !important;
+}
+
+/* ── Search bar ── */
+#searchInput,
+.search-bar {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg) !important;
+    border: 1px solid var(--stoa-stone) !important;
+    border-radius: 3px !important;
+}
+
+#searchInput:focus,
+.search-bar:focus {
+    border-color: var(--stoa-bronze) !important;
+}
+
+/* ── Scrollbars ── */
+scrollbar {
+    background-color: var(--stoa-bg-dark) !important;
+}
+
+scrollbar thumb {
+    background-color: var(--stoa-stone) !important;
+    border-radius: 4px !important;
+}
+
+scrollbar thumb:hover {
+    background-color: var(--stoa-fg-dim) !important;
+}
+
+/* ── Splitters ── */
+splitter {
+    background-color: var(--stoa-stone) !important;
+    border: none !important;
+}
+
+/* ── Buttons ── */
+button,
+toolbarbutton {
+    color: var(--stoa-fg) !important;
+}
+
+button:not([disabled]):hover,
+toolbarbutton:not([disabled]):hover {
+    background-color: var(--stoa-bg-light) !important;
+}
+
+/* Primary action buttons */
+button.primary,
+.button-primary {
+    background-color: var(--stoa-bronze) !important;
+    color: var(--stoa-bg-dark) !important;
+    border: none !important;
+}
+
+button.primary:hover,
+.button-primary:hover {
+    background-color: var(--stoa-gold) !important;
+}
+
+/* ── Status bar ── */
+#status-bar {
+    background-color: var(--stoa-bg-dark) !important;
+    color: var(--stoa-fg-dim) !important;
+    border-top: 1px solid var(--stoa-stone) !important;
+}
+
+/* ── Tooltips ── */
+tooltip {
+    background-color: var(--stoa-bg-light) !important;
+    color: var(--stoa-fg) !important;
+    border: 1px solid var(--stoa-stone) !important;
+}
+
+/* ── Selection ── */
+::selection {
+    background-color: var(--stoa-bronze) !important;
+    color: var(--stoa-bg-dark) !important;
+}
+
+/* ── Links ── */
+a {
+    color: var(--stoa-azure) !important;
+}
+
+a:hover {
+    color: var(--stoa-bronze) !important;
+}
+
+/* ── Calendar (if enabled) ── */
+#calendar-panel,
+.calendar-task-tree {
+    background-color: var(--stoa-bg) !important;
+    color: var(--stoa-fg) !important;
+}
+
+.calendar-event-box {
+    background-color: var(--stoa-bg-light) !important;
+    border: 1px solid var(--stoa-bronze) !important;
+    color: var(--stoa-fg) !important;
+}

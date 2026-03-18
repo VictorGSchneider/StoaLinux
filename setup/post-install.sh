@@ -59,6 +59,9 @@ UI_PKGS="rofi dunst"
 BROWSER_PKGS="brave-bin"
 NOTES_PKGS="obsidian"
 
+# Email (AUR)
+EMAIL_PKGS="betterbird-bin"
+
 # VPN (AUR)
 VPN_PKGS="protonvpn-cli"
 
@@ -114,6 +117,7 @@ echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
+echo -e "  ${S}Email:      ${EMAIL_PKGS} (AUR)${R}"
 echo -e "  ${S}VPN:        ${VPN_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
@@ -346,6 +350,26 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
     else
         echo -e "  ${S}[~] howdy already installed.${R}"
+    fi
+
+    # Betterbird — Email client (AUR) — "Letters are our absent friends." — Seneca
+    echo ""
+    if ! command -v betterbird &>/dev/null; then
+        echo -e "  ${F}Installing Betterbird (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm betterbird-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm betterbird-bin
+        else
+            echo -e "  ${S}Installing Betterbird manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/betterbird-bin.git "$_tmpdir/betterbird-bin"
+            (cd "$_tmpdir/betterbird-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Betterbird installed.${R}"
+    else
+        echo -e "  ${S}[~] Betterbird already installed.${R}"
     fi
 
     # ProtonVPN CLI (AUR) — "The wise man guards his retreat." — Seneca

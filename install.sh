@@ -92,6 +92,36 @@ if [ -d "${HOME}/.steam" ]; then
         echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
 fi
 
+# Betterbird — apply Stoa CSS to all profiles
+if [ -d "${HOME}/.betterbird" ]; then
+    for profile_dir in "${HOME}/.betterbird/"*.default*; do
+        [ -d "$profile_dir" ] || continue
+        chrome_dir="${profile_dir}/chrome"
+        mkdir -p "$chrome_dir"
+        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
+        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
+        # Enable toolkit.legacyUserProfileCustomizations.stylesheets
+        prefs_file="${profile_dir}/user.js"
+        if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
+            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
+        fi
+        echo -e "  ${O}[+] Betterbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
+    done
+elif [ -d "${HOME}/.thunderbird" ]; then
+    for profile_dir in "${HOME}/.thunderbird/"*.default*; do
+        [ -d "$profile_dir" ] || continue
+        chrome_dir="${profile_dir}/chrome"
+        mkdir -p "$chrome_dir"
+        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
+        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
+        prefs_file="${profile_dir}/user.js"
+        if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
+            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
+        fi
+        echo -e "  ${O}[+] Thunderbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
+    done
+fi
+
 # ── Stoa data dirs ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 mkdir -p "${HOME}/Pictures/screenshots"
@@ -151,6 +181,8 @@ x-scheme-handler/http=brave-browser.desktop
 x-scheme-handler/https=brave-browser.desktop
 x-scheme-handler/about=brave-browser.desktop
 x-scheme-handler/unknown=brave-browser.desktop
+x-scheme-handler/mailto=betterbird.desktop
+message/rfc822=betterbird.desktop
 text/markdown=obsidian.desktop
 application/pdf=org.pwmt.zathura.desktop
 image/png=imv.desktop

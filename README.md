@@ -109,8 +109,9 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><td>Neovim</td><td>Editor</td><td>Steam</td><td>Gaming (Proton)</td></tr>
   <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
   <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>
-  <tr><td>imv</td><td>Images</td><td>Enpass</td><td>Passwords</td></tr>
-  <tr><td>lf / Thunar</td><td>Files</td><td>howdy</td><td>Face unlock</td></tr>
+  <tr><td>Betterbird</td><td>Email</td><td>Enpass</td><td>Passwords</td></tr>
+  <tr><td>imv</td><td>Images</td><td>howdy</td><td>Face unlock</td></tr>
+  <tr><td>lf / Thunar</td><td>Files</td><td></td><td></td></tr>
 </table>
 
 ## Theme
@@ -120,6 +121,7 @@ The Stoa theme is applied consistently across:
 - **GTK 3/4** — `stoa-gtk.css` with dark palette + EB Garamond
 - **Qt 5/6** — Fusion dark via qt5ct/qt6ct
 - **Steam** — CSS overlay (`libraryroot.custom.css`)
+- **Betterbird** — userChrome/userContent CSS (`stoa-betterbird.css`)
 - **Calibre** — dark reader with EB Garamond 18pt
 - **YACReader** — full Qt stylesheet
 - **Icons** — Colloid-dark
