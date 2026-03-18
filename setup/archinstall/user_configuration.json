@@ -27,7 +27,7 @@
         "picom",
         "rofi",
         "dunst",
-        "alacritty",
+        "kitty",
         "neovim",
         "zathura",
         "zathura-pdf-mupdf",
@@ -75,7 +75,10 @@
         "catfish",
         "qalculate-gtk",
         "hyprlock",
-        "github-cli"
+        "i3lock-color",
+        "github-cli",
+        "nftables",
+        "libinput-gestures"
     ],
     "parallel downloads": 5,
     "profile_config": {
