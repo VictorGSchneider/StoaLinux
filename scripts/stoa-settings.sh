@@ -548,6 +548,81 @@ _bt_toggle() {
     fi
 }
 
+_bt_saved() {
+    local lines=()
+    local connected_macs
+    connected_macs=$(bluetoothctl devices Connected 2>/dev/null | awk '{print $2}')
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local mac name
+        mac=$(echo "$line" | awk '{print $2}')
+        name=$(echo "$line" | awk '{$1=""; $2=""; print substr($0,3)}')
+
+        local status_icon="  "
+        echo "$connected_macs" | grep -qx "$mac" && status_icon="  "
+
+        local type_info
+        type_info=$(bluetoothctl info "$mac" 2>/dev/null | grep "Icon:" | awk '{print $2}')
+        [ -z "$type_info" ] && type_info="device"
+
+        lines+=("${status_icon}${name}  (${type_info})")
+    done < <(bluetoothctl devices Paired 2>/dev/null)
+
+    if [ ${#lines[@]} -eq 0 ]; then
+        _notify "No saved Bluetooth devices"
+        return
+    fi
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Saved Devices")
+    [ -z "$choice" ] && return
+
+    local dev_name
+    dev_name=$(echo "$choice" | sed 's/^  //;s/^  //;s/  (.*//')
+
+    local dev_mac
+    dev_mac=$(bluetoothctl devices Paired 2>/dev/null | grep "$dev_name" | awk '{print $2}')
+    [ -z "$dev_mac" ] && return
+
+    local is_connected=false
+    echo "$connected_macs" | grep -qx "$dev_mac" && is_connected=true
+
+    local action
+    if $is_connected; then
+        action=$(_rofi_select "  $dev_name" \
+            "  Disconnect" \
+            "  Forget" \
+            "  Back")
+    else
+        action=$(_rofi_select "  $dev_name" \
+            "  Connect" \
+            "  Forget" \
+            "  Back")
+    fi
+    [ -z "$action" ] || [[ "$action" == *"Back"* ]] && return
+
+    case "$action" in
+        *Connect*)
+            _notify "Connecting to $dev_name..."
+            bluetoothctl connect "$dev_mac" 2>/dev/null \
+                && _notify "Connected to $dev_name" \
+                || _notify "Failed to connect to $dev_name"
+            ;;
+        *Disconnect*)
+            bluetoothctl disconnect "$dev_mac" 2>/dev/null
+            _notify "Disconnected from $dev_name"
+            ;;
+        *Forget*)
+            _rofi_confirm "Forget $dev_name?" && {
+                bluetoothctl untrust "$dev_mac" 2>/dev/null
+                bluetoothctl remove "$dev_mac" 2>/dev/null
+                _notify "Forgot $dev_name"
+            }
+            ;;
+    esac
+}
+
 menu_bluetooth() {
     if ! command -v bluetoothctl &>/dev/null; then
         _notify "Bluetooth not available (install bluez + bluez-utils)"
@@ -561,6 +636,7 @@ menu_bluetooth() {
         local choice
         choice=$(_rofi_select "  Bluetooth ($status)" \
             "  Scan and connect" \
+            "  Saved devices" \
             "  Disconnect device" \
             "  Toggle Bluetooth ($status)" \
             "  Back")
@@ -568,6 +644,7 @@ menu_bluetooth() {
 
         case "$choice" in
             *Scan*)       _bt_scan_connect ;;
+            *Saved*)      _bt_saved ;;
             *Disconnect*) _bt_disconnect ;;
             *Toggle*)     _bt_toggle ;;
         esac
