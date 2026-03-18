@@ -776,6 +776,146 @@ menu_vpn() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   FIREWALL & PORTS
+# ══════════════════════════════════════════════════════════════
+
+STOA_FW_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/firewall"
+WHITELIST="${STOA_FW_DIR}/allowed-ports.conf"
+
+_fw_status() {
+    if sudo nft list table inet stoa_firewall &>/dev/null 2>&1; then
+        echo "Active"
+    else
+        echo "Inactive"
+    fi
+}
+
+_fw_ports_list() {
+    local lines=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local proto local_addr pid_prog port process
+        proto=$(echo "$line" | awk '{print $1}')
+        local_addr=$(echo "$line" | awk '{print $4}')
+        port=$(echo "$local_addr" | rev | cut -d: -f1 | rev)
+        pid_prog=$(echo "$line" | awk '{print $6}')
+
+        if [[ "$pid_prog" =~ users:\(\(\"([^\"]+)\" ]]; then
+            process="${BASH_REMATCH[1]}"
+        else
+            process="unknown"
+        fi
+
+        local status="BLOCKED"
+        grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null && status="ALLOWED"
+        lines+=("${status}  :${port}/${proto}  ${process}")
+    done < <(ss -tlnpH 2>/dev/null; ss -ulnpH 2>/dev/null)
+
+    if [ ${#lines[@]} -eq 0 ]; then
+        echo "No listening ports"
+    else
+        printf '%s\n' "${lines[@]}"
+    fi
+}
+
+_fw_toggle_port() {
+    local entry="$1"
+    [ -z "$entry" ] && return
+    [[ "$entry" == "No listening"* ]] && return
+
+    local port_proto
+    port_proto=$(echo "$entry" | grep -oP ':\K[0-9]+/[a-z]+')
+    [ -z "$port_proto" ] && return
+
+    local port proto
+    port=$(echo "$port_proto" | cut -d/ -f1)
+    proto=$(echo "$port_proto" | cut -d/ -f2)
+
+    if grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null; then
+        # Currently allowed → block it
+        if _rofi_confirm "Block port ${port}/${proto}?"; then
+            stoa-firewall deny "$port" "$proto" 2>/dev/null
+            _notify "Port ${port}/${proto} blocked"
+        fi
+    else
+        # Currently blocked → allow it
+        if _rofi_confirm "Allow port ${port}/${proto}?"; then
+            stoa-firewall allow "$port" "$proto" 2>/dev/null
+            _notify "Port ${port}/${proto} allowed"
+        fi
+    fi
+}
+
+menu_firewall() {
+    if ! command -v nft &>/dev/null; then
+        _notify "nftables not installed. Run: stoa-firewall setup"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_fw_status)
+
+        local choice
+        choice=$(_rofi_select "  Firewall ($status)" \
+            "  View ports" \
+            "  Allow a port" \
+            "  Block a port" \
+            "  Enable firewall" \
+            "  Disable firewall" \
+            "  Setup (first time)" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"View ports"*)
+                local port_choice
+                port_choice=$(_fw_ports_list | "${ROFI[@]}" -p "  Ports (tap to toggle)")
+                [ -n "$port_choice" ] && _fw_toggle_port "$port_choice"
+                ;;
+            *"Allow a port"*)
+                local port_input
+                port_input=$(_rofi_input "  Port to allow (e.g. 8080)")
+                [ -z "$port_input" ] && continue
+                local proto_choice
+                proto_choice=$(_rofi_select "  Protocol" "tcp" "udp")
+                [ -z "$proto_choice" ] && continue
+                stoa-firewall allow "$port_input" "$proto_choice" 2>/dev/null
+                _notify "Port ${port_input}/${proto_choice} allowed"
+                ;;
+            *"Block a port"*)
+                if [ ! -s "$WHITELIST" ]; then
+                    _notify "No ports in whitelist"
+                    continue
+                fi
+                local block_choice
+                block_choice=$(cat "$WHITELIST" | "${ROFI[@]}" -p "  Remove from whitelist")
+                [ -z "$block_choice" ] && continue
+                local bport bproto
+                bport=$(echo "$block_choice" | cut -d/ -f1)
+                bproto=$(echo "$block_choice" | cut -d/ -f2)
+                stoa-firewall deny "$bport" "$bproto" 2>/dev/null
+                _notify "Port ${bport}/${bproto} blocked"
+                ;;
+            *"Enable"*)
+                kitty -e sudo stoa-firewall enable &
+                disown
+                ;;
+            *"Disable"*)
+                _rofi_confirm "Disable firewall? All ports will be open." && {
+                    kitty -e sudo stoa-firewall disable &
+                    disown
+                }
+                ;;
+            *"Setup"*)
+                kitty -e sudo stoa-firewall setup &
+                disown
+                ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -873,6 +1013,7 @@ main_menu() {
             "  Audio" \
             "  Network" \
             "  VPN" \
+            "  Firewall" \
             "  Bluetooth" \
             "  Cloud Drive" \
             "  Wallpaper" \
@@ -887,6 +1028,7 @@ main_menu() {
             *Audio*)        menu_audio ;;
             *Network*)      menu_network ;;
             *VPN*)          menu_vpn ;;
+            *Firewall*)     menu_firewall ;;
             *Bluetooth*)    menu_bluetooth ;;
             *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;

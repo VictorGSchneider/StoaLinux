@@ -104,6 +104,9 @@ FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome"
 # Toolkit unification (Qt = GTK appearance)
 THEME_PKGS="qt5ct qt6ct"
 
+# Firewall
+FIREWALL_PKGS="nftables"
+
 # Audio + utilities
 UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl"
 
@@ -113,7 +116,7 @@ DEV_PKGS="github-cli"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -134,6 +137,7 @@ echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
+echo -e "  ${S}Firewall:   ${FIREWALL_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
 echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
@@ -498,6 +502,7 @@ echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
 echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P2P${R}"
 echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDrive, etc)${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
+echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+I → Firewall)${R}"
 echo ""
 echo -e "  ${F}Leisure:${R}"
 echo -e "  ${S}  steam             — Gaming (Proton enabled for Windows games)${R}"

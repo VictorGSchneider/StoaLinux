@@ -77,7 +77,8 @@
         "qalculate-gtk",
         "hyprlock",
         "i3lock-color",
-        "github-cli"
+        "github-cli",
+        "nftables"
     ],
     "parallel downloads": 5,
     "profile_config": {
