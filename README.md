@@ -69,7 +69,7 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 
 <table>
   <tr><th>Key</th><th>Action</th><th>Key</th><th>Action</th></tr>
-  <tr><td><code>Super+Return</code></td><td>Terminal (Alacritty)</td><td><code>Super+Shift+V</code></td><td>Clipboard pin</td></tr>
+  <tr><td><code>Super+Return</code></td><td>Terminal (Kitty)</td><td><code>Super+Shift+V</code></td><td>Clipboard pin</td></tr>
   <tr><td><code>Super+B</code></td><td>Browser (Brave)</td><td><code>Super+Shift+T</code></td><td>OCR (screen text)</td></tr>
   <tr><td><code>Super+C</code></td><td>Calculator (Qalculate)</td><td><code>Super+Shift+P</code></td><td>Advanced paste</td></tr>
   <tr><td><code>Super+D</code></td><td>Launcher (Rofi)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
@@ -105,7 +105,7 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><th>App</th><th>Purpose</th><th>App</th><th>Purpose</th></tr>
   <tr><td>Brave</td><td>Browser</td><td>btop</td><td>Monitor</td></tr>
   <tr><td>Obsidian</td><td>Notes</td><td>Qalculate</td><td>Calculator</td></tr>
-  <tr><td>Alacritty</td><td>Terminal</td><td>eww</td><td>Memento Mori widget</td></tr>
+  <tr><td>Kitty</td><td>Terminal</td><td>eww</td><td>Memento Mori widget</td></tr>
   <tr><td>Neovim</td><td>Editor</td><td>Steam</td><td>Gaming (Proton)</td></tr>
   <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
   <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>

@@ -52,7 +52,7 @@ _link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
 _link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"
 
 # ── Apps ──
-_link "${STOA_DIR}/config/alacritty/alacritty.toml" "${CONFIG_DIR}/alacritty/alacritty.toml"
+_link "${STOA_DIR}/config/kitty/kitty.conf" "${CONFIG_DIR}/kitty/kitty.conf"
 _link "${STOA_DIR}/config/nvim/init.vim"            "${CONFIG_DIR}/nvim/init.vim"
 _link "${STOA_DIR}/config/nvim/colors/stoa.vim"     "${CONFIG_DIR}/nvim/colors/stoa.vim"
 _link "${STOA_DIR}/config/rofi/config.rasi"         "${CONFIG_DIR}/rofi/config.rasi"

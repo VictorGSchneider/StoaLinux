@@ -23,7 +23,7 @@ export ELECTRON_OZONE_PLATFORM_HINT="auto"
 export BROWSER="brave"
 export EDITOR="nvim"
 export VISUAL="nvim"
-export TERMINAL="alacritty"
+export TERMINAL="kitty"
 export FILE_MANAGER="lf"
 export PAGER="less"
 

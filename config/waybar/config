@@ -120,9 +120,9 @@
         "rewrite": {
             "brave-browser~(.*)": "Super+B │ $1",
             "obsidian~(.*)": "Super+O │ $1",
-            "Alacritty~.*btop.*": "Super+N │ btop",
-            "Alacritty~.*lf.*": "Super+E │ lf",
-            "Alacritty~(.*)": "Super+⏎ │ $1",
+            "kitty~.*btop.*": "Super+N │ btop",
+            "kitty~.*lf.*": "Super+E │ lf",
+            "kitty~(.*)": "Super+⏎ │ $1",
             "org.pwmt.zathura~(.*)": "$1",
             "mpv~(.*)": "$1",
             "imv~(.*)": "$1",

@@ -41,7 +41,7 @@ _has_aur() { [[ "$(_helper)" != "pacman" ]]; }
 _is_installed() { pacman -Qi "$1" &>/dev/null; }
 
 _run_in_term() {
-    alacritty -e bash -c "$1; echo; echo 'Pressione Enter...'; read"
+    kitty -e bash -c "$1; echo; echo 'Pressione Enter...'; read"
 }
 
 _apply_stoa_theme() {

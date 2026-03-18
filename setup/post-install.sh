@@ -69,7 +69,7 @@ EMAIL_PKGS="betterbird-bin"
 VPN_PKGS="protonvpn-cli"
 
 # Terminal, editor, wallpapers
-APP_PKGS="alacritty neovim feh imagemagick"
+APP_PKGS="kitty neovim feh imagemagick"
 
 # Stoic apps (minimalist)
 STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish qalculate-gtk calibre"

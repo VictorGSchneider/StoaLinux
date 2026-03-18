@@ -613,7 +613,7 @@ menu_lockscreen() {
                 fi
                 ;;
             *"setup"*)
-                alacritty -e sudo stoa-face setup &
+                kitty -e sudo stoa-face setup &
                 disown
                 ;;
             *"status"*)
@@ -809,7 +809,7 @@ menu_stoa() {
                 _notify "Wallpapers generated!"
                 ;;
             *fetch*)
-                alacritty -e stoa-fetch &
+                kitty -e stoa-fetch &
                 disown
                 ;;
         esac
