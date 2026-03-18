@@ -1597,6 +1597,463 @@ menu_hardware() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   MOUSE & TOUCHPAD
+# ══════════════════════════════════════════════════════════════
+
+STOA_INPUT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/input.conf"
+
+_input_save() {
+    local key="$1" val="$2"
+    mkdir -p "$(dirname "$STOA_INPUT_CONF")"
+    touch "$STOA_INPUT_CONF"
+    if grep -q "^${key}=" "$STOA_INPUT_CONF" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${val}|" "$STOA_INPUT_CONF"
+    else
+        echo "${key}=${val}" >> "$STOA_INPUT_CONF"
+    fi
+}
+
+_input_get() {
+    local key="$1" default="$2"
+    local val
+    val=$(grep "^${key}=" "$STOA_INPUT_CONF" 2>/dev/null | cut -d= -f2)
+    echo "${val:-$default}"
+}
+
+# ── Apply to Hyprland (live) ──
+_input_apply_hypr() {
+    local key="$1" val="$2"
+    hyprctl keyword "$key" "$val" &>/dev/null
+}
+
+# ── Apply to Xorg via xinput ──
+_xinput_set() {
+    local prop="$1" val="$2"
+    while IFS= read -r id; do
+        [ -z "$id" ] && continue
+        xinput set-prop "$id" "$prop" $val 2>/dev/null
+    done < <(xinput list --id-only 2>/dev/null)
+}
+
+# ── Sensitivity / Speed ──
+_mouse_sensitivity() {
+    local current
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:sensitivity 2>/dev/null | grep "float:" | awk '{print $2}')
+    else
+        current=$(_input_get "sensitivity" "0")
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Sensitivity ($current)" \
+        "-1.0  (very slow)" \
+        "-0.75" \
+        "-0.5  (slow)" \
+        "-0.25" \
+        " 0.0  (default)" \
+        " 0.25" \
+        " 0.5  (fast)" \
+        " 0.75" \
+        " 1.0  (very fast)")
+    [ -z "$choice" ] && return
+
+    local val
+    val=$(echo "$choice" | awk '{print $1}')
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:sensitivity" "$val"
+    else
+        # xinput: map -1..1 to 0.25..4.0 (accel speed)
+        _xinput_set "libinput Accel Speed" "$val"
+    fi
+    _input_save "sensitivity" "$val"
+    _notify "Sensitivity: $val"
+}
+
+# ── Acceleration Profile ──
+_mouse_accel_profile() {
+    local current
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:accel_profile 2>/dev/null | grep "str:" | awk '{print $2}')
+        [ -z "$current" ] && current="(default)"
+    else
+        current=$(_input_get "accel_profile" "adaptive")
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Accel Profile ($current)" \
+        "adaptive  (accelerates with speed)" \
+        "flat  (constant speed, no accel)" \
+        "custom")
+    [ -z "$choice" ] && return
+
+    local val
+    val=$(echo "$choice" | awk '{print $1}')
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:accel_profile" "$val"
+    else
+        case "$val" in
+            adaptive) _xinput_set "libinput Accel Profile Enabled" "1 0" ;;
+            flat)     _xinput_set "libinput Accel Profile Enabled" "0 1" ;;
+        esac
+    fi
+    _input_save "accel_profile" "$val"
+    _notify "Accel profile: $val"
+}
+
+# ── Scroll Direction ──
+_mouse_natural_scroll() {
+    local current label
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:natural_scroll 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current=$(_input_get "natural_scroll" "0")
+    fi
+    [ "$current" = "1" ] || [ "$current" = "true" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  Natural Scroll ($label)" \
+        "  Enable (scroll follows content)" \
+        "  Disable (traditional)")
+    [ -z "$choice" ] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:natural_scroll" "$val"
+    else
+        _xinput_set "libinput Natural Scrolling Enabled" "$val"
+    fi
+    _input_save "natural_scroll" "$val"
+    [ "$val" = "1" ] && _notify "Natural scroll: on" || _notify "Natural scroll: off"
+}
+
+# ── Scroll Speed (Hyprland) ──
+_mouse_scroll_factor() {
+    local current
+    current=$(hyprctl getoption input:scroll_factor 2>/dev/null | grep "float:" | awk '{print $2}')
+    [ -z "$current" ] && current="1.0"
+
+    local choice
+    choice=$(_rofi_select "  Scroll Speed ($current)" \
+        "0.5  (slow)" \
+        "0.75" \
+        "1.0  (default)" \
+        "1.5" \
+        "2.0  (fast)" \
+        "3.0  (very fast)")
+    [ -z "$choice" ] && return
+
+    local val
+    val=$(echo "$choice" | awk '{print $1}')
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:scroll_factor" "$val"
+    fi
+    _input_save "scroll_factor" "$val"
+    _notify "Scroll speed: $val"
+}
+
+# ── Left-handed Mode ──
+_mouse_left_handed() {
+    local current label
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:left_handed 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current=$(_input_get "left_handed" "0")
+    fi
+    [ "$current" = "1" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  Left-handed ($label)" \
+        "  Enable (swap left/right buttons)" \
+        "  Disable (right-handed)")
+    [ -z "$choice" ] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:left_handed" "$val"
+    else
+        _xinput_set "libinput Left Handed Enabled" "$val"
+    fi
+    _input_save "left_handed" "$val"
+    [ "$val" = "1" ] && _notify "Left-handed: on" || _notify "Left-handed: off"
+}
+
+# ── Follow Mouse (Hyprland focus policy) ──
+_mouse_follow() {
+    local current
+    current=$(hyprctl getoption input:follow_mouse 2>/dev/null | grep "int:" | awk '{print $2}')
+    [ -z "$current" ] && current="1"
+
+    local choice
+    choice=$(_rofi_select "  Focus follows mouse ($current)" \
+        "0  (click to focus)" \
+        "1  (focus on hover, click to raise)" \
+        "2  (focus on hover, no raise)" \
+        "3  (focus on hover, always raise)")
+    [ -z "$choice" ] && return
+
+    local val
+    val=$(echo "$choice" | awk '{print $1}')
+
+    _input_apply_hypr "input:follow_mouse" "$val"
+    _input_save "follow_mouse" "$val"
+    _notify "Follow mouse: $val"
+}
+
+# ── Touchpad: Tap to Click ──
+_tp_tap() {
+    local current label
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:touchpad:tap-to-click 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current=$(_input_get "tap_to_click" "1")
+    fi
+    [ "$current" = "1" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  Tap to Click ($label)" \
+        "  Enable" \
+        "  Disable")
+    [ -z "$choice" ] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:touchpad:tap-to-click" "$val"
+    else
+        _xinput_set "libinput Tapping Enabled" "$val"
+    fi
+    _input_save "tap_to_click" "$val"
+    [ "$val" = "1" ] && _notify "Tap to click: on" || _notify "Tap to click: off"
+}
+
+# ── Touchpad: Natural Scroll ──
+_tp_natural_scroll() {
+    local current label
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:touchpad:natural_scroll 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current=$(_input_get "tp_natural_scroll" "1")
+    fi
+    [ "$current" = "1" ] || [ "$current" = "true" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  TP Natural Scroll ($label)" \
+        "  Enable (scroll follows content)" \
+        "  Disable (traditional)")
+    [ -z "$choice" ] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:touchpad:natural_scroll" "$val"
+    else
+        _xinput_set "libinput Natural Scrolling Enabled" "$val"
+    fi
+    _input_save "tp_natural_scroll" "$val"
+    [ "$val" = "1" ] && _notify "TP natural scroll: on" || _notify "TP natural scroll: off"
+}
+
+# ── Touchpad: Disable While Typing ──
+_tp_dwt() {
+    local current label
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:touchpad:disable_while_typing 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current=$(_input_get "dwt" "1")
+    fi
+    [ "$current" = "1" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  Disable while typing ($label)" \
+        "  Enable (prevents accidental touches)" \
+        "  Disable")
+    [ -z "$choice" ] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:touchpad:disable_while_typing" "$val"
+    else
+        _xinput_set "libinput Disable While Typing Enabled" "$val"
+    fi
+    _input_save "dwt" "$val"
+    [ "$val" = "1" ] && _notify "Disable while typing: on" || _notify "Disable while typing: off"
+}
+
+# ── Touchpad: Scroll Method ──
+_tp_scroll_method() {
+    local current
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:touchpad:scroll_method 2>/dev/null | grep "str:" | awk '{print $2}')
+        [ -z "$current" ] && current="2fg"
+    else
+        current=$(_input_get "tp_scroll_method" "2fg")
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Scroll Method ($current)" \
+        "2fg  (two-finger scroll)" \
+        "edge  (edge scroll)" \
+        "on_button_down  (button + drag)" \
+        "no_scroll  (disabled)")
+    [ -z "$choice" ] && return
+
+    local val
+    val=$(echo "$choice" | awk '{print $1}')
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:touchpad:scroll_method" "$val"
+    else
+        case "$val" in
+            2fg)            _xinput_set "libinput Scroll Method Enabled" "1 0 0" ;;
+            edge)           _xinput_set "libinput Scroll Method Enabled" "0 1 0" ;;
+            on_button_down) _xinput_set "libinput Scroll Method Enabled" "0 0 1" ;;
+            no_scroll)      _xinput_set "libinput Scroll Method Enabled" "0 0 0" ;;
+        esac
+    fi
+    _input_save "tp_scroll_method" "$val"
+    _notify "Scroll method: $val"
+}
+
+# ── Touchpad: Click Method ──
+_tp_click_method() {
+    local current
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:touchpad:clickfinger_behavior 2>/dev/null | grep "int:" | awk '{print $2}')
+        [ "$current" = "1" ] && current="clickfinger" || current="button_areas"
+    else
+        current=$(_input_get "tp_click_method" "button_areas")
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Click Method ($current)" \
+        "button_areas  (bottom left/right = L/R click)" \
+        "clickfinger  (1 finger=L, 2=R, 3=M)")
+    [ -z "$choice" ] && return
+
+    local val
+    val=$(echo "$choice" | awk '{print $1}')
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        [ "$val" = "clickfinger" ] && _input_apply_hypr "input:touchpad:clickfinger_behavior" "1" \
+            || _input_apply_hypr "input:touchpad:clickfinger_behavior" "0"
+    else
+        case "$val" in
+            button_areas) _xinput_set "libinput Click Method Enabled" "1 0" ;;
+            clickfinger)  _xinput_set "libinput Click Method Enabled" "0 1" ;;
+        esac
+    fi
+    _input_save "tp_click_method" "$val"
+    _notify "Click method: $val"
+}
+
+# ── Touchpad: Drag ──
+_tp_drag() {
+    local current label
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        current=$(hyprctl getoption input:touchpad:tap-and-drag 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current=$(_input_get "tap_and_drag" "1")
+    fi
+    [ "$current" = "1" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  Tap and Drag ($label)" \
+        "  Enable (tap+hold to drag)" \
+        "  Disable")
+    [ -z "$choice" ] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+
+    if [ -n "$WAYLAND_DISPLAY" ]; then
+        _input_apply_hypr "input:touchpad:tap-and-drag" "$val"
+    else
+        _xinput_set "libinput Tapping Drag Enabled" "$val"
+    fi
+    _input_save "tap_and_drag" "$val"
+    [ "$val" = "1" ] && _notify "Tap and drag: on" || _notify "Tap and drag: off"
+}
+
+menu_mouse() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Mouse & Touchpad" \
+            "  Mouse" \
+            "  Touchpad" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Mouse*)    _menu_mouse_sub ;;
+            *Touchpad*) _menu_touchpad_sub ;;
+        esac
+    done
+}
+
+_menu_mouse_sub() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Mouse" \
+            "  Sensitivity" \
+            "  Accel profile" \
+            "  Natural scroll" \
+            "  Scroll speed" \
+            "  Left-handed mode" \
+            "  Focus follows mouse" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Sensitivity*)     _mouse_sensitivity ;;
+            *Accel*)           _mouse_accel_profile ;;
+            *"Natural scroll"*) _mouse_natural_scroll ;;
+            *"Scroll speed"*)  _mouse_scroll_factor ;;
+            *Left*)            _mouse_left_handed ;;
+            *Focus*)           _mouse_follow ;;
+        esac
+    done
+}
+
+_menu_touchpad_sub() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Touchpad" \
+            "  Tap to click" \
+            "  Natural scroll" \
+            "  Scroll method" \
+            "  Click method" \
+            "  Tap and drag" \
+            "  Disable while typing" \
+            "  Sensitivity" \
+            "  Accel profile" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Tap to click"*)   _tp_tap ;;
+            *"Natural scroll"*) _tp_natural_scroll ;;
+            *"Scroll method"*)  _tp_scroll_method ;;
+            *"Click method"*)   _tp_click_method ;;
+            *"Tap and drag"*)   _tp_drag ;;
+            *"Disable while"*)  _tp_dwt ;;
+            *Sensitivity*)      _mouse_sensitivity ;;
+            *Accel*)            _mouse_accel_profile ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -1692,6 +2149,7 @@ main_menu() {
         choice=$(_rofi_select "  Settings" \
             "  Display" \
             "  Audio" \
+            "  Mouse & Touchpad" \
             "  Network" \
             "  VPN" \
             "  Firewall" \
@@ -1708,6 +2166,7 @@ main_menu() {
         case "$choice" in
             *Display*)      menu_display ;;
             *Audio*)        menu_audio ;;
+            *"Mouse & Touchpad"*) menu_mouse ;;
             *Network*)      menu_network ;;
             *VPN*)          menu_vpn ;;
             *Firewall*)     menu_firewall ;;
