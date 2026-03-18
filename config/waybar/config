@@ -32,7 +32,7 @@
             "10": "X"
         },
         "persistent-workspaces": {
-            "*": 5
+            "*": 10
         },
         "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
         "on-scroll-down": "~/.local/bin/stoa-osd volume-down"

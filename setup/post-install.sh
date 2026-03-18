@@ -10,8 +10,8 @@
 # USAGE:
 #   git clone https://github.com/VictorGSchneider/StoaLinux.git
 #   cd StoaLinux
-#   chmod +x post-install.sh
-#   ./post-install.sh
+#   chmod +x setup/post-install.sh
+#   ./setup/post-install.sh
 
 set -e
 

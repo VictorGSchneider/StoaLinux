@@ -9,7 +9,7 @@
 #
 # USAGE (from Arch Linux live ISO):
 #
-#   curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/arch-install.sh
+#   curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/setup/arch-install.sh
 #   chmod +x arch-install.sh
 #   ./arch-install.sh
 #
@@ -64,7 +64,7 @@ CONFIG_DIR="/tmp/stoa-archinstall"
 mkdir -p "$CONFIG_DIR"
 
 echo -e "  ${B}[1/4] Downloading StoaLinux config...${R}"
-curl -sL "${STOA_REPO}/archinstall/user_configuration.json" -o "${CONFIG_DIR}/user_configuration.json"
+curl -sL "${STOA_REPO}/setup/archinstall/user_configuration.json" -o "${CONFIG_DIR}/user_configuration.json"
 echo -e "  ${O}[✓] Config downloaded.${R}"
 echo ""
 
@@ -154,15 +154,15 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     echo -e "  ${O}[✓] yay installed.${R}"
 
     # ── AUR packages ──
-    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww-wayland, satty, enpass-bin, howdy...${R}"
+    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww-wayland, satty, enpass-bin, howdy, i3lock-color...${R}"
     arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-        "yay -S --needed --noconfirm brave-bin obsidian eww-wayland satty enpass-bin howdy" 2>/dev/null || true
+        "yay -S --needed --noconfirm brave-bin obsidian eww-wayland satty enpass-bin howdy i3lock-color" 2>/dev/null || true
     echo -e "  ${O}[✓] AUR packages installed.${R}"
 else
     echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
     echo -e "  ${S}Install after first boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
-    echo -e "  ${B}    yay -S brave-bin obsidian eww-wayland satty enpass-bin howdy${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian eww-wayland satty enpass-bin howdy i3lock-color${R}"
 fi
 
 # Remove temporary sudo
