@@ -1430,6 +1430,122 @@ _hw_sensors() {
     printf '%s\n' "${lines[@]}"
 }
 
+_hw_camera() {
+    local lines=()
+    lines+=("  Cameras")
+
+    # Video4Linux devices
+    if [ -d /sys/class/video4linux ]; then
+        for dev in /sys/class/video4linux/video*; do
+            [ -d "$dev" ] || continue
+            local name devnode
+            name=$(cat "$dev/name" 2>/dev/null)
+            devnode="/dev/$(basename "$dev")"
+            [ -n "$name" ] && lines+=("    $devnode: $name")
+        done
+    fi
+
+    # USB cameras
+    if command -v lsusb &>/dev/null; then
+        while IFS= read -r cam; do
+            [ -z "$cam" ] && continue
+            local desc
+            desc=$(echo "$cam" | sed 's/^Bus [0-9]* Device [0-9]*: ID [0-9a-f]*:[0-9a-f]* //')
+            lines+=("    USB: $desc")
+        done < <(lsusb 2>/dev/null | grep -iE 'Camera|Webcam|Video|Imaging')
+    fi
+
+    [ ${#lines[@]} -eq 1 ] && lines+=("    No cameras detected")
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_input() {
+    local lines=()
+    lines+=("  Input Devices")
+
+    # Keyboards
+    local kb_found=false
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name
+        name=$(echo "$line" | grep -oP 'Name="\K[^"]+')
+        [ -z "$name" ] && continue
+
+        # Filter to real keyboards (exclude power buttons, video bus, etc.)
+        local handlers
+        handlers=$(grep -A4 "Name=\"$name\"" /proc/bus/input/devices 2>/dev/null | grep "Handlers=")
+        [[ "$handlers" != *"kbd"* ]] && continue
+        # Skip virtual/system devices
+        [[ "$name" == *"Video Bus"* ]] && continue
+        [[ "$name" == *"Power Button"* ]] && continue
+        [[ "$name" == *"Lid Switch"* ]] && continue
+        [[ "$name" == *"Sleep Button"* ]] && continue
+        [[ "$name" == *"PC Speaker"* ]] && continue
+
+        if ! $kb_found; then
+            lines+=("")
+            lines+=("    Keyboards")
+            kb_found=true
+        fi
+        lines+=("      $name")
+    done < <(grep "^N:" /proc/bus/input/devices 2>/dev/null)
+
+    # Touchpads and mice
+    local tp_found=false
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name
+        name=$(echo "$line" | grep -oP 'Name="\K[^"]+')
+        [ -z "$name" ] && continue
+
+        local handlers
+        handlers=$(grep -A4 "Name=\"$name\"" /proc/bus/input/devices 2>/dev/null | grep "Handlers=")
+        [[ "$handlers" != *"mouse"* ]] && continue
+
+        if ! $tp_found; then
+            lines+=("")
+            lines+=("    Touchpads / Mice")
+            tp_found=true
+        fi
+
+        local type_label="Mouse"
+        [[ "$name" == *"ouchpad"* ]] || [[ "$name" == *"Touchpad"* ]] || [[ "$name" == *"TrackPad"* ]] || [[ "$name" == *"Synaptics"* ]] || [[ "$name" == *"ELAN"* ]] && type_label="Touchpad"
+        [[ "$name" == *"TrackPoint"* ]] || [[ "$name" == *"pointing stick"* ]] && type_label="TrackPoint"
+
+        lines+=("      [$type_label] $name")
+    done < <(grep "^N:" /proc/bus/input/devices 2>/dev/null)
+
+    # Touchpad settings (libinput)
+    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+        local tap nat_scroll speed
+        tap=$(hyprctl getoption input:touchpad:tap 2>/dev/null | grep "int:" | awk '{print $2}')
+        nat_scroll=$(hyprctl getoption input:touchpad:natural_scroll 2>/dev/null | grep "int:" | awk '{print $2}')
+        speed=$(hyprctl getoption input:sensitivity 2>/dev/null | grep "float:" | awk '{print $2}')
+        if [ -n "$tap" ]; then
+            lines+=("")
+            lines+=("    Touchpad Settings")
+            [ "$tap" = "1" ] && lines+=("      Tap to click: on") || lines+=("      Tap to click: off")
+            [ "$nat_scroll" = "1" ] && lines+=("      Natural scroll: on") || lines+=("      Natural scroll: off")
+            [ -n "$speed" ] && lines+=("      Sensitivity: $speed")
+        fi
+    fi
+
+    # Keyboard layout
+    local layout
+    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+        layout=$(hyprctl getoption input:kb_layout 2>/dev/null | grep "str:" | awk '{print $2}')
+    else
+        layout=$(setxkbmap -query 2>/dev/null | grep "layout:" | awk '{print $2}')
+    fi
+    if [ -n "$layout" ]; then
+        lines+=("")
+        lines+=("    Keyboard Layout: $layout")
+    fi
+
+    [ ${#lines[@]} -eq 1 ] && lines+=("    No input devices detected")
+    printf '%s\n' "${lines[@]}"
+}
+
 menu_hardware() {
     while true; do
         local choice
@@ -1443,6 +1559,8 @@ menu_hardware() {
             "  USB devices" \
             "  Network adapters" \
             "  Audio devices" \
+            "  Camera" \
+            "  Input (keyboard/touchpad)" \
             "  Sensors" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
@@ -1457,6 +1575,8 @@ menu_hardware() {
                     _hw_battery; echo ""
                     _hw_network; echo ""
                     _hw_audio; echo ""
+                    _hw_camera; echo ""
+                    _hw_input; echo ""
                     _hw_usb; echo ""
                     _hw_sensors
                 } | "${ROFI[@]}" -p "  Hardware"
@@ -1469,6 +1589,8 @@ menu_hardware() {
             *USB*)              _hw_usb | "${ROFI[@]}" -p "  USB" ;;
             *"Network adapt"*)  _hw_network | "${ROFI[@]}" -p "  Network Adapters" ;;
             *Audio*)            _hw_audio | "${ROFI[@]}" -p "  Audio" ;;
+            *Camera*)           _hw_camera | "${ROFI[@]}" -p "  Camera" ;;
+            *Input*)            _hw_input | "${ROFI[@]}" -p "  Input Devices" ;;
             *Sensors*)          _hw_sensors | "${ROFI[@]}" -p "  Sensors" ;;
         esac
     done
