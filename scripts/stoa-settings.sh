@@ -1149,6 +1149,332 @@ menu_firewall() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   HARDWARE & DEVICES
+# ══════════════════════════════════════════════════════════════
+
+_hw_cpu() {
+    local lines=()
+    local model count cores threads freq governor temp
+
+    model=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs)
+    count=$(grep -c "^processor" /proc/cpuinfo 2>/dev/null)
+    cores=$(grep "cpu cores" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 | xargs)
+    threads="$count"
+    freq=$(grep "cpu MHz" /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2 | xargs | cut -d. -f1)
+    governor=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)
+    temp=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
+    [ -n "$temp" ] && temp="$((temp / 1000))°C"
+
+    lines+=("  CPU")
+    [ -n "$model" ] && lines+=("    Model: $model")
+    [ -n "$cores" ] && lines+=("    Cores: $cores  Threads: $threads")
+    [ -n "$freq" ] && lines+=("    Freq: ${freq} MHz")
+    [ -n "$governor" ] && lines+=("    Governor: $governor")
+    [ -n "$temp" ] && lines+=("    Temp: $temp")
+
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_gpu() {
+    local lines=()
+    lines+=("  GPU")
+
+    if command -v lspci &>/dev/null; then
+        while IFS= read -r gpu; do
+            [ -z "$gpu" ] && continue
+            lines+=("    $gpu")
+        done < <(lspci 2>/dev/null | grep -iE 'VGA|3D|Display' | cut -d: -f3- | xargs)
+    fi
+
+    # VRAM and driver via DRM
+    for card in /sys/class/drm/card[0-9]; do
+        [ -d "$card" ] || continue
+        local name driver vram
+        name=$(basename "$card")
+        driver=$(basename "$(readlink "$card/device/driver" 2>/dev/null)")
+        vram=$(cat "$card/device/mem_info_vram_total" 2>/dev/null)
+        [ -n "$driver" ] && lines+=("    $name driver: $driver")
+        [ -n "$vram" ] && lines+=("    $name VRAM: $((vram / 1024 / 1024)) MB")
+    done
+
+    [ ${#lines[@]} -eq 1 ] && lines+=("    No GPU detected")
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_memory() {
+    local lines=()
+    lines+=("  Memory")
+
+    local total used avail
+    total=$(free -h 2>/dev/null | awk '/^Mem:/ {print $2}')
+    used=$(free -h 2>/dev/null | awk '/^Mem:/ {print $3}')
+    avail=$(free -h 2>/dev/null | awk '/^Mem:/ {print $7}')
+    lines+=("    Total: $total  Used: $used  Available: $avail")
+
+    # Swap
+    local swap_total swap_used
+    swap_total=$(free -h 2>/dev/null | awk '/^Swap:/ {print $2}')
+    swap_used=$(free -h 2>/dev/null | awk '/^Swap:/ {print $3}')
+    [ -n "$swap_total" ] && [ "$swap_total" != "0B" ] && lines+=("    Swap: $swap_used / $swap_total")
+
+    # DIMM slots
+    if command -v dmidecode &>/dev/null; then
+        while IFS= read -r dimm; do
+            [ -z "$dimm" ] && continue
+            lines+=("    $dimm")
+        done < <(sudo dmidecode -t memory 2>/dev/null | awk '
+            /^Memory Device$/ {dev=1; size=""; type=""; speed=""; loc=""}
+            dev && /Size:/ {size=$2 " " $3}
+            dev && /Type:/ && !/Type Detail/ {type=$2}
+            dev && /Speed:/ && !/Configured/ {speed=$2 " " $3}
+            dev && /Locator:/ && !/Bank/ {loc=$2}
+            dev && /^$/ {
+                if (size != "" && size !~ /No Module/) printf "%s: %s %s %s\n", loc, size, type, speed
+                dev=0
+            }')
+    fi
+
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_disks() {
+    local lines=()
+    lines+=("  Disks")
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size type model mountpoint pct
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        type=$(echo "$line" | awk '{print $3}')
+        model=$(echo "$line" | awk '{$1=$2=$3=""; print $0}' | xargs)
+
+        # Only show real disks and partitions
+        [[ "$type" == "loop" ]] && continue
+        [[ "$type" == "rom" ]] && continue
+
+        if [[ "$name" == sd* ]] || [[ "$name" == nvme* ]] || [[ "$name" == vd* ]]; then
+            [ -n "$model" ] && lines+=("    /dev/$name  $size  $model") || lines+=("    /dev/$name  $size  $type")
+        fi
+    done < <(lsblk -dno NAME,SIZE,TYPE,MODEL 2>/dev/null)
+
+    # Partitions with usage
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local fs size used avail pct mount
+        fs=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        used=$(echo "$line" | awk '{print $3}')
+        avail=$(echo "$line" | awk '{print $4}')
+        pct=$(echo "$line" | awk '{print $5}')
+        mount=$(echo "$line" | awk '{print $6}')
+
+        [[ "$fs" == tmpfs ]] && continue
+        [[ "$fs" == devtmpfs ]] && continue
+        [[ "$fs" == efivarfs ]] && continue
+
+        lines+=("      $mount  $used/$size ($pct)")
+    done < <(df -h 2>/dev/null | tail -n +2)
+
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_battery() {
+    local lines=()
+    local found=false
+
+    for bat in /sys/class/power_supply/BAT*; do
+        [ -d "$bat" ] || continue
+        found=true
+        local name status capacity health energy_full energy_full_design cycles
+        name=$(basename "$bat")
+        status=$(cat "$bat/status" 2>/dev/null)
+        capacity=$(cat "$bat/capacity" 2>/dev/null)
+        energy_full=$(cat "$bat/energy_full" 2>/dev/null || cat "$bat/charge_full" 2>/dev/null)
+        energy_full_design=$(cat "$bat/energy_full_design" 2>/dev/null || cat "$bat/charge_full_design" 2>/dev/null)
+        cycles=$(cat "$bat/cycle_count" 2>/dev/null)
+
+        lines+=("  Battery ($name)")
+        lines+=("    Status: $status  Charge: ${capacity}%")
+
+        if [ -n "$energy_full" ] && [ -n "$energy_full_design" ] && [ "$energy_full_design" -gt 0 ]; then
+            health=$((energy_full * 100 / energy_full_design))
+            lines+=("    Health: ${health}%")
+        fi
+
+        [ -n "$cycles" ] && [ "$cycles" != "0" ] && lines+=("    Cycles: $cycles")
+    done
+
+    # AC adapter
+    for ac in /sys/class/power_supply/AC* /sys/class/power_supply/ADP*; do
+        [ -d "$ac" ] || continue
+        local online
+        online=$(cat "$ac/online" 2>/dev/null)
+        [ "$online" = "1" ] && lines+=("    AC: plugged in") || lines+=("    AC: unplugged")
+    done
+
+    if ! $found; then
+        lines+=("  Battery")
+        lines+=("    No battery detected (desktop)")
+    fi
+
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_usb() {
+    local lines=()
+    lines+=("  USB Devices")
+
+    if command -v lsusb &>/dev/null; then
+        while IFS= read -r dev; do
+            [ -z "$dev" ] && continue
+            # Remove "Bus XXX Device XXX: ID XXXX:XXXX" prefix, keep description
+            local desc
+            desc=$(echo "$dev" | sed 's/^Bus [0-9]* Device [0-9]*: ID [0-9a-f]*:[0-9a-f]* //')
+            [ -n "$desc" ] && lines+=("    $desc")
+        done < <(lsusb 2>/dev/null)
+    else
+        lines+=("    lsusb not available")
+    fi
+
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_network() {
+    local lines=()
+    lines+=("  Network Adapters")
+
+    if command -v lspci &>/dev/null; then
+        while IFS= read -r nic; do
+            [ -z "$nic" ] && continue
+            lines+=("    PCI: $nic")
+        done < <(lspci 2>/dev/null | grep -iE 'Network|Ethernet|Wi-Fi|Wireless' | cut -d: -f3- | xargs)
+    fi
+
+    # USB network adapters
+    if command -v lsusb &>/dev/null; then
+        while IFS= read -r nic; do
+            [ -z "$nic" ] && continue
+            local desc
+            desc=$(echo "$nic" | sed 's/^Bus [0-9]* Device [0-9]*: ID [0-9a-f]*:[0-9a-f]* //')
+            lines+=("    USB: $desc")
+        done < <(lsusb 2>/dev/null | grep -iE 'Network|Ethernet|Wi-Fi|Wireless|802\.11')
+    fi
+
+    [ ${#lines[@]} -eq 1 ] && lines+=("    No adapters detected")
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_audio() {
+    local lines=()
+    lines+=("  Audio Devices")
+
+    if command -v lspci &>/dev/null; then
+        while IFS= read -r dev; do
+            [ -z "$dev" ] && continue
+            lines+=("    $dev")
+        done < <(lspci 2>/dev/null | grep -i 'Audio' | cut -d: -f3- | xargs)
+    fi
+
+    # ALSA cards
+    if [ -f /proc/asound/cards ]; then
+        while IFS= read -r card; do
+            [ -z "$card" ] && continue
+            [[ "$card" == *"["* ]] && lines+=("    ALSA: $(echo "$card" | sed 's/^[[:space:]]*[0-9]* \[/[/')")
+        done < /proc/asound/cards
+    fi
+
+    [ ${#lines[@]} -eq 1 ] && lines+=("    No audio devices detected")
+    printf '%s\n' "${lines[@]}"
+}
+
+_hw_sensors() {
+    local lines=()
+    lines+=("  Sensors")
+
+    if command -v sensors &>/dev/null; then
+        while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            # Show adapter headers and temperature lines
+            if [[ "$line" != *"="* ]] && [[ "$line" != *"Adapter"* ]]; then
+                [[ "$line" == *"°C"* ]] || [[ "$line" == *"RPM"* ]] || [[ "$line" == *"V"* ]] && \
+                    lines+=("    $line")
+            elif [[ "$line" == *"Adapter"* ]]; then
+                lines+=("    ---")
+            fi
+        done < <(sensors 2>/dev/null)
+    else
+        # Fallback to sysfs thermal zones
+        for tz in /sys/class/thermal/thermal_zone*; do
+            [ -d "$tz" ] || continue
+            local type temp
+            type=$(cat "$tz/type" 2>/dev/null)
+            temp=$(cat "$tz/temp" 2>/dev/null)
+            [ -n "$temp" ] && lines+=("    $type: $((temp / 1000))°C")
+        done
+    fi
+
+    # Fan speeds from sysfs
+    for hwmon in /sys/class/hwmon/hwmon*; do
+        [ -d "$hwmon" ] || continue
+        for fan in "$hwmon"/fan*_input; do
+            [ -f "$fan" ] || continue
+            local rpm label
+            rpm=$(cat "$fan" 2>/dev/null)
+            label=$(cat "${fan%_input}_label" 2>/dev/null || basename "$fan" | sed 's/_input//')
+            [ -n "$rpm" ] && [ "$rpm" != "0" ] && lines+=("    $label: ${rpm} RPM")
+        done
+    done
+
+    [ ${#lines[@]} -eq 1 ] && lines+=("    No sensors detected")
+    printf '%s\n' "${lines[@]}"
+}
+
+menu_hardware() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Hardware" \
+            "  All devices" \
+            "  CPU" \
+            "  GPU" \
+            "  Memory" \
+            "  Disks" \
+            "  Battery" \
+            "  USB devices" \
+            "  Network adapters" \
+            "  Audio devices" \
+            "  Sensors" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"All devices"*)
+                {
+                    _hw_cpu; echo ""
+                    _hw_gpu; echo ""
+                    _hw_memory; echo ""
+                    _hw_disks; echo ""
+                    _hw_battery; echo ""
+                    _hw_network; echo ""
+                    _hw_audio; echo ""
+                    _hw_usb; echo ""
+                    _hw_sensors
+                } | "${ROFI[@]}" -p "  Hardware"
+                ;;
+            *CPU*)              _hw_cpu | "${ROFI[@]}" -p "  CPU" ;;
+            *GPU*)              _hw_gpu | "${ROFI[@]}" -p "  GPU" ;;
+            *Memory*)           _hw_memory | "${ROFI[@]}" -p "  Memory" ;;
+            *Disks*)            _hw_disks | "${ROFI[@]}" -p "  Disks" ;;
+            *Battery*)          _hw_battery | "${ROFI[@]}" -p "  Battery" ;;
+            *USB*)              _hw_usb | "${ROFI[@]}" -p "  USB" ;;
+            *"Network adapt"*)  _hw_network | "${ROFI[@]}" -p "  Network Adapters" ;;
+            *Audio*)            _hw_audio | "${ROFI[@]}" -p "  Audio" ;;
+            *Sensors*)          _hw_sensors | "${ROFI[@]}" -p "  Sensors" ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -1248,6 +1574,7 @@ main_menu() {
             "  VPN" \
             "  Firewall" \
             "  Bluetooth" \
+            "  Hardware" \
             "  Cloud Drive" \
             "  Wallpaper" \
             "  Theme" \
@@ -1263,6 +1590,7 @@ main_menu() {
             *VPN*)          menu_vpn ;;
             *Firewall*)     menu_firewall ;;
             *Bluetooth*)    menu_bluetooth ;;
+            *Hardware*)     menu_hardware ;;
             *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;
             *Theme*)        menu_theme ;;
