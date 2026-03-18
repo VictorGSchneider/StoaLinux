@@ -63,7 +63,7 @@ bindsym $mod+d exec --no-startup-id rofi -show drun -config ~/.config/rofi/confi
 bindsym $mod+q kill
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
-bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'"
+bindsym $mod+Ctrl+e exec "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'"
 
 # ── Apps ──
 bindsym $mod+a exec --no-startup-id ~/.local/bin/stoa-store
@@ -99,7 +99,7 @@ bindsym $mod+Shift+e exec thunar
 bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+space floating toggle
 bindsym $mod+space focus mode_toggle
-bindsym $mod+a focus parent
+bindsym $mod+p focus parent
 
 # ── Workspaces (Roman numerals) ──
 set $ws1 "I"
@@ -159,6 +159,18 @@ bindsym XF86MonBrightnessDown exec --no-startup-id ~/.local/bin/stoa-osd brightn
 # ── Screenshot ──
 bindsym Print exec --no-startup-id maim ~/Pictures/screenshots/screenshot-$(date +%s).png
 bindsym $mod+Print exec --no-startup-id maim -s ~/Pictures/screenshots/screenshot-$(date +%s).png
+
+# ── Clipboard ──
+bindsym $mod+v exec --no-startup-id ~/.local/bin/stoa-clipboard show
+bindsym $mod+Shift+v exec --no-startup-id ~/.local/bin/stoa-clipboard pin
+
+# ── Stoatools ──
+bindsym $mod+Shift+t exec --no-startup-id ~/.local/bin/stoa-ocr
+bindsym $mod+Shift+p exec --no-startup-id ~/.local/bin/stoa-paste
+
+# ── CapsLock / NumLock ──
+bindsym --release Caps_Lock exec --no-startup-id ~/.local/bin/stoa-osd capslock
+bindsym --release Num_Lock exec --no-startup-id ~/.local/bin/stoa-osd numlock
 
 # ── Autostart ──
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b
