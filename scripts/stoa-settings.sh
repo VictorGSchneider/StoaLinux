@@ -301,6 +301,107 @@ _wifi_toggle() {
     fi
 }
 
+_net_info() {
+    local lines=()
+
+    # ── Hostname ──
+    lines+=("  Hostname: $(hostnamectl hostname 2>/dev/null || hostname)")
+
+    # ── Interfaces ──
+    while IFS= read -r iface; do
+        [ -z "$iface" ] && continue
+        local state addr addr6 mac speed type_label
+
+        state=$(ip -br link show "$iface" 2>/dev/null | awk '{print $2}')
+        addr=$(ip -4 addr show "$iface" 2>/dev/null | grep -oP 'inet \K[0-9./]+' | head -1)
+        addr6=$(ip -6 addr show "$iface" scope global 2>/dev/null | grep -oP 'inet6 \K[0-9a-f:/]+' | head -1)
+        mac=$(ip link show "$iface" 2>/dev/null | grep -oP 'link/ether \K[0-9a-f:]+')
+        speed=$(cat "/sys/class/net/${iface}/speed" 2>/dev/null)
+
+        # Interface type
+        if [[ "$iface" == wl* ]]; then
+            type_label="Wi-Fi"
+        elif [[ "$iface" == en* ]] || [[ "$iface" == eth* ]]; then
+            type_label="Ethernet"
+        elif [[ "$iface" == lo ]]; then
+            type_label="Loopback"
+        elif [[ "$iface" == tun* ]] || [[ "$iface" == proton* ]] || [[ "$iface" == wg* ]]; then
+            type_label="VPN"
+        elif [[ "$iface" == docker* ]] || [[ "$iface" == br-* ]] || [[ "$iface" == veth* ]]; then
+            type_label="Docker"
+        else
+            type_label="Other"
+        fi
+
+        lines+=("")
+        lines+=("  [$type_label] $iface  ($state)")
+        [ -n "$addr" ] && lines+=("    IPv4: $addr")
+        [ -n "$addr6" ] && lines+=("    IPv6: $addr6")
+        [ -n "$mac" ] && lines+=("    MAC:  $mac")
+        [ -n "$speed" ] && [ "$speed" != "-1" ] && lines+=("    Speed: ${speed} Mbps")
+
+        # Wi-Fi details
+        if [[ "$iface" == wl* ]] && command -v iwctl &>/dev/null; then
+            local ssid signal freq
+            ssid=$(iwctl station "$iface" show 2>/dev/null | grep "Connected network" | awk '{print $NF}')
+            signal=$(iwctl station "$iface" show 2>/dev/null | grep "RSSI" | awk '{print $2}')
+            [ -n "$ssid" ] && lines+=("    SSID: $ssid")
+            [ -n "$signal" ] && lines+=("    Signal: ${signal} dBm")
+        elif [[ "$iface" == wl* ]] && command -v nmcli &>/dev/null; then
+            local ssid signal freq security
+            ssid=$(nmcli -t -f NAME,TYPE con show --active 2>/dev/null | grep wifi | cut -d: -f1)
+            if [ -n "$ssid" ]; then
+                signal=$(nmcli -t -f IN-USE,SIGNAL device wifi list 2>/dev/null | grep '^\*' | cut -d: -f2)
+                freq=$(nmcli -t -f IN-USE,FREQ device wifi list 2>/dev/null | grep '^\*' | cut -d: -f2)
+                security=$(nmcli -t -f IN-USE,SECURITY device wifi list 2>/dev/null | grep '^\*' | cut -d: -f2)
+                lines+=("    SSID: $ssid")
+                [ -n "$signal" ] && lines+=("    Signal: ${signal}%")
+                [ -n "$freq" ] && lines+=("    Freq: $freq")
+                [ -n "$security" ] && lines+=("    Security: $security")
+            fi
+        fi
+    done < <(ip -br link show 2>/dev/null | awk '{print $1}' | sed 's/@.*//')
+
+    # ── Gateway & DNS ──
+    local gw
+    gw=$(ip route show default 2>/dev/null | awk '/default/ {print $3; exit}')
+    [ -n "$gw" ] && lines+=("") && lines+=("  Gateway: $gw")
+
+    local dns
+    dns=$(resolvectl dns 2>/dev/null | grep -oP 'link.*: \K.*' | head -3 || \
+          grep -oP '^nameserver \K.*' /etc/resolv.conf 2>/dev/null | head -3)
+    if [ -n "$dns" ]; then
+        lines+=("  DNS: $(echo "$dns" | tr '\n' ', ' | sed 's/,$//')")
+    fi
+
+    # ── Public IP ──
+    local pub_ip
+    pub_ip=$(curl -s --max-time 3 ifconfig.me 2>/dev/null)
+    [ -n "$pub_ip" ] && lines+=("  Public IP: $pub_ip")
+
+    # ── Firewall ──
+    if command -v nft &>/dev/null && sudo nft list table inet stoa_firewall &>/dev/null 2>&1; then
+        lines+=("  Firewall: Active")
+    else
+        lines+=("  Firewall: Inactive")
+    fi
+
+    # ── VPN ──
+    if command -v protonvpn-cli &>/dev/null; then
+        local vpn_st
+        vpn_st=$(protonvpn-cli s 2>/dev/null | grep "Status:" | awk '{print $2}')
+        if [ "$vpn_st" = "Connected" ]; then
+            local vpn_server
+            vpn_server=$(protonvpn-cli s 2>/dev/null | grep "Server:" | awk '{print $2}')
+            lines+=("  VPN: Connected ($vpn_server)")
+        else
+            lines+=("  VPN: Disconnected")
+        fi
+    fi
+
+    printf '%s\n' "${lines[@]}"
+}
+
 menu_network() {
     while true; do
         local status
@@ -310,6 +411,7 @@ menu_network() {
 
         local choice
         choice=$(_rofi_select "  Network ($status)" \
+            "  Network info" \
             "  Connect to Wi-Fi" \
             "  Disconnect" \
             "  Forget network" \
@@ -318,6 +420,7 @@ menu_network() {
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
+            *info*)       _net_info | "${ROFI[@]}" -p "  Network Info" ;;
             *Connect*)    _wifi_connect ;;
             *Disconnect*) _wifi_disconnect ;;
             *Forget*)     _wifi_forget ;;
