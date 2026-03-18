@@ -67,7 +67,7 @@ _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xm
 _link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
 
-# ── Theme (GTK + Qt + Steam + Calibre + YACReader) ──
+# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
 _link "${STOA_DIR}/theme/gtk-3.0/stoa-gtk.css"  "${CONFIG_DIR}/gtk-3.0/gtk.css"
 _link "${STOA_DIR}/theme/gtk-4.0/settings.ini"  "${CONFIG_DIR}/gtk-4.0/settings.ini"
@@ -90,6 +90,15 @@ if [ -d "${HOME}/.steam" ]; then
     mkdir -p "$STEAM_CSS_DIR"
     cp "${STOA_DIR}/theme/steam/stoa-steam.css" "${STEAM_CSS_DIR}/libraryroot.custom.css" 2>/dev/null && \
         echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
+fi
+
+# OnlyOffice — install Stoa theme JSON
+ONLYOFFICE_THEME_DIR="${HOME}/.local/share/onlyoffice/desktopeditors/themes"
+if command -v desktopeditors &>/dev/null || [ -d "/opt/onlyoffice" ]; then
+    mkdir -p "$ONLYOFFICE_THEME_DIR"
+    cp "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" "${ONLYOFFICE_THEME_DIR}/stoa-onlyoffice.json" 2>/dev/null && \
+        echo -e "  ${O}[+] OnlyOffice Stoa theme installed${R}" || true
+    echo -e "  ${S}    To activate: File → Advanced Settings → Interface theme → Stoa${R}"
 fi
 
 # Betterbird — apply Stoa CSS to all profiles
@@ -184,6 +193,15 @@ x-scheme-handler/unknown=brave-browser.desktop
 x-scheme-handler/mailto=betterbird.desktop
 message/rfc822=betterbird.desktop
 text/markdown=obsidian.desktop
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=onlyoffice-desktopeditors.desktop
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=onlyoffice-desktopeditors.desktop
+application/vnd.openxmlformats-officedocument.presentationml.presentation=onlyoffice-desktopeditors.desktop
+application/msword=onlyoffice-desktopeditors.desktop
+application/vnd.ms-excel=onlyoffice-desktopeditors.desktop
+application/vnd.ms-powerpoint=onlyoffice-desktopeditors.desktop
+application/vnd.oasis.opendocument.text=onlyoffice-desktopeditors.desktop
+application/vnd.oasis.opendocument.spreadsheet=onlyoffice-desktopeditors.desktop
+application/vnd.oasis.opendocument.presentation=onlyoffice-desktopeditors.desktop
 application/pdf=org.pwmt.zathura.desktop
 image/png=imv.desktop
 image/jpeg=imv.desktop

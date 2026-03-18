@@ -59,6 +59,9 @@ UI_PKGS="rofi dunst"
 BROWSER_PKGS="brave-bin"
 NOTES_PKGS="obsidian"
 
+# Office (AUR)
+OFFICE_PKGS="onlyoffice-bin"
+
 # Email (AUR)
 EMAIL_PKGS="betterbird-bin"
 
@@ -117,6 +120,7 @@ echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
+echo -e "  ${S}Office:     ${OFFICE_PKGS} (AUR)${R}"
 echo -e "  ${S}Email:      ${EMAIL_PKGS} (AUR)${R}"
 echo -e "  ${S}VPN:        ${VPN_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
@@ -350,6 +354,26 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
     else
         echo -e "  ${S}[~] howdy already installed.${R}"
+    fi
+
+    # OnlyOffice Desktop Editors (AUR) — "Order is the first law of heaven." — Alexander Pope
+    echo ""
+    if ! command -v desktopeditors &>/dev/null; then
+        echo -e "  ${F}Installing OnlyOffice Desktop Editors (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm onlyoffice-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm onlyoffice-bin
+        else
+            echo -e "  ${S}Installing OnlyOffice manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/onlyoffice-bin.git "$_tmpdir/onlyoffice-bin"
+            (cd "$_tmpdir/onlyoffice-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] OnlyOffice installed.${R}"
+    else
+        echo -e "  ${S}[~] OnlyOffice already installed.${R}"
     fi
 
     # Betterbird — Email client (AUR) — "Letters are our absent friends." — Seneca
