@@ -402,6 +402,57 @@ _net_info() {
     printf '%s\n' "${lines[@]}"
 }
 
+_wifi_saved() {
+    local lines=()
+    local active
+    active=$(nmcli -t -f NAME,TYPE con show --active 2>/dev/null | grep wifi | cut -d: -f1)
+
+    while IFS=: read -r name uuid type device; do
+        [ "$type" != "802-11-wireless" ] && continue
+        local status_icon="  "
+        [ "$name" = "$active" ] && status_icon="  "
+        local detail
+        detail=$(nmcli -t -f 802-11-wireless.ssid,802-11-wireless-security.key-mgmt con show "$uuid" 2>/dev/null)
+        local security
+        security=$(echo "$detail" | grep key-mgmt | cut -d: -f2)
+        [ -z "$security" ] && security="open"
+        lines+=("${status_icon}${name}  (${security})")
+    done < <(nmcli -t -f NAME,UUID,TYPE,DEVICE con show 2>/dev/null)
+
+    if [ ${#lines[@]} -eq 0 ]; then
+        _notify "No saved Wi-Fi networks"
+        return
+    fi
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Saved Networks")
+    [ -z "$choice" ] && return
+
+    # Extract network name
+    local net_name
+    net_name=$(echo "$choice" | sed 's/^  //;s/^  //;s/  (.*//')
+
+    local action
+    action=$(_rofi_select "  $net_name" \
+        "  Connect" \
+        "  Forget" \
+        "  Back")
+    [ -z "$action" ] || [[ "$action" == *"Back"* ]] && return
+
+    case "$action" in
+        *Connect*)
+            nmcli con up "$net_name" 2>/dev/null \
+                && _notify "Connected to $net_name" \
+                || _notify "Failed to connect to $net_name"
+            ;;
+        *Forget*)
+            _rofi_confirm "Forget $net_name?" && \
+                nmcli con delete "$net_name" 2>/dev/null && \
+                _notify "Forgot $net_name"
+            ;;
+    esac
+}
+
 menu_network() {
     while true; do
         local status
@@ -413,6 +464,7 @@ menu_network() {
         choice=$(_rofi_select "  Network ($status)" \
             "  Network info" \
             "  Connect to Wi-Fi" \
+            "  Saved networks" \
             "  Disconnect" \
             "  Forget network" \
             "  Toggle Wi-Fi ($wifi_state)" \
@@ -422,6 +474,7 @@ menu_network() {
         case "$choice" in
             *info*)       _net_info | "${ROFI[@]}" -p "  Network Info" ;;
             *Connect*)    _wifi_connect ;;
+            *Saved*)      _wifi_saved ;;
             *Disconnect*) _wifi_disconnect ;;
             *Forget*)     _wifi_forget ;;
             *Toggle*)     _wifi_toggle ;;
