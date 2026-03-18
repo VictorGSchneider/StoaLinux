@@ -11,7 +11,138 @@ S='\033[38;2;110;106;98m'   # Stone
 O='\033[38;2;138;154;108m'  # Olive
 F='\033[38;2;212;207;196m'  # Foreground
 D='\033[38;2;168;159;145m'  # Dim
+T='\033[38;2;179;107;90m'   # Terracotta
 R='\033[0m'                 # Reset
+
+# ── Easter egg: Diogenes' plucked chicken ──
+if [[ "$1" == "--plato" ]]; then
+    clear
+    HIDE='\033[?25l'  # hide cursor
+    SHOW='\033[?25h'  # show cursor
+    trap "printf '${SHOW}'; exit" EXIT INT TERM
+
+    # 6 animation frames — the chicken walks across the screen
+    frames=(
+"
+        ${T}  _${R}
+        ${T} (o>${R}
+        ${T} //\\${R}
+        ${T} V_/_${R}
+        ${T}  ||${R}
+        ${T} _/\\_${R}
+"
+"
+        ${T}  _${R}
+        ${T} (o>${R}
+        ${T} //\\${R}
+        ${T} V_/_${R}
+        ${T}  ||${R}
+        ${T} _/ \\_${R}
+"
+"
+          ${T}  _${R}
+          ${T} (o>${R}
+          ${T} //\\${R}
+          ${T} V_/_${R}
+          ${T}   \\|${R}
+          ${T}  _/|_${R}
+"
+"
+            ${T}  _${R}
+            ${T} (o>${R}
+            ${T} //\\${R}
+            ${T} V_/_${R}
+            ${T}  ||${R}
+            ${T} _/\\_${R}
+"
+"
+              ${T}  _${R}
+              ${T} (o>${R}
+              ${T} //\\${R}
+              ${T} V_/_${R}
+              ${T}  |\\${R}
+              ${T} _|\\_${R}
+"
+"
+                ${T}  _${R}
+                ${T} (o>${R}
+                ${T} //\\${R}
+                ${T} V_/_${R}
+                ${T}  ||${R}
+                ${T} _/\\_${R}
+"
+    )
+
+    printf "${HIDE}"
+
+    # Phase 1: chicken walks in (3 loops)
+    for i in {1..3}; do
+        for frame in "${frames[@]}"; do
+            printf '\033[H\033[2J'
+            echo ""
+            echo -e "  ${S}───────────────────────────────────────────${R}"
+            echo -e "${frame}"
+            echo -e "  ${S}───────────────────────────────────────────${R}"
+            sleep 0.18
+        done
+    done
+
+    # Phase 2: chicken stops, Diogenes speaks
+    printf '\033[H\033[2J'
+    echo ""
+    echo -e "  ${S}───────────────────────────────────────────${R}"
+    echo ""
+    echo -e "                       ${T}  _${R}"
+    echo -e "                       ${T} (o>${R}"
+    echo -e "                       ${T} //\\${R}"
+    echo -e "                       ${T} V_/_${R}"
+    echo -e "                       ${T}  ||${R}"
+    echo -e "                       ${T} _/\\_${R}"
+    echo ""
+    echo -e "  ${S}───────────────────────────────────────────${R}"
+    sleep 0.8
+
+    # Phase 3: quote typed out letter by letter
+    printf '\033[H\033[2J'
+    echo ""
+    echo -e "  ${S}───────────────────────────────────────────${R}"
+    echo ""
+    echo -e "                       ${T}  _${R}"
+    echo -e "                       ${T} (o>${R}    ${B}\"Ecce homo${R}"
+    echo -e "                       ${T} //\\${R}     ${B}Platonis!\"${R}"
+    echo -e "                       ${T} V_/_${R}"
+    echo -e "                       ${T}  ||${R}"
+    echo -e "                       ${T} _/\\_${R}"
+    echo ""
+    echo -e "  ${S}───────────────────────────────────────────${R}"
+    sleep 1.2
+
+    # Phase 4: full scene with context
+    printf '\033[H\033[2J'
+    echo ""
+    echo -e "  ${S}───────────────────────────────────────────${R}"
+    echo ""
+    echo -e "                       ${T}  _${R}"
+    echo -e "                       ${T} (o>${R}    ${B}\"Ecce homo${R}"
+    echo -e "                       ${T} //\\${R}     ${B}Platonis!\"${R}"
+    echo -e "                       ${T} V_/_${R}"
+    echo -e "                       ${T}  ||${R}    ${D}— Diogenes${R}"
+    echo -e "                       ${T} _/\\_${R}   ${D}  c. 350 BC${R}"
+    echo ""
+    echo -e "  ${S}───────────────────────────────────────────${R}"
+    echo ""
+    echo -e "  ${G}Behold! Plato's man!${R}"
+    echo -e "  ${D}Plato defined man as a \"featherless biped\".${R}"
+    echo -e "  ${D}Diogenes plucked a chicken and stormed the${R}"
+    echo -e "  ${D}Academy: definitions that don't survive a${R}"
+    echo -e "  ${D}practical test are worthless.${R}"
+    echo ""
+    echo -e "  ${S}───────────────────────────────────────────${R}"
+    echo ""
+
+    printf "${SHOW}"
+    exit 0
+fi
 
 # Info
 user="${USER}@$(hostname)"
