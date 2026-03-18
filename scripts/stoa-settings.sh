@@ -1985,6 +1985,254 @@ _tp_drag() {
     [ "$val" = "1" ] && _notify "Tap and drag: on" || _notify "Tap and drag: off"
 }
 
+# ══════════════════════════════════════════════════════════════
+#   TOUCHPAD GESTURES (libinput-gestures)
+# ══════════════════════════════════════════════════════════════
+
+GESTURE_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/gestures.conf"
+
+# All 12 gestures: {2,3,4} fingers × {up,down,left,right}
+_GESTURE_KEYS=(
+    "swipe_2_up"    "swipe_2_down"  "swipe_2_left"  "swipe_2_right"
+    "swipe_3_up"    "swipe_3_down"  "swipe_3_left"  "swipe_3_right"
+    "swipe_4_up"    "swipe_4_down"  "swipe_4_left"  "swipe_4_right"
+)
+
+_GESTURE_LABELS=(
+    "2 fingers ↑"   "2 fingers ↓"   "2 fingers ←"   "2 fingers →"
+    "3 fingers ↑"   "3 fingers ↓"   "3 fingers ←"   "3 fingers →"
+    "4 fingers ↑"   "4 fingers ↓"   "4 fingers ←"   "4 fingers →"
+)
+
+# Default gestures
+_GESTURE_DEFAULTS=(
+    "volume_up"         "volume_down"       "disabled"          "disabled"
+    "workspace_prev"    "workspace_next"    "window_move_left"  "window_move_right"
+    "overview"          "window_close"      "window_prev"       "window_next"
+)
+
+# Action catalog: id|label|wayland_cmd|xorg_cmd
+_gesture_actions() {
+    cat <<'ACTIONS'
+disabled|  Disabled||
+workspace_next|  Workspace next|hyprctl dispatch workspace e+1|i3-msg workspace next
+workspace_prev|  Workspace prev|hyprctl dispatch workspace e-1|i3-msg workspace prev
+window_close|  Close window|hyprctl dispatch killactive|i3-msg kill
+window_fullscreen|  Toggle fullscreen|hyprctl dispatch fullscreen|i3-msg fullscreen toggle
+window_float|  Toggle floating|hyprctl dispatch togglefloating|i3-msg floating toggle
+window_move_left|  Move window left|hyprctl dispatch movewindow l|i3-msg move left
+window_move_right|  Move window right|hyprctl dispatch movewindow r|i3-msg move right
+window_move_up|  Move window up|hyprctl dispatch movewindow u|i3-msg move up
+window_move_down|  Move window down|hyprctl dispatch movewindow d|i3-msg move down
+window_next|  Next window|hyprctl dispatch cyclenext|i3-msg focus right
+window_prev|  Prev window|hyprctl dispatch cyclenext prev|i3-msg focus left
+window_minimize|  Minimize|hyprctl dispatch movetospecialworkspace minimize|i3-msg move scratchpad
+overview|  Overview / App switcher|rofi -show window -config ~/.config/rofi/config.rasi|rofi -show window -config ~/.config/rofi/config.rasi
+launcher|  App launcher|rofi -show drun -config ~/.config/rofi/config.rasi|rofi -show drun -config ~/.config/rofi/config.rasi
+volume_up|  Volume up|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0
+volume_down|  Volume down|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+volume_mute|  Toggle mute|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+brightness_up|  Brightness up|brightnessctl set +5% -q|brightnessctl set +5% -q
+brightness_down|  Brightness down|brightnessctl set 5%- -q|brightnessctl set 5%- -q
+screenshot|  Screenshot|grim -g "$(slurp)" ~/Pictures/screenshots/$(date +%Y%m%d_%H%M%S).png|maim -s ~/Pictures/screenshots/$(date +%Y%m%d_%H%M%S).png
+play_pause|  Play / Pause|playerctl play-pause|playerctl play-pause
+next_track|  Next track|playerctl next|playerctl next
+prev_track|  Previous track|playerctl previous|playerctl previous
+settings|  Stoa Settings|stoa-settings|stoa-settings
+ACTIONS
+}
+
+_gesture_get() {
+    local key="$1"
+    local val
+    val=$(grep "^${key}=" "$GESTURE_CONF" 2>/dev/null | cut -d= -f2)
+    # Find default
+    if [ -z "$val" ]; then
+        for i in "${!_GESTURE_KEYS[@]}"; do
+            if [ "${_GESTURE_KEYS[$i]}" = "$key" ]; then
+                val="${_GESTURE_DEFAULTS[$i]}"
+                break
+            fi
+        done
+    fi
+    echo "${val:-disabled}"
+}
+
+_gesture_set() {
+    local key="$1" val="$2"
+    mkdir -p "$(dirname "$GESTURE_CONF")"
+    touch "$GESTURE_CONF"
+    if grep -q "^${key}=" "$GESTURE_CONF" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${val}|" "$GESTURE_CONF"
+    else
+        echo "${key}=${val}" >> "$GESTURE_CONF"
+    fi
+}
+
+# Get the label for an action id
+_gesture_action_label() {
+    local action_id="$1"
+    _gesture_actions | while IFS='|' read -r id label _wcmd _xcmd; do
+        [ "$id" = "$action_id" ] && echo "$label" && return
+    done
+}
+
+# Get command for an action id
+_gesture_action_cmd() {
+    local action_id="$1"
+    _gesture_actions | while IFS='|' read -r id _label wcmd xcmd; do
+        if [ "$id" = "$action_id" ]; then
+            if [ -n "$WAYLAND_DISPLAY" ]; then
+                echo "$wcmd"
+            else
+                echo "$xcmd"
+            fi
+            return
+        fi
+    done
+}
+
+# Select an action from the catalog
+_gesture_pick_action() {
+    local gesture_label="$1" current_id="$2"
+    local current_label
+    current_label=$(_gesture_action_label "$current_id")
+
+    local items=()
+    while IFS='|' read -r id label _wcmd _xcmd; do
+        if [ "$id" = "$current_id" ]; then
+            items+=("${label} ◄")
+        else
+            items+=("$label")
+        fi
+    done < <(_gesture_actions)
+
+    local choice
+    choice=$(printf '%s\n' "${items[@]}" | "${ROFI[@]}" -p "  $gesture_label")
+    [ -z "$choice" ] && return 1
+
+    # Remove current marker
+    choice=$(echo "$choice" | sed 's/ ◄$//')
+
+    # Find the action id
+    while IFS='|' read -r id label _wcmd _xcmd; do
+        if [ "$label" = "$choice" ]; then
+            echo "$id"
+            return 0
+        fi
+    done < <(_gesture_actions)
+    return 1
+}
+
+# Generate libinput-gestures.conf from our config
+_gestures_apply() {
+    local conf_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local out="${conf_dir}/libinput-gestures.conf"
+
+    {
+        echo "# Generated by Stoa Linux — do not edit manually"
+        echo "# Regenerate via: Super+I → Mouse & Touchpad → Touchpad → Gestures"
+        echo ""
+
+        for i in "${!_GESTURE_KEYS[@]}"; do
+            local key="${_GESTURE_KEYS[$i]}"
+            local action_id
+            action_id=$(_gesture_get "$key")
+            [ "$action_id" = "disabled" ] && continue
+
+            local cmd
+            cmd=$(_gesture_action_cmd "$action_id")
+            [ -z "$cmd" ] && continue
+
+            # Parse key: swipe_3_up → "gesture swipe up 3"
+            local fingers direction
+            fingers=$(echo "$key" | cut -d_ -f2)
+            direction=$(echo "$key" | cut -d_ -f3)
+
+            echo "gesture swipe $direction $fingers $cmd"
+        done
+    } > "$out"
+
+    # Restart libinput-gestures
+    if command -v libinput-gestures-setup &>/dev/null; then
+        libinput-gestures-setup stop 2>/dev/null
+        libinput-gestures-setup start 2>/dev/null
+    elif command -v libinput-gestures &>/dev/null; then
+        pkill -f libinput-gestures 2>/dev/null
+        libinput-gestures &>/dev/null &
+        disown
+    fi
+}
+
+# Configure a single gesture
+_gesture_configure() {
+    local index="$1"
+    local key="${_GESTURE_KEYS[$index]}"
+    local label="${_GESTURE_LABELS[$index]}"
+    local current_id
+    current_id=$(_gesture_get "$key")
+
+    local new_id
+    new_id=$(_gesture_pick_action "$label" "$current_id")
+    [ $? -ne 0 ] && return
+
+    _gesture_set "$key" "$new_id"
+    _gestures_apply
+
+    local new_label
+    new_label=$(_gesture_action_label "$new_id")
+    _notify "${label}: ${new_label}"
+}
+
+# Gestures submenu — shows all 12 with current assignments
+_menu_gestures() {
+    while true; do
+        local items=()
+        for i in "${!_GESTURE_KEYS[@]}"; do
+            local key="${_GESTURE_KEYS[$i]}"
+            local label="${_GESTURE_LABELS[$i]}"
+            local action_id action_label
+            action_id=$(_gesture_get "$key")
+            action_label=$(_gesture_action_label "$action_id")
+            # Pad label for alignment
+            local padded
+            padded=$(printf "%-14s" "$label")
+            items+=("  ${padded} → ${action_label}")
+        done
+        items+=("")
+        items+=("  Apply & restart gestures")
+        items+=("  Reset to defaults")
+        items+=("  Back")
+
+        local choice
+        choice=$(printf '%s\n' "${items[@]}" | "${ROFI[@]}" -p "  Gestures")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        if [[ "$choice" == *"Apply"* ]]; then
+            _gestures_apply
+            _notify "Gestures applied!"
+            continue
+        fi
+
+        if [[ "$choice" == *"Reset"* ]]; then
+            _rofi_confirm "Reset all gestures to defaults?" && {
+                rm -f "$GESTURE_CONF"
+                _gestures_apply
+                _notify "Gestures reset to defaults"
+            }
+            continue
+        fi
+
+        # Find which gesture was selected
+        for i in "${!_GESTURE_LABELS[@]}"; do
+            if [[ "$choice" == *"${_GESTURE_LABELS[$i]}"* ]]; then
+                _gesture_configure "$i"
+                break
+            fi
+        done
+    done
+}
+
 menu_mouse() {
     while true; do
         local choice
@@ -2029,6 +2277,7 @@ _menu_touchpad_sub() {
     while true; do
         local choice
         choice=$(_rofi_select "  Touchpad" \
+            "  Gestures" \
             "  Tap to click" \
             "  Natural scroll" \
             "  Scroll method" \
@@ -2041,6 +2290,7 @@ _menu_touchpad_sub() {
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
+            *Gestures*)         _menu_gestures ;;
             *"Tap to click"*)   _tp_tap ;;
             *"Natural scroll"*) _tp_natural_scroll ;;
             *"Scroll method"*)  _tp_scroll_method ;;

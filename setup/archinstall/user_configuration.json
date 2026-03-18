@@ -78,7 +78,8 @@
         "hyprlock",
         "i3lock-color",
         "github-cli",
-        "nftables"
+        "nftables",
+        "libinput-gestures"
     ],
     "parallel downloads": 5,
     "profile_config": {

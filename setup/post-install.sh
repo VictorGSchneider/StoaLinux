@@ -83,6 +83,9 @@ SCREENSHOT_PKGS="grim slurp maim"
 # Stoatools (OCR, paste, resize, rename, locksmith)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
 
+# Touchpad gestures
+GESTURE_PKGS="libinput-gestures"
+
 # Cloud Drive (rclone — stream on-demand, Google Drive/OneDrive/Dropbox/S3)
 CLOUD_PKGS="rclone"
 
@@ -116,7 +119,7 @@ DEV_PKGS="github-cli"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -137,6 +140,7 @@ echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
+echo -e "  ${S}Gestures:   ${GESTURE_PKGS}${R}"
 echo -e "  ${S}Firewall:   ${FIREWALL_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
