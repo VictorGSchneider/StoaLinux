@@ -3145,6 +3145,186 @@ menu_printers() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   DATE, TIME, REGION & LANGUAGE
+# ══════════════════════════════════════════════════════════════
+
+_dt_set_timezone() {
+    local current
+    current=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "unknown")
+
+    # Common timezones first, then option to search all
+    local choice
+    choice=$(_rofi_select "  Timezone ($current)" \
+        "  America/Sao_Paulo" \
+        "  America/New_York" \
+        "  America/Chicago" \
+        "  America/Denver" \
+        "  America/Los_Angeles" \
+        "  America/Mexico_City" \
+        "  America/Buenos_Aires" \
+        "  America/Bogota" \
+        "  Europe/London" \
+        "  Europe/Berlin" \
+        "  Europe/Paris" \
+        "  Europe/Madrid" \
+        "  Europe/Rome" \
+        "  Europe/Lisbon" \
+        "  Europe/Moscow" \
+        "  Asia/Tokyo" \
+        "  Asia/Shanghai" \
+        "  Asia/Kolkata" \
+        "  Asia/Dubai" \
+        "  Asia/Seoul" \
+        "  Asia/Singapore" \
+        "  Australia/Sydney" \
+        "  Pacific/Auckland" \
+        "  Search all..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local tz
+    if [[ "$choice" == *"Search"* ]]; then
+        local query
+        query=$(_rofi_input "  Search timezone (e.g. Tokyo)")
+        [ -z "$query" ] && return
+        tz=$(timedatectl list-timezones 2>/dev/null | grep -i "$query" | "${ROFI[@]}" -p "  Results")
+        [ -z "$tz" ] && return
+    else
+        tz=$(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')
+    fi
+
+    _rofi_confirm "Set timezone to $tz?" && {
+        sudo timedatectl set-timezone "$tz" 2>/dev/null
+        _notify "Timezone: $tz"
+    }
+}
+
+_dt_toggle_ntp() {
+    local ntp_status
+    ntp_status=$(timedatectl show --property=NTP --value 2>/dev/null)
+
+    if [ "$ntp_status" = "yes" ]; then
+        _rofi_confirm "Disable auto time sync (NTP)?" && {
+            sudo timedatectl set-ntp false 2>/dev/null
+            _notify "NTP: disabled"
+        }
+    else
+        sudo timedatectl set-ntp true 2>/dev/null
+        _notify "NTP: enabled (auto sync)"
+    fi
+}
+
+_dt_set_manual_time() {
+    local ntp_status
+    ntp_status=$(timedatectl show --property=NTP --value 2>/dev/null)
+    if [ "$ntp_status" = "yes" ]; then
+        _notify "Disable NTP first to set time manually"
+        return
+    fi
+
+    local date_input
+    date_input=$(_rofi_input "  Date (YYYY-MM-DD)")
+    [ -z "$date_input" ] && return
+
+    local time_input
+    time_input=$(_rofi_input "  Time (HH:MM:SS)")
+    [ -z "$time_input" ] && return
+
+    _rofi_confirm "Set to ${date_input} ${time_input}?" && {
+        sudo timedatectl set-time "${date_input} ${time_input}" 2>/dev/null
+        _notify "Time set: ${date_input} ${time_input}"
+    }
+}
+
+_dt_24h_toggle() {
+    local current
+    current=$(gsettings get org.gnome.desktop.interface clock-format 2>/dev/null || echo "'24h'")
+
+    local choice
+    choice=$(_rofi_select "  Clock format" \
+        "  24-hour (14:30)" \
+        "  12-hour (2:30 PM)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *24*)
+            gsettings set org.gnome.desktop.interface clock-format '24h' 2>/dev/null
+            _notify "Clock: 24-hour"
+            ;;
+        *12*)
+            gsettings set org.gnome.desktop.interface clock-format '12h' 2>/dev/null
+            _notify "Clock: 12-hour"
+            ;;
+    esac
+}
+
+_dt_language() {
+    local current
+    current=$(locale 2>/dev/null | grep "^LANG=" | cut -d= -f2)
+
+    local choice
+    choice=$(_rofi_select "  Language ($current)" \
+        "  en_US.UTF-8 (English US)" \
+        "  pt_BR.UTF-8 (Portuguese BR)" \
+        "  pt_PT.UTF-8 (Portuguese PT)" \
+        "  es_ES.UTF-8 (Spanish)" \
+        "  fr_FR.UTF-8 (French)" \
+        "  de_DE.UTF-8 (German)" \
+        "  it_IT.UTF-8 (Italian)" \
+        "  ja_JP.UTF-8 (Japanese)" \
+        "  ko_KR.UTF-8 (Korean)" \
+        "  zh_CN.UTF-8 (Chinese Simplified)" \
+        "  ru_RU.UTF-8 (Russian)" \
+        "  ar_SA.UTF-8 (Arabic)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local locale_val
+    locale_val=$(echo "$choice" | awk '{print $2}')
+
+    _rofi_confirm "Set language to ${locale_val}? (requires logout)" && {
+        # Enable the locale if not already
+        sudo sed -i "s/^#\(${locale_val}\)/\1/" /etc/locale.gen 2>/dev/null
+        sudo locale-gen &>/dev/null
+
+        # Set system locale
+        sudo localectl set-locale "LANG=${locale_val}" 2>/dev/null
+        _notify "Language: ${locale_val} (logout to apply)"
+    }
+}
+
+menu_datetime() {
+    while true; do
+        local tz
+        tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "?")
+        local ntp
+        ntp=$(timedatectl show --property=NTP --value 2>/dev/null)
+        [ "$ntp" = "yes" ] && ntp="on" || ntp="off"
+        local now
+        now=$(date '+%Y-%m-%d %H:%M')
+
+        local choice
+        choice=$(_rofi_select "  Date & Time ($now)" \
+            "  Timezone ($tz)" \
+            "  Auto sync / NTP ($ntp)" \
+            "  Set time manually" \
+            "  Clock format (12/24h)" \
+            "  Language & Region" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Timezone*)      _dt_set_timezone ;;
+            *NTP*)           _dt_toggle_ntp ;;
+            *manually*)      _dt_set_manual_time ;;
+            *Clock*)         _dt_24h_toggle ;;
+            *Language*)      _dt_language ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -3253,6 +3433,7 @@ main_menu() {
             "  Wallpaper" \
             "  Theme" \
             "  Power Management" \
+            "  Date & Time" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
@@ -3274,6 +3455,7 @@ main_menu() {
             *Wallpaper*)    menu_wallpaper ;;
             *Theme*)        menu_theme ;;
             *"Power Management"*) menu_power_mgmt ;;
+            *"Date & Time"*) menu_datetime ;;
             *Lock*)         menu_lockscreen ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
