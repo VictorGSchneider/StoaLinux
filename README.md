@@ -83,16 +83,46 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print / Super+Print</code></td><td>Screenshot</td></tr>
 </table>
 
+## Settings Panel
+
+Everything is configured through `stoa-settings` (`Super+I`) — no external settings app needed.
+
+<table>
+  <tr><th>Panel</th><th>Features</th></tr>
+  <tr><td><b>Display</b></td><td>Brightness, resolution, scale, rotation, multi-monitor (extend/mirror)</td></tr>
+  <tr><td><b>Audio</b></td><td>Volume, output/input devices (PipeWire)</td></tr>
+  <tr><td><b>Equalizer</b></td><td>8 built-in EQ presets + user presets via EasyEffects</td></tr>
+  <tr><td><b>Night Light</b></td><td>Blue light filter (2500K–6500K), schedule (manual/sunset/custom)</td></tr>
+  <tr><td><b>Keyboard</b></td><td>Layout (12 presets + custom), repeat rate, Caps Lock remap, NumLock</td></tr>
+  <tr><td><b>Mouse & Touchpad</b></td><td>Sensitivity, accel, scroll, tap-to-click, 12 configurable gestures</td></tr>
+  <tr><td><b>Network</b></td><td>Wi-Fi, saved networks, network info (IP/DNS/gateway/signal)</td></tr>
+  <tr><td><b>VPN</b></td><td>ProtonVPN: connect by country, P2P, Secure Core, kill switch</td></tr>
+  <tr><td><b>Firewall</b></td><td>nftables: port list, allow/block, service toggle</td></tr>
+  <tr><td><b>Bluetooth</b></td><td>Scan, connect, saved devices, forget</td></tr>
+  <tr><td><b>Hardware</b></td><td>CPU, GPU, RAM, disks, battery, USB, PCI, sensors, cameras, input</td></tr>
+  <tr><td><b>Printers</b></td><td>CUPS: add/remove printers, print queue, scanners (SANE)</td></tr>
+  <tr><td><b>Power Management</b></td><td>Power profiles, screen off timeout, auto suspend, battery info</td></tr>
+  <tr><td><b>Date & Time</b></td><td>Timezone, NTP, manual time, 12/24h, language & locale</td></tr>
+  <tr><td><b>Accessibility</b></td><td>Cursor size, text scale, animations, gaps, opacity, border width</td></tr>
+  <tr><td><b>Screensaver</b></td><td>Living marble animation (plasma noise in Stoa palette), idle timeout</td></tr>
+  <tr><td><b>Wallpaper</b></td><td>Browse, generate, set custom</td></tr>
+  <tr><td><b>Theme</b></td><td>GTK, icons, cursors, font size</td></tr>
+  <tr><td><b>Lock Screen</b></td><td>Lock now, face recognition setup</td></tr>
+</table>
+
 ## Scripts & Stoatools
 
 <table>
   <tr><th>Script</th><th>What it does</th><th>Stoatool</th><th>What it does</th></tr>
-  <tr><td><code>stoa-settings</code></td><td>Settings panel</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
+  <tr><td><code>stoa-settings</code></td><td>Settings panel (20 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
   <tr><td><code>stoa-store</code></td><td>Package manager</td><td><code>stoa-paste</code></td><td>Paste as UPPER/lower/etc</td></tr>
   <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
   <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
   <tr><td><code>stoa-memento</code></td><td>Memento Mori widget</td><td><code>stoa-locksmith</code></td><td>See who locks a file</td></tr>
+  <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td></td><td></td></tr>
   <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
+  <tr><td><code>stoa-drive</code></td><td>Cloud drive (rclone)</td><td></td><td></td></tr>
+  <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
@@ -112,6 +142,7 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><td>OnlyOffice</td><td>Office suite</td><td>Enpass</td><td>Passwords</td></tr>
   <tr><td>Betterbird</td><td>Email</td><td>howdy</td><td>Face unlock</td></tr>
   <tr><td>imv</td><td>Images</td><td>lf / Thunar</td><td>Files</td></tr>
+  <tr><td>EasyEffects</td><td>Audio equalizer</td><td>gammastep</td><td>Night light</td></tr>
 </table>
 
 ## Theme
