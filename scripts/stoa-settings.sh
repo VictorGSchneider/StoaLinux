@@ -2633,6 +2633,182 @@ menu_power_mgmt() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   KEYBOARD (layout, repeat, Caps Lock behavior)
+# ══════════════════════════════════════════════════════════════
+
+_kb_current_layout() {
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl getoption input:kb_layout 2>/dev/null | grep "str:" | awk '{print $2}'
+    else
+        setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}'
+    fi
+}
+
+_kb_layout() {
+    local current
+    current=$(_kb_current_layout)
+
+    local choice
+    choice=$(_rofi_select "  Layout ($current)" \
+        "  us (English US)" \
+        "  br (Portuguese BR)" \
+        "  gb (English UK)" \
+        "  de (German)" \
+        "  fr (French)" \
+        "  es (Spanish)" \
+        "  it (Italian)" \
+        "  pt (Portuguese)" \
+        "  ru (Russian)" \
+        "  jp (Japanese)" \
+        "  kr (Korean)" \
+        "  cn (Chinese)" \
+        "  ar (Arabic)" \
+        "  Custom..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local layout
+    if [[ "$choice" == *"Custom"* ]]; then
+        layout=$(_rofi_input "  Layout code (e.g. latam)")
+        [ -z "$layout" ] && return
+    else
+        layout=$(echo "$choice" | grep -oP '^\s*\S+\s+\K\S+' | tr -d '()')
+        # Extract the code before the parenthesis
+        layout=$(echo "$choice" | awk '{print $2}')
+    fi
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword input:kb_layout "$layout" &>/dev/null
+        _notify "Keyboard layout: $layout"
+    else
+        setxkbmap "$layout" 2>/dev/null
+        _notify "Keyboard layout: $layout"
+    fi
+}
+
+_kb_repeat_rate() {
+    local current_rate current_delay
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        current_rate=$(hyprctl getoption input:repeat_rate 2>/dev/null | grep "int:" | awk '{print $2}')
+        current_delay=$(hyprctl getoption input:repeat_delay 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current_rate="?"
+        current_delay="?"
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Repeat (rate:${current_rate} delay:${current_delay}ms)" \
+        "  Slow (rate 15, delay 600ms)" \
+        "  Normal (rate 25, delay 400ms)" \
+        "  Fast (rate 40, delay 300ms)" \
+        "  Very fast (rate 50, delay 200ms)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local rate delay
+    case "$choice" in
+        *Slow*)      rate=15; delay=600 ;;
+        *Normal*)    rate=25; delay=400 ;;
+        *Fast*)      rate=40; delay=300 ;;
+        *"Very fast"*) rate=50; delay=200 ;;
+    esac
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword input:repeat_rate "$rate" &>/dev/null
+        hyprctl keyword input:repeat_delay "$delay" &>/dev/null
+    else
+        xset r rate "$delay" "$rate" 2>/dev/null
+    fi
+    _notify "Repeat: rate $rate, delay ${delay}ms"
+}
+
+_kb_capslock_behavior() {
+    local choice
+    choice=$(_rofi_select "  Caps Lock behavior" \
+        "  Default (Caps Lock)" \
+        "  Escape (vim-friendly)" \
+        "  Ctrl (Emacs-friendly)" \
+        "  Backspace" \
+        "  Disabled" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local opt
+    case "$choice" in
+        *Default*)    opt="" ;;
+        *Escape*)     opt="caps:escape" ;;
+        *Ctrl*)       opt="ctrl:nocaps" ;;
+        *Backspace*)  opt="caps:backspace" ;;
+        *Disabled*)   opt="caps:none" ;;
+    esac
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword input:kb_options "$opt" &>/dev/null
+        _notify "Caps Lock: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
+    else
+        local layout
+        layout=$(setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}')
+        if [ -n "$opt" ]; then
+            setxkbmap "$layout" -option "" -option "$opt" 2>/dev/null
+        else
+            setxkbmap "$layout" -option "" 2>/dev/null
+        fi
+        _notify "Caps Lock: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
+    fi
+}
+
+_kb_numlock() {
+    local choice
+    choice=$(_rofi_select "  NumLock on boot" \
+        "  On" \
+        "  Off" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *On*)
+            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+                hyprctl keyword input:numlock_by_default true &>/dev/null
+            else
+                numlockx on 2>/dev/null
+            fi
+            _notify "NumLock on boot: on"
+            ;;
+        *Off*)
+            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+                hyprctl keyword input:numlock_by_default false &>/dev/null
+            else
+                numlockx off 2>/dev/null
+            fi
+            _notify "NumLock on boot: off"
+            ;;
+    esac
+}
+
+menu_keyboard() {
+    while true; do
+        local layout
+        layout=$(_kb_current_layout)
+
+        local choice
+        choice=$(_rofi_select "  Keyboard" \
+            "  Layout ($layout)" \
+            "  Repeat rate & delay" \
+            "  Caps Lock behavior" \
+            "  NumLock on boot" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Layout*)     _kb_layout ;;
+            *Repeat*)     _kb_repeat_rate ;;
+            *Caps*)       _kb_capslock_behavior ;;
+            *NumLock*)    _kb_numlock ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -2729,6 +2905,7 @@ main_menu() {
             "  Display" \
             "  Audio" \
             "  Night Light" \
+            "  Keyboard" \
             "  Mouse & Touchpad" \
             "  Network" \
             "  VPN" \
@@ -2748,6 +2925,7 @@ main_menu() {
             *Display*)      menu_display ;;
             *Audio*)        menu_audio ;;
             *"Night Light"*) menu_nightlight ;;
+            *Keyboard*)     menu_keyboard ;;
             *"Mouse & Touchpad"*) menu_mouse ;;
             *Network*)      menu_network ;;
             *VPN*)          menu_vpn ;;
