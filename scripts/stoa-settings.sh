@@ -2453,6 +2453,186 @@ menu_nightlight() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   POWER MANAGEMENT (profiles, idle, suspend)
+# ══════════════════════════════════════════════════════════════
+
+_power_current_profile() {
+    if command -v powerprofilesctl &>/dev/null; then
+        powerprofilesctl get 2>/dev/null || echo "unknown"
+    else
+        echo "N/A"
+    fi
+}
+
+_power_set_profile() {
+    local choice
+    local current
+    current=$(_power_current_profile)
+
+    choice=$(_rofi_select "  Profile ($current)" \
+        "  Performance" \
+        "  Balanced" \
+        "  Power saver" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local profile
+    case "$choice" in
+        *Performance*) profile="performance" ;;
+        *Balanced*)    profile="balanced" ;;
+        *"Power saver"*) profile="power-saver" ;;
+    esac
+
+    if command -v powerprofilesctl &>/dev/null; then
+        powerprofilesctl set "$profile" 2>/dev/null
+        _notify "Power profile: $profile"
+    else
+        _notify "power-profiles-daemon not installed"
+    fi
+}
+
+_power_idle_timeout() {
+    local current
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        current=$(hyprctl getoption misc:dpms_timeout 2>/dev/null | grep "int:" | awk '{print $2}')
+        [ -z "$current" ] || [ "$current" = "0" ] && current="off"
+        [ "$current" != "off" ] && current="${current}s"
+    else
+        current="unknown"
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Screen off after ($current)" \
+        "  1 minute" \
+        "  2 minutes" \
+        "  5 minutes" \
+        "  10 minutes" \
+        "  15 minutes" \
+        "  30 minutes" \
+        "  Never" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local seconds
+    case "$choice" in
+        *"1 minute"*)   seconds=60 ;;
+        *"2 minute"*)   seconds=120 ;;
+        *"5 minute"*)   seconds=300 ;;
+        *"10 minute"*)  seconds=600 ;;
+        *"15 minute"*)  seconds=900 ;;
+        *"30 minute"*)  seconds=1800 ;;
+        *Never*)        seconds=0 ;;
+    esac
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword misc:dpms_timeout "$seconds" &>/dev/null
+        [ "$seconds" -eq 0 ] && _notify "Screen off: never" || _notify "Screen off: $((seconds / 60)) min"
+    else
+        if [ "$seconds" -eq 0 ]; then
+            xset s off -dpms 2>/dev/null
+            _notify "Screen off: never"
+        else
+            xset s "$seconds" dpms "$seconds" "$seconds" "$seconds" 2>/dev/null
+            _notify "Screen off: $((seconds / 60)) min"
+        fi
+    fi
+}
+
+_power_auto_suspend() {
+    local current
+    current=$(systemctl show sleep.target --property=ActiveState 2>/dev/null | cut -d= -f2)
+    local idle_delay
+    idle_delay=$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 2>/dev/null || echo "")
+
+    local choice
+    choice=$(_rofi_select "  Auto Suspend" \
+        "  Suspend after 15 min" \
+        "  Suspend after 30 min" \
+        "  Suspend after 1 hour" \
+        "  Suspend after 2 hours" \
+        "  Disable auto suspend" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local minutes
+    case "$choice" in
+        *"15 min"*)  minutes=15 ;;
+        *"30 min"*)  minutes=30 ;;
+        *"1 hour"*)  minutes=60 ;;
+        *"2 hour"*)  minutes=120 ;;
+        *Disable*)   minutes=0 ;;
+    esac
+
+    local conf_dir="/etc/systemd/sleep.conf.d"
+    if [ "$minutes" -eq 0 ]; then
+        sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
+        _notify "Auto suspend: disabled"
+    else
+        sudo systemctl unmask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
+        sudo mkdir -p "$conf_dir"
+        printf '[Sleep]\nIdleActionSec=%dm\nIdleAction=suspend\n' "$minutes" | sudo tee "$conf_dir/stoa-idle.conf" >/dev/null
+        _notify "Auto suspend: ${minutes} min"
+    fi
+}
+
+_power_battery_info() {
+    local bat_path
+    bat_path=$(find /sys/class/power_supply -name "BAT*" -maxdepth 1 2>/dev/null | head -1)
+    if [ -z "$bat_path" ]; then
+        _notify "No battery detected"
+        return
+    fi
+
+    local status capacity health cycles energy_full energy_full_design ac_status
+    status=$(cat "$bat_path/status" 2>/dev/null || echo "Unknown")
+    capacity=$(cat "$bat_path/capacity" 2>/dev/null || echo "?")
+    energy_full=$(cat "$bat_path/energy_full" 2>/dev/null || cat "$bat_path/charge_full" 2>/dev/null || echo "0")
+    energy_full_design=$(cat "$bat_path/energy_full_design" 2>/dev/null || cat "$bat_path/charge_full_design" 2>/dev/null || echo "0")
+    cycles=$(cat "$bat_path/cycle_count" 2>/dev/null || echo "N/A")
+
+    health="N/A"
+    if [ "$energy_full_design" -gt 0 ] 2>/dev/null; then
+        health="$((energy_full * 100 / energy_full_design))%"
+    fi
+
+    ac_status="Unplugged"
+    for ac in /sys/class/power_supply/AC* /sys/class/power_supply/ADP*; do
+        [ -f "$ac/online" ] && [ "$(cat "$ac/online" 2>/dev/null)" = "1" ] && ac_status="Plugged in"
+    done
+
+    _rofi_select "  Battery Info" \
+        "  Status: $status" \
+        "  Charge: ${capacity}%" \
+        "  Health: $health" \
+        "  Cycles: $cycles" \
+        "  AC: $ac_status" \
+        "  Back" >/dev/null
+}
+
+menu_power_mgmt() {
+    while true; do
+        local profile
+        profile=$(_power_current_profile)
+
+        local choice
+        choice=$(_rofi_select "  Power Management" \
+            "  Power profile ($profile)" \
+            "  Screen off timeout" \
+            "  Auto suspend" \
+            "  Battery info" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Power profile"*)  _power_set_profile ;;
+            *"Screen off"*)     _power_idle_timeout ;;
+            *"Auto suspend"*)   _power_auto_suspend ;;
+            *Battery*)          _power_battery_info ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -2558,6 +2738,7 @@ main_menu() {
             "  Cloud Drive" \
             "  Wallpaper" \
             "  Theme" \
+            "  Power Management" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
@@ -2576,6 +2757,7 @@ main_menu() {
             *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;
             *Theme*)        menu_theme ;;
+            *"Power Management"*) menu_power_mgmt ;;
             *Lock*)         menu_lockscreen ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
