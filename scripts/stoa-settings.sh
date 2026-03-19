@@ -3325,6 +3325,222 @@ menu_datetime() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   ACCESSIBILITY
+# ══════════════════════════════════════════════════════════════
+
+_a11y_cursor_size() {
+    local current
+    current=$(gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null || echo "24")
+
+    local choice
+    choice=$(_rofi_select "  Cursor size (${current}px)" \
+        "  24 (default)" \
+        "  32 (large)" \
+        "  48 (extra large)" \
+        "  64 (huge)" \
+        "  96 (maximum)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local size
+    size=$(echo "$choice" | grep -oP '\d+' | head -1)
+
+    gsettings set org.gnome.desktop.interface cursor-size "$size" 2>/dev/null
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword env "XCURSOR_SIZE,$size" &>/dev/null
+    fi
+    _notify "Cursor size: ${size}px"
+}
+
+_a11y_text_scaling() {
+    local current
+    current=$(gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null || echo "1.0")
+
+    local choice
+    choice=$(_rofi_select "  Text scale (${current}x)" \
+        "  1.0 (default)" \
+        "  1.25 (125%)" \
+        "  1.5 (150%)" \
+        "  1.75 (175%)" \
+        "  2.0 (200%)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local factor
+    factor=$(echo "$choice" | grep -oP '\d+\.\d+' | head -1)
+
+    gsettings set org.gnome.desktop.interface text-scaling-factor "$factor" 2>/dev/null
+    _notify "Text scale: ${factor}x"
+}
+
+_a11y_animations() {
+    local current="on"
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        local enabled
+        enabled=$(hyprctl getoption animations:enabled 2>/dev/null | grep "int:" | awk '{print $2}')
+        [ "$enabled" = "0" ] && current="off"
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Animations ($current)" \
+        "  Enable animations" \
+        "  Disable animations" \
+        "  Reduce motion (slower)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        case "$choice" in
+            *Enable*)
+                hyprctl keyword animations:enabled true &>/dev/null
+                _notify "Animations: enabled"
+                ;;
+            *Disable*)
+                hyprctl keyword animations:enabled false &>/dev/null
+                gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null
+                _notify "Animations: disabled"
+                ;;
+            *Reduce*)
+                hyprctl keyword animations:enabled true &>/dev/null
+                hyprctl keyword animation "windows, 1, 8, default" &>/dev/null
+                hyprctl keyword animation "fade, 1, 8, default" &>/dev/null
+                hyprctl keyword animation "workspaces, 1, 6, default" &>/dev/null
+                _notify "Animations: reduced motion"
+                ;;
+        esac
+    else
+        case "$choice" in
+            *Enable*)
+                gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null
+                _notify "Animations: enabled"
+                ;;
+            *Disable*)
+                gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null
+                _notify "Animations: disabled"
+                ;;
+        esac
+    fi
+}
+
+_a11y_gaps() {
+    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+        _notify "Gaps only available on Hyprland"
+        return
+    fi
+
+    local current_in current_out
+    current_in=$(hyprctl getoption general:gaps_in 2>/dev/null | grep "custom:" | awk '{print $2}')
+    current_out=$(hyprctl getoption general:gaps_out 2>/dev/null | grep "custom:" | awk '{print $2}')
+
+    local choice
+    choice=$(_rofi_select "  Gaps (in:${current_in} out:${current_out})" \
+        "  None (0/0)" \
+        "  Minimal (1/2)" \
+        "  Default (3/6)" \
+        "  Comfortable (5/10)" \
+        "  Spacious (8/16)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local gin gout
+    case "$choice" in
+        *None*)        gin=0; gout=0 ;;
+        *Minimal*)     gin=1; gout=2 ;;
+        *Default*)     gin=3; gout=6 ;;
+        *Comfortable*) gin=5; gout=10 ;;
+        *Spacious*)    gin=8; gout=16 ;;
+    esac
+
+    hyprctl keyword general:gaps_in "$gin" &>/dev/null
+    hyprctl keyword general:gaps_out "$gout" &>/dev/null
+    _notify "Gaps: in=$gin out=$gout"
+}
+
+_a11y_opacity() {
+    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+        _notify "Opacity only available on Hyprland"
+        return
+    fi
+
+    local current
+    current=$(hyprctl getoption decoration:inactive_opacity 2>/dev/null | grep "float:" | awk '{print $2}')
+
+    local choice
+    choice=$(_rofi_select "  Inactive window opacity (${current})" \
+        "  100% (opaque)" \
+        "  95%" \
+        "  90% (default)" \
+        "  85%" \
+        "  80%" \
+        "  70%" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    case "$choice" in
+        *100*) val="1.0" ;;
+        *95*)  val="0.95" ;;
+        *90*)  val="0.90" ;;
+        *85*)  val="0.85" ;;
+        *80*)  val="0.80" ;;
+        *70*)  val="0.70" ;;
+    esac
+
+    hyprctl keyword decoration:inactive_opacity "$val" &>/dev/null
+    _notify "Inactive opacity: $val"
+}
+
+_a11y_border_size() {
+    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+        _notify "Border size only available on Hyprland"
+        return
+    fi
+
+    local current
+    current=$(hyprctl getoption general:border_size 2>/dev/null | grep "int:" | awk '{print $2}')
+
+    local choice
+    choice=$(_rofi_select "  Border width (${current}px)" \
+        "  0 (none)" \
+        "  1 (thin)" \
+        "  2 (default)" \
+        "  3 (thick)" \
+        "  4 (extra thick)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local size
+    size=$(echo "$choice" | grep -oP '^\s*\S+\s+\K\d+')
+
+    hyprctl keyword general:border_size "$size" &>/dev/null
+    _notify "Border width: ${size}px"
+}
+
+menu_accessibility() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Accessibility" \
+            "  Cursor size" \
+            "  Text scaling" \
+            "  Animations" \
+            "  Window gaps" \
+            "  Inactive opacity" \
+            "  Border width" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Cursor*)    _a11y_cursor_size ;;
+            *Text*)      _a11y_text_scaling ;;
+            *Animation*) _a11y_animations ;;
+            *gaps*)      _a11y_gaps ;;
+            *opacity*)   _a11y_opacity ;;
+            *Border*)    _a11y_border_size ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -3434,6 +3650,7 @@ main_menu() {
             "  Theme" \
             "  Power Management" \
             "  Date & Time" \
+            "  Accessibility" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
@@ -3456,6 +3673,7 @@ main_menu() {
             *Theme*)        menu_theme ;;
             *"Power Management"*) menu_power_mgmt ;;
             *"Date & Time"*) menu_datetime ;;
+            *Accessibility*) menu_accessibility ;;
             *Lock*)         menu_lockscreen ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
