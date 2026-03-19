@@ -3541,6 +3541,175 @@ menu_accessibility() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   AUDIO EQUALIZER (EasyEffects — PipeWire)
+# ══════════════════════════════════════════════════════════════
+
+EQ_PRESETS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/easyeffects/output"
+
+_eq_running() {
+    pgrep -x easyeffects &>/dev/null && echo "on" || echo "off"
+}
+
+_eq_toggle() {
+    if pgrep -x easyeffects &>/dev/null; then
+        easyeffects -q 2>/dev/null
+        _notify "Equalizer: off"
+    else
+        easyeffects --gapplication-service &>/dev/null &
+        disown
+        _notify "Equalizer: on"
+    fi
+}
+
+_eq_open_gui() {
+    if ! pgrep -x easyeffects &>/dev/null; then
+        easyeffects --gapplication-service &>/dev/null &
+        disown
+        sleep 1
+    fi
+    easyeffects &>/dev/null &
+    disown
+    _notify "Opening EasyEffects..."
+}
+
+_eq_presets() {
+    # List available presets from EasyEffects config
+    local presets=()
+
+    # Built-in style presets (common EQ curves)
+    presets+=("  Flat (default)")
+    presets+=("  Bass Boost")
+    presets+=("  Treble Boost")
+    presets+=("  Vocal Clarity")
+    presets+=("  Rock")
+    presets+=("  Electronic")
+    presets+=("  Classical")
+    presets+=("  Podcast / Speech")
+
+    # User presets from EasyEffects
+    if [ -d "$EQ_PRESETS_DIR" ]; then
+        local user_presets
+        user_presets=$(find "$EQ_PRESETS_DIR" -name "*.json" -printf "%f\n" 2>/dev/null | sed 's/\.json$//')
+        while IFS= read -r p; do
+            [ -n "$p" ] && presets+=("  $p (saved)")
+        done <<< "$user_presets"
+    fi
+
+    presets+=("  Back")
+
+    local choice
+    choice=$(_rofi_select "  EQ Preset" "${presets[@]}")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    # Ensure EasyEffects is running
+    if ! pgrep -x easyeffects &>/dev/null; then
+        easyeffects --gapplication-service &>/dev/null &
+        disown
+        sleep 1
+    fi
+
+    local preset_name
+    preset_name=$(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //' | sed 's/ (saved)$//')
+
+    # For built-in presets, create the EQ config
+    case "$choice" in
+        *"Flat"*)
+            _eq_apply_builtin "Flat" "0:0:0:0:0:0:0:0:0:0"
+            ;;
+        *"Bass Boost"*)
+            _eq_apply_builtin "Bass Boost" "6:5:4:2:0:0:0:0:0:0"
+            ;;
+        *"Treble Boost"*)
+            _eq_apply_builtin "Treble Boost" "0:0:0:0:0:2:3:4:5:6"
+            ;;
+        *"Vocal Clarity"*)
+            _eq_apply_builtin "Vocal Clarity" "-2:0:2:4:4:3:2:0:-1:-2"
+            ;;
+        *"Rock"*)
+            _eq_apply_builtin "Rock" "4:3:1:0:-1:-1:0:2:3:4"
+            ;;
+        *"Electronic"*)
+            _eq_apply_builtin "Electronic" "5:4:2:0:-2:-1:0:2:4:5"
+            ;;
+        *"Classical"*)
+            _eq_apply_builtin "Classical" "3:2:1:0:0:0:0:1:2:3"
+            ;;
+        *"Podcast"*|*"Speech"*)
+            _eq_apply_builtin "Podcast" "-3:-1:2:4:4:3:1:0:-2:-3"
+            ;;
+        *"(saved)"*)
+            local name
+            name=$(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //' | sed 's/ (saved)$//')
+            easyeffects -l "$name" 2>/dev/null
+            _notify "Preset: $name"
+            ;;
+    esac
+}
+
+_eq_apply_builtin() {
+    local name="$1"
+    local gains="$2"
+
+    # Create a simple preset JSON for EasyEffects
+    mkdir -p "$EQ_PRESETS_DIR"
+    local freqs=(31 63 125 250 500 1000 2000 4000 8000 16000)
+    IFS=':' read -ra gain_arr <<< "$gains"
+
+    local bands=""
+    for i in "${!freqs[@]}"; do
+        local g="${gain_arr[$i]:-0}"
+        [ -n "$bands" ] && bands+=","
+        bands+=$(printf '{"frequency":%d,"gain":%s,"mode":"RLC (BT)","q":1.5,"slope":"x1","type":"Bell"}' "${freqs[$i]}" "$g")
+    done
+
+    cat > "${EQ_PRESETS_DIR}/stoa-${name,,}.json" <<EQEOF
+{
+  "output": {
+    "equalizer#0": {
+      "bypass": false,
+      "input-gain": 0.0,
+      "num-bands": 10,
+      "output-gain": 0.0,
+      "split-channels": false,
+      "left": [${bands}],
+      "right": [${bands}]
+    },
+    "plugins_order": ["equalizer#0"]
+  }
+}
+EQEOF
+
+    easyeffects -l "stoa-${name,,}" 2>/dev/null
+    _notify "Preset: $name"
+}
+
+menu_equalizer() {
+    if ! command -v easyeffects &>/dev/null; then
+        _notify "easyeffects not installed (pacman -S easyeffects)"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_eq_running)
+
+        local choice
+        choice=$(_rofi_select "  Equalizer ($status)" \
+            "  Toggle equalizer ($status)" \
+            "  Presets" \
+            "  Open EasyEffects" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Toggle*)   _eq_toggle ;;
+            *Presets*)  _eq_presets ;;
+            *Open*)     _eq_open_gui ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -3636,6 +3805,7 @@ main_menu() {
         choice=$(_rofi_select "  Settings" \
             "  Display" \
             "  Audio" \
+            "  Equalizer" \
             "  Night Light" \
             "  Keyboard" \
             "  Mouse & Touchpad" \
@@ -3659,6 +3829,7 @@ main_menu() {
         case "$choice" in
             *Display*)      menu_display ;;
             *Audio*)        menu_audio ;;
+            *Equalizer*)    menu_equalizer ;;
             *"Night Light"*) menu_nightlight ;;
             *Keyboard*)     menu_keyboard ;;
             *"Mouse & Touchpad"*) menu_mouse ;;
