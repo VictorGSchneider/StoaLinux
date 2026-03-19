@@ -47,7 +47,7 @@ echo -e "  ${F}StoaLinux packages:${R}"
 echo ""
 
 # Hyprland (Wayland — primary)
-WAYLAND_PKGS="hyprland waybar swaybg xdg-desktop-portal-hyprland"
+WAYLAND_PKGS="hyprland waybar swaybg swayidle xdg-desktop-portal-hyprland"
 
 # i3 (Xorg — fallback)
 XORG_PKGS="i3-wm i3status xorg-server xorg-xinit picom"
@@ -123,7 +123,7 @@ PRINT_PKGS="cups cups-pdf system-config-printer"
 EQUALIZER_PKGS="easyeffects"
 
 # Audio + utilities
-UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl"
+UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg"
 
 # Developer tools
 DEV_PKGS="github-cli"

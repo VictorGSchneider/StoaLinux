@@ -3710,6 +3710,113 @@ menu_equalizer() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   SCREENSAVER (living marble animation)
+# ══════════════════════════════════════════════════════════════
+
+_ss_is_enabled() {
+    local conf="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver.conf"
+    [ -f "$conf" ] && grep -q "^ENABLED=true" "$conf" 2>/dev/null && echo "on" || echo "off"
+}
+
+_ss_current_timeout() {
+    local conf="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver.conf"
+    local val="300"
+    [ -f "$conf" ] && {
+        local v
+        v=$(grep "^IDLE_TIMEOUT=" "$conf" 2>/dev/null | cut -d= -f2)
+        [ -n "$v" ] && val="$v"
+    }
+    echo "$((val / 60))"
+}
+
+_ss_toggle() {
+    local status
+    status=$(_ss_is_enabled)
+    if [ "$status" = "on" ]; then
+        stoa-screensaver disable 2>/dev/null
+        _notify "Screensaver: disabled"
+    else
+        stoa-screensaver enable 2>/dev/null
+        _notify "Screensaver: enabled"
+    fi
+}
+
+_ss_set_timeout() {
+    local current
+    current=$(_ss_current_timeout)
+
+    local choice
+    choice=$(_rofi_select "  Idle timeout (${current} min)" \
+        "  1 minute" \
+        "  2 minutes" \
+        "  5 minutes" \
+        "  10 minutes" \
+        "  15 minutes" \
+        "  30 minutes" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local seconds
+    case "$choice" in
+        *"1 minute"*)   seconds=60 ;;
+        *"2 minute"*)   seconds=120 ;;
+        *"5 minute"*)   seconds=300 ;;
+        *"10 minute"*)  seconds=600 ;;
+        *"15 minute"*)  seconds=900 ;;
+        *"30 minute"*)  seconds=1800 ;;
+    esac
+
+    stoa-screensaver set-timeout "$seconds" 2>/dev/null
+    _notify "Screensaver timeout: $((seconds / 60)) min"
+}
+
+_ss_regenerate() {
+    _notify "Generating screensaver animation..."
+    kitty -e stoa-screensaver generate &
+    disown
+}
+
+_ss_preview() {
+    local video="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver/marble-flow.mp4"
+    if [ ! -f "$video" ]; then
+        _notify "No animation yet — generate first"
+        return
+    fi
+    stoa-screensaver start &
+    disown
+}
+
+menu_screensaver() {
+    if ! command -v magick &>/dev/null; then
+        _notify "imagemagick not installed"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_ss_is_enabled)
+        local timeout
+        timeout=$(_ss_current_timeout)
+
+        local choice
+        choice=$(_rofi_select "  Screensaver ($status)" \
+            "  Toggle ($status)" \
+            "  Idle timeout (${timeout} min)" \
+            "  Generate animation" \
+            "  Preview" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Toggle*)    _ss_toggle ;;
+            *timeout*)   _ss_set_timeout ;;
+            *Generate*)  _ss_regenerate ;;
+            *Preview*)   _ss_preview ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -3821,6 +3928,7 @@ main_menu() {
             "  Power Management" \
             "  Date & Time" \
             "  Accessibility" \
+            "  Screensaver" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
@@ -3845,6 +3953,7 @@ main_menu() {
             *"Power Management"*) menu_power_mgmt ;;
             *"Date & Time"*) menu_datetime ;;
             *Accessibility*) menu_accessibility ;;
+            *Screensaver*)  menu_screensaver ;;
             *Lock*)         menu_lockscreen ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
