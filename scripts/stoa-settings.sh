@@ -2304,6 +2304,155 @@ _menu_touchpad_sub() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   NIGHT LIGHT (blue light filter — gammastep)
+# ══════════════════════════════════════════════════════════════
+
+NIGHTLIGHT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/nightlight.conf"
+
+_nightlight_save() {
+    local key="$1" val="$2"
+    mkdir -p "$(dirname "$NIGHTLIGHT_CONF")"
+    [ ! -f "$NIGHTLIGHT_CONF" ] && touch "$NIGHTLIGHT_CONF"
+    if grep -q "^${key}=" "$NIGHTLIGHT_CONF" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${val}|" "$NIGHTLIGHT_CONF"
+    else
+        echo "${key}=${val}" >> "$NIGHTLIGHT_CONF"
+    fi
+}
+
+_nightlight_get() {
+    local key="$1" default="$2"
+    if [ -f "$NIGHTLIGHT_CONF" ]; then
+        local val
+        val=$(grep "^${key}=" "$NIGHTLIGHT_CONF" 2>/dev/null | cut -d= -f2)
+        [ -n "$val" ] && echo "$val" && return
+    fi
+    echo "$default"
+}
+
+_nightlight_running() {
+    pgrep -x gammastep &>/dev/null && echo "on" || echo "off"
+}
+
+_nightlight_toggle() {
+    if pgrep -x gammastep &>/dev/null; then
+        pkill -x gammastep
+        _nightlight_save "ENABLED" "false"
+        _notify "Night light: off"
+    else
+        local temp
+        temp=$(_nightlight_get "TEMPERATURE" "4500")
+        gammastep -O "$temp" &>/dev/null &
+        disown
+        _nightlight_save "ENABLED" "true"
+        _notify "Night light: on (${temp}K)"
+    fi
+}
+
+_nightlight_temperature() {
+    local current
+    current=$(_nightlight_get "TEMPERATURE" "4500")
+
+    local choice
+    choice=$(_rofi_select "  Temperature (${current}K)" \
+        "  6500K (daylight)" \
+        "  5500K (warm white)" \
+        "  5000K (soft)" \
+        "  4500K (warm)" \
+        "  4000K (sunset)" \
+        "  3500K (candle)" \
+        "  3000K (amber)" \
+        "  2500K (deep warm)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local temp
+    temp=$(echo "$choice" | grep -oP '\d+(?=K)')
+    [ -z "$temp" ] && return
+
+    _nightlight_save "TEMPERATURE" "$temp"
+
+    # Apply immediately if running
+    if pgrep -x gammastep &>/dev/null; then
+        pkill -x gammastep
+        gammastep -O "$temp" &>/dev/null &
+        disown
+    fi
+    _notify "Temperature: ${temp}K"
+}
+
+_nightlight_schedule() {
+    local mode
+    mode=$(_nightlight_get "SCHEDULE" "manual")
+
+    local choice
+    choice=$(_rofi_select "  Schedule ($mode)" \
+        "  Manual (toggle on/off)" \
+        "  Sunset to sunrise (auto)" \
+        "  Custom hours" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *Manual*)
+            _nightlight_save "SCHEDULE" "manual"
+            pkill -x gammastep 2>/dev/null
+            _notify "Schedule: manual"
+            ;;
+        *Sunset*)
+            _nightlight_save "SCHEDULE" "auto"
+            local temp
+            temp=$(_nightlight_get "TEMPERATURE" "4500")
+            pkill -x gammastep 2>/dev/null
+            gammastep -t 6500:"$temp" &>/dev/null &
+            disown
+            _nightlight_save "ENABLED" "true"
+            _notify "Schedule: sunset to sunrise"
+            ;;
+        *Custom*)
+            local start
+            start=$(_rofi_input "  Start hour (e.g. 20:00)")
+            [ -z "$start" ] && return
+            local end
+            end=$(_rofi_input "  End hour (e.g. 06:00)")
+            [ -z "$end" ] && return
+            _nightlight_save "SCHEDULE" "custom"
+            _nightlight_save "CUSTOM_START" "$start"
+            _nightlight_save "CUSTOM_END" "$end"
+            _notify "Schedule: ${start} to ${end}"
+            ;;
+    esac
+}
+
+menu_nightlight() {
+    if ! command -v gammastep &>/dev/null; then
+        _notify "gammastep not installed (pacman -S gammastep)"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_nightlight_running)
+        local temp
+        temp=$(_nightlight_get "TEMPERATURE" "4500")
+
+        local choice
+        choice=$(_rofi_select "  Night Light ($status)" \
+            "  Toggle night light ($status)" \
+            "  Temperature (${temp}K)" \
+            "  Schedule" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Toggle*)      _nightlight_toggle ;;
+            *Temperature*) _nightlight_temperature ;;
+            *Schedule*)    _nightlight_schedule ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -2399,6 +2548,7 @@ main_menu() {
         choice=$(_rofi_select "  Settings" \
             "  Display" \
             "  Audio" \
+            "  Night Light" \
             "  Mouse & Touchpad" \
             "  Network" \
             "  VPN" \
@@ -2416,6 +2566,7 @@ main_menu() {
         case "$choice" in
             *Display*)      menu_display ;;
             *Audio*)        menu_audio ;;
+            *"Night Light"*) menu_nightlight ;;
             *"Mouse & Touchpad"*) menu_mouse ;;
             *Network*)      menu_network ;;
             *VPN*)          menu_vpn ;;
