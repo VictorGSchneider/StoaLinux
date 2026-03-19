@@ -123,6 +123,174 @@ _display_scale() {
     fi
 }
 
+_display_rotation() {
+    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+        local monitor
+        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
+        local current
+        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].transform' 2>/dev/null)
+
+        local label="Normal"
+        case "$current" in
+            1) label="90°" ;; 2) label="180°" ;; 3) label="270°" ;;
+        esac
+
+        local choice
+        choice=$(_rofi_select "  Rotation ($label)" \
+            "  Normal (0°)" \
+            "  90° (portrait)" \
+            "  180° (inverted)" \
+            "  270° (portrait inverted)" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        local transform
+        case "$choice" in
+            *Normal*)  transform=0 ;;
+            *90*)      transform=1 ;;
+            *180*)     transform=2 ;;
+            *270*)     transform=3 ;;
+        esac
+
+        hyprctl keyword monitor "$monitor, preferred, auto, 1, transform, $transform" &>/dev/null
+        _notify "Rotation: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
+    else
+        local output
+        output=$(xrandr 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
+        [ -z "$output" ] && { _notify "No display detected"; return; }
+
+        local choice
+        choice=$(_rofi_select "  Rotation" \
+            "  Normal" "  Left (90°)" "  Inverted (180°)" "  Right (270°)" "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Normal*)   xrandr --output "$output" --rotate normal ;;
+            *Left*)     xrandr --output "$output" --rotate left ;;
+            *Inverted*) xrandr --output "$output" --rotate inverted ;;
+            *Right*)    xrandr --output "$output" --rotate right ;;
+        esac
+        _notify "Rotation applied"
+    fi
+}
+
+_display_multi_monitor() {
+    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+        local monitors
+        monitors=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name' 2>/dev/null)
+        local count
+        count=$(echo "$monitors" | wc -l)
+
+        if [ "$count" -lt 2 ]; then
+            _notify "Only one monitor detected"
+            return
+        fi
+
+        local primary secondary
+        primary=$(echo "$monitors" | head -1)
+        secondary=$(echo "$monitors" | tail -1)
+
+        local choice
+        choice=$(_rofi_select "  Multi-Monitor ($primary + $secondary)" \
+            "  Extend right" \
+            "  Extend left" \
+            "  Extend above" \
+            "  Extend below" \
+            "  Mirror (same on both)" \
+            "  Primary only ($primary)" \
+            "  Secondary only ($secondary)" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        local pri_res
+        pri_res=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0] | "\(.width)x\(.height)"' 2>/dev/null)
+        local pri_w pri_h
+        pri_w=$(echo "$pri_res" | cut -dx -f1)
+        pri_h=$(echo "$pri_res" | cut -dx -f2)
+
+        case "$choice" in
+            *"Extend right"*)
+                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$secondary, preferred, ${pri_w}x0, 1" &>/dev/null
+                _notify "Extended right"
+                ;;
+            *"Extend left"*)
+                local sec_w
+                sec_w=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].width' 2>/dev/null)
+                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$primary, preferred, ${sec_w}x0, 1" &>/dev/null
+                _notify "Extended left"
+                ;;
+            *"Extend above"*)
+                local sec_h
+                sec_h=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].height' 2>/dev/null)
+                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$primary, preferred, 0x${sec_h}, 1" &>/dev/null
+                _notify "Extended above"
+                ;;
+            *"Extend below"*)
+                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$secondary, preferred, 0x${pri_h}, 1" &>/dev/null
+                _notify "Extended below"
+                ;;
+            *Mirror*)
+                hyprctl keyword monitor "$secondary, preferred, auto, 1, mirror, $primary" &>/dev/null
+                _notify "Mirroring: $secondary → $primary"
+                ;;
+            *"Primary only"*)
+                hyprctl keyword monitor "$secondary, disable" &>/dev/null
+                _notify "Using $primary only"
+                ;;
+            *"Secondary only"*)
+                hyprctl keyword monitor "$primary, disable" &>/dev/null
+                _notify "Using $secondary only"
+                ;;
+        esac
+    else
+        local outputs
+        outputs=$(xrandr 2>/dev/null | grep " connected" | awk '{print $1}')
+        local count
+        count=$(echo "$outputs" | wc -l)
+
+        if [ "$count" -lt 2 ]; then
+            _notify "Only one monitor detected"
+            return
+        fi
+
+        local primary secondary
+        primary=$(echo "$outputs" | head -1)
+        secondary=$(echo "$outputs" | tail -1)
+
+        local choice
+        choice=$(_rofi_select "  Multi-Monitor" \
+            "  Extend right" \
+            "  Mirror" \
+            "  Primary only ($primary)" \
+            "  Secondary only ($secondary)" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Extend right"*)
+                xrandr --output "$secondary" --auto --right-of "$primary" 2>/dev/null
+                _notify "Extended right"
+                ;;
+            *Mirror*)
+                xrandr --output "$secondary" --auto --same-as "$primary" 2>/dev/null
+                _notify "Mirroring"
+                ;;
+            *"Primary only"*)
+                xrandr --output "$secondary" --off 2>/dev/null
+                _notify "Using $primary only"
+                ;;
+            *"Secondary only"*)
+                xrandr --output "$primary" --off --output "$secondary" --auto 2>/dev/null
+                _notify "Using $secondary only"
+                ;;
+        esac
+    fi
+}
+
 menu_display() {
     while true; do
         local choice
@@ -130,13 +298,17 @@ menu_display() {
             "  Brightness" \
             "  Resolution" \
             "  Scale" \
+            "  Rotation" \
+            "  Multi-Monitor" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *Brightness*)  _display_brightness ;;
-            *Resolution*)  _display_resolution ;;
-            *Scale*)       _display_scale ;;
+            *Brightness*)      _display_brightness ;;
+            *Resolution*)      _display_resolution ;;
+            *Scale*)           _display_scale ;;
+            *Rotation*)        _display_rotation ;;
+            *"Multi-Monitor"*) _display_multi_monitor ;;
         esac
     done
 }
