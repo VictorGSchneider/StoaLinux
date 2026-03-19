@@ -168,6 +168,7 @@ _link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-set
 _link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
 _link "${STOA_DIR}/scripts/stoa-drive.sh"           "${HOME}/.local/bin/stoa-drive"
 _link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-firewall"
+_link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -179,7 +180,8 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-settings" \
          "${HOME}/.local/bin/stoa-store" \
          "${HOME}/.local/bin/stoa-drive" \
-         "${HOME}/.local/bin/stoa-firewall"
+         "${HOME}/.local/bin/stoa-firewall" \
+         "${HOME}/.local/bin/stoa-screensaver"
 
 # ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"

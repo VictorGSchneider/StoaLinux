@@ -123,6 +123,174 @@ _display_scale() {
     fi
 }
 
+_display_rotation() {
+    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+        local monitor
+        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
+        local current
+        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].transform' 2>/dev/null)
+
+        local label="Normal"
+        case "$current" in
+            1) label="90°" ;; 2) label="180°" ;; 3) label="270°" ;;
+        esac
+
+        local choice
+        choice=$(_rofi_select "  Rotation ($label)" \
+            "  Normal (0°)" \
+            "  90° (portrait)" \
+            "  180° (inverted)" \
+            "  270° (portrait inverted)" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        local transform
+        case "$choice" in
+            *Normal*)  transform=0 ;;
+            *90*)      transform=1 ;;
+            *180*)     transform=2 ;;
+            *270*)     transform=3 ;;
+        esac
+
+        hyprctl keyword monitor "$monitor, preferred, auto, 1, transform, $transform" &>/dev/null
+        _notify "Rotation: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
+    else
+        local output
+        output=$(xrandr 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
+        [ -z "$output" ] && { _notify "No display detected"; return; }
+
+        local choice
+        choice=$(_rofi_select "  Rotation" \
+            "  Normal" "  Left (90°)" "  Inverted (180°)" "  Right (270°)" "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Normal*)   xrandr --output "$output" --rotate normal ;;
+            *Left*)     xrandr --output "$output" --rotate left ;;
+            *Inverted*) xrandr --output "$output" --rotate inverted ;;
+            *Right*)    xrandr --output "$output" --rotate right ;;
+        esac
+        _notify "Rotation applied"
+    fi
+}
+
+_display_multi_monitor() {
+    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+        local monitors
+        monitors=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name' 2>/dev/null)
+        local count
+        count=$(echo "$monitors" | wc -l)
+
+        if [ "$count" -lt 2 ]; then
+            _notify "Only one monitor detected"
+            return
+        fi
+
+        local primary secondary
+        primary=$(echo "$monitors" | head -1)
+        secondary=$(echo "$monitors" | tail -1)
+
+        local choice
+        choice=$(_rofi_select "  Multi-Monitor ($primary + $secondary)" \
+            "  Extend right" \
+            "  Extend left" \
+            "  Extend above" \
+            "  Extend below" \
+            "  Mirror (same on both)" \
+            "  Primary only ($primary)" \
+            "  Secondary only ($secondary)" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        local pri_res
+        pri_res=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0] | "\(.width)x\(.height)"' 2>/dev/null)
+        local pri_w pri_h
+        pri_w=$(echo "$pri_res" | cut -dx -f1)
+        pri_h=$(echo "$pri_res" | cut -dx -f2)
+
+        case "$choice" in
+            *"Extend right"*)
+                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$secondary, preferred, ${pri_w}x0, 1" &>/dev/null
+                _notify "Extended right"
+                ;;
+            *"Extend left"*)
+                local sec_w
+                sec_w=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].width' 2>/dev/null)
+                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$primary, preferred, ${sec_w}x0, 1" &>/dev/null
+                _notify "Extended left"
+                ;;
+            *"Extend above"*)
+                local sec_h
+                sec_h=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].height' 2>/dev/null)
+                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$primary, preferred, 0x${sec_h}, 1" &>/dev/null
+                _notify "Extended above"
+                ;;
+            *"Extend below"*)
+                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
+                hyprctl keyword monitor "$secondary, preferred, 0x${pri_h}, 1" &>/dev/null
+                _notify "Extended below"
+                ;;
+            *Mirror*)
+                hyprctl keyword monitor "$secondary, preferred, auto, 1, mirror, $primary" &>/dev/null
+                _notify "Mirroring: $secondary → $primary"
+                ;;
+            *"Primary only"*)
+                hyprctl keyword monitor "$secondary, disable" &>/dev/null
+                _notify "Using $primary only"
+                ;;
+            *"Secondary only"*)
+                hyprctl keyword monitor "$primary, disable" &>/dev/null
+                _notify "Using $secondary only"
+                ;;
+        esac
+    else
+        local outputs
+        outputs=$(xrandr 2>/dev/null | grep " connected" | awk '{print $1}')
+        local count
+        count=$(echo "$outputs" | wc -l)
+
+        if [ "$count" -lt 2 ]; then
+            _notify "Only one monitor detected"
+            return
+        fi
+
+        local primary secondary
+        primary=$(echo "$outputs" | head -1)
+        secondary=$(echo "$outputs" | tail -1)
+
+        local choice
+        choice=$(_rofi_select "  Multi-Monitor" \
+            "  Extend right" \
+            "  Mirror" \
+            "  Primary only ($primary)" \
+            "  Secondary only ($secondary)" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Extend right"*)
+                xrandr --output "$secondary" --auto --right-of "$primary" 2>/dev/null
+                _notify "Extended right"
+                ;;
+            *Mirror*)
+                xrandr --output "$secondary" --auto --same-as "$primary" 2>/dev/null
+                _notify "Mirroring"
+                ;;
+            *"Primary only"*)
+                xrandr --output "$secondary" --off 2>/dev/null
+                _notify "Using $primary only"
+                ;;
+            *"Secondary only"*)
+                xrandr --output "$primary" --off --output "$secondary" --auto 2>/dev/null
+                _notify "Using $secondary only"
+                ;;
+        esac
+    fi
+}
+
 menu_display() {
     while true; do
         local choice
@@ -130,13 +298,17 @@ menu_display() {
             "  Brightness" \
             "  Resolution" \
             "  Scale" \
+            "  Rotation" \
+            "  Multi-Monitor" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *Brightness*)  _display_brightness ;;
-            *Resolution*)  _display_resolution ;;
-            *Scale*)       _display_scale ;;
+            *Brightness*)      _display_brightness ;;
+            *Resolution*)      _display_resolution ;;
+            *Scale*)           _display_scale ;;
+            *Rotation*)        _display_rotation ;;
+            *"Multi-Monitor"*) _display_multi_monitor ;;
         esac
     done
 }
@@ -2304,6 +2476,1347 @@ _menu_touchpad_sub() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   NIGHT LIGHT (blue light filter — gammastep)
+# ══════════════════════════════════════════════════════════════
+
+NIGHTLIGHT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/nightlight.conf"
+
+_nightlight_save() {
+    local key="$1" val="$2"
+    mkdir -p "$(dirname "$NIGHTLIGHT_CONF")"
+    [ ! -f "$NIGHTLIGHT_CONF" ] && touch "$NIGHTLIGHT_CONF"
+    if grep -q "^${key}=" "$NIGHTLIGHT_CONF" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${val}|" "$NIGHTLIGHT_CONF"
+    else
+        echo "${key}=${val}" >> "$NIGHTLIGHT_CONF"
+    fi
+}
+
+_nightlight_get() {
+    local key="$1" default="$2"
+    if [ -f "$NIGHTLIGHT_CONF" ]; then
+        local val
+        val=$(grep "^${key}=" "$NIGHTLIGHT_CONF" 2>/dev/null | cut -d= -f2)
+        [ -n "$val" ] && echo "$val" && return
+    fi
+    echo "$default"
+}
+
+_nightlight_running() {
+    pgrep -x gammastep &>/dev/null && echo "on" || echo "off"
+}
+
+_nightlight_toggle() {
+    if pgrep -x gammastep &>/dev/null; then
+        pkill -x gammastep
+        _nightlight_save "ENABLED" "false"
+        _notify "Night light: off"
+    else
+        local temp
+        temp=$(_nightlight_get "TEMPERATURE" "4500")
+        gammastep -O "$temp" &>/dev/null &
+        disown
+        _nightlight_save "ENABLED" "true"
+        _notify "Night light: on (${temp}K)"
+    fi
+}
+
+_nightlight_temperature() {
+    local current
+    current=$(_nightlight_get "TEMPERATURE" "4500")
+
+    local choice
+    choice=$(_rofi_select "  Temperature (${current}K)" \
+        "  6500K (daylight)" \
+        "  5500K (warm white)" \
+        "  5000K (soft)" \
+        "  4500K (warm)" \
+        "  4000K (sunset)" \
+        "  3500K (candle)" \
+        "  3000K (amber)" \
+        "  2500K (deep warm)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local temp
+    temp=$(echo "$choice" | grep -oP '\d+(?=K)')
+    [ -z "$temp" ] && return
+
+    _nightlight_save "TEMPERATURE" "$temp"
+
+    # Apply immediately if running
+    if pgrep -x gammastep &>/dev/null; then
+        pkill -x gammastep
+        gammastep -O "$temp" &>/dev/null &
+        disown
+    fi
+    _notify "Temperature: ${temp}K"
+}
+
+_nightlight_schedule() {
+    local mode
+    mode=$(_nightlight_get "SCHEDULE" "manual")
+
+    local choice
+    choice=$(_rofi_select "  Schedule ($mode)" \
+        "  Manual (toggle on/off)" \
+        "  Sunset to sunrise (auto)" \
+        "  Custom hours" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *Manual*)
+            _nightlight_save "SCHEDULE" "manual"
+            pkill -x gammastep 2>/dev/null
+            _notify "Schedule: manual"
+            ;;
+        *Sunset*)
+            _nightlight_save "SCHEDULE" "auto"
+            local temp
+            temp=$(_nightlight_get "TEMPERATURE" "4500")
+            pkill -x gammastep 2>/dev/null
+            gammastep -t 6500:"$temp" &>/dev/null &
+            disown
+            _nightlight_save "ENABLED" "true"
+            _notify "Schedule: sunset to sunrise"
+            ;;
+        *Custom*)
+            local start
+            start=$(_rofi_input "  Start hour (e.g. 20:00)")
+            [ -z "$start" ] && return
+            local end
+            end=$(_rofi_input "  End hour (e.g. 06:00)")
+            [ -z "$end" ] && return
+            _nightlight_save "SCHEDULE" "custom"
+            _nightlight_save "CUSTOM_START" "$start"
+            _nightlight_save "CUSTOM_END" "$end"
+            _notify "Schedule: ${start} to ${end}"
+            ;;
+    esac
+}
+
+menu_nightlight() {
+    if ! command -v gammastep &>/dev/null; then
+        _notify "gammastep not installed (pacman -S gammastep)"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_nightlight_running)
+        local temp
+        temp=$(_nightlight_get "TEMPERATURE" "4500")
+
+        local choice
+        choice=$(_rofi_select "  Night Light ($status)" \
+            "  Toggle night light ($status)" \
+            "  Temperature (${temp}K)" \
+            "  Schedule" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Toggle*)      _nightlight_toggle ;;
+            *Temperature*) _nightlight_temperature ;;
+            *Schedule*)    _nightlight_schedule ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   POWER MANAGEMENT (profiles, idle, suspend)
+# ══════════════════════════════════════════════════════════════
+
+_power_current_profile() {
+    if command -v powerprofilesctl &>/dev/null; then
+        powerprofilesctl get 2>/dev/null || echo "unknown"
+    else
+        echo "N/A"
+    fi
+}
+
+_power_set_profile() {
+    local choice
+    local current
+    current=$(_power_current_profile)
+
+    choice=$(_rofi_select "  Profile ($current)" \
+        "  Performance" \
+        "  Balanced" \
+        "  Power saver" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local profile
+    case "$choice" in
+        *Performance*) profile="performance" ;;
+        *Balanced*)    profile="balanced" ;;
+        *"Power saver"*) profile="power-saver" ;;
+    esac
+
+    if command -v powerprofilesctl &>/dev/null; then
+        powerprofilesctl set "$profile" 2>/dev/null
+        _notify "Power profile: $profile"
+    else
+        _notify "power-profiles-daemon not installed"
+    fi
+}
+
+_power_idle_timeout() {
+    local current
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        current=$(hyprctl getoption misc:dpms_timeout 2>/dev/null | grep "int:" | awk '{print $2}')
+        [ -z "$current" ] || [ "$current" = "0" ] && current="off"
+        [ "$current" != "off" ] && current="${current}s"
+    else
+        current="unknown"
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Screen off after ($current)" \
+        "  1 minute" \
+        "  2 minutes" \
+        "  5 minutes" \
+        "  10 minutes" \
+        "  15 minutes" \
+        "  30 minutes" \
+        "  Never" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local seconds
+    case "$choice" in
+        *"1 minute"*)   seconds=60 ;;
+        *"2 minute"*)   seconds=120 ;;
+        *"5 minute"*)   seconds=300 ;;
+        *"10 minute"*)  seconds=600 ;;
+        *"15 minute"*)  seconds=900 ;;
+        *"30 minute"*)  seconds=1800 ;;
+        *Never*)        seconds=0 ;;
+    esac
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword misc:dpms_timeout "$seconds" &>/dev/null
+        [ "$seconds" -eq 0 ] && _notify "Screen off: never" || _notify "Screen off: $((seconds / 60)) min"
+    else
+        if [ "$seconds" -eq 0 ]; then
+            xset s off -dpms 2>/dev/null
+            _notify "Screen off: never"
+        else
+            xset s "$seconds" dpms "$seconds" "$seconds" "$seconds" 2>/dev/null
+            _notify "Screen off: $((seconds / 60)) min"
+        fi
+    fi
+}
+
+_power_auto_suspend() {
+    local current
+    current=$(systemctl show sleep.target --property=ActiveState 2>/dev/null | cut -d= -f2)
+    local idle_delay
+    idle_delay=$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 2>/dev/null || echo "")
+
+    local choice
+    choice=$(_rofi_select "  Auto Suspend" \
+        "  Suspend after 15 min" \
+        "  Suspend after 30 min" \
+        "  Suspend after 1 hour" \
+        "  Suspend after 2 hours" \
+        "  Disable auto suspend" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local minutes
+    case "$choice" in
+        *"15 min"*)  minutes=15 ;;
+        *"30 min"*)  minutes=30 ;;
+        *"1 hour"*)  minutes=60 ;;
+        *"2 hour"*)  minutes=120 ;;
+        *Disable*)   minutes=0 ;;
+    esac
+
+    local conf_dir="/etc/systemd/sleep.conf.d"
+    if [ "$minutes" -eq 0 ]; then
+        sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
+        _notify "Auto suspend: disabled"
+    else
+        sudo systemctl unmask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
+        sudo mkdir -p "$conf_dir"
+        printf '[Sleep]\nIdleActionSec=%dm\nIdleAction=suspend\n' "$minutes" | sudo tee "$conf_dir/stoa-idle.conf" >/dev/null
+        _notify "Auto suspend: ${minutes} min"
+    fi
+}
+
+_power_battery_info() {
+    local bat_path
+    bat_path=$(find /sys/class/power_supply -name "BAT*" -maxdepth 1 2>/dev/null | head -1)
+    if [ -z "$bat_path" ]; then
+        _notify "No battery detected"
+        return
+    fi
+
+    local status capacity health cycles energy_full energy_full_design ac_status
+    status=$(cat "$bat_path/status" 2>/dev/null || echo "Unknown")
+    capacity=$(cat "$bat_path/capacity" 2>/dev/null || echo "?")
+    energy_full=$(cat "$bat_path/energy_full" 2>/dev/null || cat "$bat_path/charge_full" 2>/dev/null || echo "0")
+    energy_full_design=$(cat "$bat_path/energy_full_design" 2>/dev/null || cat "$bat_path/charge_full_design" 2>/dev/null || echo "0")
+    cycles=$(cat "$bat_path/cycle_count" 2>/dev/null || echo "N/A")
+
+    health="N/A"
+    if [ "$energy_full_design" -gt 0 ] 2>/dev/null; then
+        health="$((energy_full * 100 / energy_full_design))%"
+    fi
+
+    ac_status="Unplugged"
+    for ac in /sys/class/power_supply/AC* /sys/class/power_supply/ADP*; do
+        [ -f "$ac/online" ] && [ "$(cat "$ac/online" 2>/dev/null)" = "1" ] && ac_status="Plugged in"
+    done
+
+    _rofi_select "  Battery Info" \
+        "  Status: $status" \
+        "  Charge: ${capacity}%" \
+        "  Health: $health" \
+        "  Cycles: $cycles" \
+        "  AC: $ac_status" \
+        "  Back" >/dev/null
+}
+
+menu_power_mgmt() {
+    while true; do
+        local profile
+        profile=$(_power_current_profile)
+
+        local choice
+        choice=$(_rofi_select "  Power Management" \
+            "  Power profile ($profile)" \
+            "  Screen off timeout" \
+            "  Auto suspend" \
+            "  Battery info" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Power profile"*)  _power_set_profile ;;
+            *"Screen off"*)     _power_idle_timeout ;;
+            *"Auto suspend"*)   _power_auto_suspend ;;
+            *Battery*)          _power_battery_info ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   KEYBOARD (layout, repeat, Caps Lock behavior)
+# ══════════════════════════════════════════════════════════════
+
+_kb_current_layout() {
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl getoption input:kb_layout 2>/dev/null | grep "str:" | awk '{print $2}'
+    else
+        setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}'
+    fi
+}
+
+_kb_layout() {
+    local current
+    current=$(_kb_current_layout)
+
+    local choice
+    choice=$(_rofi_select "  Layout ($current)" \
+        "  us (English US)" \
+        "  br (Portuguese BR)" \
+        "  gb (English UK)" \
+        "  de (German)" \
+        "  fr (French)" \
+        "  es (Spanish)" \
+        "  it (Italian)" \
+        "  pt (Portuguese)" \
+        "  ru (Russian)" \
+        "  jp (Japanese)" \
+        "  kr (Korean)" \
+        "  cn (Chinese)" \
+        "  ar (Arabic)" \
+        "  Custom..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local layout
+    if [[ "$choice" == *"Custom"* ]]; then
+        layout=$(_rofi_input "  Layout code (e.g. latam)")
+        [ -z "$layout" ] && return
+    else
+        layout=$(echo "$choice" | grep -oP '^\s*\S+\s+\K\S+' | tr -d '()')
+        # Extract the code before the parenthesis
+        layout=$(echo "$choice" | awk '{print $2}')
+    fi
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword input:kb_layout "$layout" &>/dev/null
+        _notify "Keyboard layout: $layout"
+    else
+        setxkbmap "$layout" 2>/dev/null
+        _notify "Keyboard layout: $layout"
+    fi
+}
+
+_kb_repeat_rate() {
+    local current_rate current_delay
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        current_rate=$(hyprctl getoption input:repeat_rate 2>/dev/null | grep "int:" | awk '{print $2}')
+        current_delay=$(hyprctl getoption input:repeat_delay 2>/dev/null | grep "int:" | awk '{print $2}')
+    else
+        current_rate="?"
+        current_delay="?"
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Repeat (rate:${current_rate} delay:${current_delay}ms)" \
+        "  Slow (rate 15, delay 600ms)" \
+        "  Normal (rate 25, delay 400ms)" \
+        "  Fast (rate 40, delay 300ms)" \
+        "  Very fast (rate 50, delay 200ms)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local rate delay
+    case "$choice" in
+        *Slow*)      rate=15; delay=600 ;;
+        *Normal*)    rate=25; delay=400 ;;
+        *Fast*)      rate=40; delay=300 ;;
+        *"Very fast"*) rate=50; delay=200 ;;
+    esac
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword input:repeat_rate "$rate" &>/dev/null
+        hyprctl keyword input:repeat_delay "$delay" &>/dev/null
+    else
+        xset r rate "$delay" "$rate" 2>/dev/null
+    fi
+    _notify "Repeat: rate $rate, delay ${delay}ms"
+}
+
+_kb_capslock_behavior() {
+    local choice
+    choice=$(_rofi_select "  Caps Lock behavior" \
+        "  Default (Caps Lock)" \
+        "  Escape (vim-friendly)" \
+        "  Ctrl (Emacs-friendly)" \
+        "  Backspace" \
+        "  Disabled" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local opt
+    case "$choice" in
+        *Default*)    opt="" ;;
+        *Escape*)     opt="caps:escape" ;;
+        *Ctrl*)       opt="ctrl:nocaps" ;;
+        *Backspace*)  opt="caps:backspace" ;;
+        *Disabled*)   opt="caps:none" ;;
+    esac
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword input:kb_options "$opt" &>/dev/null
+        _notify "Caps Lock: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
+    else
+        local layout
+        layout=$(setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}')
+        if [ -n "$opt" ]; then
+            setxkbmap "$layout" -option "" -option "$opt" 2>/dev/null
+        else
+            setxkbmap "$layout" -option "" 2>/dev/null
+        fi
+        _notify "Caps Lock: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
+    fi
+}
+
+_kb_numlock() {
+    local choice
+    choice=$(_rofi_select "  NumLock on boot" \
+        "  On" \
+        "  Off" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *On*)
+            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+                hyprctl keyword input:numlock_by_default true &>/dev/null
+            else
+                numlockx on 2>/dev/null
+            fi
+            _notify "NumLock on boot: on"
+            ;;
+        *Off*)
+            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+                hyprctl keyword input:numlock_by_default false &>/dev/null
+            else
+                numlockx off 2>/dev/null
+            fi
+            _notify "NumLock on boot: off"
+            ;;
+    esac
+}
+
+menu_keyboard() {
+    while true; do
+        local layout
+        layout=$(_kb_current_layout)
+
+        local choice
+        choice=$(_rofi_select "  Keyboard" \
+            "  Layout ($layout)" \
+            "  Repeat rate & delay" \
+            "  Caps Lock behavior" \
+            "  NumLock on boot" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Layout*)     _kb_layout ;;
+            *Repeat*)     _kb_repeat_rate ;;
+            *Caps*)       _kb_capslock_behavior ;;
+            *NumLock*)    _kb_numlock ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   PRINTERS & SCANNERS (CUPS)
+# ══════════════════════════════════════════════════════════════
+
+_print_cups_status() {
+    if systemctl is-active cups.service &>/dev/null; then
+        echo "running"
+    elif systemctl is-enabled cups.service &>/dev/null; then
+        echo "enabled"
+    else
+        echo "off"
+    fi
+}
+
+_print_list() {
+    local printers
+    printers=$(lpstat -p 2>/dev/null | awk '{print $2}')
+    [ -z "$printers" ] && { _notify "No printers found"; return; }
+
+    local default
+    default=$(lpstat -d 2>/dev/null | awk '{print $NF}')
+
+    local items=()
+    while IFS= read -r p; do
+        local status
+        status=$(lpstat -p "$p" 2>/dev/null | grep -oP '(idle|printing|disabled)')
+        local mark=""
+        [ "$p" = "$default" ] && mark=" (default)"
+        items+=("  $p — ${status:-unknown}${mark}")
+    done <<< "$printers"
+
+    local choice
+    choice=$(_rofi_select "  Printers" "${items[@]}" "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local selected
+    selected=$(echo "$choice" | awk '{print $2}')
+
+    local action
+    action=$(_rofi_select "  $selected" \
+        "  Set as default" \
+        "  Print test page" \
+        "  Enable" \
+        "  Disable" \
+        "  Remove" \
+        "  Back")
+    [ -z "$action" ] || [[ "$action" == *"Back"* ]] && return
+
+    case "$action" in
+        *"Set as default"*)
+            lpadmin -d "$selected" 2>/dev/null
+            _notify "Default printer: $selected"
+            ;;
+        *"Print test"*)
+            lp -d "$selected" /usr/share/cups/data/testprint 2>/dev/null
+            _notify "Test page sent to $selected"
+            ;;
+        *Enable*)
+            cupsenable "$selected" 2>/dev/null
+            _notify "Printer enabled: $selected"
+            ;;
+        *Disable*)
+            cupsdisable "$selected" 2>/dev/null
+            _notify "Printer disabled: $selected"
+            ;;
+        *Remove*)
+            _rofi_confirm "Remove $selected?" && {
+                lpadmin -x "$selected" 2>/dev/null
+                _notify "Printer removed: $selected"
+            }
+            ;;
+    esac
+}
+
+_print_add() {
+    if command -v system-config-printer &>/dev/null; then
+        system-config-printer &
+        disown
+        _notify "Opening printer setup..."
+    else
+        _notify "system-config-printer not installed"
+    fi
+}
+
+_print_toggle_cups() {
+    if systemctl is-active cups.service &>/dev/null; then
+        _rofi_confirm "Stop CUPS service?" && {
+            sudo systemctl stop cups.service 2>/dev/null
+            _notify "CUPS service stopped"
+        }
+    else
+        sudo systemctl enable --now cups.service 2>/dev/null
+        _notify "CUPS service started"
+    fi
+}
+
+_print_queue() {
+    local jobs
+    jobs=$(lpstat -o 2>/dev/null)
+    if [ -z "$jobs" ]; then
+        _notify "Print queue is empty"
+        return
+    fi
+
+    local choice
+    choice=$(echo "$jobs" | "${ROFI[@]}" -p "  Print queue")
+    [ -z "$choice" ] && return
+
+    local job_id
+    job_id=$(echo "$choice" | awk '{print $1}')
+
+    _rofi_confirm "Cancel job $job_id?" && {
+        cancel "$job_id" 2>/dev/null
+        _notify "Job cancelled: $job_id"
+    }
+}
+
+_scanner_list() {
+    if ! command -v scanimage &>/dev/null; then
+        _notify "sane not installed (pacman -S sane)"
+        return
+    fi
+
+    _notify "Scanning for devices..."
+    local scanners
+    scanners=$(scanimage -L 2>/dev/null)
+    if [ -z "$scanners" ]; then
+        _notify "No scanners found"
+        return
+    fi
+
+    echo "$scanners" | "${ROFI[@]}" -p "  Scanners" >/dev/null
+}
+
+menu_printers() {
+    if ! command -v lpstat &>/dev/null; then
+        _notify "CUPS not installed (pacman -S cups)"
+        return
+    fi
+
+    while true; do
+        local cups_status
+        cups_status=$(_print_cups_status)
+
+        local choice
+        choice=$(_rofi_select "  Printers & Scanners" \
+            "  CUPS service ($cups_status)" \
+            "  List printers" \
+            "  Add printer" \
+            "  Print queue" \
+            "  Scanners" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *CUPS*)          _print_toggle_cups ;;
+            *"List printer"*) _print_list ;;
+            *"Add printer"*) _print_add ;;
+            *"Print queue"*) _print_queue ;;
+            *Scanners*)      _scanner_list ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   DATE, TIME, REGION & LANGUAGE
+# ══════════════════════════════════════════════════════════════
+
+_dt_set_timezone() {
+    local current
+    current=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "unknown")
+
+    # Common timezones first, then option to search all
+    local choice
+    choice=$(_rofi_select "  Timezone ($current)" \
+        "  America/Sao_Paulo" \
+        "  America/New_York" \
+        "  America/Chicago" \
+        "  America/Denver" \
+        "  America/Los_Angeles" \
+        "  America/Mexico_City" \
+        "  America/Buenos_Aires" \
+        "  America/Bogota" \
+        "  Europe/London" \
+        "  Europe/Berlin" \
+        "  Europe/Paris" \
+        "  Europe/Madrid" \
+        "  Europe/Rome" \
+        "  Europe/Lisbon" \
+        "  Europe/Moscow" \
+        "  Asia/Tokyo" \
+        "  Asia/Shanghai" \
+        "  Asia/Kolkata" \
+        "  Asia/Dubai" \
+        "  Asia/Seoul" \
+        "  Asia/Singapore" \
+        "  Australia/Sydney" \
+        "  Pacific/Auckland" \
+        "  Search all..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local tz
+    if [[ "$choice" == *"Search"* ]]; then
+        local query
+        query=$(_rofi_input "  Search timezone (e.g. Tokyo)")
+        [ -z "$query" ] && return
+        tz=$(timedatectl list-timezones 2>/dev/null | grep -i "$query" | "${ROFI[@]}" -p "  Results")
+        [ -z "$tz" ] && return
+    else
+        tz=$(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')
+    fi
+
+    _rofi_confirm "Set timezone to $tz?" && {
+        sudo timedatectl set-timezone "$tz" 2>/dev/null
+        _notify "Timezone: $tz"
+    }
+}
+
+_dt_toggle_ntp() {
+    local ntp_status
+    ntp_status=$(timedatectl show --property=NTP --value 2>/dev/null)
+
+    if [ "$ntp_status" = "yes" ]; then
+        _rofi_confirm "Disable auto time sync (NTP)?" && {
+            sudo timedatectl set-ntp false 2>/dev/null
+            _notify "NTP: disabled"
+        }
+    else
+        sudo timedatectl set-ntp true 2>/dev/null
+        _notify "NTP: enabled (auto sync)"
+    fi
+}
+
+_dt_set_manual_time() {
+    local ntp_status
+    ntp_status=$(timedatectl show --property=NTP --value 2>/dev/null)
+    if [ "$ntp_status" = "yes" ]; then
+        _notify "Disable NTP first to set time manually"
+        return
+    fi
+
+    local date_input
+    date_input=$(_rofi_input "  Date (YYYY-MM-DD)")
+    [ -z "$date_input" ] && return
+
+    local time_input
+    time_input=$(_rofi_input "  Time (HH:MM:SS)")
+    [ -z "$time_input" ] && return
+
+    _rofi_confirm "Set to ${date_input} ${time_input}?" && {
+        sudo timedatectl set-time "${date_input} ${time_input}" 2>/dev/null
+        _notify "Time set: ${date_input} ${time_input}"
+    }
+}
+
+_dt_24h_toggle() {
+    local current
+    current=$(gsettings get org.gnome.desktop.interface clock-format 2>/dev/null || echo "'24h'")
+
+    local choice
+    choice=$(_rofi_select "  Clock format" \
+        "  24-hour (14:30)" \
+        "  12-hour (2:30 PM)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *24*)
+            gsettings set org.gnome.desktop.interface clock-format '24h' 2>/dev/null
+            _notify "Clock: 24-hour"
+            ;;
+        *12*)
+            gsettings set org.gnome.desktop.interface clock-format '12h' 2>/dev/null
+            _notify "Clock: 12-hour"
+            ;;
+    esac
+}
+
+_dt_language() {
+    local current
+    current=$(locale 2>/dev/null | grep "^LANG=" | cut -d= -f2)
+
+    local choice
+    choice=$(_rofi_select "  Language ($current)" \
+        "  en_US.UTF-8 (English US)" \
+        "  pt_BR.UTF-8 (Portuguese BR)" \
+        "  pt_PT.UTF-8 (Portuguese PT)" \
+        "  es_ES.UTF-8 (Spanish)" \
+        "  fr_FR.UTF-8 (French)" \
+        "  de_DE.UTF-8 (German)" \
+        "  it_IT.UTF-8 (Italian)" \
+        "  ja_JP.UTF-8 (Japanese)" \
+        "  ko_KR.UTF-8 (Korean)" \
+        "  zh_CN.UTF-8 (Chinese Simplified)" \
+        "  ru_RU.UTF-8 (Russian)" \
+        "  ar_SA.UTF-8 (Arabic)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local locale_val
+    locale_val=$(echo "$choice" | awk '{print $2}')
+
+    _rofi_confirm "Set language to ${locale_val}? (requires logout)" && {
+        # Enable the locale if not already
+        sudo sed -i "s/^#\(${locale_val}\)/\1/" /etc/locale.gen 2>/dev/null
+        sudo locale-gen &>/dev/null
+
+        # Set system locale
+        sudo localectl set-locale "LANG=${locale_val}" 2>/dev/null
+        _notify "Language: ${locale_val} (logout to apply)"
+    }
+}
+
+menu_datetime() {
+    while true; do
+        local tz
+        tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "?")
+        local ntp
+        ntp=$(timedatectl show --property=NTP --value 2>/dev/null)
+        [ "$ntp" = "yes" ] && ntp="on" || ntp="off"
+        local now
+        now=$(date '+%Y-%m-%d %H:%M')
+
+        local choice
+        choice=$(_rofi_select "  Date & Time ($now)" \
+            "  Timezone ($tz)" \
+            "  Auto sync / NTP ($ntp)" \
+            "  Set time manually" \
+            "  Clock format (12/24h)" \
+            "  Language & Region" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Timezone*)      _dt_set_timezone ;;
+            *NTP*)           _dt_toggle_ntp ;;
+            *manually*)      _dt_set_manual_time ;;
+            *Clock*)         _dt_24h_toggle ;;
+            *Language*)      _dt_language ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   ACCESSIBILITY
+# ══════════════════════════════════════════════════════════════
+
+_a11y_cursor_size() {
+    local current
+    current=$(gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null || echo "24")
+
+    local choice
+    choice=$(_rofi_select "  Cursor size (${current}px)" \
+        "  24 (default)" \
+        "  32 (large)" \
+        "  48 (extra large)" \
+        "  64 (huge)" \
+        "  96 (maximum)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local size
+    size=$(echo "$choice" | grep -oP '\d+' | head -1)
+
+    gsettings set org.gnome.desktop.interface cursor-size "$size" 2>/dev/null
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl keyword env "XCURSOR_SIZE,$size" &>/dev/null
+    fi
+    _notify "Cursor size: ${size}px"
+}
+
+_a11y_text_scaling() {
+    local current
+    current=$(gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null || echo "1.0")
+
+    local choice
+    choice=$(_rofi_select "  Text scale (${current}x)" \
+        "  1.0 (default)" \
+        "  1.25 (125%)" \
+        "  1.5 (150%)" \
+        "  1.75 (175%)" \
+        "  2.0 (200%)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local factor
+    factor=$(echo "$choice" | grep -oP '\d+\.\d+' | head -1)
+
+    gsettings set org.gnome.desktop.interface text-scaling-factor "$factor" 2>/dev/null
+    _notify "Text scale: ${factor}x"
+}
+
+_a11y_animations() {
+    local current="on"
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        local enabled
+        enabled=$(hyprctl getoption animations:enabled 2>/dev/null | grep "int:" | awk '{print $2}')
+        [ "$enabled" = "0" ] && current="off"
+    fi
+
+    local choice
+    choice=$(_rofi_select "  Animations ($current)" \
+        "  Enable animations" \
+        "  Disable animations" \
+        "  Reduce motion (slower)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        case "$choice" in
+            *Enable*)
+                hyprctl keyword animations:enabled true &>/dev/null
+                _notify "Animations: enabled"
+                ;;
+            *Disable*)
+                hyprctl keyword animations:enabled false &>/dev/null
+                gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null
+                _notify "Animations: disabled"
+                ;;
+            *Reduce*)
+                hyprctl keyword animations:enabled true &>/dev/null
+                hyprctl keyword animation "windows, 1, 8, default" &>/dev/null
+                hyprctl keyword animation "fade, 1, 8, default" &>/dev/null
+                hyprctl keyword animation "workspaces, 1, 6, default" &>/dev/null
+                _notify "Animations: reduced motion"
+                ;;
+        esac
+    else
+        case "$choice" in
+            *Enable*)
+                gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null
+                _notify "Animations: enabled"
+                ;;
+            *Disable*)
+                gsettings set org.gnome.desktop.interface enable-animations false 2>/dev/null
+                _notify "Animations: disabled"
+                ;;
+        esac
+    fi
+}
+
+_a11y_gaps() {
+    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+        _notify "Gaps only available on Hyprland"
+        return
+    fi
+
+    local current_in current_out
+    current_in=$(hyprctl getoption general:gaps_in 2>/dev/null | grep "custom:" | awk '{print $2}')
+    current_out=$(hyprctl getoption general:gaps_out 2>/dev/null | grep "custom:" | awk '{print $2}')
+
+    local choice
+    choice=$(_rofi_select "  Gaps (in:${current_in} out:${current_out})" \
+        "  None (0/0)" \
+        "  Minimal (1/2)" \
+        "  Default (3/6)" \
+        "  Comfortable (5/10)" \
+        "  Spacious (8/16)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local gin gout
+    case "$choice" in
+        *None*)        gin=0; gout=0 ;;
+        *Minimal*)     gin=1; gout=2 ;;
+        *Default*)     gin=3; gout=6 ;;
+        *Comfortable*) gin=5; gout=10 ;;
+        *Spacious*)    gin=8; gout=16 ;;
+    esac
+
+    hyprctl keyword general:gaps_in "$gin" &>/dev/null
+    hyprctl keyword general:gaps_out "$gout" &>/dev/null
+    _notify "Gaps: in=$gin out=$gout"
+}
+
+_a11y_opacity() {
+    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+        _notify "Opacity only available on Hyprland"
+        return
+    fi
+
+    local current
+    current=$(hyprctl getoption decoration:inactive_opacity 2>/dev/null | grep "float:" | awk '{print $2}')
+
+    local choice
+    choice=$(_rofi_select "  Inactive window opacity (${current})" \
+        "  100% (opaque)" \
+        "  95%" \
+        "  90% (default)" \
+        "  85%" \
+        "  80%" \
+        "  70%" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    case "$choice" in
+        *100*) val="1.0" ;;
+        *95*)  val="0.95" ;;
+        *90*)  val="0.90" ;;
+        *85*)  val="0.85" ;;
+        *80*)  val="0.80" ;;
+        *70*)  val="0.70" ;;
+    esac
+
+    hyprctl keyword decoration:inactive_opacity "$val" &>/dev/null
+    _notify "Inactive opacity: $val"
+}
+
+_a11y_border_size() {
+    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+        _notify "Border size only available on Hyprland"
+        return
+    fi
+
+    local current
+    current=$(hyprctl getoption general:border_size 2>/dev/null | grep "int:" | awk '{print $2}')
+
+    local choice
+    choice=$(_rofi_select "  Border width (${current}px)" \
+        "  0 (none)" \
+        "  1 (thin)" \
+        "  2 (default)" \
+        "  3 (thick)" \
+        "  4 (extra thick)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local size
+    size=$(echo "$choice" | grep -oP '^\s*\S+\s+\K\d+')
+
+    hyprctl keyword general:border_size "$size" &>/dev/null
+    _notify "Border width: ${size}px"
+}
+
+menu_accessibility() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Accessibility" \
+            "  Cursor size" \
+            "  Text scaling" \
+            "  Animations" \
+            "  Window gaps" \
+            "  Inactive opacity" \
+            "  Border width" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Cursor*)    _a11y_cursor_size ;;
+            *Text*)      _a11y_text_scaling ;;
+            *Animation*) _a11y_animations ;;
+            *gaps*)      _a11y_gaps ;;
+            *opacity*)   _a11y_opacity ;;
+            *Border*)    _a11y_border_size ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   AUDIO EQUALIZER (EasyEffects — PipeWire)
+# ══════════════════════════════════════════════════════════════
+
+EQ_PRESETS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/easyeffects/output"
+
+_eq_running() {
+    pgrep -x easyeffects &>/dev/null && echo "on" || echo "off"
+}
+
+_eq_toggle() {
+    if pgrep -x easyeffects &>/dev/null; then
+        easyeffects -q 2>/dev/null
+        _notify "Equalizer: off"
+    else
+        easyeffects --gapplication-service &>/dev/null &
+        disown
+        _notify "Equalizer: on"
+    fi
+}
+
+_eq_open_gui() {
+    if ! pgrep -x easyeffects &>/dev/null; then
+        easyeffects --gapplication-service &>/dev/null &
+        disown
+        sleep 1
+    fi
+    easyeffects &>/dev/null &
+    disown
+    _notify "Opening EasyEffects..."
+}
+
+_eq_presets() {
+    # List available presets from EasyEffects config
+    local presets=()
+
+    # Built-in style presets (common EQ curves)
+    presets+=("  Flat (default)")
+    presets+=("  Bass Boost")
+    presets+=("  Treble Boost")
+    presets+=("  Vocal Clarity")
+    presets+=("  Rock")
+    presets+=("  Electronic")
+    presets+=("  Classical")
+    presets+=("  Podcast / Speech")
+
+    # User presets from EasyEffects
+    if [ -d "$EQ_PRESETS_DIR" ]; then
+        local user_presets
+        user_presets=$(find "$EQ_PRESETS_DIR" -name "*.json" -printf "%f\n" 2>/dev/null | sed 's/\.json$//')
+        while IFS= read -r p; do
+            [ -n "$p" ] && presets+=("  $p (saved)")
+        done <<< "$user_presets"
+    fi
+
+    presets+=("  Back")
+
+    local choice
+    choice=$(_rofi_select "  EQ Preset" "${presets[@]}")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    # Ensure EasyEffects is running
+    if ! pgrep -x easyeffects &>/dev/null; then
+        easyeffects --gapplication-service &>/dev/null &
+        disown
+        sleep 1
+    fi
+
+    local preset_name
+    preset_name=$(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //' | sed 's/ (saved)$//')
+
+    # For built-in presets, create the EQ config
+    case "$choice" in
+        *"Flat"*)
+            _eq_apply_builtin "Flat" "0:0:0:0:0:0:0:0:0:0"
+            ;;
+        *"Bass Boost"*)
+            _eq_apply_builtin "Bass Boost" "6:5:4:2:0:0:0:0:0:0"
+            ;;
+        *"Treble Boost"*)
+            _eq_apply_builtin "Treble Boost" "0:0:0:0:0:2:3:4:5:6"
+            ;;
+        *"Vocal Clarity"*)
+            _eq_apply_builtin "Vocal Clarity" "-2:0:2:4:4:3:2:0:-1:-2"
+            ;;
+        *"Rock"*)
+            _eq_apply_builtin "Rock" "4:3:1:0:-1:-1:0:2:3:4"
+            ;;
+        *"Electronic"*)
+            _eq_apply_builtin "Electronic" "5:4:2:0:-2:-1:0:2:4:5"
+            ;;
+        *"Classical"*)
+            _eq_apply_builtin "Classical" "3:2:1:0:0:0:0:1:2:3"
+            ;;
+        *"Podcast"*|*"Speech"*)
+            _eq_apply_builtin "Podcast" "-3:-1:2:4:4:3:1:0:-2:-3"
+            ;;
+        *"(saved)"*)
+            local name
+            name=$(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //' | sed 's/ (saved)$//')
+            easyeffects -l "$name" 2>/dev/null
+            _notify "Preset: $name"
+            ;;
+    esac
+}
+
+_eq_apply_builtin() {
+    local name="$1"
+    local gains="$2"
+
+    # Create a simple preset JSON for EasyEffects
+    mkdir -p "$EQ_PRESETS_DIR"
+    local freqs=(31 63 125 250 500 1000 2000 4000 8000 16000)
+    IFS=':' read -ra gain_arr <<< "$gains"
+
+    local bands=""
+    for i in "${!freqs[@]}"; do
+        local g="${gain_arr[$i]:-0}"
+        [ -n "$bands" ] && bands+=","
+        bands+=$(printf '{"frequency":%d,"gain":%s,"mode":"RLC (BT)","q":1.5,"slope":"x1","type":"Bell"}' "${freqs[$i]}" "$g")
+    done
+
+    cat > "${EQ_PRESETS_DIR}/stoa-${name,,}.json" <<EQEOF
+{
+  "output": {
+    "equalizer#0": {
+      "bypass": false,
+      "input-gain": 0.0,
+      "num-bands": 10,
+      "output-gain": 0.0,
+      "split-channels": false,
+      "left": [${bands}],
+      "right": [${bands}]
+    },
+    "plugins_order": ["equalizer#0"]
+  }
+}
+EQEOF
+
+    easyeffects -l "stoa-${name,,}" 2>/dev/null
+    _notify "Preset: $name"
+}
+
+menu_equalizer() {
+    if ! command -v easyeffects &>/dev/null; then
+        _notify "easyeffects not installed (pacman -S easyeffects)"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_eq_running)
+
+        local choice
+        choice=$(_rofi_select "  Equalizer ($status)" \
+            "  Toggle equalizer ($status)" \
+            "  Presets" \
+            "  Open EasyEffects" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Toggle*)   _eq_toggle ;;
+            *Presets*)  _eq_presets ;;
+            *Open*)     _eq_open_gui ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   SCREENSAVER (living marble animation)
+# ══════════════════════════════════════════════════════════════
+
+_ss_is_enabled() {
+    local conf="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver.conf"
+    [ -f "$conf" ] && grep -q "^ENABLED=true" "$conf" 2>/dev/null && echo "on" || echo "off"
+}
+
+_ss_current_timeout() {
+    local conf="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver.conf"
+    local val="300"
+    [ -f "$conf" ] && {
+        local v
+        v=$(grep "^IDLE_TIMEOUT=" "$conf" 2>/dev/null | cut -d= -f2)
+        [ -n "$v" ] && val="$v"
+    }
+    echo "$((val / 60))"
+}
+
+_ss_toggle() {
+    local status
+    status=$(_ss_is_enabled)
+    if [ "$status" = "on" ]; then
+        stoa-screensaver disable 2>/dev/null
+        _notify "Screensaver: disabled"
+    else
+        stoa-screensaver enable 2>/dev/null
+        _notify "Screensaver: enabled"
+    fi
+}
+
+_ss_set_timeout() {
+    local current
+    current=$(_ss_current_timeout)
+
+    local choice
+    choice=$(_rofi_select "  Idle timeout (${current} min)" \
+        "  1 minute" \
+        "  2 minutes" \
+        "  5 minutes" \
+        "  10 minutes" \
+        "  15 minutes" \
+        "  30 minutes" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local seconds
+    case "$choice" in
+        *"1 minute"*)   seconds=60 ;;
+        *"2 minute"*)   seconds=120 ;;
+        *"5 minute"*)   seconds=300 ;;
+        *"10 minute"*)  seconds=600 ;;
+        *"15 minute"*)  seconds=900 ;;
+        *"30 minute"*)  seconds=1800 ;;
+    esac
+
+    stoa-screensaver set-timeout "$seconds" 2>/dev/null
+    _notify "Screensaver timeout: $((seconds / 60)) min"
+}
+
+_ss_regenerate() {
+    _notify "Generating screensaver animation..."
+    kitty -e stoa-screensaver generate &
+    disown
+}
+
+_ss_preview() {
+    local video="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver/marble-flow.mp4"
+    if [ ! -f "$video" ]; then
+        _notify "No animation yet — generate first"
+        return
+    fi
+    stoa-screensaver start &
+    disown
+}
+
+menu_screensaver() {
+    if ! command -v magick &>/dev/null; then
+        _notify "imagemagick not installed"
+        return
+    fi
+
+    while true; do
+        local status
+        status=$(_ss_is_enabled)
+        local timeout
+        timeout=$(_ss_current_timeout)
+
+        local choice
+        choice=$(_rofi_select "  Screensaver ($status)" \
+            "  Toggle ($status)" \
+            "  Idle timeout (${timeout} min)" \
+            "  Generate animation" \
+            "  Preview" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Toggle*)    _ss_toggle ;;
+            *timeout*)   _ss_set_timeout ;;
+            *Generate*)  _ss_regenerate ;;
+            *Preview*)   _ss_preview ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -2399,15 +3912,23 @@ main_menu() {
         choice=$(_rofi_select "  Settings" \
             "  Display" \
             "  Audio" \
+            "  Equalizer" \
+            "  Night Light" \
+            "  Keyboard" \
             "  Mouse & Touchpad" \
             "  Network" \
             "  VPN" \
             "  Firewall" \
             "  Bluetooth" \
             "  Hardware" \
+            "  Printers & Scanners" \
             "  Cloud Drive" \
             "  Wallpaper" \
             "  Theme" \
+            "  Power Management" \
+            "  Date & Time" \
+            "  Accessibility" \
+            "  Screensaver" \
             "  Lock Screen" \
             "  Stoa Config" \
             "  Power")
@@ -2416,15 +3937,23 @@ main_menu() {
         case "$choice" in
             *Display*)      menu_display ;;
             *Audio*)        menu_audio ;;
+            *Equalizer*)    menu_equalizer ;;
+            *"Night Light"*) menu_nightlight ;;
+            *Keyboard*)     menu_keyboard ;;
             *"Mouse & Touchpad"*) menu_mouse ;;
             *Network*)      menu_network ;;
             *VPN*)          menu_vpn ;;
             *Firewall*)     menu_firewall ;;
             *Bluetooth*)    menu_bluetooth ;;
             *Hardware*)     menu_hardware ;;
+            *"Printers & Scanners"*) menu_printers ;;
             *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;
             *Theme*)        menu_theme ;;
+            *"Power Management"*) menu_power_mgmt ;;
+            *"Date & Time"*) menu_datetime ;;
+            *Accessibility*) menu_accessibility ;;
+            *Screensaver*)  menu_screensaver ;;
             *Lock*)         menu_lockscreen ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
