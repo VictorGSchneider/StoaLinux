@@ -2809,6 +2809,170 @@ menu_keyboard() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   PRINTERS & SCANNERS (CUPS)
+# ══════════════════════════════════════════════════════════════
+
+_print_cups_status() {
+    if systemctl is-active cups.service &>/dev/null; then
+        echo "running"
+    elif systemctl is-enabled cups.service &>/dev/null; then
+        echo "enabled"
+    else
+        echo "off"
+    fi
+}
+
+_print_list() {
+    local printers
+    printers=$(lpstat -p 2>/dev/null | awk '{print $2}')
+    [ -z "$printers" ] && { _notify "No printers found"; return; }
+
+    local default
+    default=$(lpstat -d 2>/dev/null | awk '{print $NF}')
+
+    local items=()
+    while IFS= read -r p; do
+        local status
+        status=$(lpstat -p "$p" 2>/dev/null | grep -oP '(idle|printing|disabled)')
+        local mark=""
+        [ "$p" = "$default" ] && mark=" (default)"
+        items+=("  $p — ${status:-unknown}${mark}")
+    done <<< "$printers"
+
+    local choice
+    choice=$(_rofi_select "  Printers" "${items[@]}" "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local selected
+    selected=$(echo "$choice" | awk '{print $2}')
+
+    local action
+    action=$(_rofi_select "  $selected" \
+        "  Set as default" \
+        "  Print test page" \
+        "  Enable" \
+        "  Disable" \
+        "  Remove" \
+        "  Back")
+    [ -z "$action" ] || [[ "$action" == *"Back"* ]] && return
+
+    case "$action" in
+        *"Set as default"*)
+            lpadmin -d "$selected" 2>/dev/null
+            _notify "Default printer: $selected"
+            ;;
+        *"Print test"*)
+            lp -d "$selected" /usr/share/cups/data/testprint 2>/dev/null
+            _notify "Test page sent to $selected"
+            ;;
+        *Enable*)
+            cupsenable "$selected" 2>/dev/null
+            _notify "Printer enabled: $selected"
+            ;;
+        *Disable*)
+            cupsdisable "$selected" 2>/dev/null
+            _notify "Printer disabled: $selected"
+            ;;
+        *Remove*)
+            _rofi_confirm "Remove $selected?" && {
+                lpadmin -x "$selected" 2>/dev/null
+                _notify "Printer removed: $selected"
+            }
+            ;;
+    esac
+}
+
+_print_add() {
+    if command -v system-config-printer &>/dev/null; then
+        system-config-printer &
+        disown
+        _notify "Opening printer setup..."
+    else
+        _notify "system-config-printer not installed"
+    fi
+}
+
+_print_toggle_cups() {
+    if systemctl is-active cups.service &>/dev/null; then
+        _rofi_confirm "Stop CUPS service?" && {
+            sudo systemctl stop cups.service 2>/dev/null
+            _notify "CUPS service stopped"
+        }
+    else
+        sudo systemctl enable --now cups.service 2>/dev/null
+        _notify "CUPS service started"
+    fi
+}
+
+_print_queue() {
+    local jobs
+    jobs=$(lpstat -o 2>/dev/null)
+    if [ -z "$jobs" ]; then
+        _notify "Print queue is empty"
+        return
+    fi
+
+    local choice
+    choice=$(echo "$jobs" | "${ROFI[@]}" -p "  Print queue")
+    [ -z "$choice" ] && return
+
+    local job_id
+    job_id=$(echo "$choice" | awk '{print $1}')
+
+    _rofi_confirm "Cancel job $job_id?" && {
+        cancel "$job_id" 2>/dev/null
+        _notify "Job cancelled: $job_id"
+    }
+}
+
+_scanner_list() {
+    if ! command -v scanimage &>/dev/null; then
+        _notify "sane not installed (pacman -S sane)"
+        return
+    fi
+
+    _notify "Scanning for devices..."
+    local scanners
+    scanners=$(scanimage -L 2>/dev/null)
+    if [ -z "$scanners" ]; then
+        _notify "No scanners found"
+        return
+    fi
+
+    echo "$scanners" | "${ROFI[@]}" -p "  Scanners" >/dev/null
+}
+
+menu_printers() {
+    if ! command -v lpstat &>/dev/null; then
+        _notify "CUPS not installed (pacman -S cups)"
+        return
+    fi
+
+    while true; do
+        local cups_status
+        cups_status=$(_print_cups_status)
+
+        local choice
+        choice=$(_rofi_select "  Printers & Scanners" \
+            "  CUPS service ($cups_status)" \
+            "  List printers" \
+            "  Add printer" \
+            "  Print queue" \
+            "  Scanners" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *CUPS*)          _print_toggle_cups ;;
+            *"List printer"*) _print_list ;;
+            *"Add printer"*) _print_add ;;
+            *"Print queue"*) _print_queue ;;
+            *Scanners*)      _scanner_list ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   STOA SETTINGS (keybinds, greeting, etc.)
 # ══════════════════════════════════════════════════════════════
 
@@ -2912,6 +3076,7 @@ main_menu() {
             "  Firewall" \
             "  Bluetooth" \
             "  Hardware" \
+            "  Printers & Scanners" \
             "  Cloud Drive" \
             "  Wallpaper" \
             "  Theme" \
@@ -2932,6 +3097,7 @@ main_menu() {
             *Firewall*)     menu_firewall ;;
             *Bluetooth*)    menu_bluetooth ;;
             *Hardware*)     menu_hardware ;;
+            *"Printers & Scanners"*) menu_printers ;;
             *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;
             *Theme*)        menu_theme ;;
