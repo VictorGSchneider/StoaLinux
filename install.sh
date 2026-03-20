@@ -92,6 +92,15 @@ if [ -d "${HOME}/.steam" ]; then
         echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
 fi
 
+# ── Pacman hook (auto-apply theme after installs) ──
+if [ -d /etc/pacman.d/hooks ] || sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null; then
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook" /etc/pacman.d/hooks/ 2>/dev/null && \
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" /usr/local/bin/ 2>/dev/null && \
+    sudo chmod +x /usr/local/bin/stoa-theme-enforce 2>/dev/null && \
+    echo -e "  ${O}[+] Pacman theme hook installed${R}" || \
+    echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
+fi
+
 # ── Stoa data dirs ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 mkdir -p "${HOME}/Pictures/screenshots"
