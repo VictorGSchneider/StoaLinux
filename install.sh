@@ -52,7 +52,7 @@ _link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
 _link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"
 
 # ── Apps ──
-_link "${STOA_DIR}/config/alacritty/alacritty.toml" "${CONFIG_DIR}/alacritty/alacritty.toml"
+_link "${STOA_DIR}/config/kitty/kitty.conf" "${CONFIG_DIR}/kitty/kitty.conf"
 _link "${STOA_DIR}/config/nvim/init.vim"            "${CONFIG_DIR}/nvim/init.vim"
 _link "${STOA_DIR}/config/nvim/colors/stoa.vim"     "${CONFIG_DIR}/nvim/colors/stoa.vim"
 _link "${STOA_DIR}/config/rofi/config.rasi"         "${CONFIG_DIR}/rofi/config.rasi"
@@ -66,7 +66,7 @@ _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xm
 _link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
 
-# ── Theme (GTK + Qt + Steam + Calibre + YACReader) ──
+# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
 _link "${STOA_DIR}/theme/gtk-3.0/stoa-gtk.css"  "${CONFIG_DIR}/gtk-3.0/gtk.css"
 _link "${STOA_DIR}/theme/gtk-4.0/settings.ini"  "${CONFIG_DIR}/gtk-4.0/settings.ini"
@@ -136,6 +136,9 @@ _link "${STOA_DIR}/scripts/stoa-face-setup.sh"      "${HOME}/.local/bin/stoa-fac
 _link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
 _link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
 _link "${STOA_DIR}/scripts/stoa-drive.sh"           "${HOME}/.local/bin/stoa-drive"
+_link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-firewall"
+_link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
+_link "${STOA_DIR}/scripts/stoa-winapps.sh"      "${HOME}/.local/bin/stoa-winapps"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -146,7 +149,10 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-thunar" "${HOME}/.local/bin/stoa-face" \
          "${HOME}/.local/bin/stoa-settings" \
          "${HOME}/.local/bin/stoa-store" \
-         "${HOME}/.local/bin/stoa-drive"
+         "${HOME}/.local/bin/stoa-drive" \
+         "${HOME}/.local/bin/stoa-firewall" \
+         "${HOME}/.local/bin/stoa-screensaver" \
+         "${HOME}/.local/bin/stoa-winapps"
 
 # ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"
@@ -159,7 +165,18 @@ x-scheme-handler/http=brave-browser.desktop
 x-scheme-handler/https=brave-browser.desktop
 x-scheme-handler/about=brave-browser.desktop
 x-scheme-handler/unknown=brave-browser.desktop
+x-scheme-handler/mailto=betterbird.desktop
+message/rfc822=betterbird.desktop
 text/markdown=obsidian.desktop
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=onlyoffice-desktopeditors.desktop
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=onlyoffice-desktopeditors.desktop
+application/vnd.openxmlformats-officedocument.presentationml.presentation=onlyoffice-desktopeditors.desktop
+application/msword=onlyoffice-desktopeditors.desktop
+application/vnd.ms-excel=onlyoffice-desktopeditors.desktop
+application/vnd.ms-powerpoint=onlyoffice-desktopeditors.desktop
+application/vnd.oasis.opendocument.text=onlyoffice-desktopeditors.desktop
+application/vnd.oasis.opendocument.spreadsheet=onlyoffice-desktopeditors.desktop
+application/vnd.oasis.opendocument.presentation=onlyoffice-desktopeditors.desktop
 application/pdf=org.pwmt.zathura.desktop
 image/png=imv.desktop
 image/jpeg=imv.desktop

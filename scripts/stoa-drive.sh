@@ -184,7 +184,7 @@ _add_account() {
     _notify "Opening browser for authentication..."
 
     if [ -n "$provider_type" ]; then
-        alacritty -e bash -c "
+        kitty -e bash -c "
             echo '╔══════════════════════════════════════════╗'
             echo '║  Stoa Drive — Account Setup              ║'
             echo '╚══════════════════════════════════════════╝'
@@ -199,7 +199,7 @@ _add_account() {
         " &
         disown
     else
-        alacritty -e bash -c "
+        kitty -e bash -c "
             echo '╔══════════════════════════════════════════╗'
             echo '║  Stoa Drive — Manual Configuration       ║'
             echo '╚══════════════════════════════════════════╝'
