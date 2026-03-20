@@ -85,3 +85,82 @@
   :stacking "overlay"
   :focusable true
   (memento-mori))
+
+;; ══════════════════════════════════════════════════════════════
+;; ║  CAPTURE — Screenshot + Recording toolbar                  ║
+;; ══════════════════════════════════════════════════════════════
+
+;; ── Capture variables ──
+(defvar capture-mode "screen")
+(defvar capture-type "screenshot")
+(defvar capture-delay 0)
+
+;; ── Mode button ──
+(defwidget capture-mode-btn [mode icon label]
+  (button :class {capture-mode == mode ? "cap-mode-btn active" : "cap-mode-btn"}
+          :onclick "eww update capture-mode=${mode}"
+    (box :orientation "v" :space-evenly false
+      (label :class "cap-mode-icon" :text icon)
+      (label :class "cap-mode-label" :text label))))
+
+;; ── Main capture widget ──
+(defwidget capture-bar []
+  (box :class "cap-container" :orientation "v" :space-evenly false
+
+    ;; Close button (top-right)
+    (box :class "cap-close-row" :halign "end"
+      (button :class "cap-close-btn"
+              :onclick "eww close capture"
+        (label :text "✕")))
+
+    ;; Mode selection row
+    (box :class "cap-modes" :orientation "h" :space-evenly true :halign "center"
+      (capture-mode-btn :mode "selection" :icon "⊡" :label "Selection")
+      (capture-mode-btn :mode "screen"    :icon "▣" :label "Screen")
+      (capture-mode-btn :mode "window"    :icon "☐" :label "Window"))
+
+    ;; Divider
+    (box :class "cap-divider")
+
+    ;; Actions row
+    (box :class "cap-actions" :orientation "h" :space-evenly false :halign "center"
+
+      ;; Type toggle (screenshot / recording)
+      (box :class "cap-type-toggle" :orientation "h" :space-evenly false
+        (button :class {capture-type == "screenshot" ? "cap-type-btn active" : "cap-type-btn"}
+                :onclick "eww update capture-type=screenshot"
+          (label :text "📷"))
+        (button :class {capture-type == "recording" ? "cap-type-btn active" : "cap-type-btn"}
+                :onclick "eww update capture-type=recording"
+          (label :text "🎥")))
+
+      ;; Capture button
+      (button :class {capture-type == "screenshot" ? "cap-shutter-btn" : "cap-shutter-btn recording"}
+              :onclick "stoa-capture ${capture-mode} ${capture-type} ${capture-delay}"
+        (label :class "cap-shutter-icon"
+               :text {capture-type == "screenshot" ? "●" : "●"}))
+
+      ;; Delay selector (screenshot only)
+      (box :class "cap-delay" :orientation "h" :space-evenly false
+           :visible {capture-type == "screenshot"}
+        (button :class {capture-delay == 0 ? "cap-delay-btn active" : "cap-delay-btn"}
+                :onclick "eww update capture-delay=0"
+          (label :text "0s"))
+        (button :class {capture-delay == 3 ? "cap-delay-btn active" : "cap-delay-btn"}
+                :onclick "eww update capture-delay=3"
+          (label :text "3s"))
+        (button :class {capture-delay == 5 ? "cap-delay-btn active" : "cap-delay-btn"}
+                :onclick "eww update capture-delay=5"
+          (label :text "5s"))))))
+
+;; ── Capture window ──
+(defwindow capture
+  :monitor 0
+  :geometry (geometry :x "0%"
+                      :y "-40px"
+                      :width "380px"
+                      :height "160px"
+                      :anchor "bottom center")
+  :stacking "overlay"
+  :focusable true
+  (capture-bar))
