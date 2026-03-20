@@ -58,7 +58,7 @@ bar {
 }
 
 # ── Core Keybinds ──
-bindsym $mod+Return exec alacritty
+bindsym $mod+Return exec kitty
 bindsym $mod+d exec --no-startup-id rofi -show drun -config ~/.config/rofi/config.rasi
 bindsym $mod+q kill
 bindsym $mod+Shift+c reload
@@ -69,10 +69,12 @@ bindsym $mod+Ctrl+e exec "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg ex
 bindsym $mod+a exec --no-startup-id ~/.local/bin/stoa-store
 bindsym $mod+b exec brave
 bindsym $mod+c exec qalculate-gtk
-bindsym $mod+n exec alacritty -e btop
+bindsym $mod+n exec kitty -e btop
 bindsym $mod+o exec obsidian
 bindsym $mod+m exec ~/.local/bin/stoa-memento
 bindsym $mod+i exec --no-startup-id ~/.local/bin/stoa-settings
+bindsym $mod+w exec --no-startup-id ~/.local/bin/stoa-winapps
+bindsym $mod+g exec --no-startup-id dfm
 bindsym $mod+slash exec ~/.local/bin/stoa-keybinds-toggle
 
 # ── Lock Screen ──
@@ -92,9 +94,9 @@ bindsym $mod+Shift+l move right
 # ── Layout ──
 bindsym $mod+g splitv
 bindsym $mod+s layout stacking
-bindsym $mod+w layout tabbed
+bindsym $mod+Shift+w layout tabbed
 bindsym $mod+t layout toggle split
-bindsym $mod+e exec alacritty -e lf
+bindsym $mod+e exec kitty -e lf
 bindsym $mod+Shift+e exec thunar
 bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+space floating toggle

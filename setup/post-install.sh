@@ -59,11 +59,17 @@ UI_PKGS="rofi dunst libnotify"
 BROWSER_PKGS="brave-bin"
 NOTES_PKGS="obsidian"
 
+# Office (AUR)
+OFFICE_PKGS="onlyoffice-bin"
+
+# Email (AUR)
+EMAIL_PKGS="betterbird-bin"
+
 # VPN (AUR)
 VPN_PKGS="protonvpn-cli"
 
 # Terminal, editor, wallpapers
-APP_PKGS="alacritty neovim feh imagemagick"
+APP_PKGS="kitty neovim feh imagemagick"
 
 # Stoic apps (minimalist)
 STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish qalculate-gtk calibre"
@@ -76,6 +82,9 @@ SCREENSHOT_PKGS="grim slurp maim"
 
 # Stoatools (OCR, paste, resize, rename, locksmith)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
+
+# Touchpad gestures
+GESTURE_PKGS="libinput-gestures"
 
 # Cloud Drive (rclone — stream on-demand, Google Drive/OneDrive/Dropbox/S3)
 CLOUD_PKGS="rclone"
@@ -98,8 +107,29 @@ FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome"
 # Toolkit unification (Qt = GTK appearance)
 THEME_PKGS="qt5ct qt6ct"
 
+# Firewall
+FIREWALL_PKGS="nftables"
+
+# Night light (blue light filter — Wayland)
+NIGHTLIGHT_PKGS="gammastep"
+
+# Power management (power profiles)
+POWER_MGMT_PKGS="power-profiles-daemon"
+
+# Printing (CUPS)
+PRINT_PKGS="cups cups-pdf system-config-printer"
+
+# Audio equalizer (PipeWire)
+EQUALIZER_PKGS="easyeffects"
+
+# WinApps (Windows apps via KVM/QEMU + FreeRDP)
+WINAPPS_PKGS="qemu-full libvirt virt-manager dnsmasq edk2-ovmf freerdp"
+
 # Audio + utilities
-UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl"
+UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg"
+
+# DFM — Dotfile Manager (GTK4/libadwaita GUI)
+DFM_PKGS="python python-gobject gtk4 libadwaita"
 
 # Developer tools
 DEV_PKGS="github-cli"
@@ -107,13 +137,15 @@ DEV_PKGS="github-cli"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
+echo -e "  ${S}Office:     ${OFFICE_PKGS} (AUR)${R}"
+echo -e "  ${S}Email:      ${EMAIL_PKGS} (AUR)${R}"
 echo -e "  ${S}VPN:        ${VPN_PKGS} (AUR)${R}"
 echo -e "  ${S}Apps:       ${APP_PKGS}${R}"
 echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
@@ -126,6 +158,14 @@ echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
 echo -e "  ${S}Clipboard:  ${CLIPBOARD_PKGS}${R}"
 echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
+echo -e "  ${S}Gestures:   ${GESTURE_PKGS}${R}"
+echo -e "  ${S}Firewall:   ${FIREWALL_PKGS}${R}"
+echo -e "  ${S}Night:      ${NIGHTLIGHT_PKGS}${R}"
+echo -e "  ${S}Power:      ${POWER_MGMT_PKGS}${R}"
+echo -e "  ${S}Print:      ${PRINT_PKGS}${R}"
+echo -e "  ${S}Equalizer:  ${EQUALIZER_PKGS}${R}"
+echo -e "  ${S}WinApps:    ${WINAPPS_PKGS}${R}"
+echo -e "  ${S}DFM:        ${DFM_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
 echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
@@ -368,6 +408,46 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${S}[~] howdy already installed.${R}"
     fi
 
+    # OnlyOffice Desktop Editors (AUR) — "Order is the first law of heaven." — Alexander Pope
+    echo ""
+    if ! command -v desktopeditors &>/dev/null; then
+        echo -e "  ${F}Installing OnlyOffice Desktop Editors (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm onlyoffice-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm onlyoffice-bin
+        else
+            echo -e "  ${S}Installing OnlyOffice manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/onlyoffice-bin.git "$_tmpdir/onlyoffice-bin"
+            (cd "$_tmpdir/onlyoffice-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] OnlyOffice installed.${R}"
+    else
+        echo -e "  ${S}[~] OnlyOffice already installed.${R}"
+    fi
+
+    # Betterbird — Email client (AUR) — "Letters are our absent friends." — Seneca
+    echo ""
+    if ! command -v betterbird &>/dev/null; then
+        echo -e "  ${F}Installing Betterbird (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm betterbird-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm betterbird-bin
+        else
+            echo -e "  ${S}Installing Betterbird manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/betterbird-bin.git "$_tmpdir/betterbird-bin"
+            (cd "$_tmpdir/betterbird-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] Betterbird installed.${R}"
+    else
+        echo -e "  ${S}[~] Betterbird already installed.${R}"
+    fi
+
     # ProtonVPN CLI (AUR) — "The wise man guards his retreat." — Seneca
     echo ""
     if ! command -v protonvpn-cli &>/dev/null; then
@@ -388,6 +468,23 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${S}    Or use: Super+I → VPN${R}"
     else
         echo -e "  ${S}[~] ProtonVPN CLI already installed.${R}"
+    fi
+    # DFM — Dotfile Manager (GTK4 GUI) — "Know thyself." — Thales
+    echo ""
+    if ! command -v dfm &>/dev/null; then
+        echo -e "  ${F}Installing DFM — Dotfile Manager...${R}"
+        DFM_DIR="${HOME}/.local/share/dfm-app"
+        if [ -d "$DFM_DIR" ]; then
+            git -C "$DFM_DIR" pull
+        else
+            git clone https://github.com/VictorGSchneider/DFM.git "$DFM_DIR"
+        fi
+        pip install -e "$DFM_DIR" --break-system-packages 2>/dev/null || \
+            pip install -e "$DFM_DIR"
+        echo -e "  ${O}[✓] DFM installed.${R}"
+        echo -e "  ${S}    Launch: dfm  or  Super+G${R}"
+    else
+        echo -e "  ${S}[~] DFM already installed.${R}"
     fi
 else
     echo -e "  ${S}[~] Packages skipped.${R}"
@@ -481,6 +578,9 @@ echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
 echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P2P${R}"
 echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDrive, etc)${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
+echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+I → Firewall)${R}"
+echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
+echo -e "  ${S}  dfm               — Dotfile Manager GUI (Super+G)${R}"
 echo ""
 echo -e "  ${F}Leisure:${R}"
 echo -e "  ${S}  steam             — Gaming (Proton enabled for Windows games)${R}"
