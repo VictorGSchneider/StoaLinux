@@ -190,7 +190,7 @@ Change the entire color scheme from `Super+I → Theme → Color Palette`:
 
 Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland, Kitty, and Dunst reload live — other apps take effect on restart.
 
-### DFM — Dotfile Manager
+### [DFM — Dotfile Manager](https://github.com/VictorGSchneider/DFM)
 
 A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G` or `dfm`.
 
