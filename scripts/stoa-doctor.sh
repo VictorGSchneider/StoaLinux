@@ -8,7 +8,7 @@
 # required by Stoa scripts are present and functional.
 # Reports issues via dunst notifications.
 
-set -uo pipefail
+set -o pipefail
 
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 LOG="${STOA_DIR}/doctor.log"

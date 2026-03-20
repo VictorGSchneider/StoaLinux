@@ -27,6 +27,26 @@ _deref() {
     fi
 }
 
+# ── Hyprland version-aware helper ──
+# stoa-doctor writes the detected format to ~/.config/stoa/hyprctl-format
+# ("legacy" = grep "int:/float:/str:", "raw" = direct value)
+_hyprctl_get() {
+    local option="$1" type="${2:-int}"
+    local output format
+
+    format=$(cat "${STOA_DIR}/hyprctl-format" 2>/dev/null || echo "legacy")
+    output=$(hyprctl getoption "$option" 2>/dev/null)
+
+    case "$format" in
+        raw)
+            echo "$output" | head -1
+            ;;
+        *)
+            echo "$output" | grep "${type}:" | awk '{print $2}'
+            ;;
+    esac
+}
+
 _rofi_select() {
     local prompt="$1"
     shift
