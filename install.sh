@@ -171,6 +171,8 @@ _link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-fire
 _link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
 _link "${STOA_DIR}/scripts/stoa-winapps.sh"      "${HOME}/.local/bin/stoa-winapps"
 _link "${STOA_DIR}/scripts/stoa-capture.sh"       "${HOME}/.local/bin/stoa-capture"
+_link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
+_link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -185,7 +187,27 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-firewall" \
          "${HOME}/.local/bin/stoa-screensaver" \
          "${HOME}/.local/bin/stoa-winapps" \
-         "${HOME}/.local/bin/stoa-capture"
+         "${HOME}/.local/bin/stoa-capture" \
+         "${HOME}/.local/bin/stoa-doctor" \
+         "${HOME}/.local/bin/stoa-pkg-snapshot"
+
+# ── Pacman hooks (require sudo) ──
+echo ""
+echo -e "${F}Pacman hooks:${R}"
+echo ""
+HOOK_DIR="/etc/pacman.d/hooks"
+if [ -d "$HOOK_DIR" ] || sudo mkdir -p "$HOOK_DIR" 2>/dev/null; then
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-pkg-snapshot.hook" "${HOOK_DIR}/" 2>/dev/null \
+        && echo -e "  ${O}[+] stoa-pkg-snapshot.hook${R}" \
+        || echo -e "  ${S}[!] Could not install pkg-snapshot hook (need sudo)${R}"
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook" "${HOOK_DIR}/" 2>/dev/null \
+        && echo -e "  ${O}[+] stoa-theme.hook${R}" \
+        || echo -e "  ${S}[!] Could not install theme hook (need sudo)${R}"
+    # The hook calls /usr/local/bin/stoa-pkg-snapshot — symlink it
+    sudo ln -sf "${HOME}/.local/bin/stoa-pkg-snapshot" /usr/local/bin/stoa-pkg-snapshot 2>/dev/null
+else
+    echo -e "  ${S}[!] Could not create ${HOOK_DIR} (need sudo)${R}"
+fi
 
 # ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"

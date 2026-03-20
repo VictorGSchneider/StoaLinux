@@ -165,6 +165,7 @@ bindsym Print exec --no-startup-id ~/.local/bin/stoa-capture
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b
 exec_always --no-startup-id feh --bg-fill ~/.config/stoa/wallpapers/marble.png
 exec --no-startup-id dunst -config ~/.config/dunst/dunstrc
+exec --no-startup-id stoa-doctor
 
 # ── Qalculate ──
 for_window [class="Qalculate-gtk"] floating enable, resize set 420 540, move position center
