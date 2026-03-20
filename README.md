@@ -1,26 +1,38 @@
+<div align="center">
+
 # StoaLinux
+
+**A Stoic desktop for Arch Linux — Hyprland, i3, and a unified dark theme inspired by the ancient world.**
+
+[![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white)](https://archlinux.org)
+[![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?style=flat-square&logo=wayland&logoColor=black)](https://hyprland.org)
+[![License](https://img.shields.io/badge/License-GPL--3.0-c49a5c?style=flat-square)](LICENSE)
 
 > *"The happiness of your life depends upon the quality of your thoughts."* — Marcus Aurelius
 
-An Arch Linux setup inspired by Stoic philosophy. Every detail — from the color palette to the terminal prompt — is designed to foster focus, discipline, and clarity of mind.
+</div>
 
-## Philosophy
+---
 
-Stoicism teaches that we don't control what happens, but we control how we respond. StoaLinux brings that principle to the desktop: a system that doesn't distract, doesn't over-decorate, doesn't get in your way. It just works.
+Marble, bronze, parchment, stone — colors from temples, statues, and manuscripts. EB Garamond as the serif. JetBrains Mono in the terminal. A Stoic quote every time you open a shell. A Memento Mori widget on the desktop reminding you that time is finite.
 
-The palette comes from the ancient world — marble, bronze, parchment, stone, terracotta — colors that evoke temples, statues, and manuscripts. The typography uses EB Garamond, a classical serif that reinforces this identity. Every terminal opens with a different Stoic quote. The Memento Mori widget reminds you that time is finite.
+StoaLinux is a complete Arch Linux environment with automated installation, a unified dark theme across every app, a settings panel that replaces the need for any external configuration tool, and a collection of `stoa-*` scripts that handle everything from wallpapers to OCR to cloud drives.
 
 This isn't minimalism for aesthetics. It's minimalism by principle: **only what serves, stays**.
 
-## What it is
+### Highlights
 
 - **Arch Linux** with automated installation (from live ISO or existing Arch)
 - **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
-- Unified dark theme across GTK, Qt, Steam, Calibre, YACReader, and everything else
-- `stoa-*` scripts for wallpapers, settings, OCR, clipboard, GPU, and more
-- Memento Mori widget (eww) built into the desktop
+- **20-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, themes, and more
+- **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
+- **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird
+- **Memento Mori widget** (eww), **Stoic quotes**, and a **living marble screensaver**
+- **stoa-\* scripts** for wallpapers, clipboard, OCR, paste, resize, firewall, WinApps, and more
 
 ## Palette
+
+The default palette is inspired by the ancient world — marble, bronze, parchment, stone. It can be changed entirely via `Super+I → Theme → Color Palette`, with **10 built-in presets** and a **custom color editor**.
 
 <table>
   <tr>
@@ -39,6 +51,8 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
     <td><img src="https://img.shields.io/badge/Stone__%236e6a62-6e6a62?style=for-the-badge&labelColor=6e6a62&color=6e6a62" alt="#6e6a62"/></td>
   </tr>
 </table>
+
+**Available presets:** Stoic (default), Nord, Dracula, Gruvbox, Catppuccin Mocha, Tokyo Night, Solarized Dark, Rose Pine, GitHub Dark, Base16 Default
 
 ## Install
 
@@ -79,6 +93,7 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><td><code>Super+O</code></td><td>Notes (Obsidian)</td><td><code>Super+R</code></td><td>Resize (HJKL)</td></tr>
   <tr><td><code>Super+M</code></td><td>Memento Mori</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
   <tr><td><code>Super+I</code></td><td>Settings panel</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
+  <tr><td><code>Super+W</code></td><td>WinApps</td><td></td><td></td></tr>
   <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
   <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print / Super+Print</code></td><td>Screenshot</td></tr>
 </table>
@@ -106,7 +121,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><b>Accessibility</b></td><td>Cursor size, text scale, animations, gaps, opacity, border width</td></tr>
   <tr><td><b>Screensaver</b></td><td>Living marble animation (plasma noise in Stoa palette), idle timeout</td></tr>
   <tr><td><b>Wallpaper</b></td><td>Browse, generate, set custom</td></tr>
-  <tr><td><b>Theme</b></td><td>GTK, icons, cursors, font size</td></tr>
+  <tr><td><b>Theme</b></td><td>Color palette (10 presets + custom), GTK, icons, cursors, font size</td></tr>
   <tr><td><b>Lock Screen</b></td><td>Lock now, face recognition setup</td></tr>
 </table>
 
@@ -123,6 +138,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
   <tr><td><code>stoa-drive</code></td><td>Cloud drive (rclone)</td><td></td><td></td></tr>
   <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
+  <tr><td><code>stoa-winapps</code></td><td>Windows apps (KVM/RDP)</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
@@ -143,6 +159,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td>Betterbird</td><td>Email</td><td>howdy</td><td>Face unlock</td></tr>
   <tr><td>imv</td><td>Images</td><td>lf / Thunar</td><td>Files</td></tr>
   <tr><td>EasyEffects</td><td>Audio equalizer</td><td>gammastep</td><td>Night light</td></tr>
+  <tr><td>QEMU/KVM</td><td>WinApps (VM)</td><td>FreeRDP</td><td>Remote desktop</td></tr>
 </table>
 
 ## Theme
@@ -159,6 +176,17 @@ The Stoa theme is applied consistently across:
 - **Icons** — Colloid-dark
 - **Cursors** — Colloid
 - **Font** — EB Garamond (serif) + JetBrains Mono (mono)
+
+### Color Palette Manager
+
+Change the entire color scheme from `Super+I → Theme → Color Palette`:
+
+- **Apply Preset** — pick from 10 palettes and apply with one click
+- **Edit Colors** — customize any of the 11 core colors individually via hex input
+- **View Current Palette** — see the active colors at a glance
+- **Reset to Stoic** — restore the default marble/bronze palette
+
+Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland, Kitty, and Dunst reload live — other apps take effect on restart.
 
 ## License
 

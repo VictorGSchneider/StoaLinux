@@ -970,10 +970,337 @@ _theme_font_size() {
     _notify "Font size: ${choice}pt"
 }
 
+# ── Color Palette Manager ──
+
+STOA_COLORS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
+STOA_COLORS_FILE="${STOA_COLORS_DIR}/colors.conf"
+STOA_DIR_RESOLVED="$(dirname "$(readlink -f "$0")")/.."
+
+# Preset palettes: bg_dark|bg|bg_light|fg|fg_dim|accent|accent2|green|red|blue|grey|name
+_color_presets() {
+    cat <<'PRESETS'
+#1a1714|#211e19|#2d2921|#d4cfc4|#a89f91|#c49a5c|#d4a84b|#8a9a6c|#b36b5a|#5a7a8a|#6e6a62|Stoic (default)
+#2e3440|#3b4252|#434c5e|#eceff4|#d8dee9|#88c0d0|#81a1c1|#a3be8c|#bf616a|#5e81ac|#4c566a|Nord
+#282a36|#1e1f29|#44475a|#f8f8f2|#6272a4|#bd93f9|#ff79c6|#50fa7b|#ff5555|#8be9fd|#6272a4|Dracula
+#1d2021|#282828|#3c3836|#ebdbb2|#a89984|#d79921|#fabd2f|#b8bb26|#fb4934|#458588|#665c54|Gruvbox
+#11111b|#1e1e2e|#313244|#cdd6f4|#a6adc8|#cba6f7|#f5c2e7|#a6e3a1|#f38ba8|#89b4fa|#585b70|Catppuccin Mocha
+#16161e|#1a1b26|#24283b|#c0caf5|#a9b1d6|#7aa2f7|#bb9af7|#9ece6a|#f7768e|#7dcfff|#565f89|Tokyo Night
+#002b36|#073642|#586e75|#fdf6e3|#93a1a1|#b58900|#cb4b16|#859900|#dc322f|#268bd2|#657b83|Solarized Dark
+#191724|#1f1d2e|#26233a|#e0def4|#908caa|#c4a7e7|#ebbcba|#31748f|#eb6f92|#9ccfd8|#6e6a86|Rose Pine
+#0d1117|#161b22|#21262d|#c9d1d9|#8b949e|#58a6ff|#79c0ff|#3fb950|#f85149|#58a6ff|#484f58|GitHub Dark
+#181818|#282828|#383838|#d8d8d8|#b8b8b8|#dc9656|#f7ca88|#a1b56c|#ab4642|#7cafc2|#585858|Base16 Default
+PRESETS
+}
+
+# Strip '#' from hex
+_hex() { echo "${1#\#}"; }
+
+# Convert hex to rgb components for rgba() format
+_hex2rgba() {
+    local hex=$(_hex "$1")
+    local r=$((16#${hex:0:2}))
+    local g=$((16#${hex:2:2}))
+    local b=$((16#${hex:4:2}))
+    echo "${r}, ${g}, ${b}"
+}
+
+# Save current palette to conf
+_colors_save() {
+    local bg_dark="$1" bg="$2" bg_light="$3" fg="$4" fg_dim="$5"
+    local accent="$6" accent2="$7" green="$8" red="$9" blue="${10}" grey="${11}"
+    mkdir -p "$STOA_COLORS_DIR"
+    cat > "$STOA_COLORS_FILE" <<EOF
+STOA_BG_DARK="${bg_dark}"
+STOA_BG="${bg}"
+STOA_BG_LIGHT="${bg_light}"
+STOA_FG="${fg}"
+STOA_FG_DIM="${fg_dim}"
+STOA_ACCENT="${accent}"
+STOA_ACCENT2="${accent2}"
+STOA_GREEN="${green}"
+STOA_RED="${red}"
+STOA_BLUE="${blue}"
+STOA_GREY="${grey}"
+EOF
+}
+
+# Load current palette (defaults to Stoic)
+_colors_load() {
+    C_BG_DARK="#1a1714"; C_BG="#211e19"; C_BG_LIGHT="#2d2921"
+    C_FG="#d4cfc4"; C_FG_DIM="#a89f91"
+    C_ACCENT="#c49a5c"; C_ACCENT2="#d4a84b"
+    C_GREEN="#8a9a6c"; C_RED="#b36b5a"; C_BLUE="#5a7a8a"; C_GREY="#6e6a62"
+
+    if [ -f "$STOA_COLORS_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$STOA_COLORS_FILE"
+        C_BG_DARK="${STOA_BG_DARK:-$C_BG_DARK}"
+        C_BG="${STOA_BG:-$C_BG}"
+        C_BG_LIGHT="${STOA_BG_LIGHT:-$C_BG_LIGHT}"
+        C_FG="${STOA_FG:-$C_FG}"
+        C_FG_DIM="${STOA_FG_DIM:-$C_FG_DIM}"
+        C_ACCENT="${STOA_ACCENT:-$C_ACCENT}"
+        C_ACCENT2="${STOA_ACCENT2:-$C_ACCENT2}"
+        C_GREEN="${STOA_GREEN:-$C_GREEN}"
+        C_RED="${STOA_RED:-$C_RED}"
+        C_BLUE="${STOA_BLUE:-$C_BLUE}"
+        C_GREY="${STOA_GREY:-$C_GREY}"
+    fi
+}
+
+# Apply palette to all config files
+_colors_apply() {
+    local bg_dark="$1" bg="$2" bg_light="$3" fg="$4" fg_dim="$5"
+    local accent="$6" accent2="$7" green="$8" red="$9" blue="${10}" grey="${11}"
+
+    # Stoic defaults (what we're replacing FROM)
+    _colors_load
+    local old_bg_dark="$C_BG_DARK" old_bg="$C_BG" old_bg_light="$C_BG_LIGHT"
+    local old_fg="$C_FG" old_fg_dim="$C_FG_DIM"
+    local old_accent="$C_ACCENT" old_accent2="$C_ACCENT2"
+    local old_green="$C_GREEN" old_red="$C_RED" old_blue="$C_BLUE" old_grey="$C_GREY"
+
+    # Build sed replacements (case-insensitive hex)
+    local -a pairs=(
+        "$old_bg_dark|$bg_dark"
+        "$old_bg_light|$bg_light"
+        "$old_bg|$bg"
+        "$old_fg_dim|$fg_dim"
+        "$old_fg|$fg"
+        "$old_accent2|$accent2"
+        "$old_accent|$accent"
+        "$old_green|$green"
+        "$old_red|$red"
+        "$old_blue|$blue"
+        "$old_grey|$grey"
+    )
+
+    # Files to update
+    local -a files=(
+        "${HOME}/.config/rofi/config.rasi"
+        "${HOME}/.config/waybar/style.css"
+        "${HOME}/.config/kitty/kitty.conf"
+        "${HOME}/.config/dunst/dunstrc"
+        "${HOME}/.config/eww/eww.scss"
+        "${HOME}/.config/gtk-3.0/gtk.css"
+        "${HOME}/.config/gtk-4.0/gtk.css"
+    )
+
+    for f in "${files[@]}"; do
+        [ -f "$f" ] || continue
+        for pair in "${pairs[@]}"; do
+            local from="${pair%%|*}" to="${pair##*|}"
+            [ "$from" = "$to" ] && continue
+            sed -i "s/${from}/${to}/gi" "$f"
+        done
+    done
+
+    # Hyprland: uses rgb(RRGGBB) without '#'
+    local hypr="${HOME}/.config/hypr/hyprland.conf"
+    if [ -f "$hypr" ]; then
+        for pair in "${pairs[@]}"; do
+            local from="${pair%%|*}" to="${pair##*|}"
+            [ "$from" = "$to" ] && continue
+            sed -i "s/rgb($(_hex "$from"))/rgb($(_hex "$to"))/gi" "$hypr"
+        done
+    fi
+
+    # Hyprlock: uses rgba(R, G, B, A) format
+    local hyprlock="${HOME}/.config/hypr/hyprlock.conf"
+    if [ -f "$hyprlock" ]; then
+        for pair in "${pairs[@]}"; do
+            local from="${pair%%|*}" to="${pair##*|}"
+            [ "$from" = "$to" ] && continue
+            local from_rgba=$(_hex2rgba "$from")
+            local to_rgba=$(_hex2rgba "$to")
+            sed -i "s/${from_rgba}/${to_rgba}/g" "$hyprlock"
+            # Also replace hex refs (e.g. in <span>)
+            sed -i "s/${from}/${to}/gi" "$hyprlock"
+        done
+    fi
+
+    # i3: uses #RRGGBB directly
+    local i3conf="${HOME}/.config/i3/config"
+    if [ -f "$i3conf" ]; then
+        for pair in "${pairs[@]}"; do
+            local from="${pair%%|*}" to="${pair##*|}"
+            [ "$from" = "$to" ] && continue
+            sed -i "s/${from}/${to}/gi" "$i3conf"
+        done
+    fi
+
+    # colors.sh (central reference)
+    local colorssh="${STOA_DIR_RESOLVED}/theme/colors.sh"
+    if [ -f "$colorssh" ]; then
+        for pair in "${pairs[@]}"; do
+            local from="${pair%%|*}" to="${pair##*|}"
+            [ "$from" = "$to" ] && continue
+            sed -i "s/${from}/${to}/gi" "$colorssh"
+        done
+    fi
+
+    # Save new palette
+    _colors_save "$bg_dark" "$bg" "$bg_light" "$fg" "$fg_dim" \
+                 "$accent" "$accent2" "$green" "$red" "$blue" "$grey"
+
+    # Reload live components
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+        hyprctl reload &>/dev/null
+    fi
+    pkill -USR1 kitty 2>/dev/null
+    pkill dunst 2>/dev/null; dunst -config ~/.config/dunst/dunstrc &>/dev/null &
+    disown 2>/dev/null
+}
+
+_theme_color_preset() {
+    local entries=()
+    while IFS='|' read -r _ _ _ _ _ _ _ _ _ _ _ name; do
+        entries+=("  ${name}")
+    done < <(_color_presets)
+    entries+=("  Back")
+
+    local choice
+    choice=$(_rofi_select "  Color Preset" "${entries[@]}")
+    [[ -z "$choice" || "$choice" == *"Back"* ]] && return
+
+    local selected_name="${choice#*  }"
+    local line
+    line=$(grep "${selected_name}$" < <(_color_presets))
+    [ -z "$line" ] && return
+
+    IFS='|' read -r bd bg bl fg fd ac ac2 gr rd bu gy _ <<< "$line"
+
+    if _rofi_confirm "Apply '${selected_name}'?"; then
+        _colors_apply "$bd" "$bg" "$bl" "$fg" "$fd" "$ac" "$ac2" "$gr" "$rd" "$bu" "$gy"
+        _notify "Palette: ${selected_name}\nRestart apps to see full changes."
+    fi
+}
+
+_theme_color_edit() {
+    _colors_load
+
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Edit Colors" \
+            "  Background dark: ${C_BG_DARK}" \
+            "  Background: ${C_BG}" \
+            "  Background light: ${C_BG_LIGHT}" \
+            "  Foreground: ${C_FG}" \
+            "  Foreground dim: ${C_FG_DIM}" \
+            "  Accent (bronze): ${C_ACCENT}" \
+            "  Accent 2 (gold): ${C_ACCENT2}" \
+            "  Green (olive): ${C_GREEN}" \
+            "  Red (terracotta): ${C_RED}" \
+            "  Blue (azure): ${C_BLUE}" \
+            "  Grey (stone): ${C_GREY}" \
+            "  Apply changes" \
+            "  Back")
+        [[ -z "$choice" || "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Apply changes"*)
+                if _rofi_confirm "Apply custom palette?"; then
+                    _colors_apply "$C_BG_DARK" "$C_BG" "$C_BG_LIGHT" "$C_FG" "$C_FG_DIM" \
+                                  "$C_ACCENT" "$C_ACCENT2" "$C_GREEN" "$C_RED" "$C_BLUE" "$C_GREY"
+                    _notify "Custom palette applied.\nRestart apps to see full changes."
+                fi
+                ;;
+            *"Background dark"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #1a1714)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_DARK="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Background light"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #2d2921)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_LIGHT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Background:"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #211e19)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Foreground dim"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #a89f91)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG_DIM="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Foreground:"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #d4cfc4)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Accent (bronze)"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #c49a5c)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Accent 2 (gold)"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #d4a84b)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT2="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Green (olive)"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #8a9a6c)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREEN="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Red (terracotta)"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #b36b5a)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_RED="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Blue (azure)"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #5a7a8a)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BLUE="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+            *"Grey (stone)"*)
+                local val; val=$(_rofi_input "  Hex color (e.g. #6e6a62)")
+                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREY="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                ;;
+        esac
+    done
+}
+
+_theme_color_current() {
+    _colors_load
+    _rofi_select "  Current Palette" \
+        "  bg dark:     ${C_BG_DARK}" \
+        "  bg:          ${C_BG}" \
+        "  bg light:    ${C_BG_LIGHT}" \
+        "  fg:          ${C_FG}" \
+        "  fg dim:      ${C_FG_DIM}" \
+        "  accent:      ${C_ACCENT}" \
+        "  accent 2:    ${C_ACCENT2}" \
+        "  green:       ${C_GREEN}" \
+        "  red:         ${C_RED}" \
+        "  blue:        ${C_BLUE}" \
+        "  grey:        ${C_GREY}" \
+        "  Back"
+}
+
+menu_colors() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Color Palette" \
+            "  Apply Preset" \
+            "  Edit Colors" \
+            "  View Current Palette" \
+            "  Reset to Stoic (default)" \
+            "  Back")
+        [[ -z "$choice" || "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Apply Preset"*)       _theme_color_preset ;;
+            *"Edit Colors"*)        _theme_color_edit ;;
+            *"View Current"*)       _theme_color_current ;;
+            *"Reset to Stoic"*)
+                if _rofi_confirm "Reset to Stoic palette?"; then
+                    _colors_apply "#1a1714" "#211e19" "#2d2921" "#d4cfc4" "#a89f91" \
+                                  "#c49a5c" "#d4a84b" "#8a9a6c" "#b36b5a" "#5a7a8a" "#6e6a62"
+                    _notify "Palette reset to Stoic.\nRestart apps to see full changes."
+                fi
+                ;;
+        esac
+    done
+}
+
 menu_theme() {
     while true; do
         local choice
         choice=$(_rofi_select "  Theme" \
+            "  Color Palette" \
             "  GTK Theme" \
             "  Icon Theme" \
             "  Cursor Theme" \
@@ -982,6 +1309,7 @@ menu_theme() {
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
+            *Color*)  menu_colors ;;
             *GTK*)    _theme_gtk ;;
             *Icon*)   _theme_icons ;;
             *Cursor*) _theme_cursor ;;
