@@ -77,8 +77,8 @@ STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar
 # Gaming — "Even a wise man needs rest." — Seneca
 GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 
-# Screenshot — Wayland + Xorg
-SCREENSHOT_PKGS="grim slurp maim"
+# Screenshot + Recording — Wayland + Xorg
+SCREENSHOT_PKGS="grim slurp maim wf-recorder slop"
 
 # Stoatools (OCR, paste, resize, rename, locksmith)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"

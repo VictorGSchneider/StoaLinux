@@ -158,9 +158,8 @@ bindsym XF86AudioMute exec --no-startup-id ~/.local/bin/stoa-osd volume-mute
 bindsym XF86MonBrightnessUp exec --no-startup-id ~/.local/bin/stoa-osd brightness-up
 bindsym XF86MonBrightnessDown exec --no-startup-id ~/.local/bin/stoa-osd brightness-down
 
-# ── Screenshot ──
-bindsym Print exec --no-startup-id maim ~/Pictures/screenshots/screenshot-$(date +%s).png
-bindsym $mod+Print exec --no-startup-id maim -s ~/Pictures/screenshots/screenshot-$(date +%s).png
+# ── Capture (screenshot + recording) ──
+bindsym Print exec --no-startup-id ~/.local/bin/stoa-capture
 
 # ── Clipboard ──
 bindsym $mod+v exec --no-startup-id ~/.local/bin/stoa-clipboard show

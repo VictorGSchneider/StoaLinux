@@ -146,3 +146,162 @@ $font:        "EB Garamond";
     font-size: 11px;
     color: $stone;
 }
+
+// ══════════════════════════════════════════════════════════════
+// ║  CAPTURE — Screenshot + Recording toolbar                  ║
+// ══════════════════════════════════════════════════════════════
+
+.cap-container {
+    background-color: rgba($bg, 0.95);
+    border: 2px solid $stone;
+    border-radius: 16px;
+    padding: 8px 16px 14px 16px;
+    font-family: "JetBrains Mono", monospace;
+    color: $fg;
+}
+
+// ── Close button ──
+.cap-close-row {
+    margin-bottom: 2px;
+}
+
+.cap-close-btn {
+    background: none;
+    border: none;
+    color: $stone;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 6px;
+
+    &:hover {
+        color: $terracotta;
+        background-color: rgba($terracotta, 0.15);
+    }
+}
+
+// ── Mode buttons (Selection / Screen / Window) ──
+.cap-modes {
+    margin: 0 8px 8px 8px;
+}
+
+.cap-mode-btn {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 8px 16px;
+    color: $fg-dim;
+    min-width: 90px;
+
+    &:hover {
+        background-color: rgba($stone, 0.2);
+    }
+
+    &.active {
+        background-color: rgba($bronze, 0.15);
+        border-color: $bronze;
+        color: $bronze;
+    }
+}
+
+.cap-mode-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.cap-mode-label {
+    font-size: 10px;
+}
+
+// ── Divider ──
+.cap-divider {
+    background-color: $stone;
+    min-height: 1px;
+    margin: 4px 16px 10px 16px;
+    opacity: 0.4;
+}
+
+// ── Actions row ──
+.cap-actions {
+    margin: 0 8px;
+}
+
+// ── Type toggle (📷 / 🎥) ──
+.cap-type-toggle {
+    background-color: rgba($stone, 0.2);
+    border-radius: 8px;
+    padding: 2px;
+    margin-right: 16px;
+}
+
+.cap-type-btn {
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    color: $fg-dim;
+
+    &:hover {
+        background-color: rgba($stone, 0.3);
+    }
+
+    &.active {
+        background-color: $bg-light;
+        color: $fg;
+    }
+}
+
+// ── Shutter / capture button ──
+.cap-shutter-btn {
+    background-color: $fg;
+    border: 3px solid $stone;
+    border-radius: 50%;
+    min-width: 42px;
+    min-height: 42px;
+    margin: 0 16px;
+    color: $bg;
+
+    &:hover {
+        background-color: $bronze;
+        border-color: $bronze;
+    }
+
+    &.recording {
+        background-color: $terracotta;
+        border-color: $terracotta;
+        color: $bg;
+
+        &:hover {
+            background-color: lighten($terracotta, 10%);
+        }
+    }
+}
+
+.cap-shutter-icon {
+    font-size: 18px;
+}
+
+// ── Delay selector ──
+.cap-delay {
+    background-color: rgba($stone, 0.2);
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.cap-delay-btn {
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 10px;
+    color: $fg-dim;
+
+    &:hover {
+        background-color: rgba($stone, 0.3);
+    }
+
+    &.active {
+        background-color: $bg-light;
+        color: $bronze;
+    }
+}
