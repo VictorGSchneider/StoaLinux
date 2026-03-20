@@ -25,6 +25,7 @@
         "i3status",
         "xorg-server",
         "xorg-xinit",
+        "xorg-xrandr",
         "picom",
         "rofi",
         "dunst",
@@ -79,7 +80,11 @@
         "hyprlock",
         "github-cli",
         "rclone",
-        "flatpak"
+        "flatpak",
+        "xdg-utils",
+        "v4l-utils",
+        "bluez",
+        "bluez-utils"
     ],
     "parallel downloads": 5,
     "profile_config": {
