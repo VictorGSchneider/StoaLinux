@@ -11,7 +11,7 @@
 #   stoa-ocr por        — select area, OCR in Portuguese
 #   stoa-ocr eng        — select area, OCR in English
 
-TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
+OCR_TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
 
 # Detect language: argument or default
 _get_lang() {
@@ -29,7 +29,7 @@ _ocr_from_file() {
 
     if [ ! -f "$file" ]; then
         notify-send -t 3000 "OCR" "File not found: $file"
-        exit 1
+        return 1
     fi
 
     local text
@@ -37,7 +37,7 @@ _ocr_from_file() {
 
     if [ -z "$text" ]; then
         notify-send -t 3000 "OCR" "No text detected"
-        exit 0
+        return 1
     fi
 
     printf '%s' "$text" | wl-copy
@@ -46,7 +46,7 @@ _ocr_from_file() {
 
 _ocr_from_screen() {
     local lang="$1"
-    local tmpfile="${TMPDIR}/stoa-ocr-$$.png"
+    local tmpfile="${OCR_TMPDIR}/stoa-ocr-$$.png"
 
     # Capture screen area
     local geometry

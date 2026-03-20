@@ -76,7 +76,7 @@ bindsym $mod+i exec --no-startup-id ~/.local/bin/stoa-settings
 bindsym $mod+slash exec ~/.local/bin/stoa-keybinds-toggle
 
 # ── Lock Screen ──
-bindsym $mod+Escape exec --no-startup-id i3lock-color --blur 5 --ring-color=c49a5c --inside-color=211e19cc --line-uses-inside --keyhl-color=8a9a6c --bshl-color=b36b5a --separator-color=6e6a62 --time-color=c49a5c --date-color=d4cfc4aa --verif-color=8a9a6c --wrong-color=b36b5a --clock --time-str="%H:%M" --date-str="%A, %d %B" --time-font="JetBrains Mono" --date-font="JetBrains Mono"
+bindsym $mod+Escape exec --no-startup-id i3lock --blur 5 --ring-color=c49a5c --inside-color=211e19cc --line-uses-inside --keyhl-color=8a9a6c --bshl-color=b36b5a --separator-color=6e6a62 --time-color=c49a5c --date-color=d4cfc4aa --verif-color=8a9a6c --wrong-color=b36b5a --clock --time-str="%H:%M" --date-str="%A, %d %B" --time-font="JetBrains Mono" --date-font="JetBrains Mono"
 
 # ── Navigation ──
 bindsym $mod+h focus left
@@ -90,7 +90,7 @@ bindsym $mod+Shift+k move up
 bindsym $mod+Shift+l move right
 
 # ── Layout ──
-bindsym $mod+v splitv
+bindsym $mod+g splitv
 bindsym $mod+s layout stacking
 bindsym $mod+w layout tabbed
 bindsym $mod+t layout toggle split

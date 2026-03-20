@@ -20,6 +20,7 @@
         "waybar",
         "swaybg",
         "xdg-desktop-portal-hyprland",
+        "xdg-desktop-portal-gtk",
         "i3-wm",
         "i3status",
         "xorg-server",
@@ -27,6 +28,7 @@
         "picom",
         "rofi",
         "dunst",
+        "libnotify",
         "alacritty",
         "neovim",
         "zathura",
@@ -75,7 +77,9 @@
         "catfish",
         "qalculate-gtk",
         "hyprlock",
-        "github-cli"
+        "github-cli",
+        "rclone",
+        "flatpak"
     ],
     "parallel downloads": 5,
     "profile_config": {

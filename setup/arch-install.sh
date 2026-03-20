@@ -154,15 +154,15 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     echo -e "  ${O}[✓] yay installed.${R}"
 
     # ── AUR packages ──
-    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww-wayland, satty, enpass-bin, howdy, i3lock-color...${R}"
+    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww, satty, enpass-bin, howdy, i3lock-color...${R}"
     arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-        "yay -S --needed --noconfirm brave-bin obsidian eww-wayland satty enpass-bin howdy i3lock-color" 2>/dev/null || true
+        "yay -S --needed --noconfirm brave-bin obsidian eww satty enpass-bin howdy i3lock-color" 2>/dev/null || true
     echo -e "  ${O}[✓] AUR packages installed.${R}"
 else
     echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
     echo -e "  ${S}Install after first boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
-    echo -e "  ${B}    yay -S brave-bin obsidian eww-wayland satty enpass-bin howdy i3lock-color${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian eww satty enpass-bin howdy i3lock-color${R}"
 fi
 
 # Remove temporary sudo
