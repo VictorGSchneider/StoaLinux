@@ -56,6 +56,8 @@ TOOLTIP+="Super+1-0     Workspaces I-X\n"
 TOOLTIP+="─────────────────────\n"
 TOOLTIP+="Print         Screenshot (satty)\n"
 TOOLTIP+="Super+Print   Screenshot (selection)\n"
+TOOLTIP+="Shift+Print   Record screen (toggle)\n"
+TOOLTIP+="Super+Shift+Print  Record region (toggle)\n"
 TOOLTIP+="Super+/       Hide/show keybinds\n"
 TOOLTIP+="╚═════════════════════╝"
 

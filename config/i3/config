@@ -162,6 +162,10 @@ bindsym XF86MonBrightnessDown exec --no-startup-id ~/.local/bin/stoa-osd brightn
 bindsym Print exec --no-startup-id maim ~/Pictures/screenshots/screenshot-$(date +%s).png
 bindsym $mod+Print exec --no-startup-id maim -s ~/Pictures/screenshots/screenshot-$(date +%s).png
 
+# ── Screen Recording (ffmpeg) ──
+bindsym Shift+Print exec --no-startup-id ~/.local/bin/stoa-record
+bindsym $mod+Shift+Print exec --no-startup-id ~/.local/bin/stoa-record region
+
 # ── Autostart ──
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b
 exec_always --no-startup-id feh --bg-fill ~/.config/stoa/wallpapers/marble.png
