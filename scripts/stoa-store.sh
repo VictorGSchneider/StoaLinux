@@ -1715,8 +1715,8 @@ _install_rpm() {
         return
     fi
 
-    _notify "Converting .rpm to Arch package..."
-    _run_in_term "cd /tmp && debtap -Q '$path' && sudo pacman -U /tmp/*.pkg.tar* && rm -f /tmp/*.pkg.tar*"
+    _notify "Extracting .rpm package..."
+    _run_in_term "cd /tmp && mkdir -p stoa-rpm-extract && cd stoa-rpm-extract && rpmextract.sh '$path' && echo '── Contents extracted to /tmp/stoa-rpm-extract ──' && ls -la && echo && echo 'Install manually: sudo cp -r usr/ /usr/' && echo 'Or convert first: install debtap, then alien -d file.rpm, then debtap file.deb'"
     _apply_stoa_theme
     _notify "RPM package installed"
 }
