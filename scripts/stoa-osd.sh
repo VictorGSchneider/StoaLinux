@@ -63,7 +63,7 @@ osd_brightness() {
 
 _read_lock_state() {
     local lock_name="$1"
-    local state=0
+    local state=""
 
     local led_path
     for led_path in /sys/class/leds/*${lock_name}*/brightness; do
@@ -73,8 +73,8 @@ _read_lock_state() {
         fi
     done
 
-    # Fallback: xset (X11)
-    if [ "$state" -eq 0 ] && command -v xset &>/dev/null; then
+    # Fallback: xset (X11) — only if no LED file was found
+    if [ -z "$state" ] && command -v xset &>/dev/null; then
         local label
         case "$lock_name" in
             capslock) label="Caps Lock" ;;

@@ -15,6 +15,17 @@ WALLDIR="${HOME}/.config/stoa/wallpapers"
 
 _notify() { dunstify -t 2500 "Stoa Settings" "$1" 2>/dev/null; }
 
+# Break symlink before modifying: copies target content into a real file
+# so sed -i doesn't modify the repo source through the symlink
+_deref() {
+    local f="$1"
+    if [ -L "$f" ]; then
+        local tmp="${f}.stoa-tmp"
+        cp --remove-destination "$(readlink -f "$f")" "$tmp"
+        mv "$tmp" "$f"
+    fi
+}
+
 _rofi_select() {
     local prompt="$1"
     shift
@@ -897,13 +908,15 @@ _theme_gtk() {
     # Update GTK 3.0
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
     if [ -f "$gtk3" ]; then
-        sed -i "s/^gtk-theme-name=.*/gtk-theme-name=${choice}/" "$gtk3"
+        _deref "$gtk3"
+        sed -i "s/^gtk-theme-name\s*=.*/gtk-theme-name = ${choice}/" "$gtk3"
     fi
 
     # Update GTK 4.0
     local gtk4="${HOME}/.config/gtk-4.0/settings.ini"
     if [ -f "$gtk4" ]; then
-        sed -i "s/^gtk-theme-name=.*/gtk-theme-name=${choice}/" "$gtk4"
+        _deref "$gtk4"
+        sed -i "s/^gtk-theme-name\s*=.*/gtk-theme-name = ${choice}/" "$gtk4"
     fi
 
     # Apply via gsettings if available
@@ -922,10 +935,10 @@ _theme_icons() {
     [ -z "$choice" ] && return
 
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
-    [ -f "$gtk3" ] && sed -i "s/^gtk-icon-theme-name=.*/gtk-icon-theme-name=${choice}/" "$gtk3"
+    [ -f "$gtk3" ] && _deref "$gtk3" && sed -i "s/^gtk-icon-theme-name\s*=.*/gtk-icon-theme-name = ${choice}/" "$gtk3"
 
     local gtk4="${HOME}/.config/gtk-4.0/settings.ini"
-    [ -f "$gtk4" ] && sed -i "s/^gtk-icon-theme-name=.*/gtk-icon-theme-name=${choice}/" "$gtk4"
+    [ -f "$gtk4" ] && _deref "$gtk4" && sed -i "s/^gtk-icon-theme-name\s*=.*/gtk-icon-theme-name = ${choice}/" "$gtk4"
 
     command -v gsettings &>/dev/null && gsettings set org.gnome.desktop.interface icon-theme "$choice" 2>/dev/null
 
@@ -942,7 +955,7 @@ _theme_cursor() {
     [ -z "$choice" ] && return
 
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
-    [ -f "$gtk3" ] && sed -i "s/^gtk-cursor-theme-name=.*/gtk-cursor-theme-name=${choice}/" "$gtk3"
+    [ -f "$gtk3" ] && _deref "$gtk3" && sed -i "s/^gtk-cursor-theme-name\s*=.*/gtk-cursor-theme-name = ${choice}/" "$gtk3"
 
     if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
         hyprctl setcursor "$choice" 24 &>/dev/null
@@ -960,10 +973,10 @@ _theme_font_size() {
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
     # Read current font family from settings.ini
     local current_font
-    current_font=$(grep "^gtk-font-name" "$gtk3" 2>/dev/null | sed 's/^gtk-font-name=\s*//' | sed 's/\s*[0-9]*$//')
+    current_font=$(grep "^gtk-font-name" "$gtk3" 2>/dev/null | sed 's/^[^=]*=\s*//' | sed 's/\s*[0-9]*$//')
     current_font="${current_font:-EB Garamond}"
 
-    [ -f "$gtk3" ] && sed -i "s/^gtk-font-name=.*/gtk-font-name=${current_font} ${choice}/" "$gtk3"
+    [ -f "$gtk3" ] && _deref "$gtk3" && sed -i "s/^gtk-font-name\s*=.*/gtk-font-name = ${current_font} ${choice}/" "$gtk3"
 
     command -v gsettings &>/dev/null && gsettings set org.gnome.desktop.interface font-name "${current_font} $choice" 2>/dev/null
 

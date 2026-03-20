@@ -48,10 +48,10 @@ _apply_stoa_theme() {
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
     [ ! -f "$gtk3" ] && return
     local t i c f
-    t=$(grep "^gtk-theme-name"       "$gtk3" | cut -d= -f2)
-    i=$(grep "^gtk-icon-theme-name"  "$gtk3" | cut -d= -f2)
-    c=$(grep "^gtk-cursor-theme-name" "$gtk3" | cut -d= -f2)
-    f=$(grep "^gtk-font-name"        "$gtk3" | cut -d= -f2)
+    t=$(grep "^gtk-theme-name"       "$gtk3" | sed 's/^[^=]*=\s*//')
+    i=$(grep "^gtk-icon-theme-name"  "$gtk3" | sed 's/^[^=]*=\s*//')
+    c=$(grep "^gtk-cursor-theme-name" "$gtk3" | sed 's/^[^=]*=\s*//')
+    f=$(grep "^gtk-font-name"        "$gtk3" | sed 's/^[^=]*=\s*//')
     if command -v gsettings &>/dev/null; then
         gsettings set org.gnome.desktop.interface gtk-theme    "${t:-Adwaita-dark}"    2>/dev/null
         gsettings set org.gnome.desktop.interface icon-theme   "${i:-Colloid-dark}"    2>/dev/null
@@ -1190,11 +1190,11 @@ _setup_hook() {
     local stoa_dir
     stoa_dir="$(dirname "$(readlink -f "$0")")/.."
 
-    if [ -f "$stoa_dir/pacman-hooks/stoa-theme-enforce" ]; then
+    if [ -f "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" ]; then
         sudo mkdir -p /etc/pacman.d/hooks
-        sudo cp "$stoa_dir/pacman-hooks/stoa-theme-enforce" "$script"
+        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" "$script"
         sudo chmod +x "$script"
-        sudo cp "$stoa_dir/pacman-hooks/stoa-theme.hook" "$hook"
+        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme.hook" "$hook"
     else
         # Inline fallback
         sudo mkdir -p /etc/pacman.d/hooks
@@ -1202,8 +1202,8 @@ _setup_hook() {
 #!/bin/bash
 U="${SUDO_USER:-$USER}"; H=$(eval echo "~$U")
 g="$H/.config/gtk-3.0/settings.ini"; [ ! -f "$g" ] && exit 0
-t=$(grep "^gtk-theme-name" "$g"|cut -d= -f2)
-i=$(grep "^gtk-icon-theme-name" "$g"|cut -d= -f2)
+t=$(grep "^gtk-theme-name" "$g"|sed 's/^[^=]*=\s*//')
+i=$(grep "^gtk-icon-theme-name" "$g"|sed 's/^[^=]*=\s*//')
 command -v gsettings &>/dev/null && su - "$U" -c "
 export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$(id -u)/bus
 gsettings set org.gnome.desktop.interface gtk-theme '${t:-Adwaita-dark}' 2>/dev/null

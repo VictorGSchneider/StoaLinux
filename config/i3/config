@@ -6,7 +6,7 @@
 set $mod Mod4
 
 # ── Fonts ──
-font pango:EB Garamond 11
+font pango:EB Garamond, Font Awesome 6 Free 11
 
 # ── Stoic Palette ──
 set $bg         #211e19
@@ -178,6 +178,8 @@ bindsym --release Num_Lock exec --no-startup-id ~/.local/bin/stoa-osd numlock
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b
 exec_always --no-startup-id feh --bg-fill ~/.config/stoa/wallpapers/marble.png
 exec --no-startup-id dunst -config ~/.config/dunst/dunstrc
+exec --no-startup-id ~/.local/bin/stoa-quotes-sync tick
+exec --no-startup-id ~/.local/bin/stoa-drive mount-all
 
 # ── Qalculate ──
 for_window [class="Qalculate-gtk"] floating enable, resize set 420 540, move position center

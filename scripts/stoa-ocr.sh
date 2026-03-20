@@ -13,6 +13,29 @@
 
 OCR_TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
 
+# Detect session type
+_is_wayland() { [ -n "${WAYLAND_DISPLAY:-}" ]; }
+
+_copy() {
+    if _is_wayland; then
+        wl-copy
+    else
+        xclip -selection clipboard
+    fi
+}
+
+_screenshot_area() {
+    local outfile="$1"
+    if _is_wayland; then
+        local geometry
+        geometry=$(slurp 2>/dev/null)
+        [ -z "$geometry" ] && exit 0
+        grim -g "$geometry" "$outfile"
+    else
+        maim -s "$outfile"
+    fi
+}
+
 # Detect language: argument or default
 _get_lang() {
     local arg="$1"
@@ -40,7 +63,7 @@ _ocr_from_file() {
         return 1
     fi
 
-    printf '%s' "$text" | wl-copy
+    printf '%s' "$text" | _copy
     notify-send -t 3000 "OCR" "Text extracted and copied (${#text} chars)"
 }
 
@@ -49,11 +72,7 @@ _ocr_from_screen() {
     local tmpfile="${OCR_TMPDIR}/stoa-ocr-$$.png"
 
     # Capture screen area
-    local geometry
-    geometry=$(slurp 2>/dev/null)
-    [ -z "$geometry" ] && exit 0
-
-    grim -g "$geometry" "$tmpfile"
+    _screenshot_area "$tmpfile"
 
     if [ ! -f "$tmpfile" ]; then
         notify-send -t 3000 "OCR" "Failed to capture screen"

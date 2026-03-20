@@ -3,7 +3,7 @@
     "audio_config": {
         "audio": "pipewire"
     },
-    "bootloader": "efistub",
+    "bootloader": "Efistub",
     "hostname": "stoa",
     "kernels": ["linux"],
     "locale_config": {
@@ -25,6 +25,7 @@
         "i3status",
         "xorg-server",
         "xorg-xinit",
+        "xorg-xrandr",
         "picom",
         "rofi",
         "dunst",
@@ -41,6 +42,7 @@
         "slurp",
         "maim",
         "wl-clipboard",
+        "xclip",
         "cliphist",
         "feh",
         "imagemagick",
@@ -78,7 +80,11 @@
         "hyprlock",
         "github-cli",
         "rclone",
-        "flatpak"
+        "flatpak",
+        "xdg-utils",
+        "v4l-utils",
+        "bluez",
+        "bluez-utils"
     ],
     "parallel downloads": 5,
     "profile_config": {
