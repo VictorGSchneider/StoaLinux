@@ -128,13 +128,16 @@ WINAPPS_PKGS="qemu-full libvirt virt-manager dnsmasq edk2-ovmf freerdp"
 # Audio + utilities
 UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg"
 
+# DFM — Dotfile Manager (GTK4/libadwaita GUI)
+DFM_PKGS="python python-gobject gtk4 libadwaita"
+
 # Developer tools
 DEV_PKGS="github-cli"
 
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -162,6 +165,7 @@ echo -e "  ${S}Power:      ${POWER_MGMT_PKGS}${R}"
 echo -e "  ${S}Print:      ${PRINT_PKGS}${R}"
 echo -e "  ${S}Equalizer:  ${EQUALIZER_PKGS}${R}"
 echo -e "  ${S}WinApps:    ${WINAPPS_PKGS}${R}"
+echo -e "  ${S}DFM:        ${DFM_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
 echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
@@ -445,6 +449,23 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     else
         echo -e "  ${S}[~] ProtonVPN CLI already installed.${R}"
     fi
+    # DFM — Dotfile Manager (GTK4 GUI) — "Know thyself." — Thales
+    echo ""
+    if ! command -v dfm &>/dev/null; then
+        echo -e "  ${F}Installing DFM — Dotfile Manager...${R}"
+        DFM_DIR="${HOME}/.local/share/dfm-app"
+        if [ -d "$DFM_DIR" ]; then
+            git -C "$DFM_DIR" pull
+        else
+            git clone https://github.com/VictorGSchneider/DFM.git "$DFM_DIR"
+        fi
+        pip install -e "$DFM_DIR" --break-system-packages 2>/dev/null || \
+            pip install -e "$DFM_DIR"
+        echo -e "  ${O}[✓] DFM installed.${R}"
+        echo -e "  ${S}    Launch: dfm  or  Super+G${R}"
+    else
+        echo -e "  ${S}[~] DFM already installed.${R}"
+    fi
 else
     echo -e "  ${S}[~] Packages skipped.${R}"
 fi
@@ -528,6 +549,7 @@ echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDr
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
 echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+I → Firewall)${R}"
 echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
+echo -e "  ${S}  dfm               — Dotfile Manager GUI (Super+G)${R}"
 echo ""
 echo -e "  ${F}Leisure:${R}"
 echo -e "  ${S}  steam             — Gaming (Proton enabled for Windows games)${R}"

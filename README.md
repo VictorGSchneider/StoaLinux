@@ -28,6 +28,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 - **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
 - **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird
 - **Memento Mori widget** (eww), **Stoic quotes**, and a **living marble screensaver**
+- **DFM** (Dotfile Manager) — GTK4 GUI to edit dotfiles in-place with smart widgets, backups, and GitHub sync
 - **stoa-\* scripts** for wallpapers, clipboard, OCR, paste, resize, firewall, WinApps, and more
 
 ## Palette
@@ -93,7 +94,7 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><td><code>Super+O</code></td><td>Notes (Obsidian)</td><td><code>Super+R</code></td><td>Resize (HJKL)</td></tr>
   <tr><td><code>Super+M</code></td><td>Memento Mori</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
   <tr><td><code>Super+I</code></td><td>Settings panel</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
-  <tr><td><code>Super+W</code></td><td>WinApps</td><td></td><td></td></tr>
+  <tr><td><code>Super+W</code></td><td>WinApps</td><td><code>Super+G</code></td><td>Dotfile Manager (DFM)</td></tr>
   <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
   <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print / Super+Print</code></td><td>Screenshot</td></tr>
 </table>
@@ -143,6 +144,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
   <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
+  <tr><td><code>dfm</code></td><td>Dotfile Manager (GTK4 GUI)</td><td></td><td></td></tr>
 </table>
 
 ## Apps
@@ -187,6 +189,17 @@ Change the entire color scheme from `Super+I → Theme → Color Palette`:
 - **Reset to Stoic** — restore the default marble/bronze palette
 
 Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland, Kitty, and Dunst reload live — other apps take effect on restart.
+
+### DFM — Dotfile Manager
+
+A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G` or `dfm`.
+
+- **Smart widgets** — auto-generated toggles, sliders, color pickers, and path selectors based on config file content
+- **Versioned backups** — automatic snapshots before every edit, with rollback support
+- **Syntax validation** — JSON, TOML, YAML, INI, shell, Xresources, plus cross-file conflict detection
+- **GitHub sync** — push/pull dotfiles via `gh`, create repos, share as Gists
+- **80+ known configs** — shells, window managers, terminals, status bars, editors, and more
+- **Profile management** — switch between configuration sets and built-in templates
 
 ## License
 

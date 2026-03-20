@@ -74,6 +74,7 @@ bindsym $mod+o exec obsidian
 bindsym $mod+m exec ~/.local/bin/stoa-memento
 bindsym $mod+i exec --no-startup-id ~/.local/bin/stoa-settings
 bindsym $mod+w exec --no-startup-id ~/.local/bin/stoa-winapps
+bindsym $mod+g exec --no-startup-id dfm
 bindsym $mod+slash exec ~/.local/bin/stoa-keybinds-toggle
 
 # ── Lock Screen ──
