@@ -3,7 +3,7 @@
     "audio_config": {
         "audio": "pipewire"
     },
-    "bootloader": "efistub",
+    "bootloader": "Efistub",
     "hostname": "stoa",
     "kernels": ["linux"],
     "locale_config": {
