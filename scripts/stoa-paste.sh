@@ -11,12 +11,23 @@
 
 ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
+# Detect session type
+_is_wayland() { [ -n "${WAYLAND_DISPLAY:-}" ]; }
+
 _get_clipboard() {
-    wl-paste 2>/dev/null
+    if _is_wayland; then
+        wl-paste 2>/dev/null
+    else
+        xclip -selection clipboard -o 2>/dev/null
+    fi
 }
 
 _set_clipboard() {
-    wl-copy "$1"
+    if _is_wayland; then
+        wl-copy "$1"
+    else
+        printf '%s' "$1" | xclip -selection clipboard
+    fi
 }
 
 _type_text() {
