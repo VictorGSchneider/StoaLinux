@@ -11,7 +11,30 @@
 #   stoa-ocr por        — select area, OCR in Portuguese
 #   stoa-ocr eng        — select area, OCR in English
 
-TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
+OCR_TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
+
+# Detect session type
+_is_wayland() { [ -n "${WAYLAND_DISPLAY:-}" ]; }
+
+_copy() {
+    if _is_wayland; then
+        wl-copy
+    else
+        xclip -selection clipboard
+    fi
+}
+
+_screenshot_area() {
+    local outfile="$1"
+    if _is_wayland; then
+        local geometry
+        geometry=$(slurp 2>/dev/null)
+        [ -z "$geometry" ] && exit 0
+        grim -g "$geometry" "$outfile"
+    else
+        maim -s "$outfile"
+    fi
+}
 
 # Detect language: argument or default
 _get_lang() {
@@ -29,7 +52,7 @@ _ocr_from_file() {
 
     if [ ! -f "$file" ]; then
         notify-send -t 3000 "OCR" "File not found: $file"
-        exit 1
+        return 1
     fi
 
     local text
@@ -37,23 +60,19 @@ _ocr_from_file() {
 
     if [ -z "$text" ]; then
         notify-send -t 3000 "OCR" "No text detected"
-        exit 0
+        return 1
     fi
 
-    printf '%s' "$text" | wl-copy
+    printf '%s' "$text" | _copy
     notify-send -t 3000 "OCR" "Text extracted and copied (${#text} chars)"
 }
 
 _ocr_from_screen() {
     local lang="$1"
-    local tmpfile="${TMPDIR}/stoa-ocr-$$.png"
+    local tmpfile="${OCR_TMPDIR}/stoa-ocr-$$.png"
 
     # Capture screen area
-    local geometry
-    geometry=$(slurp 2>/dev/null)
-    [ -z "$geometry" ] && exit 0
-
-    grim -g "$geometry" "$tmpfile"
+    _screenshot_area "$tmpfile"
 
     if [ ! -f "$tmpfile" ]; then
         notify-send -t 3000 "OCR" "Failed to capture screen"

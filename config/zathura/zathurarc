@@ -16,7 +16,7 @@ set notification-fg     "#d4cfc4"
 set notification-error-bg   "#211e19"
 set notification-error-fg   "#b36b5a"
 set notification-warning-bg "#211e19"
-set notification-warning-fg "#c49a5c"
+set notification-warning-fg "#d4a84b"
 
 set highlight-color     "#c49a5c"
 set highlight-active-color "#d4a84b"

@@ -32,26 +32,20 @@
             "10": "X"
         },
         "persistent-workspaces": {
-            "*": 5
-        },
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+            "*": 10
+        }
     },
 
     "disk": {
         "format": " {free}",
-        "path": "/",
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        "path": "/"
     },
 
     "network": {
         "format-wifi": " {essid} {signalStrength}%",
         "format-ethernet": " {ipaddr}",
         "format-disconnected": " --",
-        "tooltip-format": "{ifname}: {ipaddr}",
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        "tooltip-format": "{ifname}: {ipaddr}"
     },
 
     "battery": {
@@ -61,23 +55,17 @@
         "states": {
             "warning": 30,
             "critical": 15
-        },
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        }
     },
 
     "cpu": {
         "format": " {usage}%",
-        "interval": 5,
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        "interval": 5
     },
 
     "memory": {
         "format": " {used:0.1f}G / {total:0.1f}G",
-        "interval": 5,
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        "interval": 5
     },
 
     "wireplumber": {
@@ -90,18 +78,14 @@
 
     "clock": {
         "format": " {:%a %d %b  %H:%M}",
-        "tooltip-format": "<tt>{calendar}</tt>",
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        "tooltip-format": "<tt>{calendar}</tt>"
     },
 
     "custom/keybinds": {
         "exec": "~/.local/bin/stoa-keybinds-bar",
         "return-type": "json",
         "interval": 5,
-        "tooltip": true,
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        "tooltip": true
     },
 
     "custom/clipboard": {
@@ -109,9 +93,7 @@
         "tooltip-format": "Clipboard (Super+V) │ Fixar (Super+Shift+V)",
         "on-click": "~/.local/bin/stoa-clipboard show",
         "on-click-right": "~/.local/bin/stoa-clipboard pin",
-        "interval": "once",
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        "interval": "once"
     },
 
     "hyprland/window": {
@@ -128,8 +110,6 @@
             "imv~(.*)": "$1",
             "(.*)~(.*)": "$2",
             "": ""
-        },
-        "on-scroll-up": "~/.local/bin/stoa-osd volume-up",
-        "on-scroll-down": "~/.local/bin/stoa-osd volume-down"
+        }
     }
 }

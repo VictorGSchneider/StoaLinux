@@ -63,7 +63,7 @@ _detect_camera() {
             # Check if it's an IR camera
             if echo "$name" | grep -iq "ir\|infrared"; then
                 cam="$devpath"
-                echo -e "  ${O}[✓] IR camera detected: ${name} (${devpath})${R}"
+                echo -e "  ${O}[✓] IR camera detected: ${name} (${devpath})${R}" >&2
                 echo "$cam"
                 return 0
             fi
@@ -77,14 +77,14 @@ _detect_camera() {
                 local name
                 name=$(cat "$dev/name" 2>/dev/null)
                 cam="$devpath"
-                echo -e "  ${S}[~] Webcam detected: ${name} (${devpath})${R}"
+                echo -e "  ${S}[~] Webcam detected: ${name} (${devpath})${R}" >&2
                 echo "$cam"
                 return 0
             fi
         done
     fi
 
-    echo -e "  ${T}[!] No camera detected.${R}"
+    echo -e "  ${T}[!] No camera detected.${R}" >&2
     return 1
 }
 

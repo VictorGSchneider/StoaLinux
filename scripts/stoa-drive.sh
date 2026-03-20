@@ -53,7 +53,7 @@ _list_remotes() {
 
 _is_mounted() {
     local remote="$1"
-    mount | grep -q "^${remote}: on ${DRIVE_DIR}/${remote}" 2>/dev/null
+    mount | grep -qF "${remote}: on ${DRIVE_DIR}/${remote}" 2>/dev/null
 }
 
 # ── Mount a remote ──
@@ -409,7 +409,6 @@ case "${1:-}" in
         fi
         while IFS= read -r remote; do
             [ -z "$remote" ] && continue
-            local type
             type=$(rclone config show "$remote" 2>/dev/null | grep "^type" | awk '{print $3}')
             if _is_mounted "$remote"; then
                 echo "  ${remote} (${type}) — mounted at ~/Drive/${remote}"
