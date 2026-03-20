@@ -139,6 +139,9 @@ echo ""
 echo -e "  ${B}[3/4] Installing yay (AUR helper)...${R}"
 
 # Ensure temporary passwordless sudo for makepkg in chroot
+# Trap ensures cleanup even if script is interrupted
+_cleanup_sudoers() { arch-chroot "$INSTALL_ROOT" rm -f /etc/sudoers.d/stoa-temp 2>/dev/null; }
+trap _cleanup_sudoers EXIT
 arch-chroot "$INSTALL_ROOT" bash -c \
     "echo '${CREATED_USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/stoa-temp" 2>/dev/null
 
