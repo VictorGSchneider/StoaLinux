@@ -22,6 +22,8 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 
 ## Palette
 
+The default palette is inspired by the ancient world — marble, bronze, parchment, stone. It can be changed entirely via `Super+I → Theme → Color Palette`, with **10 built-in presets** and a **custom color editor**.
+
 <table>
   <tr>
     <td><img src="https://img.shields.io/badge/Background__%23211e19-211e19?style=for-the-badge&labelColor=211e19&color=211e19" alt="#211e19"/></td>
@@ -39,6 +41,8 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
     <td><img src="https://img.shields.io/badge/Stone__%236e6a62-6e6a62?style=for-the-badge&labelColor=6e6a62&color=6e6a62" alt="#6e6a62"/></td>
   </tr>
 </table>
+
+**Available presets:** Stoic (default), Nord, Dracula, Gruvbox, Catppuccin Mocha, Tokyo Night, Solarized Dark, Rose Pine, GitHub Dark, Base16 Default
 
 ## Install
 
@@ -162,6 +166,17 @@ The Stoa theme is applied consistently across:
 - **Icons** — Colloid-dark
 - **Cursors** — Colloid
 - **Font** — EB Garamond (serif) + JetBrains Mono (mono)
+
+### Color Palette Manager
+
+Change the entire color scheme from `Super+I → Theme → Color Palette`:
+
+- **Apply Preset** — pick from 10 palettes and apply with one click
+- **Edit Colors** — customize any of the 11 core colors individually via hex input
+- **View Current Palette** — see the active colors at a glance
+- **Reset to Stoic** — restore the default marble/bronze palette
+
+Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland, Kitty, and Dunst reload live — other apps take effect on restart.
 
 ## License
 
