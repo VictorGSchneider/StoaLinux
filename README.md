@@ -107,7 +107,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><b>Accessibility</b></td><td>Cursor size, text scale, animations, gaps, opacity, border width</td></tr>
   <tr><td><b>Screensaver</b></td><td>Living marble animation (plasma noise in Stoa palette), idle timeout</td></tr>
   <tr><td><b>Wallpaper</b></td><td>Browse, generate, set custom</td></tr>
-  <tr><td><b>Theme</b></td><td>GTK, icons, cursors, font size</td></tr>
+  <tr><td><b>Theme</b></td><td>Color palette (10 presets + custom), GTK, icons, cursors, font size</td></tr>
   <tr><td><b>Lock Screen</b></td><td>Lock now, face recognition setup</td></tr>
 </table>
 
