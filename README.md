@@ -1,24 +1,34 @@
+<div align="center">
+
 # StoaLinux
+
+**A Stoic desktop for Arch Linux — Hyprland, i3, and a unified dark theme inspired by the ancient world.**
+
+[![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white)](https://archlinux.org)
+[![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?style=flat-square&logo=wayland&logoColor=black)](https://hyprland.org)
+[![License](https://img.shields.io/badge/License-GPL--3.0-c49a5c?style=flat-square)](LICENSE)
 
 > *"The happiness of your life depends upon the quality of your thoughts."* — Marcus Aurelius
 
-An Arch Linux setup inspired by Stoic philosophy. Every detail — from the color palette to the terminal prompt — is designed to foster focus, discipline, and clarity of mind.
+</div>
 
-## Philosophy
+---
 
-Stoicism teaches that we don't control what happens, but we control how we respond. StoaLinux brings that principle to the desktop: a system that doesn't distract, doesn't over-decorate, doesn't get in your way. It just works.
+Marble, bronze, parchment, stone — colors from temples, statues, and manuscripts. EB Garamond as the serif. JetBrains Mono in the terminal. A Stoic quote every time you open a shell. A Memento Mori widget on the desktop reminding you that time is finite.
 
-The palette comes from the ancient world — marble, bronze, parchment, stone, terracotta — colors that evoke temples, statues, and manuscripts. The typography uses EB Garamond, a classical serif that reinforces this identity. Every terminal opens with a different Stoic quote. The Memento Mori widget reminds you that time is finite.
+StoaLinux is a complete Arch Linux environment with automated installation, a unified dark theme across every app, a settings panel that replaces the need for any external configuration tool, and a collection of `stoa-*` scripts that handle everything from wallpapers to OCR to cloud drives.
 
 This isn't minimalism for aesthetics. It's minimalism by principle: **only what serves, stays**.
 
-## What it is
+### Highlights
 
 - **Arch Linux** with automated installation (from live ISO or existing Arch)
 - **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
-- Unified dark theme across GTK, Qt, Steam, Calibre, YACReader, and everything else
-- `stoa-*` scripts for wallpapers, settings, OCR, clipboard, GPU, and more
-- Memento Mori widget (eww) built into the desktop
+- **20-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, themes, and more
+- **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
+- **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird
+- **Memento Mori widget** (eww), **Stoic quotes**, and a **living marble screensaver**
+- **stoa-\* scripts** for wallpapers, clipboard, OCR, paste, resize, firewall, WinApps, and more
 
 ## Palette
 
