@@ -53,7 +53,7 @@ _list_remotes() {
 
 _is_mounted() {
     local remote="$1"
-    mount | grep -q "^${remote}: on ${DRIVE_DIR}/${remote}" 2>/dev/null
+    mount | grep -qF "${remote}: on ${DRIVE_DIR}/${remote}" 2>/dev/null
 }
 
 # ── Mount a remote ──

@@ -1190,11 +1190,11 @@ _setup_hook() {
     local stoa_dir
     stoa_dir="$(dirname "$(readlink -f "$0")")/.."
 
-    if [ -f "$stoa_dir/pacman-hooks/stoa-theme-enforce" ]; then
+    if [ -f "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" ]; then
         sudo mkdir -p /etc/pacman.d/hooks
-        sudo cp "$stoa_dir/pacman-hooks/stoa-theme-enforce" "$script"
+        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" "$script"
         sudo chmod +x "$script"
-        sudo cp "$stoa_dir/pacman-hooks/stoa-theme.hook" "$hook"
+        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme.hook" "$hook"
     else
         # Inline fallback
         sudo mkdir -p /etc/pacman.d/hooks
