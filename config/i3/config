@@ -34,7 +34,7 @@ client.background       $bg
 default_border pixel 2
 default_floating_border pixel 2
 gaps inner 6
-gaps outer 2
+gaps outer 6
 smart_gaps on
 
 # ── Bar ──
