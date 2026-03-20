@@ -92,7 +92,7 @@ bindsym $mod+Shift+k move up
 bindsym $mod+Shift+l move right
 
 # ── Layout ──
-bindsym $mod+g splitv
+bindsym $mod+minus splitv
 bindsym $mod+s layout stacking
 bindsym $mod+Shift+w layout tabbed
 bindsym $mod+t layout toggle split
