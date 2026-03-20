@@ -26,7 +26,6 @@ style = "Italic"
 
 [cursor]
 style = { shape = "Block", blinking = "On" }
-blink_interval = 750
 
 # ── Paleta Estoica ──
 [colors.primary]

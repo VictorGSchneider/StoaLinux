@@ -57,7 +57,6 @@ _link "${STOA_DIR}/config/nvim/init.vim"            "${CONFIG_DIR}/nvim/init.vim
 _link "${STOA_DIR}/config/nvim/colors/stoa.vim"     "${CONFIG_DIR}/nvim/colors/stoa.vim"
 _link "${STOA_DIR}/config/rofi/config.rasi"         "${CONFIG_DIR}/rofi/config.rasi"
 _link "${STOA_DIR}/config/dunst/dunstrc"            "${CONFIG_DIR}/dunst/dunstrc"
-_link "${STOA_DIR}/config/neofetch/config.conf"     "${CONFIG_DIR}/neofetch/config.conf"
 _link "${STOA_DIR}/config/zathura/zathurarc"        "${CONFIG_DIR}/zathura/zathurarc"
 _link "${STOA_DIR}/config/mpv/mpv.conf"             "${CONFIG_DIR}/mpv/mpv.conf"
 _link "${STOA_DIR}/config/btop/btop.conf"           "${CONFIG_DIR}/btop/btop.conf"
