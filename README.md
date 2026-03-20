@@ -79,6 +79,7 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><td><code>Super+O</code></td><td>Notes (Obsidian)</td><td><code>Super+R</code></td><td>Resize (HJKL)</td></tr>
   <tr><td><code>Super+M</code></td><td>Memento Mori</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
   <tr><td><code>Super+I</code></td><td>Settings panel</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
+  <tr><td><code>Super+W</code></td><td>WinApps</td><td></td><td></td></tr>
   <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
   <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print / Super+Print</code></td><td>Screenshot</td></tr>
 </table>
@@ -123,6 +124,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
   <tr><td><code>stoa-drive</code></td><td>Cloud drive (rclone)</td><td></td><td></td></tr>
   <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
+  <tr><td><code>stoa-winapps</code></td><td>Windows apps (KVM/RDP)</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
@@ -143,6 +145,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td>Betterbird</td><td>Email</td><td>howdy</td><td>Face unlock</td></tr>
   <tr><td>imv</td><td>Images</td><td>lf / Thunar</td><td>Files</td></tr>
   <tr><td>EasyEffects</td><td>Audio equalizer</td><td>gammastep</td><td>Night light</td></tr>
+  <tr><td>QEMU/KVM</td><td>WinApps (VM)</td><td>FreeRDP</td><td>Remote desktop</td></tr>
 </table>
 
 ## Theme

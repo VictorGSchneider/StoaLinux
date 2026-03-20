@@ -122,6 +122,9 @@ PRINT_PKGS="cups cups-pdf system-config-printer"
 # Audio equalizer (PipeWire)
 EQUALIZER_PKGS="easyeffects"
 
+# WinApps (Windows apps via KVM/QEMU + FreeRDP)
+WINAPPS_PKGS="qemu-full libvirt virt-manager dnsmasq edk2-ovmf freerdp"
+
 # Audio + utilities
 UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg"
 
@@ -131,7 +134,7 @@ DEV_PKGS="github-cli"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -158,6 +161,7 @@ echo -e "  ${S}Night:      ${NIGHTLIGHT_PKGS}${R}"
 echo -e "  ${S}Power:      ${POWER_MGMT_PKGS}${R}"
 echo -e "  ${S}Print:      ${PRINT_PKGS}${R}"
 echo -e "  ${S}Equalizer:  ${EQUALIZER_PKGS}${R}"
+echo -e "  ${S}WinApps:    ${WINAPPS_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
 echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
@@ -523,6 +527,7 @@ echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P
 echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDrive, etc)${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
 echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+I → Firewall)${R}"
+echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
 echo ""
 echo -e "  ${F}Leisure:${R}"
 echo -e "  ${S}  steam             — Gaming (Proton enabled for Windows games)${R}"
