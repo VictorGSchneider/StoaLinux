@@ -9,6 +9,7 @@
 
 ROFI=(rofi -dmenu -config ~/.config/rofi/config.rasi)
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
+STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 WALLDIR="${HOME}/.config/stoa/wallpapers"
 
 # ── Helpers ──
@@ -2031,9 +2032,9 @@ _hw_input() {
     # Touchpad settings (libinput)
     if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
         local tap nat_scroll speed
-        tap=$(hyprctl getoption input:touchpad:tap 2>/dev/null | grep "int:" | awk '{print $2}')
-        nat_scroll=$(hyprctl getoption input:touchpad:natural_scroll 2>/dev/null | grep "int:" | awk '{print $2}')
-        speed=$(hyprctl getoption input:sensitivity 2>/dev/null | grep "float:" | awk '{print $2}')
+        tap=$(_hyprctl_get input:touchpad:tap int)
+        nat_scroll=$(_hyprctl_get input:touchpad:natural_scroll int)
+        speed=$(_hyprctl_get input:sensitivity float)
         if [ -n "$tap" ]; then
             lines+=("")
             lines+=("    Touchpad Settings")
@@ -2046,7 +2047,7 @@ _hw_input() {
     # Keyboard layout
     local layout
     if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        layout=$(hyprctl getoption input:kb_layout 2>/dev/null | grep "str:" | awk '{print $2}')
+        layout=$(_hyprctl_get input:kb_layout str)
     else
         layout=$(setxkbmap -query 2>/dev/null | grep "layout:" | awk '{print $2}')
     fi
@@ -2152,7 +2153,7 @@ _xinput_set() {
 _mouse_sensitivity() {
     local current
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:sensitivity 2>/dev/null | grep "float:" | awk '{print $2}')
+        current=$(_hyprctl_get input:sensitivity float)
     else
         current=$(_input_get "sensitivity" "0")
     fi
@@ -2187,7 +2188,7 @@ _mouse_sensitivity() {
 _mouse_accel_profile() {
     local current
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:accel_profile 2>/dev/null | grep "str:" | awk '{print $2}')
+        current=$(_hyprctl_get input:accel_profile str)
         [ -z "$current" ] && current="(default)"
     else
         current=$(_input_get "accel_profile" "adaptive")
@@ -2219,7 +2220,7 @@ _mouse_accel_profile() {
 _mouse_natural_scroll() {
     local current label
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:natural_scroll 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get input:natural_scroll int)
     else
         current=$(_input_get "natural_scroll" "0")
     fi
@@ -2246,7 +2247,7 @@ _mouse_natural_scroll() {
 # ── Scroll Speed (Hyprland) ──
 _mouse_scroll_factor() {
     local current
-    current=$(hyprctl getoption input:scroll_factor 2>/dev/null | grep "float:" | awk '{print $2}')
+    current=$(_hyprctl_get input:scroll_factor float)
     [ -z "$current" ] && current="1.0"
 
     local choice
@@ -2273,7 +2274,7 @@ _mouse_scroll_factor() {
 _mouse_left_handed() {
     local current label
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:left_handed 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get input:left_handed int)
     else
         current=$(_input_get "left_handed" "0")
     fi
@@ -2300,7 +2301,7 @@ _mouse_left_handed() {
 # ── Follow Mouse (Hyprland focus policy) ──
 _mouse_follow() {
     local current
-    current=$(hyprctl getoption input:follow_mouse 2>/dev/null | grep "int:" | awk '{print $2}')
+    current=$(_hyprctl_get input:follow_mouse int)
     [ -z "$current" ] && current="1"
 
     local choice
@@ -2323,7 +2324,7 @@ _mouse_follow() {
 _tp_tap() {
     local current label
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:touchpad:tap-to-click 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get input:touchpad:tap-to-click int)
     else
         current=$(_input_get "tap_to_click" "1")
     fi
@@ -2351,7 +2352,7 @@ _tp_tap() {
 _tp_natural_scroll() {
     local current label
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:touchpad:natural_scroll 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get input:touchpad:natural_scroll int)
     else
         current=$(_input_get "tp_natural_scroll" "1")
     fi
@@ -2379,7 +2380,7 @@ _tp_natural_scroll() {
 _tp_dwt() {
     local current label
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:touchpad:disable_while_typing 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get input:touchpad:disable_while_typing int)
     else
         current=$(_input_get "dwt" "1")
     fi
@@ -2407,7 +2408,7 @@ _tp_dwt() {
 _tp_scroll_method() {
     local current
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:touchpad:scroll_method 2>/dev/null | grep "str:" | awk '{print $2}')
+        current=$(_hyprctl_get input:touchpad:scroll_method str)
         [ -z "$current" ] && current="2fg"
     else
         current=$(_input_get "tp_scroll_method" "2fg")
@@ -2442,7 +2443,7 @@ _tp_scroll_method() {
 _tp_click_method() {
     local current
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:touchpad:clickfinger_behavior 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get input:touchpad:clickfinger_behavior int)
         [ "$current" = "1" ] && current="clickfinger" || current="button_areas"
     else
         current=$(_input_get "tp_click_method" "button_areas")
@@ -2474,7 +2475,7 @@ _tp_click_method() {
 _tp_drag() {
     local current label
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(hyprctl getoption input:touchpad:tap-and-drag 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get input:touchpad:tap-and-drag int)
     else
         current=$(_input_get "tap_and_drag" "1")
     fi
@@ -3007,7 +3008,7 @@ _power_set_profile() {
 _power_idle_timeout() {
     local current
     if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
-        current=$(hyprctl getoption misc:dpms_timeout 2>/dev/null | grep "int:" | awk '{print $2}')
+        current=$(_hyprctl_get misc:dpms_timeout int)
         [ -z "$current" ] || [ "$current" = "0" ] && current="off"
         [ "$current" != "off" ] && current="${current}s"
     else
@@ -3151,7 +3152,7 @@ menu_power_mgmt() {
 
 _kb_current_layout() {
     if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
-        hyprctl getoption input:kb_layout 2>/dev/null | grep "str:" | awk '{print $2}'
+        _hyprctl_get input:kb_layout str
     else
         setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}'
     fi
@@ -3202,8 +3203,8 @@ _kb_layout() {
 _kb_repeat_rate() {
     local current_rate current_delay
     if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
-        current_rate=$(hyprctl getoption input:repeat_rate 2>/dev/null | grep "int:" | awk '{print $2}')
-        current_delay=$(hyprctl getoption input:repeat_delay 2>/dev/null | grep "int:" | awk '{print $2}')
+        current_rate=$(_hyprctl_get input:repeat_rate int)
+        current_delay=$(_hyprctl_get input:repeat_delay int)
     else
         current_rate="?"
         current_delay="?"
@@ -3718,7 +3719,7 @@ _a11y_animations() {
     local current="on"
     if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
         local enabled
-        enabled=$(hyprctl getoption animations:enabled 2>/dev/null | grep "int:" | awk '{print $2}')
+        enabled=$(_hyprctl_get animations:enabled int)
         [ "$enabled" = "0" ] && current="off"
     fi
 
@@ -3770,8 +3771,8 @@ _a11y_gaps() {
     fi
 
     local current_in current_out
-    current_in=$(hyprctl getoption general:gaps_in 2>/dev/null | grep "custom:" | awk '{print $2}')
-    current_out=$(hyprctl getoption general:gaps_out 2>/dev/null | grep "custom:" | awk '{print $2}')
+    current_in=$(_hyprctl_get general:gaps_in custom)
+    current_out=$(_hyprctl_get general:gaps_out custom)
 
     local choice
     choice=$(_rofi_select "  Gaps (in:${current_in} out:${current_out})" \
@@ -3804,7 +3805,7 @@ _a11y_opacity() {
     fi
 
     local current
-    current=$(hyprctl getoption decoration:inactive_opacity 2>/dev/null | grep "float:" | awk '{print $2}')
+    current=$(_hyprctl_get decoration:inactive_opacity float)
 
     local choice
     choice=$(_rofi_select "  Inactive window opacity (${current})" \
@@ -3838,7 +3839,7 @@ _a11y_border_size() {
     fi
 
     local current
-    current=$(hyprctl getoption general:border_size 2>/dev/null | grep "int:" | awk '{print $2}')
+    current=$(_hyprctl_get general:border_size int)
 
     local choice
     choice=$(_rofi_select "  Border width (${current}px)" \

@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Saving Stoa package snapshot before transaction...
+When = PreTransaction
+Exec = /usr/local/bin/stoa-pkg-snapshot
