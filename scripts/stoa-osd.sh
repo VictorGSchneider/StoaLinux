@@ -80,9 +80,9 @@ _read_lock_state() {
             capslock) label="Caps Lock" ;;
             numlock)  label="Num Lock" ;;
         esac
-        state=$(xset q 2>/dev/null | grep "$label" | awk -v f="$label" '{
-            for(i=1;i<=NF;i++) if($i==substr(f,length(f)-3)) { print ($(i+1)=="on") ? 1 : 0; exit }
-        }')
+        state=$(xset q 2>/dev/null | awk -v lbl="$label" '
+            $0 ~ lbl { for(i=1;i<=NF;i++) if($i ~ /on|off/) { print ($i=="on") ? 1 : 0; exit } }
+        ')
     fi
 
     echo "${state:-0}"

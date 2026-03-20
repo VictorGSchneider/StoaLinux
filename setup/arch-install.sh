@@ -139,6 +139,9 @@ echo ""
 echo -e "  ${B}[3/4] Installing yay (AUR helper)...${R}"
 
 # Ensure temporary passwordless sudo for makepkg in chroot
+# Trap ensures cleanup even if script is interrupted
+_cleanup_sudoers() { arch-chroot "$INSTALL_ROOT" rm -f /etc/sudoers.d/stoa-temp 2>/dev/null; }
+trap _cleanup_sudoers EXIT
 arch-chroot "$INSTALL_ROOT" bash -c \
     "echo '${CREATED_USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/stoa-temp" 2>/dev/null
 
@@ -154,15 +157,15 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     echo -e "  ${O}[✓] yay installed.${R}"
 
     # ── AUR packages ──
-    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww-wayland, satty, enpass-bin, howdy, i3lock-color...${R}"
+    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, eww, satty, enpass-bin, howdy, i3lock-color...${R}"
     arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-        "yay -S --needed --noconfirm brave-bin obsidian eww-wayland satty enpass-bin howdy i3lock-color" 2>/dev/null || true
+        "yay -S --needed --noconfirm brave-bin obsidian eww satty enpass-bin howdy i3lock-color" 2>/dev/null || true
     echo -e "  ${O}[✓] AUR packages installed.${R}"
 else
     echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
     echo -e "  ${S}Install after first boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
-    echo -e "  ${B}    yay -S brave-bin obsidian eww-wayland satty enpass-bin howdy i3lock-color${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian eww satty enpass-bin howdy i3lock-color${R}"
 fi
 
 # Remove temporary sudo

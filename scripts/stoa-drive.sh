@@ -409,7 +409,6 @@ case "${1:-}" in
         fi
         while IFS= read -r remote; do
             [ -z "$remote" ] && continue
-            local type
             type=$(rclone config show "$remote" 2>/dev/null | grep "^type" | awk '{print $3}')
             if _is_mounted "$remote"; then
                 echo "  ${remote} (${type}) — mounted at ~/Drive/${remote}"

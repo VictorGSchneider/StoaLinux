@@ -92,43 +92,13 @@ if [ -d "${HOME}/.steam" ]; then
         echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
 fi
 
-# OnlyOffice — install Stoa theme JSON
-ONLYOFFICE_THEME_DIR="${HOME}/.local/share/onlyoffice/desktopeditors/themes"
-if command -v desktopeditors &>/dev/null || [ -d "/opt/onlyoffice" ]; then
-    mkdir -p "$ONLYOFFICE_THEME_DIR"
-    cp "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" "${ONLYOFFICE_THEME_DIR}/stoa-onlyoffice.json" 2>/dev/null && \
-        echo -e "  ${O}[+] OnlyOffice Stoa theme installed${R}" || true
-    echo -e "  ${S}    To activate: File → Advanced Settings → Interface theme → Stoa${R}"
-fi
-
-# Betterbird — apply Stoa CSS to all profiles
-if [ -d "${HOME}/.betterbird" ]; then
-    for profile_dir in "${HOME}/.betterbird/"*.default*; do
-        [ -d "$profile_dir" ] || continue
-        chrome_dir="${profile_dir}/chrome"
-        mkdir -p "$chrome_dir"
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
-        # Enable toolkit.legacyUserProfileCustomizations.stylesheets
-        prefs_file="${profile_dir}/user.js"
-        if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
-            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
-        fi
-        echo -e "  ${O}[+] Betterbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
-    done
-elif [ -d "${HOME}/.thunderbird" ]; then
-    for profile_dir in "${HOME}/.thunderbird/"*.default*; do
-        [ -d "$profile_dir" ] || continue
-        chrome_dir="${profile_dir}/chrome"
-        mkdir -p "$chrome_dir"
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
-        prefs_file="${profile_dir}/user.js"
-        if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
-            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
-        fi
-        echo -e "  ${O}[+] Thunderbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
-    done
+# ── Pacman hook (auto-apply theme after installs) ──
+if [ -d /etc/pacman.d/hooks ] || sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null; then
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook" /etc/pacman.d/hooks/ 2>/dev/null && \
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" /usr/local/bin/ 2>/dev/null && \
+    sudo chmod +x /usr/local/bin/stoa-theme-enforce 2>/dev/null && \
+    echo -e "  ${O}[+] Pacman theme hook installed${R}" || \
+    echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
 fi
 
 # ── Stoa data dirs ──

@@ -20,6 +20,7 @@
         "waybar",
         "swaybg",
         "xdg-desktop-portal-hyprland",
+        "xdg-desktop-portal-gtk",
         "i3-wm",
         "i3status",
         "xorg-server",
@@ -27,7 +28,8 @@
         "picom",
         "rofi",
         "dunst",
-        "kitty",
+        "libnotify",
+        "alacritty",
         "neovim",
         "zathura",
         "zathura-pdf-mupdf",
@@ -47,7 +49,6 @@
         "qt6ct",
         "ttf-jetbrains-mono",
         "ttf-font-awesome",
-        "papirus-icon-theme",
         "git",
         "zsh",
         "base-devel",
@@ -75,10 +76,9 @@
         "catfish",
         "qalculate-gtk",
         "hyprlock",
-        "i3lock-color",
         "github-cli",
-        "nftables",
-        "libinput-gestures"
+        "rclone",
+        "flatpak"
     ],
     "parallel downloads": 5,
     "profile_config": {
