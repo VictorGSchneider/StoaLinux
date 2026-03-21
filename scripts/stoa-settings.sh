@@ -4257,6 +4257,639 @@ menu_power() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   DISKS & STORAGE (gnome-disks + disk-usage-analyzer)
+# ══════════════════════════════════════════════════════════════
+
+# ── Overview: all disks with partitions ──
+_disk_overview() {
+    local lines=()
+    lines+=("─── Physical Disks ───")
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size model serial transport
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        model=$(echo "$line" | awk '{$1=$2=""; print $0}' | xargs)
+        lines+=("  /dev/$name  $size  ${model:-unknown}")
+    done < <(lsblk -dno NAME,SIZE,MODEL 2>/dev/null | grep -E '^(sd|nvme|vd|mmcblk)')
+
+    lines+=("")
+    lines+=("─── Partitions ───")
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size fstype label mount
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        fstype=$(echo "$line" | awk '{print $3}')
+        label=$(echo "$line" | awk '{print $4}')
+        mount=$(echo "$line" | awk '{print $5}')
+        [ -z "$fstype" ] && continue
+        local desc="/dev/$name  $size  $fstype"
+        [ -n "$label" ] && desc+="  [$label]"
+        [ -n "$mount" ] && desc+="  → $mount" || desc+="  (not mounted)"
+        lines+=("  $desc")
+    done < <(lsblk -lno NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT 2>/dev/null | grep -vE '^(loop|sr)')
+
+    lines+=("")
+    lines+=("─── Usage ───")
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local fs size used avail pct mount
+        fs=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        used=$(echo "$line" | awk '{print $3}')
+        avail=$(echo "$line" | awk '{print $4}')
+        pct=$(echo "$line" | awk '{print $5}')
+        mount=$(echo "$line" | awk '{print $6}')
+        [[ "$fs" == tmpfs ]] && continue
+        [[ "$fs" == devtmpfs ]] && continue
+        [[ "$fs" == efivarfs ]] && continue
+        [[ "$fs" == overlay ]] && continue
+        lines+=("  $mount  $used/$size  $pct used  ($avail free)")
+    done < <(df -h 2>/dev/null | tail -n +2)
+
+    printf '%s\n' "${lines[@]}"
+}
+
+# ── Disk health (SMART) ──
+_disk_smart() {
+    if ! command -v smartctl &>/dev/null; then
+        _notify "smartmontools not installed (pacman -S smartmontools)"
+        return
+    fi
+
+    local disks=()
+    while IFS= read -r d; do
+        [ -n "$d" ] && disks+=("/dev/$d")
+    done < <(lsblk -dno NAME 2>/dev/null | grep -E '^(sd|nvme|vd)')
+
+    [ ${#disks[@]} -eq 0 ] && { _notify "No disks found"; return; }
+
+    local disk
+    if [ ${#disks[@]} -eq 1 ]; then
+        disk="${disks[0]}"
+    else
+        disk=$(printf '%s\n' "${disks[@]}" | "${ROFI[@]}" -p "  Select disk")
+        [ -z "$disk" ] && return
+    fi
+
+    local lines=()
+    lines+=("─── SMART Health: $disk ───")
+
+    local health
+    health=$(sudo smartctl -H "$disk" 2>/dev/null | grep -i "result\|status" | head -1)
+    [ -n "$health" ] && lines+=("  $health") || lines+=("  Could not read SMART (need sudo)")
+
+    local info
+    info=$(sudo smartctl -i "$disk" 2>/dev/null)
+    if [ -n "$info" ]; then
+        local model serial fw
+        model=$(echo "$info" | grep -i "Device Model\|Model Number" | head -1 | sed 's/.*: *//')
+        serial=$(echo "$info" | grep -i "Serial Number" | head -1 | sed 's/.*: *//')
+        fw=$(echo "$info" | grep -i "Firmware" | head -1 | sed 's/.*: *//')
+        [ -n "$model" ] && lines+=("  Model: $model")
+        [ -n "$serial" ] && lines+=("  Serial: $serial")
+        [ -n "$fw" ] && lines+=("  Firmware: $fw")
+    fi
+
+    # Key SMART attributes
+    local attrs
+    attrs=$(sudo smartctl -A "$disk" 2>/dev/null)
+    if [ -n "$attrs" ]; then
+        lines+=("" "─── Key Attributes ───")
+        local temp power_on reallocated wear
+        temp=$(echo "$attrs" | grep -iE "Temperature_Celsius|Temperature" | head -1 | awk '{print $NF}')
+        power_on=$(echo "$attrs" | grep -i "Power_On_Hours" | head -1 | awk '{print $NF}')
+        reallocated=$(echo "$attrs" | grep -i "Reallocated_Sector" | head -1 | awk '{print $NF}')
+        wear=$(echo "$attrs" | grep -iE "Wear_Leveling|Media_Wearout\|Percentage Used" | head -1 | awk '{print $NF}')
+
+        [ -n "$temp" ] && lines+=("  Temperature: ${temp}°C")
+        [ -n "$power_on" ] && lines+=("  Power-on hours: $power_on")
+        [ -n "$reallocated" ] && lines+=("  Reallocated sectors: $reallocated")
+        [ -n "$wear" ] && lines+=("  Wear level: $wear")
+    fi
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  SMART"
+}
+
+# ── Mount / Unmount partitions ──
+_disk_mount() {
+    # List unmounted partitions
+    local parts=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size fstype mount
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        fstype=$(echo "$line" | awk '{print $3}')
+        mount=$(echo "$line" | awk '{print $4}')
+        [ -z "$fstype" ] && continue
+        [[ "$fstype" == "swap" ]] && continue
+        [ -z "$mount" ] && parts+=("/dev/$name  $size  $fstype  (not mounted)")
+    done < <(lsblk -lno NAME,SIZE,FSTYPE,MOUNTPOINT 2>/dev/null | grep -vE '^(loop|sr)')
+
+    [ ${#parts[@]} -eq 0 ] && { _notify "No unmounted partitions found"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Mount partition")
+    [ -z "$choice" ] && return
+
+    local dev
+    dev=$(echo "$choice" | awk '{print $1}')
+
+    if command -v udisksctl &>/dev/null; then
+        udisksctl mount -b "$dev" 2>&1 | head -1
+        local mp
+        mp=$(lsblk -no MOUNTPOINT "$dev" 2>/dev/null | head -1)
+        _notify "Mounted $dev → $mp"
+    else
+        local mp="/mnt/$(basename "$dev")"
+        sudo mkdir -p "$mp"
+        sudo mount "$dev" "$mp" && _notify "Mounted $dev → $mp" || _notify "Mount failed"
+    fi
+}
+
+_disk_unmount() {
+    local parts=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size fstype mount
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        fstype=$(echo "$line" | awk '{print $3}')
+        mount=$(echo "$line" | awk '{print $4}')
+        [ -z "$mount" ] && continue
+        [[ "$mount" == "/" ]] && continue
+        [[ "$mount" == "/boot"* ]] && continue
+        [[ "$mount" == "/home" ]] && continue
+        parts+=("/dev/$name  $size  → $mount")
+    done < <(lsblk -lno NAME,SIZE,FSTYPE,MOUNTPOINT 2>/dev/null | grep -vE '^(loop|sr)')
+
+    [ ${#parts[@]} -eq 0 ] && { _notify "No unmountable partitions"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Unmount partition")
+    [ -z "$choice" ] && return
+
+    local dev
+    dev=$(echo "$choice" | awk '{print $1}')
+
+    _rofi_confirm "Unmount $dev?" || return
+
+    if command -v udisksctl &>/dev/null; then
+        udisksctl unmount -b "$dev" 2>&1 | head -1
+    else
+        sudo umount "$dev" 2>/dev/null
+    fi
+    _notify "Unmounted $dev"
+}
+
+# ── Disk Usage Analyzer (du-based) ──
+_disk_usage_scan() {
+    local target
+    target=$(_rofi_select "  Analyze directory" \
+        "  ~ (Home)" \
+        "  / (Root)" \
+        "  Custom path")
+    [ -z "$target" ] && return
+
+    case "$target" in
+        *Home*)   target="$HOME" ;;
+        *Root*)   target="/" ;;
+        *Custom*) target=$(_rofi_input "  Path to analyze")
+                  [ -z "$target" ] && return
+                  [ ! -d "$target" ] && { _notify "Not a directory: $target"; return; }
+                  ;;
+    esac
+
+    _notify "Scanning $target..."
+
+    local lines=()
+    lines+=("─── Disk Usage: $target ───")
+    lines+=("")
+
+    # Top 20 largest subdirectories (depth 1)
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local size dir
+        size=$(echo "$line" | awk '{print $1}')
+        dir=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
+        lines+=("  $size    $dir")
+    done < <(du -h --max-depth=1 "$target" 2>/dev/null | sort -rh | head -20)
+
+    lines+=("")
+    lines+=("─── Total ───")
+    local total
+    total=$(du -sh "$target" 2>/dev/null | awk '{print $1}')
+    lines+=("  $total    $target")
+
+    local selected
+    selected=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Usage" -mesg "Select to drill down")
+
+    # Drill-down: if user selects a directory, scan it recursively
+    if [ -n "$selected" ]; then
+        local subdir
+        subdir=$(echo "$selected" | awk '{print $NF}')
+        if [ -d "$subdir" ]; then
+            _disk_usage_drill "$subdir"
+        fi
+    fi
+}
+
+_disk_usage_drill() {
+    local target="$1"
+
+    while true; do
+        local lines=()
+        lines+=("─── $target ───")
+        lines+=("  ← Back")
+
+        while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            local size dir
+            size=$(echo "$line" | awk '{print $1}')
+            dir=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
+            [ "$dir" = "$target" ] && continue
+            lines+=("  $size    $dir")
+        done < <(du -h --max-depth=1 "$target" 2>/dev/null | sort -rh | head -25)
+
+        local selected
+        selected=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Usage")
+        [ -z "$selected" ] && return
+        [[ "$selected" == *"Back"* ]] && return
+
+        local subdir
+        subdir=$(echo "$selected" | awk '{print $NF}')
+        if [ -d "$subdir" ]; then
+            _disk_usage_drill "$subdir"
+        fi
+    done
+}
+
+# ── Largest files finder ──
+_disk_largest_files() {
+    local target
+    target=$(_rofi_select "  Find largest files" \
+        "  ~ (Home)" \
+        "  / (Root)" \
+        "  Custom path")
+    [ -z "$target" ] && return
+
+    case "$target" in
+        *Home*)   target="$HOME" ;;
+        *Root*)   target="/" ;;
+        *Custom*) target=$(_rofi_input "  Path")
+                  [ -z "$target" ] && return ;;
+    esac
+
+    _notify "Searching $target..."
+
+    local lines=()
+    lines+=("─── Largest Files in $target ───")
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local size file
+        size=$(echo "$line" | awk '{print $1}')
+        file=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
+        lines+=("  $size    $file")
+    done < <(find "$target" -xdev -type f -exec du -h {} + 2>/dev/null | sort -rh | head -30)
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Large Files"
+}
+
+# ── Filesystem check ──
+_disk_fsck() {
+    local parts=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size fstype mount
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        fstype=$(echo "$line" | awk '{print $3}')
+        mount=$(echo "$line" | awk '{print $4}')
+        [ -z "$fstype" ] && continue
+        [[ "$fstype" == "swap" ]] && continue
+        [ -n "$mount" ] && parts+=("/dev/$name  $size  $fstype  → $mount (mounted)") \
+                        || parts+=("/dev/$name  $size  $fstype  (unmounted)")
+    done < <(lsblk -lno NAME,SIZE,FSTYPE,MOUNTPOINT 2>/dev/null | grep -vE '^(loop|sr)')
+
+    [ ${#parts[@]} -eq 0 ] && { _notify "No partitions found"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Filesystem check")
+    [ -z "$choice" ] && return
+
+    local dev
+    dev=$(echo "$choice" | awk '{print $1}')
+
+    if echo "$choice" | grep -q "mounted)"; then
+        _notify "Cannot fsck mounted partition. Unmount first."
+        return
+    fi
+
+    _rofi_confirm "Run filesystem check on $dev?" || return
+
+    local result
+    result=$(sudo fsck -n "$dev" 2>&1)
+    echo "$result" | "${ROFI[@]}" -p "  fsck $dev"
+}
+
+# ── Format partition (dangerous!) ──
+_disk_format() {
+    local parts=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size fstype mount
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        fstype=$(echo "$line" | awk '{print $3}')
+        mount=$(echo "$line" | awk '{print $4}')
+        [ -z "$fstype" ] && continue
+        [[ "$fstype" == "swap" ]] && continue
+        [ -n "$mount" ] && continue   # only unmounted
+        parts+=("/dev/$name  $size  $fstype")
+    done < <(lsblk -lno NAME,SIZE,FSTYPE,MOUNTPOINT 2>/dev/null | grep -vE '^(loop|sr)')
+
+    [ ${#parts[@]} -eq 0 ] && { _notify "No unmounted partitions available"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "⚠ Format partition")
+    [ -z "$choice" ] && return
+
+    local dev
+    dev=$(echo "$choice" | awk '{print $1}')
+
+    local fs_choice
+    fs_choice=$(_rofi_select "  Filesystem for $dev" \
+        "ext4" "btrfs" "xfs" "fat32 (vfat)" "ntfs" "exfat")
+    [ -z "$fs_choice" ] && return
+
+    _rofi_confirm "FORMAT $dev as $fs_choice? ALL DATA WILL BE LOST!" || return
+    _rofi_confirm "Are you ABSOLUTELY sure? This is irreversible!" || return
+
+    local mkfs_cmd
+    case "$fs_choice" in
+        ext4)          mkfs_cmd="mkfs.ext4" ;;
+        btrfs)         mkfs_cmd="mkfs.btrfs -f" ;;
+        xfs)           mkfs_cmd="mkfs.xfs -f" ;;
+        "fat32 (vfat)") mkfs_cmd="mkfs.vfat -F 32" ;;
+        ntfs)          mkfs_cmd="mkfs.ntfs -f" ;;
+        exfat)         mkfs_cmd="mkfs.exfat" ;;
+    esac
+
+    _notify "Formatting $dev as $fs_choice..."
+    if sudo $mkfs_cmd "$dev" 2>&1; then
+        _notify "Formatted $dev as $fs_choice"
+    else
+        _notify "Format failed!"
+    fi
+}
+
+# ── Set partition label ──
+_disk_label() {
+    local parts=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name size fstype label
+        name=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        fstype=$(echo "$line" | awk '{print $3}')
+        label=$(echo "$line" | awk '{print $4}')
+        [ -z "$fstype" ] && continue
+        [ -n "$label" ] && parts+=("/dev/$name  $size  $fstype  [$label]") \
+                        || parts+=("/dev/$name  $size  $fstype  (no label)")
+    done < <(lsblk -lno NAME,SIZE,FSTYPE,LABEL 2>/dev/null | grep -vE '^(loop|sr)')
+
+    [ ${#parts[@]} -eq 0 ] && { _notify "No partitions found"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Set label")
+    [ -z "$choice" ] && return
+
+    local dev fstype
+    dev=$(echo "$choice" | awk '{print $1}')
+    fstype=$(echo "$choice" | awk '{print $3}')
+
+    local new_label
+    new_label=$(_rofi_input "  New label for $dev")
+    [ -z "$new_label" ] && return
+
+    case "$fstype" in
+        ext2|ext3|ext4) sudo e2label "$dev" "$new_label" ;;
+        btrfs)          sudo btrfs filesystem label "$dev" "$new_label" ;;
+        xfs)            sudo xfs_admin -L "$new_label" "$dev" ;;
+        vfat)           sudo fatlabel "$dev" "$new_label" ;;
+        ntfs)           sudo ntfslabel "$dev" "$new_label" ;;
+        exfat)          sudo exfatlabel "$dev" "$new_label" ;;
+        *)              _notify "Cannot set label for $fstype"; return ;;
+    esac
+    _notify "Label set: $dev → $new_label"
+}
+
+# ── Benchmark (simple sequential read test) ──
+_disk_benchmark() {
+    local disks=()
+    while IFS= read -r d; do
+        [ -n "$d" ] && disks+=("/dev/$d")
+    done < <(lsblk -dno NAME 2>/dev/null | grep -E '^(sd|nvme|vd)')
+
+    [ ${#disks[@]} -eq 0 ] && { _notify "No disks found"; return; }
+
+    local disk
+    if [ ${#disks[@]} -eq 1 ]; then
+        disk="${disks[0]}"
+    else
+        disk=$(printf '%s\n' "${disks[@]}" | "${ROFI[@]}" -p "  Benchmark disk")
+        [ -z "$disk" ] && return
+    fi
+
+    _rofi_confirm "Run sequential read test on $disk? (read-only, safe)" || return
+    _notify "Benchmarking $disk... (this takes a few seconds)"
+
+    local result
+    result=$(sudo hdparm -tT "$disk" 2>/dev/null)
+    if [ -z "$result" ]; then
+        # Fallback with dd
+        result=$(sudo dd if="$disk" of=/dev/null bs=1M count=512 2>&1 | tail -1)
+    fi
+
+    local lines=()
+    lines+=("─── Benchmark: $disk ───")
+    while IFS= read -r line; do
+        [ -n "$line" ] && lines+=("  $line")
+    done <<< "$result"
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Benchmark"
+}
+
+# ── Manage fstab (show + edit) ──
+_disk_fstab() {
+    local choice
+    choice=$(_rofi_select "  /etc/fstab" \
+        "  View fstab" \
+        "  Add current mounts to fstab" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *View*)
+            cat /etc/fstab 2>/dev/null | "${ROFI[@]}" -p "  fstab"
+            ;;
+        *Add*)
+            # Show non-fstab mounts that could be added
+            local mounts=()
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                local dev mount fstype
+                dev=$(echo "$line" | awk '{print $1}')
+                mount=$(echo "$line" | awk '{print $6}')
+                fstype=$(findmnt -no FSTYPE "$mount" 2>/dev/null)
+                [[ "$dev" == /dev/* ]] || continue
+                [[ "$mount" == "/" ]] && continue
+                [[ "$mount" == "/boot"* ]] && continue
+                # Check if already in fstab
+                grep -q "$dev\|$mount" /etc/fstab 2>/dev/null && continue
+                local uuid
+                uuid=$(blkid -s UUID -o value "$dev" 2>/dev/null)
+                [ -n "$uuid" ] && mounts+=("UUID=$uuid  $mount  $fstype  defaults  0 2")
+            done < <(df 2>/dev/null | tail -n +2)
+
+            if [ ${#mounts[@]} -eq 0 ]; then
+                _notify "All current mounts already in fstab"
+                return
+            fi
+
+            local entry
+            entry=$(printf '%s\n' "${mounts[@]}" | "${ROFI[@]}" -p "  Add to fstab")
+            [ -z "$entry" ] && return
+
+            _rofi_confirm "Add to /etc/fstab?\n$entry" || return
+            echo "$entry" | sudo tee -a /etc/fstab >/dev/null
+            _notify "Entry added to fstab"
+            ;;
+    esac
+}
+
+# ── Cleanup helper: find junk ──
+_disk_cleanup() {
+    local lines=()
+    lines+=("─── Cleanup Opportunities ───")
+    lines+=("")
+
+    # Package cache
+    local pkg_cache
+    pkg_cache=$(du -sh /var/cache/pacman/pkg/ 2>/dev/null | awk '{print $1}')
+    lines+=("  Package cache: ${pkg_cache:-?}")
+
+    # Journal
+    local journal
+    journal=$(journalctl --disk-usage 2>/dev/null | grep -oP '[0-9.]+[KMGT]')
+    lines+=("  System journal: ${journal:-?}")
+
+    # Trash
+    local trash_size="0"
+    [ -d "${HOME}/.local/share/Trash/files" ] && \
+        trash_size=$(du -sh "${HOME}/.local/share/Trash/files" 2>/dev/null | awk '{print $1}')
+    lines+=("  Trash: ${trash_size}")
+
+    # Orphaned packages
+    local orphans
+    orphans=$(pacman -Qtdq 2>/dev/null | wc -l)
+    lines+=("  Orphaned packages: $orphans")
+
+    # Thumbnails
+    local thumbnails="0"
+    [ -d "${HOME}/.cache/thumbnails" ] && \
+        thumbnails=$(du -sh "${HOME}/.cache/thumbnails" 2>/dev/null | awk '{print $1}')
+    lines+=("  Thumbnails cache: $thumbnails")
+
+    lines+=("")
+    lines+=("─── Actions ───")
+    lines+=("  Clean package cache (keep last 3)")
+    lines+=("  Clean journal (keep 2 weeks)")
+    lines+=("  Empty trash")
+    lines+=("  Remove orphaned packages")
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Cleanup")
+    [ -z "$choice" ] && return
+
+    case "$choice" in
+        *"package cache"*)
+            if command -v paccache &>/dev/null; then
+                _rofi_confirm "Clean package cache? (keep last 3 versions)" || return
+                sudo paccache -r 2>&1 | tail -1
+                _notify "Package cache cleaned"
+            else
+                _notify "paccache not found (pacman-contrib)"
+            fi
+            ;;
+        *journal*)
+            _rofi_confirm "Vacuum journal to 2 weeks?" || return
+            sudo journalctl --vacuum-time=2weeks 2>&1 | tail -1
+            _notify "Journal cleaned"
+            ;;
+        *trash*)
+            _rofi_confirm "Empty trash?" || return
+            rm -rf "${HOME}/.local/share/Trash/files/"* "${HOME}/.local/share/Trash/info/"*
+            _notify "Trash emptied"
+            ;;
+        *orphaned*)
+            local pkgs
+            pkgs=$(pacman -Qtdq 2>/dev/null)
+            [ -z "$pkgs" ] && { _notify "No orphaned packages"; return; }
+            _rofi_confirm "Remove orphaned packages?\n$(echo "$pkgs" | head -10)" || return
+            echo "$pkgs" | sudo pacman -Rns - 2>&1 | tail -3
+            _notify "Orphaned packages removed"
+            ;;
+    esac
+}
+
+# ── Disk Manager menu ──
+menu_disks() {
+    while true; do
+        # Get summary
+        local total used avail pct
+        read -r total used avail pct < <(df -h --total 2>/dev/null | grep '^total' | awk '{print $2, $3, $4, $5}')
+
+        local choice
+        choice=$(_rofi_select "  Disks & Storage (${used:-?}/${total:-?} — ${pct:-?})" \
+            "  Overview" \
+            "  Disk Usage Analyzer" \
+            "  Largest Files" \
+            "  Mount Partition" \
+            "  Unmount Partition" \
+            "  SMART Health" \
+            "  Benchmark" \
+            "  Filesystem Check" \
+            "  Format Partition" \
+            "  Set Label" \
+            "  fstab" \
+            "  Cleanup" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Overview*)      _disk_overview | "${ROFI[@]}" -p "  Disks" ;;
+            *Analyzer*)      _disk_usage_scan ;;
+            *"Largest Files"*) _disk_largest_files ;;
+            *"Mount P"*)     _disk_mount ;;
+            *"Unmount"*)     _disk_unmount ;;
+            *SMART*)         _disk_smart ;;
+            *Benchmark*)     _disk_benchmark ;;
+            *"Filesystem"*)  _disk_fsck ;;
+            *Format*)        _disk_format ;;
+            *Label*)         _disk_label ;;
+            *fstab*)         _disk_fstab ;;
+            *Cleanup*)       _disk_cleanup ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   MAIN MENU
 # ══════════════════════════════════════════════════════════════
 
@@ -4275,6 +4908,7 @@ main_menu() {
             "  Firewall" \
             "  Bluetooth" \
             "  Hardware" \
+            "  Disks & Storage" \
             "  Printers & Scanners" \
             "  Cloud Drive" \
             "  Wallpaper" \
@@ -4300,6 +4934,7 @@ main_menu() {
             *Firewall*)     menu_firewall ;;
             *Bluetooth*)    menu_bluetooth ;;
             *Hardware*)     menu_hardware ;;
+            *"Disks & Storage"*) menu_disks ;;
             *"Printers & Scanners"*) menu_printers ;;
             *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;
