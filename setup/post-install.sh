@@ -50,7 +50,7 @@ echo ""
 WAYLAND_PKGS="hyprland waybar swaybg xdg-desktop-portal-hyprland xdg-desktop-portal-gtk"
 
 # i3 (Xorg — fallback)
-XORG_PKGS="i3-wm i3status xorg-server xorg-xinit picom"
+XORG_PKGS="i3-wm i3status xorg-server xorg-xinit xorg-xrandr picom xclip xdotool polkit-gnome"
 
 # Launcher, notifications
 UI_PKGS="rofi dunst libnotify"

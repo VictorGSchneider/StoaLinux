@@ -39,7 +39,7 @@ export KEYTIMEOUT=1
 # ── Stoic Prompt ──
 # Symbol: Greek column (Ι) in bronze
 autoload -Uz vcs_info
-precmd() { vcs_info }
+precmd() { vcs_info; }
 setopt prompt_subst
 
 zstyle ':vcs_info:git:*' formats ' %F{#8a9a6c}%b%f'
