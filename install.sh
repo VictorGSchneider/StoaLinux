@@ -66,8 +66,9 @@ _link "${STOA_DIR}/config/imv/config"               "${CONFIG_DIR}/imv/config"
 _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xml"
 _link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
+_link "${STOA_DIR}/config/Code/User/settings.json"  "${CONFIG_DIR}/Code/User/settings.json"
 
-# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird) ──
+# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird + VS Code) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
 _link "${STOA_DIR}/theme/gtk-3.0/stoa-gtk.css"  "${CONFIG_DIR}/gtk-3.0/gtk.css"
 _link "${STOA_DIR}/theme/gtk-4.0/settings.ini"  "${CONFIG_DIR}/gtk-4.0/settings.ini"
@@ -130,6 +131,14 @@ elif [ -d "${HOME}/.thunderbird" ]; then
         echo -e "  ${O}[+] Thunderbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
     done
 fi
+
+# VS Code — install Stoa theme as extension
+VSCODE_EXT_DIR="${HOME}/.vscode/extensions/stoa-theme"
+mkdir -p "$VSCODE_EXT_DIR/themes"
+cp "${STOA_DIR}/theme/vscode/package.json" "$VSCODE_EXT_DIR/"
+cp "${STOA_DIR}/theme/vscode/themes/stoa-color-theme.json" "$VSCODE_EXT_DIR/themes/"
+echo -e "  ${O}[+] VS Code Stoa theme installed${R}"
+echo -e "  ${S}    To activate: Ctrl+K Ctrl+T → Stoa${R}"
 
 # ── Stoa data dirs ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"

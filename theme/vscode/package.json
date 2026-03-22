@@ -1,0 +1,18 @@
+{
+    "name": "stoa-theme",
+    "displayName": "Stoa — Ancient World Dark Theme",
+    "description": "Bronze, olive, terracotta, and marble — a Stoic color palette for code.",
+    "version": "1.0.0",
+    "publisher": "StoaLinux",
+    "engines": { "vscode": "^1.60.0" },
+    "categories": ["Themes"],
+    "contributes": {
+        "themes": [
+            {
+                "label": "Stoa",
+                "uiTheme": "vs-dark",
+                "path": "./themes/stoa-color-theme.json"
+            }
+        ]
+    }
+}
