@@ -24,7 +24,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 
 - **Arch Linux** with automated installation (from live ISO or existing Arch)
 - **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
-- **24-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
+- **25-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
 - **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
 - **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird, VS Code, Neovim
 - **Capture toolbar** (eww) — screenshot + recording with mode selection, toggle, and delay
@@ -129,13 +129,14 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><b>Theme</b></td><td>Color palette (10 presets + custom), GTK, icons, cursors, font size</td></tr>
   <tr><td><b>Lock Screen</b></td><td>Lock now, face recognition setup</td></tr>
   <tr><td><b>System Health</b></td><td>Doctor report, services status, failed units, thermals, journal, updates, package snapshots (diff), security audit, config integrity</td></tr>
+  <tr><td><b>Maintenance</b></td><td>Backup configs, restore (interactive/bulk), full system cleanup (10-step), dry-run preview, schedule cleanup at boot</td></tr>
 </table>
 
 ## Scripts & Stoatools
 
 <table>
   <tr><th>Script</th><th>What it does</th><th>Stoatool</th><th>What it does</th></tr>
-  <tr><td><code>stoa-settings</code></td><td>Settings panel (24 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
+  <tr><td><code>stoa-settings</code></td><td>Settings panel (25 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
   <tr><td><code>stoa-store</code></td><td>Package manager</td><td><code>stoa-paste</code></td><td>Paste as UPPER/lower/etc</td></tr>
   <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
   <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
@@ -151,6 +152,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
   <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
+  <tr><td><code>stoa-maintain</code></td><td>Backup, restore, cleanup (BRCS)</td><td></td><td></td></tr>
   <tr><td><code>stoa-pkg-snapshot</code></td><td>Package snapshot (pacman hook)</td><td></td><td></td></tr>
   <tr><td><code>dfm</code></td><td>Dotfile Manager (GTK4 GUI)</td><td></td><td></td></tr>
 </table>
