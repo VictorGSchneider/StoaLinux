@@ -183,6 +183,8 @@ _link "${STOA_DIR}/scripts/stoa-capture.sh"       "${HOME}/.local/bin/stoa-captu
 _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
 _link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
 _link "${STOA_DIR}/scripts/stoa-maintain.sh"      "${HOME}/.local/bin/stoa-maintain"
+_link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
+cp    "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
 chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
          "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
@@ -200,7 +202,9 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-capture" \
          "${HOME}/.local/bin/stoa-doctor" \
          "${HOME}/.local/bin/stoa-pkg-snapshot" \
-         "${HOME}/.local/bin/stoa-maintain"
+         "${HOME}/.local/bin/stoa-maintain" \
+         "${HOME}/.local/bin/stoa-predict" \
+         "${HOME}/.local/bin/stoa-predict.py"
 
 # ── Pacman hooks (require sudo) ──
 echo ""
