@@ -86,8 +86,10 @@ SCREENSHOT_PKGS="grim slurp maim wf-recorder slop"
 # Stoatools (OCR, paste, resize, rename, locksmith)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words"
 
-# Touchpad gestures
+# Touchpad gestures + mouse DPI/polling + RGB
 GESTURE_PKGS="libinput-gestures"
+MOUSE_PKGS="libratbag"
+RGB_PKGS="openrgb"
 
 # Cloud Drive (rclone — stream on-demand, Google Drive/OneDrive/Dropbox/S3)
 CLOUD_PKGS="rclone"
@@ -146,7 +148,7 @@ DEV_PKGS="github-cli gnupg"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -162,6 +164,8 @@ echo -e "  ${S}Stoic:      ${STOA_APPS}${R}"
 echo -e "  ${S}Gaming:     ${GAMING_PKGS}${R}"
 echo -e "  ${S}Screenshot: ${SCREENSHOT_PKGS}${R}"
 echo -e "  ${S}Stoatools:  ${STOATOOLS_PKGS}${R}"
+echo -e "  ${S}Mouse:      ${MOUSE_PKGS}${R}"
+echo -e "  ${S}RGB:        ${RGB_PKGS}${R}"
 echo -e "  ${S}Cloud:      ${CLOUD_PKGS}${R}"
 echo -e "  ${S}Store:      ${STORE_PKGS}${R}"
 echo -e "  ${S}Lock:       ${LOCK_PKGS}${R}"
@@ -531,6 +535,16 @@ if ! groups 2>/dev/null | grep -qw input; then
     echo -e "  ${O}[✓] Added to input group (takes effect after next login).${R}"
 else
     echo -e "  ${S}[~] Already in input group.${R}"
+fi
+# ── ratbagd service (required for mouse DPI/polling control) ──
+if command -v ratbagctl &>/dev/null; then
+    if ! systemctl is-enabled ratbagd.service &>/dev/null; then
+        echo -e "  ${F}Enabling ratbagd (mouse DPI/polling control)...${R}"
+        sudo systemctl enable --now ratbagd.service 2>/dev/null
+        echo -e "  ${O}[✓] ratbagd enabled.${R}"
+    else
+        echo -e "  ${S}[~] ratbagd already enabled.${R}"
+    fi
 fi
 echo ""
 # ── Flatpak (Flathub) ──

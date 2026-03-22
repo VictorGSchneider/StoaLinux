@@ -2783,6 +2783,202 @@ menu_mouse() {
     done
 }
 
+# ── DPI (via libratbag / ratbagctl) ──
+
+_ratbag_available() {
+    command -v ratbagctl &>/dev/null
+}
+
+_ratbag_device() {
+    ratbagctl list 2>/dev/null | head -1 | cut -d: -f1
+}
+
+_mouse_dpi() {
+    if ! _ratbag_available; then
+        _notify "ratbagctl not installed.\nsudo pacman -S libratbag"
+        return
+    fi
+
+    local device
+    device=$(_ratbag_device)
+    if [ -z "$device" ]; then
+        _notify "No configurable mouse found.\nMake sure ratbagd is running:\nsudo systemctl enable --now ratbagd"
+        return
+    fi
+
+    # Get current DPI
+    local current
+    current=$(ratbagctl "$device" dpi get 2>/dev/null | grep -oP '\d+' | head -1)
+    [ -z "$current" ] && current="?"
+
+    local choice
+    choice=$(_rofi_select "  DPI ($current)" \
+        "  400  (low — precision/sniping)" \
+        "  800  (default for many mice)" \
+        "  1200" \
+        "  1600  (common for gaming)" \
+        "  2400" \
+        "  3200  (high — fast movement)" \
+        "  4800" \
+        "  6400  (very high)" \
+        "  Custom..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    if [[ "$choice" == *"Custom"* ]]; then
+        val=$(_rofi_input "  DPI value (100–25600)")
+        [ -z "$val" ] && return
+        # Validate numeric
+        if ! [[ "$val" =~ ^[0-9]+$ ]] || [ "$val" -lt 100 ] || [ "$val" -gt 25600 ]; then
+            _notify "Invalid DPI: $val (must be 100–25600)"
+            return
+        fi
+    else
+        val=$(echo "$choice" | awk '{print $2}')
+    fi
+
+    ratbagctl "$device" dpi set "$val" 2>/dev/null
+    _input_save "mouse_dpi" "$val"
+    _notify "DPI: $val"
+}
+
+# ── Polling Rate (via libratbag / ratbagctl) ──
+
+_mouse_polling_rate() {
+    if ! _ratbag_available; then
+        _notify "ratbagctl not installed.\nsudo pacman -S libratbag"
+        return
+    fi
+
+    local device
+    device=$(_ratbag_device)
+    if [ -z "$device" ]; then
+        _notify "No configurable mouse found."
+        return
+    fi
+
+    # Get current report rate
+    local current
+    current=$(ratbagctl "$device" rate get 2>/dev/null | grep -oP '\d+' | head -1)
+    [ -z "$current" ] && current="?"
+
+    local choice
+    choice=$(_rofi_select "  Polling Rate (${current}Hz)" \
+        "  125 Hz  (8ms — low)" \
+        "  250 Hz  (4ms)" \
+        "  500 Hz  (2ms — balanced)" \
+        "  1000 Hz  (1ms — gaming)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    val=$(echo "$choice" | awk '{print $2}')
+
+    ratbagctl "$device" rate set "$val" 2>/dev/null
+    _input_save "mouse_polling_rate" "$val"
+    _notify "Polling rate: ${val}Hz"
+}
+
+# ── DPI Profiles (multiple DPI stages) ──
+
+_mouse_dpi_profiles() {
+    if ! _ratbag_available; then
+        _notify "ratbagctl not installed.\nsudo pacman -S libratbag"
+        return
+    fi
+
+    local device
+    device=$(_ratbag_device)
+    if [ -z "$device" ]; then
+        _notify "No configurable mouse found."
+        return
+    fi
+
+    # Read current profiles
+    local profiles
+    profiles=$(ratbagctl "$device" dpi get 2>/dev/null)
+
+    local choice
+    choice=$(_rofi_select "  DPI Profiles" \
+        "  View current profiles" \
+        "  Gaming preset (400 / 800 / 1600)" \
+        "  Productivity preset (800 / 1200 / 2400)" \
+        "  High-res preset (1600 / 3200 / 6400)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *"View"*)
+            local info
+            info=$(ratbagctl "$device" dpi get 2>/dev/null)
+            echo "$info" | "${ROFI[@]}" -p "  Current DPI" >/dev/null
+            ;;
+        *Gaming*)
+            ratbagctl "$device" dpi set 400 0 2>/dev/null
+            ratbagctl "$device" dpi set 800 1 2>/dev/null
+            ratbagctl "$device" dpi set 1600 2 2>/dev/null
+            _notify "DPI profiles: 400 / 800 / 1600"
+            ;;
+        *Productivity*)
+            ratbagctl "$device" dpi set 800 0 2>/dev/null
+            ratbagctl "$device" dpi set 1200 1 2>/dev/null
+            ratbagctl "$device" dpi set 2400 2 2>/dev/null
+            _notify "DPI profiles: 800 / 1200 / 2400"
+            ;;
+        *"High-res"*)
+            ratbagctl "$device" dpi set 1600 0 2>/dev/null
+            ratbagctl "$device" dpi set 3200 1 2>/dev/null
+            ratbagctl "$device" dpi set 6400 2 2>/dev/null
+            _notify "DPI profiles: 1600 / 3200 / 6400"
+            ;;
+    esac
+}
+
+# ── Mouse Info (device, DPI, rate, buttons) ──
+
+_mouse_info() {
+    local info=""
+
+    # Basic input devices
+    local mice
+    mice=$(grep -A4 "mouse\|Mouse" /proc/bus/input/devices 2>/dev/null | grep "N:" | sed 's/.*Name="//;s/"//')
+    info+="Detected mice:\n"
+    if [ -n "$mice" ]; then
+        while IFS= read -r m; do
+            info+="  • $m\n"
+        done <<< "$mice"
+    else
+        info+="  (none detected)\n"
+    fi
+
+    # ratbagctl details
+    if _ratbag_available; then
+        local device
+        device=$(_ratbag_device)
+        if [ -n "$device" ]; then
+            info+="\nConfigurable device: $device\n"
+            local dpi rate
+            dpi=$(ratbagctl "$device" dpi get 2>/dev/null | head -5)
+            rate=$(ratbagctl "$device" rate get 2>/dev/null)
+            [ -n "$dpi" ] && info+="\nDPI:\n$dpi\n"
+            [ -n "$rate" ] && info+="\nPolling rate: $rate\n"
+        fi
+    else
+        info+="\nInstall libratbag for DPI/rate control:\n  sudo pacman -S libratbag\n  sudo systemctl enable --now ratbagd\n"
+    fi
+
+    # Current software settings
+    local sens accel
+    sens=$(_input_get "sensitivity" "0")
+    accel=$(_input_get "accel_profile" "adaptive")
+    info+="\nSoftware settings:\n"
+    info+="  Sensitivity: $sens\n"
+    info+="  Accel profile: $accel\n"
+
+    echo -e "$info" | "${ROFI[@]}" -p "  Mouse Info" >/dev/null
+}
+
 _menu_mouse_sub() {
     while true; do
         local choice
@@ -2793,16 +2989,24 @@ _menu_mouse_sub() {
             "  Scroll speed" \
             "  Left-handed mode" \
             "  Focus follows mouse" \
+            "  DPI" \
+            "  Polling rate" \
+            "  DPI profiles" \
+            "  Mouse info" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *Sensitivity*)     _mouse_sensitivity ;;
-            *Accel*)           _mouse_accel_profile ;;
+            *Sensitivity*)      _mouse_sensitivity ;;
+            *Accel*)            _mouse_accel_profile ;;
             *"Natural scroll"*) _mouse_natural_scroll ;;
-            *"Scroll speed"*)  _mouse_scroll_factor ;;
-            *Left*)            _mouse_left_handed ;;
-            *Focus*)           _mouse_follow ;;
+            *"Scroll speed"*)   _mouse_scroll_factor ;;
+            *Left*)             _mouse_left_handed ;;
+            *Focus*)            _mouse_follow ;;
+            *"DPI profiles"*)   _mouse_dpi_profiles ;;
+            *DPI*)              _mouse_dpi ;;
+            *"Polling rate"*)   _mouse_polling_rate ;;
+            *"Mouse info"*)     _mouse_info ;;
         esac
     done
 }
@@ -3319,6 +3523,233 @@ _kb_numlock() {
     esac
 }
 
+# ── RGB Keyboard Control (via OpenRGB) ──
+
+_rgb_available() {
+    command -v openrgb &>/dev/null
+}
+
+_rgb_device_count() {
+    openrgb --list-devices 2>/dev/null | grep -c "^[0-9]\+:"
+}
+
+_rgb_list_devices() {
+    openrgb --list-devices 2>/dev/null | grep "^[0-9]\+:" | sed 's/^/  /'
+}
+
+_rgb_set_color() {
+    local color="$1"
+    # Apply to all devices
+    openrgb --color "$color" 2>/dev/null
+    _input_save "rgb_color" "$color"
+    _notify "RGB color: #$color"
+}
+
+_rgb_set_mode() {
+    local mode="$1"
+    openrgb --mode "$mode" 2>/dev/null
+    _input_save "rgb_mode" "$mode"
+    _notify "RGB mode: $mode"
+}
+
+_kb_rgb_color() {
+    if ! _rgb_available; then
+        _notify "OpenRGB not installed.\nsudo pacman -S openrgb"
+        return
+    fi
+
+    # Stoa palette colors + common RGB options
+    local choice
+    choice=$(_rofi_select "  RGB Color" \
+        "  Bronze (Stoa)       #c49a5c" \
+        "  Gold (Stoa)         #d4a84b" \
+        "  Olive (Stoa)        #8a9a6c" \
+        "  Terracotta (Stoa)   #b36b5a" \
+        "  Azure (Stoa)        #5a7a8a" \
+        "  Marble (Stoa)       #d4cfc4" \
+        "  White               #ffffff" \
+        "  Red                 #ff0000" \
+        "  Green               #00ff00" \
+        "  Blue                #0000ff" \
+        "  Cyan                #00ffff" \
+        "  Purple              #8000ff" \
+        "  Orange              #ff8000" \
+        "  Pink                #ff0080" \
+        "  Yellow              #ffff00" \
+        "  Off                 #000000" \
+        "  Custom..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local color
+    if [[ "$choice" == *"Custom"* ]]; then
+        color=$(_rofi_input "  Hex color (e.g. ff6600)")
+        [ -z "$color" ] && return
+        # Strip # if provided
+        color="${color#\#}"
+    else
+        color=$(echo "$choice" | grep -oP '#\K[0-9a-fA-F]+')
+    fi
+
+    [ -z "$color" ] && return
+    _rgb_set_color "$color"
+}
+
+_kb_rgb_mode() {
+    if ! _rgb_available; then
+        _notify "OpenRGB not installed.\nsudo pacman -S openrgb"
+        return
+    fi
+
+    # Get available modes from OpenRGB
+    local modes
+    modes=$(openrgb --list-devices 2>/dev/null | grep -i "mode:" | sed 's/.*mode: //;s/^/  /' | sort -u)
+
+    if [ -z "$modes" ]; then
+        # Fallback to common modes
+        modes="  Static
+  Breathing
+  Color Cycle
+  Rainbow
+  Wave
+  Reactive
+  Spectrum Cycle
+  Off"
+    fi
+
+    local current
+    current=$(_input_get "rgb_mode" "Static")
+
+    local choice
+    choice=$(_rofi_select "  RGB Mode ($current)" \
+        "  Static" \
+        "  Breathing" \
+        "  Color Cycle" \
+        "  Spectrum Cycle" \
+        "  Rainbow" \
+        "  Wave" \
+        "  Off" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local mode
+    mode=$(echo "$choice" | sed 's/^[[:space:]]*//')
+    _rgb_set_mode "$mode"
+}
+
+_kb_rgb_brightness() {
+    if ! _rgb_available; then
+        _notify "OpenRGB not installed.\nsudo pacman -S openrgb"
+        return
+    fi
+
+    local choice
+    choice=$(_rofi_select "  RGB Brightness" \
+        "  100% (full)" \
+        "  75%" \
+        "  50%" \
+        "  25%" \
+        "  10% (dim)" \
+        "  0% (off)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    val=$(echo "$choice" | grep -oP '\d+')
+    # Map 0-100 to 0-255
+    local brightness=$(( val * 255 / 100 ))
+    openrgb --brightness "$brightness" 2>/dev/null
+    _input_save "rgb_brightness" "$val"
+    _notify "RGB brightness: ${val}%"
+}
+
+_kb_rgb_off() {
+    if ! _rgb_available; then
+        _notify "OpenRGB not installed.\nsudo pacman -S openrgb"
+        return
+    fi
+    openrgb --mode Static --color 000000 2>/dev/null
+    _input_save "rgb_color" "000000"
+    _input_save "rgb_mode" "Off"
+    _notify "RGB: off"
+}
+
+_kb_rgb_stoa_theme() {
+    if ! _rgb_available; then
+        _notify "OpenRGB not installed.\nsudo pacman -S openrgb"
+        return
+    fi
+
+    # Source current palette
+    local color_file="${HOME}/.config/stoa/colors.sh"
+    [ ! -f "$color_file" ] && color_file="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)/theme/colors.sh"
+
+    if [ -f "$color_file" ]; then
+        source "$color_file"
+        local hex="${STOA_BRONZE#\#}"
+        openrgb --mode Static --color "$hex" 2>/dev/null
+        _input_save "rgb_color" "$hex"
+        _input_save "rgb_mode" "Static"
+        _notify "RGB: Stoa theme (bronze)"
+    else
+        # Fallback
+        openrgb --mode Static --color "c49a5c" 2>/dev/null
+        _notify "RGB: Stoa theme (bronze)"
+    fi
+}
+
+_kb_rgb_info() {
+    if ! _rgb_available; then
+        local info="OpenRGB not installed.\n\nInstall:\n  sudo pacman -S openrgb\n\nStart the background service:\n  sudo systemctl enable --now openrgb\n\nSupported devices:\n  Most RGB keyboards, mice, RAM, GPUs, motherboards,\n  LED strips, and peripherals from Corsair, Razer,\n  Logitech, SteelSeries, ASUS, MSI, etc."
+        echo -e "$info" | "${ROFI[@]}" -p "  RGB Info" >/dev/null
+        return
+    fi
+
+    local info=""
+    info+="OpenRGB devices:\n"
+    local devices
+    devices=$(openrgb --list-devices 2>/dev/null)
+    if [ -n "$devices" ]; then
+        info+="$devices\n"
+    else
+        info+="  (no devices detected — is openrgb running?)\n"
+        info+="\n  Start: openrgb --server &\n"
+    fi
+
+    local saved_color saved_mode
+    saved_color=$(_input_get "rgb_color" "(not set)")
+    saved_mode=$(_input_get "rgb_mode" "(not set)")
+    info+="\nSaved settings:\n"
+    info+="  Color: #$saved_color\n"
+    info+="  Mode: $saved_mode\n"
+
+    echo -e "$info" | "${ROFI[@]}" -p "  RGB Info" >/dev/null
+}
+
+_menu_rgb() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  RGB Control" \
+            "  Color" \
+            "  Mode (effect)" \
+            "  Brightness" \
+            "  Stoa theme" \
+            "  Turn off" \
+            "  Device info" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Color*)       _kb_rgb_color ;;
+            *Mode*)        _kb_rgb_mode ;;
+            *Brightness*)  _kb_rgb_brightness ;;
+            *"Stoa theme"*) _kb_rgb_stoa_theme ;;
+            *"Turn off"*)  _kb_rgb_off ;;
+            *"Device info"*) _kb_rgb_info ;;
+        esac
+    done
+}
+
 menu_keyboard() {
     while true; do
         local layout
@@ -3330,6 +3761,7 @@ menu_keyboard() {
             "  Repeat rate & delay" \
             "  Caps Lock behavior" \
             "  NumLock on boot" \
+            "  RGB lighting" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -3338,6 +3770,7 @@ menu_keyboard() {
             *Repeat*)     _kb_repeat_rate ;;
             *Caps*)       _kb_capslock_behavior ;;
             *NumLock*)    _kb_numlock ;;
+            *RGB*)        _menu_rgb ;;
         esac
     done
 }

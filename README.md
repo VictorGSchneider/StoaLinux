@@ -113,8 +113,8 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><b>Audio</b></td><td>Volume, output/input devices (PipeWire)</td></tr>
   <tr><td><b>Equalizer</b></td><td>8 built-in EQ presets + user presets via EasyEffects</td></tr>
   <tr><td><b>Night Light</b></td><td>Blue light filter (2500K–6500K), schedule (manual/sunset/custom)</td></tr>
-  <tr><td><b>Keyboard</b></td><td>Layout (12 presets + custom), repeat rate, Caps Lock remap, NumLock</td></tr>
-  <tr><td><b>Mouse & Touchpad</b></td><td>Sensitivity, accel, scroll, tap-to-click, 12 configurable gestures</td></tr>
+  <tr><td><b>Keyboard</b></td><td>Layout (12 presets + custom), repeat rate, Caps Lock remap, NumLock, RGB lighting (color, mode, brightness via OpenRGB)</td></tr>
+  <tr><td><b>Mouse & Touchpad</b></td><td>Sensitivity, accel, scroll, tap-to-click, 12 configurable gestures, DPI (100–25600), polling rate, DPI profiles</td></tr>
   <tr><td><b>Network</b></td><td>Wi-Fi, saved networks, network info (IP/DNS/gateway/signal)</td></tr>
   <tr><td><b>VPN</b></td><td>ProtonVPN: connect by country, P2P, Secure Core, kill switch</td></tr>
   <tr><td><b>Firewall</b></td><td>nftables: port list, allow/block, service toggle</td></tr>
