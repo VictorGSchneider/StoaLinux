@@ -1,0 +1,77 @@
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  STOA LINUX — Fastfetch                                     ║
+// ║  "Know thyself."                                              ║
+// ╚══════════════════════════════════════════════════════════════╝
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "auto",
+        "color": {
+            "1": "yellow",
+            "2": "white"
+        }
+    },
+    "display": {
+        "separator": " ›",
+        "color": {
+            "keys": "yellow",
+            "title": "yellow"
+        }
+    },
+    "modules": [
+        "title",
+        "separator",
+        {
+            "type": "os",
+            "key": "Virtue"
+        },
+        {
+            "type": "kernel",
+            "key": "Logos"
+        },
+        {
+            "type": "uptime",
+            "key": "Uptime"
+        },
+        {
+            "type": "packages",
+            "key": "Packages"
+        },
+        {
+            "type": "shell",
+            "key": "Agora"
+        },
+        {
+            "type": "wm",
+            "key": "Column"
+        },
+        {
+            "type": "theme",
+            "key": "Theme"
+        },
+        {
+            "type": "icons",
+            "key": "Icons"
+        },
+        {
+            "type": "terminalfont",
+            "key": "Font"
+        },
+        {
+            "type": "cpu",
+            "key": "Mind",
+            "temp": true
+        },
+        {
+            "type": "memory",
+            "key": "Memory",
+            "percent": true
+        },
+        {
+            "type": "disk",
+            "key": "Disk",
+            "folders": "/"
+        },
+        "colors"
+    ]
+}
