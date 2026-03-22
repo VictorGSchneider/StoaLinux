@@ -24,9 +24,11 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 
 - **Arch Linux** with automated installation (from live ISO or existing Arch)
 - **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
-- **20-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, themes, and more
+- **24-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
 - **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
-- **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird
+- **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird, VS Code, Neovim
+- **Capture toolbar** (eww) — screenshot + recording with mode selection, toggle, and delay
+- **System resilience** — pacman pre-transaction snapshots, hyprctl version adapter, health check on boot
 - **Memento Mori widget** (eww), **Stoic quotes**, and a **living marble screensaver**
 - **DFM** (Dotfile Manager) — GTK4 GUI to edit dotfiles in-place with smart widgets, backups, and GitHub sync
 - **stoa-\* scripts** for wallpapers, clipboard, OCR, paste, resize, firewall, WinApps, and more
@@ -116,7 +118,9 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><b>Firewall</b></td><td>nftables: port list, allow/block, service toggle</td></tr>
   <tr><td><b>Bluetooth</b></td><td>Scan, connect, saved devices, forget</td></tr>
   <tr><td><b>Hardware</b></td><td>CPU, GPU, RAM, disks, battery, USB, PCI, sensors, cameras, input</td></tr>
+  <tr><td><b>Disks & Storage</b></td><td>Overview, usage analyzer (drill-down), mount/unmount, SMART, benchmark, format, fsck, fstab, cleanup</td></tr>
   <tr><td><b>Printers</b></td><td>CUPS: add/remove printers, print queue, scanners (SANE)</td></tr>
+  <tr><td><b>Cloud Drive</b></td><td>Google Drive, OneDrive, Dropbox, S3 via rclone</td></tr>
   <tr><td><b>Power Management</b></td><td>Power profiles, screen off timeout, auto suspend, battery info</td></tr>
   <tr><td><b>Date & Time</b></td><td>Timezone, NTP, manual time, 12/24h, language & locale</td></tr>
   <tr><td><b>Accessibility</b></td><td>Cursor size, text scale, animations, gaps, opacity, border width</td></tr>
@@ -124,19 +128,21 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><b>Wallpaper</b></td><td>Browse, generate, set custom</td></tr>
   <tr><td><b>Theme</b></td><td>Color palette (10 presets + custom), GTK, icons, cursors, font size</td></tr>
   <tr><td><b>Lock Screen</b></td><td>Lock now, face recognition setup</td></tr>
+  <tr><td><b>System Health</b></td><td>Doctor report, services status, failed units, thermals, journal, updates, package snapshots (diff), security audit, config integrity</td></tr>
 </table>
 
 ## Scripts & Stoatools
 
 <table>
   <tr><th>Script</th><th>What it does</th><th>Stoatool</th><th>What it does</th></tr>
-  <tr><td><code>stoa-settings</code></td><td>Settings panel (20 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
+  <tr><td><code>stoa-settings</code></td><td>Settings panel (24 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
   <tr><td><code>stoa-store</code></td><td>Package manager</td><td><code>stoa-paste</code></td><td>Paste as UPPER/lower/etc</td></tr>
   <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
   <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
   <tr><td><code>stoa-memento</code></td><td>Memento Mori widget</td><td><code>stoa-locksmith</code></td><td>See who locks a file</td></tr>
-  <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td></td><td></td></tr>
+  <tr><td><code>stoa-doctor</code></td><td>System health check</td><td></td><td></td></tr>
   <tr><td><code>stoa-capture</code></td><td>Screenshot + recording (eww)</td><td></td><td></td></tr>
+  <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td></td><td></td></tr>
   <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
   <tr><td><code>stoa-drive</code></td><td>Cloud drive (rclone)</td><td></td><td></td></tr>
   <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
@@ -145,6 +151,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
   <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
+  <tr><td><code>stoa-pkg-snapshot</code></td><td>Package snapshot (pacman hook)</td><td></td><td></td></tr>
   <tr><td><code>dfm</code></td><td>Dotfile Manager (GTK4 GUI)</td><td></td><td></td></tr>
 </table>
 
@@ -154,8 +161,8 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><th>App</th><th>Purpose</th><th>App</th><th>Purpose</th></tr>
   <tr><td>Brave</td><td>Browser</td><td>btop</td><td>Monitor</td></tr>
   <tr><td>Obsidian</td><td>Notes</td><td>Qalculate</td><td>Calculator</td></tr>
-  <tr><td>Kitty</td><td>Terminal</td><td>eww</td><td>Memento Mori widget</td></tr>
-  <tr><td>Neovim</td><td>Editor</td><td>Steam</td><td>Gaming (Proton)</td></tr>
+  <tr><td>Kitty</td><td>Terminal</td><td>eww</td><td>Widgets</td></tr>
+  <tr><td>VS Code</td><td>IDE</td><td>Neovim</td><td>Editor</td></tr>
   <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
   <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>
   <tr><td>OnlyOffice</td><td>Office suite</td><td>Enpass</td><td>Passwords</td></tr>
@@ -163,6 +170,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td>imv</td><td>Images</td><td>lf / Thunar</td><td>Files</td></tr>
   <tr><td>EasyEffects</td><td>Audio equalizer</td><td>gammastep</td><td>Night light</td></tr>
   <tr><td>QEMU/KVM</td><td>WinApps (VM)</td><td>FreeRDP</td><td>Remote desktop</td></tr>
+  <tr><td>Steam</td><td>Gaming (Proton)</td><td>GnuPG</td><td>Encryption & signing</td></tr>
 </table>
 
 ## Theme
@@ -171,6 +179,8 @@ The Stoa theme is applied consistently across:
 
 - **GTK 3/4** — `stoa-gtk.css` with dark palette + EB Garamond
 - **Qt 5/6** — Fusion dark via qt5ct/qt6ct
+- **VS Code** — full color theme (syntax + UI + terminal ANSI)
+- **Neovim** — `stoa.vim` colorscheme with treesitter support
 - **Steam** — CSS overlay (`libraryroot.custom.css`)
 - **OnlyOffice** — custom JSON theme (`stoa-onlyoffice.json`)
 - **Betterbird** — userChrome/userContent CSS (`stoa-betterbird.css`)
@@ -190,6 +200,12 @@ Change the entire color scheme from `Super+I → Theme → Color Palette`:
 - **Reset to Stoic** — restore the default marble/bronze palette
 
 Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland, Kitty, and Dunst reload live — other apps take effect on restart.
+
+### System Resilience
+
+- **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
+- **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
+- **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, notifies via dunst if anything is missing. Full log at `~/.config/stoa/doctor.log`.
 
 ### DFM — Dotfile Manager
 
