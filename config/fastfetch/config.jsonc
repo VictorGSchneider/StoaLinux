@@ -1,77 +1,277 @@
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  STOA LINUX — Fastfetch                                     ║
-// ║  "Know thyself."                                              ║
+// ║  "Know thyself." — γνῶθι σεαυτόν                             ║
 // ╚══════════════════════════════════════════════════════════════╝
+//
+// Stoic palette:
+//   Bronze  #c49a5c   Gold    #d4a84b   Stone   #6e6a62
+//   Olive   #8a9a6c   Fore    #d4cfc4   Dim     #a89f91
+//   Terra   #b36b5a   Blue    #5a7a8a   Mauve   #946a7a
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+
     "logo": {
         "type": "auto",
         "color": {
-            "1": "yellow",
-            "2": "white"
+            "1": "\u001b[38;2;196;154;92m",
+            "2": "\u001b[38;2;110;106;98m"
         }
     },
+
     "display": {
-        "separator": " ›",
+        "separator": " \u203a ",
         "color": {
-            "keys": "yellow",
-            "title": "yellow"
+            "keys":  "\u001b[38;2;196;154;92m",
+            "title": "\u001b[38;2;212;168;75m",
+            "separator": "\u001b[38;2;110;106;98m",
+            "output": "\u001b[38;2;212;207;196m"
         }
     },
+
     "modules": [
+        // ── Identity ──
         "title",
         "separator",
+
+        // ── System (Polis) ──
         {
             "type": "os",
-            "key": "Virtue"
+            "key": "Virtue",
+            "format": "{2} {10} ({12})"
+        },
+        {
+            "type": "host",
+            "key": "Oikos"
         },
         {
             "type": "kernel",
             "key": "Logos"
         },
         {
+            "type": "bios",
+            "key": "Bios"
+        },
+        {
+            "type": "board",
+            "key": "Foundation"
+        },
+        {
+            "type": "chassis",
+            "key": "Vessel"
+        },
+        {
             "type": "uptime",
             "key": "Uptime"
         },
         {
+            "type": "loadavg",
+            "key": "Burden"
+        },
+        {
+            "type": "processes",
+            "key": "Daemons"
+        },
+
+        "break",
+
+        // ── Software (Techne) ──
+        {
             "type": "packages",
-            "key": "Packages"
+            "key": "Provisions"
         },
         {
             "type": "shell",
-            "key": "Agora"
+            "key": "Agora",
+            "showVersion": true
+        },
+        {
+            "type": "terminal",
+            "key": "Stoa"
+        },
+        {
+            "type": "terminalfont",
+            "key": "Script"
+        },
+        {
+            "type": "editor",
+            "key": "Stylus"
+        },
+        {
+            "type": "locale",
+            "key": "Dialect"
+        },
+
+        "break",
+
+        // ── Desktop (Agora) ──
+        {
+            "type": "de",
+            "key": "Republic"
         },
         {
             "type": "wm",
             "key": "Column"
         },
         {
+            "type": "wmtheme",
+            "key": "Frieze"
+        },
+        {
             "type": "theme",
-            "key": "Theme"
+            "key": "Toga"
         },
         {
             "type": "icons",
-            "key": "Icons"
+            "key": "Glyphs"
         },
         {
-            "type": "terminalfont",
-            "key": "Font"
+            "type": "cursor",
+            "key": "Pointer"
         },
+        {
+            "type": "font",
+            "key": "Inscription"
+        },
+        {
+            "type": "wallpaper",
+            "key": "Fresco"
+        },
+
+        "break",
+
+        // ── Hardware — Mind (Nous) ──
         {
             "type": "cpu",
-            "key": "Mind",
-            "temp": true
+            "key": "Nous",
+            "temp": true,
+            "showPeCoreCount": true
         },
         {
+            "type": "cpuusage",
+            "key": "Praxis"
+        },
+        {
+            "type": "gpu",
+            "key": "Vision",
+            "temp": true,
+            "driverSpecific": true
+        },
+        {
+            "type": "display",
+            "key": "Theatre"
+        },
+        {
+            "type": "monitor",
+            "key": "Canvas"
+        },
+        {
+            "type": "brightness",
+            "key": "Lumens"
+        },
+        {
+            "type": "vulkan",
+            "key": "Vulkan"
+        },
+        {
+            "type": "opengl",
+            "key": "OpenGL"
+        },
+        {
+            "type": "opencl",
+            "key": "OpenCL"
+        },
+
+        "break",
+
+        // ── Hardware — Body (Soma) ──
+        {
             "type": "memory",
-            "key": "Memory",
-            "percent": true
+            "key": "Mneme"
+        },
+        {
+            "type": "swap",
+            "key": "Reserve"
         },
         {
             "type": "disk",
-            "key": "Disk",
+            "key": "Archive",
             "folders": "/"
         },
+        {
+            "type": "disk",
+            "key": "Hearth",
+            "folders": "/home"
+        },
+        {
+            "type": "battery",
+            "key": "Vitality"
+        },
+        {
+            "type": "poweradapter",
+            "key": "Source"
+        },
+
+        "break",
+
+        // ── Network (Koinonia) ──
+        {
+            "type": "localip",
+            "key": "Polis IP",
+            "showIpv4": true
+        },
+        {
+            "type": "publicip",
+            "key": "Cosmos IP"
+        },
+        {
+            "type": "dns",
+            "key": "Oracle"
+        },
+        {
+            "type": "wifi",
+            "key": "Aether"
+        },
+        {
+            "type": "bluetooth",
+            "key": "Bond"
+        },
+
+        "break",
+
+        // ── Sound (Mousike) ──
+        {
+            "type": "sound",
+            "key": "Lyre"
+        },
+        {
+            "type": "media",
+            "key": "Muse"
+        },
+        {
+            "type": "player",
+            "key": "Bard"
+        },
+
+        "break",
+
+        // ── Dates & Time (Chronos) ──
+        {
+            "type": "datetime",
+            "key": "Chronos",
+            "format": "{1}-{4}-{11} {14}:{18}:{20}"
+        },
+        {
+            "type": "initsystem",
+            "key": "Arche"
+        },
+        {
+            "type": "users",
+            "key": "Citizens"
+        },
+
+        "break",
+
+        // ── Palette ──
         "colors"
     ]
 }
