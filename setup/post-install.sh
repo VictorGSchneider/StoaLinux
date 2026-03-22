@@ -10,8 +10,8 @@
 # USAGE:
 #   git clone https://github.com/VictorGSchneider/StoaLinux.git
 #   cd StoaLinux
-#   chmod +x post-install.sh
-#   ./post-install.sh
+#   chmod +x setup/post-install.sh
+#   ./setup/post-install.sh
 
 set -e
 
@@ -47,13 +47,13 @@ echo -e "  ${F}StoaLinux packages:${R}"
 echo ""
 
 # Hyprland (Wayland — primary)
-WAYLAND_PKGS="hyprland waybar swaybg swayidle xdg-desktop-portal-hyprland"
+WAYLAND_PKGS="hyprland waybar swaybg xdg-desktop-portal-hyprland xdg-desktop-portal-gtk"
 
 # i3 (Xorg — fallback)
 XORG_PKGS="i3-wm i3status xorg-server xorg-xinit picom"
 
 # Launcher, notifications
-UI_PKGS="rofi dunst"
+UI_PKGS="rofi dunst libnotify"
 
 # Browser + Notes (AUR)
 BROWSER_PKGS="brave-bin"
@@ -96,13 +96,13 @@ CLOUD_PKGS="rclone"
 STORE_PKGS="flatpak"
 
 # Lock screen
-LOCK_PKGS="hyprlock i3lock-color"
+LOCK_PKGS="hyprlock"
 
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard cliphist"
 
 # Widgets (eww — AUR, Wayland)
-WIDGET_PKGS="eww-wayland"
+WIDGET_PKGS="eww"
 
 # Fonts and theme
 FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome"
@@ -112,6 +112,12 @@ THEME_PKGS="qt5ct qt6ct"
 
 # Firewall
 FIREWALL_PKGS="nftables"
+
+# Bluetooth
+BLUETOOTH_PKGS="bluez bluez-utils"
+
+# XDG + hardware utils
+XDG_PKGS="xdg-utils v4l-utils"
 
 # Night light (blue light filter — Wayland)
 NIGHTLIGHT_PKGS="gammastep"
@@ -140,7 +146,7 @@ DEV_PKGS="github-cli gnupg"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -164,6 +170,8 @@ echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
 echo -e "  ${S}Gestures:   ${GESTURE_PKGS}${R}"
 echo -e "  ${S}Firewall:   ${FIREWALL_PKGS}${R}"
+echo -e "  ${S}Bluetooth:  ${BLUETOOTH_PKGS}${R}"
+echo -e "  ${S}XDG/HW:     ${XDG_PKGS}${R}"
 echo -e "  ${S}Night:      ${NIGHTLIGHT_PKGS}${R}"
 echo -e "  ${S}Power:      ${POWER_MGMT_PKGS}${R}"
 echo -e "  ${S}Print:      ${PRINT_PKGS}${R}"
@@ -184,7 +192,7 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     if ! grep -q "^\[multilib\]" /etc/pacman.conf 2>/dev/null; then
         echo -e "  ${F}Enabling multilib repository (required for Steam)...${R}"
         sudo sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
-        sudo pacman -Sy
+        sudo pacman -Syu
         echo -e "  ${O}[✓] multilib enabled.${R}"
     fi
 
@@ -231,6 +239,26 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${S}[~] Obsidian already installed.${R}"
     fi
 
+    # i3lock-color — Lock screen for i3 (AUR)
+    echo ""
+    if ! command -v i3lock &>/dev/null || ! i3lock --version 2>&1 | grep -q "color"; then
+        echo -e "  ${F}Installing i3lock-color (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm i3lock-color
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm i3lock-color
+        else
+            echo -e "  ${S}Installing i3lock-color manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/i3lock-color.git "$_tmpdir/i3lock-color"
+            (cd "$_tmpdir/i3lock-color" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] i3lock-color installed.${R}"
+    else
+        echo -e "  ${S}[~] i3lock-color already installed.${R}"
+    fi
+
     # Satty — Screenshot editor (AUR)
     echo ""
     if ! command -v satty &>/dev/null; then
@@ -254,19 +282,19 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     # eww — Widget system (AUR, Wayland)
     echo ""
     if ! command -v eww &>/dev/null; then
-        echo -e "  ${F}Installing eww-wayland (AUR)...${R}"
+        echo -e "  ${F}Installing eww (AUR)...${R}"
         if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm eww-wayland
+            yay -S --needed --noconfirm eww
         elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm eww-wayland
+            paru -S --needed --noconfirm eww
         else
-            echo -e "  ${S}Installing eww-wayland manually via makepkg...${R}"
+            echo -e "  ${S}Installing eww manually via makepkg...${R}"
             _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/eww-wayland.git "$_tmpdir/eww-wayland"
-            (cd "$_tmpdir/eww-wayland" && makepkg -si --noconfirm)
+            git clone https://aur.archlinux.org/eww.git "$_tmpdir/eww"
+            (cd "$_tmpdir/eww" && makepkg -si --noconfirm)
             rm -rf "$_tmpdir"
         fi
-        echo -e "  ${O}[✓] eww-wayland installed.${R}"
+        echo -e "  ${O}[✓] eww installed.${R}"
     else
         echo -e "  ${S}[~] eww already installed.${R}"
     fi
@@ -505,6 +533,16 @@ else
     echo -e "  ${S}[~] Already in input group.${R}"
 fi
 echo ""
+# ── Flatpak (Flathub) ──
+if command -v flatpak &>/dev/null; then
+    if ! flatpak remote-list 2>/dev/null | grep -q flathub; then
+        echo -e "  ${F}Adding Flathub remote...${R}"
+        flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+        echo -e "  ${O}[✓] Flathub configured.${R}"
+    else
+        echo -e "  ${S}[~] Flathub already configured.${R}"
+    fi
+fi
 
 # ── Dotfiles ──
 echo -e "  ${F}Installing dotfiles...${R}"
