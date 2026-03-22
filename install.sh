@@ -87,6 +87,22 @@ if [ -f "${STOA_DIR}/theme/yacreader/stoa-yacreader.qss" ]; then
     _link "${STOA_DIR}/theme/yacreader/stoa-yacreader.qss" "${CONFIG_DIR}/YACReader/stoa-yacreader.qss"
 fi
 
+# OnlyOffice theme
+ONLYOFFICE_DIR="${HOME}/.config/onlyoffice/desktopeditors"
+if [ -d "${HOME}/.config/onlyoffice" ] || command -v onlyoffice-desktopeditors &>/dev/null; then
+    mkdir -p "$ONLYOFFICE_DIR"
+    cp "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" "${ONLYOFFICE_DIR}/settings.json" 2>/dev/null && \
+        echo -e "  ${O}[+] OnlyOffice Stoa theme applied${R}" || true
+fi
+
+# Betterbird theme (userChrome.css)
+BB_PROFILE_DIR=$(find "${HOME}/.betterbird" -maxdepth 2 -name "prefs.js" -printf '%h\n' 2>/dev/null | head -1)
+if [ -n "$BB_PROFILE_DIR" ]; then
+    mkdir -p "${BB_PROFILE_DIR}/chrome"
+    _link "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${BB_PROFILE_DIR}/chrome/userChrome.css"
+    echo -e "  ${O}[+] Betterbird Stoa theme applied${R}"
+fi
+
 STEAM_CSS_DIR="${HOME}/.steam/steam/steamui"
 if [ -d "${HOME}/.steam" ]; then
     mkdir -p "$STEAM_CSS_DIR"
