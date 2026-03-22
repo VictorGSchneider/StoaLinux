@@ -84,7 +84,7 @@ GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 SCREENSHOT_PKGS="grim slurp maim wf-recorder slop"
 
 # Stoatools (OCR, paste, resize, rename, locksmith)
-STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype"
+STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words"
 
 # Touchpad gestures
 GESTURE_PKGS="libinput-gestures"
@@ -135,7 +135,7 @@ EQUALIZER_PKGS="easyeffects"
 WINAPPS_PKGS="qemu-full libvirt virt-manager dnsmasq edk2-ovmf freerdp"
 
 # Audio + utilities
-UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg"
+UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg zip unzip"
 
 # DFM — Dotfile Manager (GTK4/libadwaita GUI)
 DFM_PKGS="python python-gobject gtk4 libadwaita"
@@ -524,6 +524,15 @@ fi
 
 echo ""
 
+# ── Input group (required for stoa-predict) ──
+if ! groups 2>/dev/null | grep -qw input; then
+    echo -e "  ${F}Adding user to 'input' group (for text prediction)...${R}"
+    sudo usermod -aG input "$(whoami)"
+    echo -e "  ${O}[✓] Added to input group (takes effect after next login).${R}"
+else
+    echo -e "  ${S}[~] Already in input group.${R}"
+fi
+echo ""
 # ── Flatpak (Flathub) ──
 if command -v flatpak &>/dev/null; then
     if ! flatpak remote-list 2>/dev/null | grep -q flathub; then
@@ -611,6 +620,8 @@ echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P
 echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDrive, etc)${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
 echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+I → Firewall)${R}"
+echo -e "  ${S}  stoa-maintain     — Backup, restore & cleanup (Super+I → Maintenance)${R}"
+echo -e "  ${S}  stoa-predict      — Text prediction + emoji suggestions (Super+Shift+S)${R}"
 echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
 echo -e "  ${S}  dfm               — Dotfile Manager GUI (Super+G)${R}"
 echo ""
