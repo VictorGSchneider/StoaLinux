@@ -3,11 +3,11 @@
     "audio_config": {
         "audio": "pipewire"
     },
-    "bootloader": "rEFInd",
+    "bootloader": "Refind",
     "hostname": "stoa",
     "kernels": ["linux"],
     "locale_config": {
-        "kb_layout": "pt_br.abnt2",
+        "kb_layout": "br",
         "sys_enc": "UTF-8",
         "sys_lang": "pt_BR.UTF-8"
     },
