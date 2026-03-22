@@ -102,6 +102,12 @@ if command -v desktopeditors &>/dev/null || [ -d "/opt/onlyoffice" ]; then
     echo -e "  ${S}    To activate: File → Advanced Settings → Interface theme → Stoa${R}"
 fi
 
+# Div Acer Manager Max — apply Stoa theme (if installed)
+if command -v div-acer-manager &>/dev/null || [ -d "/opt/div-acer-manager-max" ] || [ -d "/opt/DivAcerManagerMax" ]; then
+    bash "${STOA_DIR}/theme/div-acer-manager/stoa-damx-apply.sh" apply 2>/dev/null && \
+        echo -e "  ${O}[+] Div Acer Manager Stoa theme applied${R}" || true
+fi
+
 # Betterbird — apply Stoa CSS to all profiles
 if [ -d "${HOME}/.betterbird" ]; then
     for profile_dir in "${HOME}/.betterbird/"*.default*; do

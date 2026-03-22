@@ -3708,6 +3708,35 @@ _fan_div_acer_launch() {
     fi
 }
 
+_fan_div_acer_stoa_theme() {
+    local script_dir
+    script_dir="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+    local apply_script="${script_dir}/theme/div-acer-manager/stoa-damx-apply.sh"
+
+    if [ ! -f "$apply_script" ]; then
+        _notify "Theme script not found.\nRun install.sh first."
+        return
+    fi
+
+    local choice
+    choice=$(_rofi_select "  DAMX Stoa Theme" \
+        "  Apply Stoa theme" \
+        "  Restore original theme" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *Apply*)
+            bash "$apply_script" apply 2>/dev/null
+            _notify "Stoa theme applied to Div Acer Manager.\nRestart DAMX to see changes."
+            ;;
+        *Restore*)
+            bash "$apply_script" restore 2>/dev/null
+            _notify "Original theme restored.\nRestart DAMX to see changes."
+            ;;
+    esac
+}
+
 # ── Performance Profiles (CPU governor + power profile) ──
 
 _fan_perf_profile() {
@@ -3967,6 +3996,7 @@ _menu_fan_perf() {
         case "$backend" in
             div-acer)
                 items+=("  Div Acer Manager (launch)")
+                items+=("  Div Acer Manager (Stoa theme)")
                 items+=("  Fan mode (Acer)")
                 items+=("  Fan speed (manual)")
                 items+=("  GPU mode")
@@ -4004,6 +4034,7 @@ _menu_fan_perf() {
         case "$choice" in
             *"Status"*)             _fan_status ;;
             *"Performance profile"*) _fan_perf_profile ;;
+            *"Div Acer Manager (Stoa"*) _fan_div_acer_stoa_theme ;;
             *"Div Acer"*)           _fan_div_acer_launch ;;
             *"Fan mode"*)           _fan_mode_acer_wmi ;;
             *"Fan speed (NBFC)"*)   _fan_nbfc_set_speed ;;

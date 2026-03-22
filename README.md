@@ -191,6 +191,7 @@ The Stoa theme is applied consistently across:
 - **Betterbird** — userChrome/userContent CSS (`stoa-betterbird.css`)
 - **Calibre** — dark reader with EB Garamond 18pt
 - **YACReader** — full Qt stylesheet
+- **Div Acer Manager Max** — Avalonia AXAML theme (bronze buttons, stone cards, marble text)
 - **Icons** — Colloid-dark
 - **Cursors** — Colloid
 - **Font** — EB Garamond (serif) + JetBrains Mono (mono)

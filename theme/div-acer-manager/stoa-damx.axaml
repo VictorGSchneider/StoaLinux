@@ -1,0 +1,341 @@
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  STOA LINUX — Div Acer Manager Max Theme                    ║
+     ║  "Beauty belongs to character." — Marcus Aurelius            ║
+     ║                                                              ║
+     ║  Avalonia AXAML theme override for DAMX.                     ║
+     ║  Replaces the default blue palette with Stoa colors:         ║
+     ║  marble, bronze, parchment, and stone.                       ║
+     ║                                                              ║
+     ║  Install: replace App.axaml in the DAMX installation.        ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="DivAcerManagerMax.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <!-- Oxanium Regular -->
+        <FontFamily x:Key="OxaniumFont">avares://DivAcerManagerMax/Assets/Fonts/Oxanium.ttf#Oxanium</FontFamily>
+
+        <!-- Oxanium Bold -->
+        <FontFamily x:Key="OxaniumBoldFont">avares://DivAcerManagerMax/Assets/Fonts/Oxanium-Bold.ttf#Oxanium</FontFamily>
+
+        <!-- Open Sans Regular -->
+        <FontFamily x:Key="OpenSansFont">avares://DivAcerManagerMax/Assets/Fonts/OpenSans.ttf#Open Sans</FontFamily>
+
+        <!-- Open Sans SemiBold -->
+        <FontFamily x:Key="OpenSansSemiBoldFont">avares://DivAcerManagerMax/Assets/Fonts/OpenSans-SemiBold.ttf#Open Sans SemiBold</FontFamily>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Material.Icons.Avalonia/MaterialIconStyles.axaml" />
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+    </Application.Styles>
+
+    <Application.Styles>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STOA PALETTE
+             ─────────────────────────────────────────────────────────
+             bg-dark:    #1a1714   Deep obsidian
+             bg:         #211e19   Warm charcoal
+             bg-light:   #2d2921   Dark stone
+             fg:         #d4cfc4   Light marble
+             fg-dim:     #a89f91   Aged marble
+             fg-dark:    #7a7267   Polished stone
+             bronze:     #c49a5c   Roman bronze (accent)
+             gold:       #d4a84b   Imperial gold (hover)
+             parchment:  #c4b08a   Parchment
+             olive:      #8a9a6c   Laurel leaf (success)
+             terracotta: #b36b5a   Roman terracotta (error)
+             azure:      #5a7a8a   Mediterranean blue
+             stone:      #6e6a62   Stone (borders)
+             ══════════════════════════════════════════════════════════ -->
+
+        <!-- ── Tab Items ── -->
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontFamily" Value="{StaticResource OxaniumFont}" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Foreground" Value="#d4cfc4" />
+        </Style>
+
+        <Style Selector="TabItem:selected">
+            <Setter Property="Foreground" Value="#c49a5c" />
+        </Style>
+
+        <Style Selector="TabItem:pointerover">
+            <Setter Property="Foreground" Value="#d4a84b" />
+        </Style>
+
+        <Style Selector="TabControl /template/ WrapPanel">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+
+        <!-- ── Section Headers ── -->
+        <Style Selector="TextBlock.SectionHeader">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontFamily" Value="{StaticResource OxaniumBoldFont}" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0 15 0 10" />
+            <Setter Property="Foreground" Value="#c49a5c" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+
+        <Style Selector="TextBlock.SubHeader">
+            <Setter Property="FontFamily" Value="{StaticResource OxaniumFont}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0 10 0 5" />
+            <Setter Property="Foreground" Value="#c4b08a" />
+        </Style>
+
+        <!-- ── Body Text ── -->
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontFamily" Value="{StaticResource OpenSansFont}" />
+            <Setter Property="Margin" Value="0 10 0 5" />
+            <Setter Property="Foreground" Value="#d4cfc4" />
+        </Style>
+
+        <!-- ── Cards (panel containers) ── -->
+        <Style Selector="Border.Card">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="100%,100%" EndPoint="100%,0%">
+                    <GradientStop Offset="0" Color="#1a1714" />
+                    <GradientStop Offset="1" Color="#2d2921" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#6e6a62" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="15" />
+            <Setter Property="Margin" Value="0 5 0 15" />
+        </Style>
+
+        <!-- ── Sliders ── -->
+        <Style Selector="Slider">
+            <Setter Property="Margin" Value="0 5" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="100" />
+            <Setter Property="TickFrequency" Value="10" />
+            <Setter Property="IsSnapToTickEnabled" Value="True" />
+            <Setter Property="Foreground" Value="#c49a5c" />
+        </Style>
+
+        <!-- ── Buttons ── -->
+        <Style Selector="Button">
+            <Setter Property="FontFamily" Value="{StaticResource OpenSansSemiBoldFont}" />
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#c49a5c" />
+                    <GradientStop Offset="1" Color="#a07a3c" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="Foreground" Value="#1a1714" />
+            <Setter Property="Padding" Value="12 6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Margin" Value="0 5" />
+            <Setter Property="BorderBrush" Value="#8a7a4c" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#d4a84b" />
+                    <GradientStop Offset="1" Color="#c49a5c" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="Foreground" Value="#1a1714" />
+        </Style>
+
+        <Style Selector="Button:pressed">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#a07a3c" />
+                    <GradientStop Offset="1" Color="#8a6a2c" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#7a5a1c" />
+        </Style>
+
+        <Style Selector="Button:disabled">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#6e6a62" />
+                    <GradientStop Offset="1" Color="#4a4540" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="Foreground" Value="#7a7267" />
+            <Setter Property="BorderBrush" Value="#4a4540" />
+        </Style>
+
+        <!-- ── Radio Buttons (Performance Profiles) ── -->
+        <Style Selector="RadioButton">
+            <Setter Property="FontFamily" Value="{StaticResource OxaniumFont}" />
+            <Setter Property="Height" Value="100" />
+            <Setter Property="Width" Value="120" />
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#2d2921" />
+                    <GradientStop Offset="1" Color="#211e19" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="Foreground" Value="#d4cfc4" />
+            <Setter Property="BorderBrush" Value="#6e6a62" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Bottom" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel>
+                        <Border Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                            <ContentPresenter Name="PART_ContentPresenter"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Padding="{TemplateBinding Padding}"
+                                              Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <!-- Radio: pointer over -->
+        <Style Selector="RadioButton:pointerover /template/ Border#border">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#3a3530" />
+                    <GradientStop Offset="1" Color="#2d2921" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#c49a5c" />
+        </Style>
+
+        <!-- Radio: pressed -->
+        <Style Selector="RadioButton:pressed /template/ Border#border">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#2d2921" />
+                    <GradientStop Offset="1" Color="#1a1714" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#c49a5c" />
+        </Style>
+
+        <!-- Radio: selected (checked) -->
+        <Style Selector="RadioButton:checked /template/ Border#border">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#c49a5c" />
+                    <GradientStop Offset="1" Color="#a07a3c" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#d4a84b" />
+            <Setter Property="BorderThickness" Value="3" />
+        </Style>
+
+        <Style Selector="RadioButton:checked">
+            <Setter Property="Width" Value="150" />
+            <Setter Property="Foreground" Value="#1a1714" />
+        </Style>
+
+        <!-- Radio: selected + pointer over -->
+        <Style Selector="RadioButton:checked:pointerover /template/ Border#border">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#d4a84b" />
+                    <GradientStop Offset="1" Color="#c49a5c" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#d4a84b" />
+        </Style>
+
+        <!-- Radio: selected + pressed -->
+        <Style Selector="RadioButton:checked:pressed /template/ Border#border">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#a07a3c" />
+                    <GradientStop Offset="1" Color="#8a6a2c" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#8a6a2c" />
+        </Style>
+
+        <!-- Radio: disabled -->
+        <Style Selector="RadioButton:disabled /template/ Border#border">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#4a4540" />
+                    <GradientStop Offset="1" Color="#3a3530" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#4a4540" />
+        </Style>
+
+        <Style Selector="RadioButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="#7a7267" />
+        </Style>
+
+        <!-- ── Toggle Switches ── -->
+        <Style Selector="ToggleSwitch">
+            <Setter Property="Foreground" Value="#d4cfc4" />
+        </Style>
+
+        <!-- ── ScrollViewer ── -->
+        <Style Selector="ScrollViewer">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <!-- ── ToolTips ── -->
+        <Style Selector="ToolTip">
+            <Setter Property="Background" Value="#2d2921" />
+            <Setter Property="Foreground" Value="#d4cfc4" />
+            <Setter Property="BorderBrush" Value="#6e6a62" />
+        </Style>
+
+        <!-- ── ProgressBar ── -->
+        <Style Selector="ProgressBar">
+            <Setter Property="Foreground" Value="#c49a5c" />
+            <Setter Property="Background" Value="#1a1714" />
+        </Style>
+
+        <!-- ── TextBox (input fields) ── -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#1a1714" />
+            <Setter Property="Foreground" Value="#d4cfc4" />
+            <Setter Property="BorderBrush" Value="#6e6a62" />
+            <Setter Property="CaretBrush" Value="#c49a5c" />
+        </Style>
+
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="#c49a5c" />
+        </Style>
+
+        <!-- ── ComboBox ── -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#1a1714" />
+            <Setter Property="Foreground" Value="#d4cfc4" />
+            <Setter Property="BorderBrush" Value="#6e6a62" />
+        </Style>
+
+        <!-- ── CheckBox ── -->
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="#d4cfc4" />
+        </Style>
+
+    </Application.Styles>
+
+</Application>
