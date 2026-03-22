@@ -5841,25 +5841,70 @@ _maintain_cleanup() {
 _maintain_schedule() {
     local script_path
     script_path=$(command -v stoa-maintain 2>/dev/null || echo "$HOME/.local/bin/stoa-maintain")
-    local cron_cmd="@reboot bash $script_path --cleanup"
 
-    # Check if already scheduled
+    # Check if already scheduled (crontab or systemd)
+    local already_scheduled=0
+    local method=""
     if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
+        already_scheduled=1
+        method="crontab"
+    elif systemctl is-enabled stoa-maintain-cleanup.timer &>/dev/null; then
+        already_scheduled=1
+        method="systemd timer"
+    fi
+
+    if [ "$already_scheduled" -eq 1 ]; then
         local action
-        action=$(_rofi_select "  Cleanup already scheduled at boot" \
+        action=$(_rofi_select "  Cleanup already scheduled ($method)" \
             "  Remove schedule" \
             "  Keep" \
             "  Back")
         if [[ "$action" == *"Remove"* ]]; then
-            crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
-            _notify "Boot cleanup removed"
+            if [ "$method" = "crontab" ]; then
+                crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+            else
+                sudo systemctl disable stoa-maintain-cleanup.timer 2>/dev/null
+                sudo rm -f /etc/systemd/system/stoa-maintain-cleanup.{service,timer} 2>/dev/null
+                sudo systemctl daemon-reload 2>/dev/null
+            fi
+            _notify "Boot cleanup removed ($method)"
         fi
         return
     fi
 
     _rofi_confirm "Schedule system cleanup to run at every boot?" || return
-    (crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") | crontab -
-    _notify "Cleanup scheduled at boot"
+
+    if command -v crontab &>/dev/null; then
+        local cron_cmd="@reboot bash $script_path --cleanup"
+        (crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") | crontab -
+        _notify "Cleanup scheduled at boot (crontab)"
+    elif command -v systemctl &>/dev/null; then
+        local unit_dir="/etc/systemd/system"
+        sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
+[Unit]
+Description=Stoa Maintain system cleanup at boot
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash $script_path --cleanup
+SVCEOF
+        sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
+[Unit]
+Description=Run Stoa Maintain cleanup on boot
+
+[Timer]
+OnBootSec=2min
+
+[Install]
+WantedBy=timers.target
+TMREOF
+        sudo systemctl daemon-reload
+        sudo systemctl enable stoa-maintain-cleanup.timer
+        _notify "Cleanup scheduled at boot (systemd timer)"
+    else
+        _notify "Neither crontab nor systemctl found"
+    fi
 }
 
 # ── Maintenance menu ──
