@@ -31,6 +31,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 - **System resilience** — pacman pre-transaction snapshots, hyprctl version adapter, health check on boot
 - **Memento Mori widget** (eww), **Stoic quotes**, and a **living marble screensaver**
 - **DFM** (Dotfile Manager) — GTK4 GUI to edit dotfiles in-place with smart widgets, backups, and GitHub sync
+- **Text prediction popup** (eww) — system-wide word suggestions + emoji as you type, like Windows text suggestions
 - **stoa-\* scripts** for wallpapers, clipboard, OCR, paste, resize, firewall, WinApps, and more
 
 ## Palette
@@ -99,6 +100,7 @@ echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
   <tr><td><code>Super+W</code></td><td>WinApps</td><td><code>Super+G</code></td><td>Dotfile Manager (DFM)</td></tr>
   <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
   <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print</code></td><td>Capture (screenshot/record)</td></tr>
+  <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td></td><td></td></tr>
 </table>
 
 ## Settings Panel
@@ -141,8 +143,7 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
   <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
   <tr><td><code>stoa-memento</code></td><td>Memento Mori widget</td><td><code>stoa-locksmith</code></td><td>See who locks a file</td></tr>
-  <tr><td><code>stoa-predict</code></td><td>Text prediction + emoji suggestions</td><td></td><td></td></tr>
-  <tr><td><code>stoa-doctor</code></td><td>System health check</td><td></td><td></td></tr>
+  <tr><td><code>stoa-doctor</code></td><td>System health check</td><td><code>stoa-predict</code></td><td>Text prediction + emoji suggestions</td></tr>
   <tr><td><code>stoa-capture</code></td><td>Screenshot + recording (eww)</td><td></td><td></td></tr>
   <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td></td><td></td></tr>
   <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
@@ -220,6 +221,19 @@ A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizi
 - **GitHub sync** — push/pull dotfiles via `gh`, create repos, share as Gists
 - **80+ known configs** — shells, window managers, terminals, status bars, editors, and more
 - **Profile management** — switch between configuration sets and built-in templates
+
+### Text Prediction
+
+System-wide word suggestions and emoji picker, similar to Windows text suggestions. Toggle with `Super+Shift+S`.
+
+- **Word completion** — as you type, a floating popup shows up to 5 dictionary-based suggestions (prefix match via `/usr/share/dict/words`)
+- **Emoji suggestions** — related emojis appear alongside word completions (120+ keyword mappings built-in, extensible via `~/.config/stoa/predict-emojis.json`)
+- **Click to insert** — selecting a suggestion erases the typed prefix and inserts the full word or emoji via `wtype`
+- **Modifier-aware** — ignores keystrokes with Ctrl/Alt/Super (shortcuts don't trigger suggestions)
+- **eww popup** — non-focusable overlay at bottom-center, styled with the Stoa palette
+- **Multi-keyboard** — auto-detects all keyboard devices via evdev
+
+Requires the user to be in the `input` group (handled automatically by `post-install.sh`).
 
 ## License
 
