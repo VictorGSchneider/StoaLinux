@@ -135,7 +135,7 @@ EQUALIZER_PKGS="easyeffects"
 WINAPPS_PKGS="qemu-full libvirt virt-manager dnsmasq edk2-ovmf freerdp"
 
 # Audio + utilities
-UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg zip unzip"
+UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg zip unzip fastfetch"
 
 # DFM — Dotfile Manager (GTK4/libadwaita GUI)
 DFM_PKGS="python python-gobject gtk4 libadwaita"

@@ -66,7 +66,7 @@ _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xm
 _link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
 _link "${STOA_DIR}/config/Code/User/settings.json"  "${CONFIG_DIR}/Code/User/settings.json"
-_link "${STOA_DIR}/config/neofetch/config.conf"     "${CONFIG_DIR}/neofetch/config.conf"
+_link "${STOA_DIR}/config/fastfetch/config.jsonc"   "${CONFIG_DIR}/fastfetch/config.jsonc"
 
 # ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird + VS Code) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
