@@ -164,3 +164,66 @@
   :stacking "overlay"
   :focusable true
   (capture-bar))
+
+;; ══════════════════════════════════════════════════════════════
+;; ║  PREDICT — Text Prediction + Emoji Suggestions             ║
+;; ══════════════════════════════════════════════════════════════
+
+;; ── Predict variables ──
+(defvar predict-data '{"prefix":"","words":[],"emojis":[],"visible":false}')
+
+;; ── Indexed word button (shows only if word exists at index) ──
+(defwidget pred-word [idx]
+  (button :class {idx == 0 ? "pred-word-btn first" : "pred-word-btn"}
+          :visible {arraylength(jq(predict-data, ".words")) > idx}
+          :onclick "stoa-predict select ${idx}"
+    (label :text {arraylength(jq(predict-data, ".words")) > idx ?
+                  jq(predict-data, ".words[${idx}]") : ""})))
+
+;; ── Indexed emoji button ──
+(defwidget pred-emoji [idx]
+  (button :class "pred-emoji-btn"
+          :visible {arraylength(jq(predict-data, ".emojis")) > idx}
+          :onclick "stoa-predict select-emoji ${idx}"
+          :tooltip {arraylength(jq(predict-data, ".emojis")) > idx ?
+                    jq(predict-data, ".emojis[${idx}].name") : ""}
+    (label :text {arraylength(jq(predict-data, ".emojis")) > idx ?
+                  jq(predict-data, ".emojis[${idx}].emoji") : ""})))
+
+;; ── Main predict widget ──
+(defwidget predict-bar []
+  (box :class "pred-container"
+       :orientation "h"
+       :space-evenly false
+       :visible {jq(predict-data, ".visible")}
+
+    ;; Word suggestions (up to 5)
+    (box :class "pred-words" :orientation "h" :space-evenly false
+      (pred-word :idx 0)
+      (pred-word :idx 1)
+      (pred-word :idx 2)
+      (pred-word :idx 3)
+      (pred-word :idx 4))
+
+    ;; Divider
+    (box :class "pred-divider"
+         :visible {arraylength(jq(predict-data, ".words")) > 0 &&
+                   arraylength(jq(predict-data, ".emojis")) > 0})
+
+    ;; Emoji suggestions (up to 3)
+    (box :class "pred-emojis" :orientation "h" :space-evenly false
+      (pred-emoji :idx 0)
+      (pred-emoji :idx 1)
+      (pred-emoji :idx 2))))
+
+;; ── Predict window ──
+(defwindow predict
+  :monitor 0
+  :geometry (geometry :x "0%"
+                      :y "-60px"
+                      :width "420px"
+                      :height "44px"
+                      :anchor "bottom center")
+  :stacking "overlay"
+  :focusable false
+  (predict-bar))

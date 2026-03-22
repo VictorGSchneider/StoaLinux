@@ -5403,6 +5403,542 @@ menu_health() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   MAINTENANCE (backup, restore, cleanup — BRCS integration)
+# ══════════════════════════════════════════════════════════════
+
+_maintain_log="${HOME}/backup_$(date +%Y%m%d).log"
+
+_maintain_log_msg() {
+    local level="$1"; shift
+    local ts
+    ts=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$ts] [$level] $*" >> "$_maintain_log" 2>/dev/null
+}
+
+# ── Backup configurations ──
+_maintain_backup() {
+    if ! command -v zip &>/dev/null; then
+        _notify "zip not installed (pacman -S zip)"
+        return
+    fi
+
+    _rofi_confirm "Backup all system & user configs?" || return
+    _notify "Backing up configurations..."
+
+    local hostname_str="${HOSTNAME:-$(hostname 2>/dev/null || echo unknown)}"
+    local today=$(date +%Y%m%d)
+    local arq="${HOME}/${hostname_str}.confs.${today}.zip"
+    local all_files=""
+
+    # /etc/ config files
+    for ext in .conf .ini .rules; do
+        local found
+        found=$(find /etc -name "*${ext}" -type f 2>/dev/null)
+        [ -n "$found" ] && all_files+="$found"$'\n'
+    done
+
+    # System files
+    for sysfile in /etc/fstab /etc/default/grub /etc/hostname /etc/resolv.conf /etc/hosts /etc/locale.conf /etc/vconsole.conf /etc/environment; do
+        [ -f "$sysfile" ] && all_files+="$sysfile"$'\n'
+    done
+
+    # User dotfiles
+    for dotfile in .bashrc .bash_profile .bash_aliases .profile .zshrc .zprofile .vimrc .nanorc .gitconfig .tmux.conf .inputrc; do
+        [ -f "$HOME/$dotfile" ] && all_files+="$HOME/$dotfile"$'\n'
+    done
+
+    # User config directory (shallow)
+    if [ -d "$HOME/.config" ]; then
+        local cfg_files
+        cfg_files=$(find "$HOME/.config" -maxdepth 3 -type f \( -name '*.conf' -o -name '*.ini' -o -name '*.yml' -o -name '*.yaml' \) 2>/dev/null)
+        [ -n "$cfg_files" ] && all_files+="$cfg_files"$'\n'
+    fi
+
+    # Crontabs
+    for crontab_path in "/var/spool/cron/crontabs/$(whoami)" "/var/spool/cron/$(whoami)" /etc/crontab; do
+        [ -f "$crontab_path" ] && all_files+="$crontab_path"$'\n'
+    done
+    if [ -d /etc/cron.d ]; then
+        local cron_files
+        cron_files=$(find /etc/cron.d -type f 2>/dev/null)
+        [ -n "$cron_files" ] && all_files+="$cron_files"$'\n'
+    fi
+
+    # Systemd custom units
+    for unit_dir in /etc/systemd/system /etc/systemd/user "$HOME/.config/systemd/user"; do
+        if [ -d "$unit_dir" ]; then
+            local unit_files
+            unit_files=$(find "$unit_dir" -maxdepth 2 -type f \( -name '*.service' -o -name '*.timer' -o -name '*.mount' -o -name '*.target' -o -name '*.socket' \) 2>/dev/null)
+            [ -n "$unit_files" ] && all_files+="$unit_files"$'\n'
+        fi
+    done
+
+    # SSH config (never backup private keys)
+    for ssh_file in "$HOME/.ssh/config" "$HOME/.ssh/authorized_keys" /etc/ssh/sshd_config /etc/ssh/ssh_config; do
+        [ -f "$ssh_file" ] && all_files+="$ssh_file"$'\n'
+    done
+
+    # Firewall rules
+    for fw_file in /etc/iptables/rules.v4 /etc/iptables/rules.v6 /etc/nftables.conf /etc/firewalld/firewalld.conf /etc/ufw/ufw.conf; do
+        [ -f "$fw_file" ] && all_files+="$fw_file"$'\n'
+    done
+
+    # Network configs
+    for net_dir in /etc/NetworkManager/system-connections /etc/netplan /etc/systemd/network; do
+        if [ -d "$net_dir" ]; then
+            local net_files
+            net_files=$(find "$net_dir" -type f 2>/dev/null)
+            [ -n "$net_files" ] && all_files+="$net_files"$'\n'
+        fi
+    done
+
+    # Pacman config
+    for repo_path in /etc/pacman.conf /etc/pacman.d; do
+        if [ -f "$repo_path" ]; then
+            all_files+="$repo_path"$'\n'
+        elif [ -d "$repo_path" ]; then
+            local repo_files
+            repo_files=$(find "$repo_path" -type f 2>/dev/null)
+            [ -n "$repo_files" ] && all_files+="$repo_files"$'\n'
+        fi
+    done
+
+    # Shell scripts in user home
+    local found_sh
+    found_sh=$(find "$HOME" -maxdepth 2 -name "*.sh" -type f 2>/dev/null)
+    [ -n "$found_sh" ] && all_files+="$found_sh"$'\n'
+
+    # Remove empty lines and duplicates
+    all_files=$(echo "$all_files" | sort -u | sed '/^$/d')
+
+    if [ -z "$all_files" ]; then
+        _notify "No configuration files found"
+        return
+    fi
+
+    local file_count
+    file_count=$(echo "$all_files" | wc -l)
+
+    echo "$all_files" | zip "$arq" -r -9 -@ >> "$_maintain_log" 2>&1
+
+    local archive_size
+    archive_size=$(du -h "$arq" 2>/dev/null | cut -f1)
+    _maintain_log_msg INFO "Backup saved: $arq ($file_count files, $archive_size)"
+    _notify "Backup saved: $(basename "$arq") ($file_count files, $archive_size)"
+}
+
+# ── List backup contents ──
+_maintain_list() {
+    local backups=()
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        local name size
+        name=$(basename "$f")
+        size=$(du -h "$f" 2>/dev/null | cut -f1)
+        backups+=("$name  ($size)")
+    done < <(ls -1t "$HOME"/*.confs.*.zip 2>/dev/null)
+
+    [ ${#backups[@]} -eq 0 ] && { _notify "No backups found in \$HOME"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${backups[@]}" | "${ROFI[@]}" -p "  Backups (${#backups[@]})")
+    [ -z "$choice" ] && return
+
+    local selected_file
+    selected_file="$HOME/$(echo "$choice" | awk '{print $1}')"
+    [ ! -f "$selected_file" ] && return
+
+    local action
+    action=$(_rofi_select "  $(basename "$selected_file")" \
+        "  View contents" \
+        "  Restore (interactive)" \
+        "  Restore all" \
+        "  Back")
+    [ -z "$action" ] || [[ "$action" == *"Back"* ]] && return
+
+    case "$action" in
+        *"View"*)
+            unzip -l "$selected_file" 2>/dev/null | "${ROFI[@]}" -p "  Contents"
+            ;;
+        *"interactive"*)
+            _maintain_restore_interactive "$selected_file"
+            ;;
+        *"Restore all"*)
+            _maintain_restore_all "$selected_file"
+            ;;
+    esac
+}
+
+# ── Restore interactive ──
+_maintain_restore_interactive() {
+    local backup_file="$1"
+    if ! command -v unzip &>/dev/null; then
+        _notify "unzip not installed (pacman -S unzip)"
+        return
+    fi
+
+    if ! unzip -t "$backup_file" >/dev/null 2>&1; then
+        _notify "Invalid or corrupted zip file"
+        return
+    fi
+
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
+
+    # Safety backup
+    local pre_restore="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    local existing=()
+    while IFS= read -r -d '' f; do
+        local dest="/${f#"$tmpdir"/}"
+        [ -f "$dest" ] && existing+=("$dest")
+    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
+
+    if [ ${#existing[@]} -gt 0 ] && command -v zip &>/dev/null; then
+        zip -q "$pre_restore" "${existing[@]}" 2>/dev/null || true
+        _notify "Safety backup: $(basename "$pre_restore")"
+    fi
+
+    # Build file list for rofi selection
+    local files=()
+    while IFS= read -r -d '' f; do
+        local dest="/${f#"$tmpdir"/}"
+        files+=("$dest")
+    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
+
+    local restored=0 skipped=0
+    for dest in "${files[@]}"; do
+        local src="${tmpdir}${dest}"
+        local status="NEW"
+        [ -f "$dest" ] && status="EXISTS"
+
+        local confirm
+        confirm=$(_rofi_select "  [$status] $dest" "  Restore" "  Skip")
+        if [[ "$confirm" == *"Restore"* ]]; then
+            sudo mkdir -p "$(dirname "$dest")"
+            sudo cp "$src" "$dest"
+            restored=$((restored + 1))
+        else
+            skipped=$((skipped + 1))
+        fi
+    done
+
+    rm -rf "$tmpdir"
+    _notify "Restore done: $restored restored, $skipped skipped"
+}
+
+# ── Restore all (no prompt) ──
+_maintain_restore_all() {
+    local backup_file="$1"
+    if ! command -v unzip &>/dev/null; then
+        _notify "unzip not installed (pacman -S unzip)"
+        return
+    fi
+
+    _rofi_confirm "Restore ALL files from $(basename "$backup_file")? This overwrites existing files." || return
+
+    if ! unzip -t "$backup_file" >/dev/null 2>&1; then
+        _notify "Invalid or corrupted zip file"
+        return
+    fi
+
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
+
+    # Safety backup
+    local pre_restore="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    local existing=()
+    while IFS= read -r -d '' f; do
+        local dest="/${f#"$tmpdir"/}"
+        [ -f "$dest" ] && existing+=("$dest")
+    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
+
+    if [ ${#existing[@]} -gt 0 ] && command -v zip &>/dev/null; then
+        zip -q "$pre_restore" "${existing[@]}" 2>/dev/null || true
+    fi
+
+    local count=0
+    while IFS= read -r -d '' f; do
+        local dest="/${f#"$tmpdir"/}"
+        sudo mkdir -p "$(dirname "$dest")"
+        sudo cp "$f" "$dest"
+        count=$((count + 1))
+    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
+
+    rm -rf "$tmpdir"
+    _notify "Restored $count files (safety backup: $(basename "$pre_restore"))"
+}
+
+# ── Full system cleanup ──
+_maintain_cleanup() {
+    local dry_run="${1:-0}"
+    local mode="Cleanup"
+    [ "$dry_run" -eq 1 ] && mode="Cleanup (dry-run)"
+
+    _rofi_confirm "Run full system cleanup? Includes package cache, orphans, journal, flatpak, docker, Steam cache, tmp files." || return
+    _notify "Running $mode..."
+
+    local space_before
+    space_before=$(df / | awk 'NR==2{print $3}')
+
+    local log_lines=()
+    log_lines+=("─── System $mode ───")
+    log_lines+=("")
+
+    # 1. Update & upgrade
+    log_lines+=("  [1/10] Package update")
+    if [ "$dry_run" -eq 0 ]; then
+        sudo pacman -Syu --noconfirm >> "$_maintain_log" 2>&1 && \
+            log_lines+=("    ✓ System updated") || \
+            log_lines+=("    ✕ Update failed — check log")
+    else
+        log_lines+=("    [DRY-RUN] Would run: pacman -Syu")
+    fi
+
+    # 2. Clean package cache
+    log_lines+=("  [2/10] Package cache")
+    if [ "$dry_run" -eq 0 ]; then
+        if command -v paccache &>/dev/null; then
+            local cleaned
+            cleaned=$(sudo paccache -rk1 2>&1 | tail -1)
+            log_lines+=("    ✓ $cleaned")
+        else
+            sudo pacman -Sc --noconfirm >> "$_maintain_log" 2>&1
+            log_lines+=("    ✓ Cache cleaned")
+        fi
+    else
+        log_lines+=("    [DRY-RUN] Would clean package cache")
+    fi
+
+    # 3. Remove orphan packages
+    log_lines+=("  [3/10] Orphan packages")
+    local orphans
+    orphans=$(pacman -Qdtq 2>/dev/null)
+    if [ -n "$orphans" ]; then
+        local orphan_count
+        orphan_count=$(echo "$orphans" | wc -l)
+        if [ "$dry_run" -eq 0 ]; then
+            echo "$orphans" | sudo pacman -Rns --noconfirm - >> "$_maintain_log" 2>&1
+            log_lines+=("    ✓ Removed $orphan_count orphans")
+        else
+            log_lines+=("    [DRY-RUN] Would remove $orphan_count orphans")
+        fi
+    else
+        log_lines+=("    ✓ No orphans")
+    fi
+
+    # 4. Snap cleanup
+    log_lines+=("  [4/10] Snap cleanup")
+    if command -v snap &>/dev/null; then
+        if [ "$dry_run" -eq 0 ]; then
+            sudo snap set system refresh.retain=2 2>/dev/null
+            snap list --all 2>/dev/null | awk '/disabled/{print $1, $2}' | while read -r snapname revision; do
+                sudo snap remove "$snapname" --revision="$revision" --purge 2>/dev/null || \
+                sudo snap remove "$snapname" --purge 2>/dev/null
+            done
+            log_lines+=("    ✓ Disabled snaps cleaned")
+        else
+            log_lines+=("    [DRY-RUN] Would clean disabled snap revisions")
+        fi
+    else
+        log_lines+=("    — snap not installed")
+    fi
+
+    # 5. Flatpak cleanup
+    log_lines+=("  [5/10] Flatpak cleanup")
+    if command -v flatpak &>/dev/null; then
+        if [ "$dry_run" -eq 0 ]; then
+            flatpak uninstall --unused -y >> "$_maintain_log" 2>&1
+            log_lines+=("    ✓ Unused runtimes removed")
+        else
+            log_lines+=("    [DRY-RUN] Would remove unused flatpak runtimes")
+        fi
+    else
+        log_lines+=("    — flatpak not installed")
+    fi
+
+    # 6. Journal log cleanup
+    log_lines+=("  [6/10] Journal logs")
+    if [ "$dry_run" -eq 0 ]; then
+        local freed
+        freed=$(sudo journalctl --vacuum-time=7d 2>&1 | tail -1)
+        sudo journalctl --vacuum-size=100M >> "$_maintain_log" 2>&1
+        log_lines+=("    ✓ $freed")
+    else
+        local journal_size
+        journal_size=$(journalctl --disk-usage 2>/dev/null | grep -oP '[\d.]+[KMGT]')
+        log_lines+=("    [DRY-RUN] Would vacuum journal (currently $journal_size)")
+    fi
+
+    # 7. Old kernel cleanup (Arch uses pacman, kernels are just packages)
+    log_lines+=("  [7/10] Old kernels")
+    log_lines+=("    — Arch manages kernels via pacman (handled by orphan removal)")
+
+    # 8. Docker cleanup
+    log_lines+=("  [8/10] Docker")
+    if command -v docker &>/dev/null; then
+        if [ "$dry_run" -eq 0 ]; then
+            local docker_out
+            docker_out=$(docker system prune -f 2>&1 | tail -1)
+            log_lines+=("    ✓ $docker_out")
+        else
+            log_lines+=("    [DRY-RUN] Would prune docker resources")
+        fi
+    else
+        log_lines+=("    — docker not installed")
+    fi
+
+    # 9. Steam shader cache cleanup
+    log_lines+=("  [9/10] Steam cache")
+    if [ -d "$HOME/.steam/steam/steamapps" ]; then
+        local shader_size compat_size
+        shader_size=$(du -sh "$HOME/.steam/steam/steamapps/shadercache" 2>/dev/null | cut -f1)
+        compat_size=$(du -sh "$HOME/.steam/steam/steamapps/compatdata" 2>/dev/null | cut -f1)
+        if [ "$dry_run" -eq 0 ]; then
+            rm -rf "$HOME/.steam/steam/steamapps/shadercache/"* 2>/dev/null
+            rm -rf "$HOME/.steam/steam/steamapps/compatdata/"* 2>/dev/null
+            log_lines+=("    ✓ Cleared shader (${shader_size:-0}) + compat (${compat_size:-0})")
+        else
+            log_lines+=("    [DRY-RUN] Would clear shader (${shader_size:-0}) + compat (${compat_size:-0})")
+        fi
+    else
+        log_lines+=("    — Steam not installed")
+    fi
+
+    # 10. Clean temporary files
+    log_lines+=("  [10/10] Temporary files")
+    if [ "$dry_run" -eq 0 ]; then
+        local tmp_count=0
+        while IFS= read -r -d '' file; do
+            if command -v lsof &>/dev/null; then
+                lsof "$file" >/dev/null 2>&1 || { rm -f "$file" 2>/dev/null && tmp_count=$((tmp_count + 1)); }
+            elif command -v fuser &>/dev/null; then
+                fuser "$file" >/dev/null 2>&1 || { rm -f "$file" 2>/dev/null && tmp_count=$((tmp_count + 1)); }
+            else
+                rm -f "$file" 2>/dev/null && tmp_count=$((tmp_count + 1))
+            fi
+        done < <(find /tmp /var/tmp -type f -print0 2>/dev/null)
+        log_lines+=("    ✓ Removed $tmp_count temporary files")
+    else
+        local tmp_total
+        tmp_total=$(find /tmp /var/tmp -type f 2>/dev/null | wc -l)
+        log_lines+=("    [DRY-RUN] Would clean $tmp_total temporary files")
+    fi
+
+    # Report space freed
+    log_lines+=("")
+    local space_after freed_kb
+    space_after=$(df / | awk 'NR==2{print $3}')
+    freed_kb=$((space_before - space_after))
+    if [ "$freed_kb" -gt 0 ] 2>/dev/null; then
+        if command -v numfmt &>/dev/null; then
+            log_lines+=("  Disk space freed: $(numfmt --to=iec --suffix=B $((freed_kb * 1024)))")
+        else
+            log_lines+=("  Disk space freed: ${freed_kb} KB")
+        fi
+    else
+        log_lines+=("  Cleanup complete (no measurable space freed)")
+    fi
+
+    printf '%s\n' "${log_lines[@]}" | "${ROFI[@]}" -p "  $mode"
+    _notify "$mode complete"
+}
+
+# ── Schedule cleanup at boot ──
+_maintain_schedule() {
+    local script_path
+    script_path=$(command -v stoa-maintain 2>/dev/null || echo "$HOME/.local/bin/stoa-maintain")
+
+    # Check if already scheduled (crontab or systemd)
+    local already_scheduled=0
+    local method=""
+    if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
+        already_scheduled=1
+        method="crontab"
+    elif systemctl is-enabled stoa-maintain-cleanup.timer &>/dev/null; then
+        already_scheduled=1
+        method="systemd timer"
+    fi
+
+    if [ "$already_scheduled" -eq 1 ]; then
+        local action
+        action=$(_rofi_select "  Cleanup already scheduled ($method)" \
+            "  Remove schedule" \
+            "  Keep" \
+            "  Back")
+        if [[ "$action" == *"Remove"* ]]; then
+            if [ "$method" = "crontab" ]; then
+                crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+            else
+                sudo systemctl disable stoa-maintain-cleanup.timer 2>/dev/null
+                sudo rm -f /etc/systemd/system/stoa-maintain-cleanup.{service,timer} 2>/dev/null
+                sudo systemctl daemon-reload 2>/dev/null
+            fi
+            _notify "Boot cleanup removed ($method)"
+        fi
+        return
+    fi
+
+    _rofi_confirm "Schedule system cleanup to run at every boot?" || return
+
+    if command -v crontab &>/dev/null; then
+        local cron_cmd="@reboot bash $script_path --cleanup"
+        (crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") | crontab -
+        _notify "Cleanup scheduled at boot (crontab)"
+    elif command -v systemctl &>/dev/null; then
+        local unit_dir="/etc/systemd/system"
+        sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
+[Unit]
+Description=Stoa Maintain system cleanup at boot
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash $script_path --cleanup
+SVCEOF
+        sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
+[Unit]
+Description=Run Stoa Maintain cleanup on boot
+
+[Timer]
+OnBootSec=2min
+
+[Install]
+WantedBy=timers.target
+TMREOF
+        sudo systemctl daemon-reload
+        sudo systemctl enable stoa-maintain-cleanup.timer
+        _notify "Cleanup scheduled at boot (systemd timer)"
+    else
+        _notify "Neither crontab nor systemctl found"
+    fi
+}
+
+# ── Maintenance menu ──
+menu_maintain() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  Maintenance" \
+            "  Backup Configs" \
+            "  Restore / Browse Backups" \
+            "  Full Cleanup" \
+            "  Cleanup (dry-run)" \
+            "  Schedule Cleanup at Boot" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Backup"*)         _maintain_backup ;;
+            *"Restore"*)        _maintain_list ;;
+            *"dry-run"*)        _maintain_cleanup 1 ;;
+            *"Full Cleanup"*)   _maintain_cleanup 0 ;;
+            *"Schedule"*)       _maintain_schedule ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   MAIN MENU
 # ══════════════════════════════════════════════════════════════
 
@@ -5432,6 +5968,7 @@ main_menu() {
             "  Screensaver" \
             "  Lock Screen" \
             "  System Health" \
+            "  Maintenance" \
             "  Stoa Config" \
             "  Power")
         [ -z "$choice" ] && exit 0
@@ -5459,6 +5996,7 @@ main_menu() {
             *Screensaver*)  menu_screensaver ;;
             *Lock*)         menu_lockscreen ;;
             *"System Health"*) menu_health ;;
+            *Maintenance*)  menu_maintain ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
         esac
