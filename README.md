@@ -123,7 +123,8 @@ Everything is configured through `stoa-settings` (`Super+I`) — no external set
   <tr><td><b>Disks & Storage</b></td><td>Overview, usage analyzer (drill-down), mount/unmount, SMART, benchmark, format, fsck, fstab, cleanup</td></tr>
   <tr><td><b>Printers</b></td><td>CUPS: add/remove printers, print queue, scanners (SANE)</td></tr>
   <tr><td><b>Cloud Drive</b></td><td>Google Drive, OneDrive, Dropbox, S3 via rclone</td></tr>
-  <tr><td><b>Power Management</b></td><td>Power profiles, screen off timeout, auto suspend, battery info</td></tr>
+  <tr><td><b>Power Management</b></td><td>Power profiles, screen off timeout, auto suspend, battery info, fan & performance (NitroSense-like)</td></tr>
+  <tr><td><b>Fan & Performance</b></td><td>Fan mode (auto/turbo/silent), fan speed (manual PWM), performance profiles (Eco→Turbo), GPU mode, KB backlight timeout, boot sound, LCD override. Supports: Div Acer Manager Max, acer-predator kernel module, NBFC, generic hwmon</td></tr>
   <tr><td><b>Date & Time</b></td><td>Timezone, NTP, manual time, 12/24h, language & locale</td></tr>
   <tr><td><b>Accessibility</b></td><td>Cursor size, text scale, animations, gaps, opacity, border width</td></tr>
   <tr><td><b>Screensaver</b></td><td>Living marble animation (plasma noise in Stoa palette), idle timeout</td></tr>
@@ -190,6 +191,7 @@ The Stoa theme is applied consistently across:
 - **Betterbird** — userChrome/userContent CSS (`stoa-betterbird.css`)
 - **Calibre** — dark reader with EB Garamond 18pt
 - **YACReader** — full Qt stylesheet
+- **Div Acer Manager Max** — Avalonia AXAML theme (bronze buttons, stone cards, marble text)
 - **Icons** — Colloid-dark
 - **Cursors** — Colloid
 - **Font** — EB Garamond (serif) + JetBrains Mono (mono)

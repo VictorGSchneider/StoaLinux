@@ -3355,6 +3355,7 @@ menu_power_mgmt() {
         local choice
         choice=$(_rofi_select "  Power Management" \
             "  Power profile ($profile)" \
+            "  Fan & Performance" \
             "  Screen off timeout" \
             "  Auto suspend" \
             "  Battery info" \
@@ -3362,10 +3363,696 @@ menu_power_mgmt() {
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *"Power profile"*)  _power_set_profile ;;
-            *"Screen off"*)     _power_idle_timeout ;;
-            *"Auto suspend"*)   _power_auto_suspend ;;
-            *Battery*)          _power_battery_info ;;
+            *"Power profile"*)     _power_set_profile ;;
+            *"Fan & Performance"*) _menu_fan_perf ;;
+            *"Screen off"*)        _power_idle_timeout ;;
+            *"Auto suspend"*)      _power_auto_suspend ;;
+            *Battery*)             _power_battery_info ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   FAN & PERFORMANCE (NitroSense-like controls)
+#   Supports: Div Acer Manager Max, acer-wmi kernel module,
+#             NBFC, and generic sysfs/hwmon fan control
+# ══════════════════════════════════════════════════════════════
+
+# ── Detection: which fan control backend is available ──
+
+_fan_backend() {
+    # 1. Div Acer Manager Max (full Acer Nitro GUI tool)
+    if command -v div-acer-manager &>/dev/null; then
+        echo "div-acer"
+        return
+    fi
+
+    # 2. acer-predator kernel module (acer_wmi / acer-predator-turbo)
+    if [ -d /sys/module/acer_wmi ] || [ -f /sys/devices/platform/acer-wmi/fan_mode ]; then
+        echo "acer-wmi"
+        return
+    fi
+
+    # 3. Custom acer-predator-turbo kernel module
+    if [ -f /sys/module/acer_predator_turbo/parameters/fan_mode ] || \
+       [ -d /sys/devices/platform/acer-predator ]; then
+        echo "acer-predator"
+        return
+    fi
+
+    # 4. NBFC (Notebook Fan Control)
+    if command -v nbfc &>/dev/null || command -v nbfc_service &>/dev/null; then
+        echo "nbfc"
+        return
+    fi
+
+    # 5. Generic hwmon (PWM fans via sysfs)
+    if ls /sys/class/hwmon/hwmon*/pwm1 &>/dev/null 2>&1; then
+        echo "hwmon"
+        return
+    fi
+
+    echo "none"
+}
+
+# ── Read current fan speeds ──
+
+_fan_read_speeds() {
+    local info=""
+    local found=false
+
+    # Read from hwmon fan RPM sensors
+    for hwmon in /sys/class/hwmon/hwmon*; do
+        local name=""
+        [ -f "$hwmon/name" ] && name=$(cat "$hwmon/name" 2>/dev/null)
+        for fan_input in "$hwmon"/fan*_input; do
+            [ -f "$fan_input" ] || continue
+            local rpm label fan_num
+            rpm=$(cat "$fan_input" 2>/dev/null)
+            fan_num=$(echo "$fan_input" | grep -oP 'fan\K\d+')
+            [ -f "${hwmon}/fan${fan_num}_label" ] && \
+                label=$(cat "${hwmon}/fan${fan_num}_label" 2>/dev/null) || \
+                label="Fan $fan_num"
+            [ -n "$name" ] && label="$label ($name)"
+            info+="  $label: ${rpm} RPM\n"
+            found=true
+        done
+    done
+
+    # ACPI thermal fans
+    if [ "$found" = false ]; then
+        for zone in /sys/class/thermal/cooling_device*; do
+            [ -f "$zone/type" ] || continue
+            local type cur max
+            type=$(cat "$zone/type" 2>/dev/null)
+            [[ "$type" == *fan* ]] || [[ "$type" == *Fan* ]] || continue
+            cur=$(cat "$zone/cur_state" 2>/dev/null)
+            max=$(cat "$zone/max_state" 2>/dev/null)
+            info+="  $type: state $cur / $max\n"
+            found=true
+        done
+    fi
+
+    [ "$found" = false ] && info+="  (no fan sensors detected)\n"
+    echo -e "$info"
+}
+
+# ── Read temperatures ──
+
+_fan_read_temps() {
+    local info=""
+
+    # hwmon temperatures
+    for hwmon in /sys/class/hwmon/hwmon*; do
+        local name=""
+        [ -f "$hwmon/name" ] && name=$(cat "$hwmon/name" 2>/dev/null)
+        for temp_input in "$hwmon"/temp*_input; do
+            [ -f "$temp_input" ] || continue
+            local temp label temp_num
+            temp=$(cat "$temp_input" 2>/dev/null)
+            temp=$((temp / 1000))
+            temp_num=$(echo "$temp_input" | grep -oP 'temp\K\d+')
+            [ -f "${hwmon}/temp${temp_num}_label" ] && \
+                label=$(cat "${hwmon}/temp${temp_num}_label" 2>/dev/null) || \
+                label="Sensor $temp_num"
+            [ -n "$name" ] && label="$label ($name)"
+            info+="  $label: ${temp}°C\n"
+        done
+    done
+
+    # Fallback: thermal zones
+    if [ -z "$info" ]; then
+        for zone in /sys/class/thermal/thermal_zone*; do
+            [ -f "$zone/temp" ] || continue
+            local temp type
+            temp=$(cat "$zone/temp" 2>/dev/null)
+            temp=$((temp / 1000))
+            type=$(cat "$zone/type" 2>/dev/null)
+            info+="  $type: ${temp}°C\n"
+        done
+    fi
+
+    [ -z "$info" ] && info="  (no temperature sensors detected)\n"
+    echo -e "$info"
+}
+
+# ── Fan & Performance: Status overview ──
+
+_fan_status() {
+    local backend
+    backend=$(_fan_backend)
+
+    local info="Fan Control Backend: $backend\n\n"
+    info+="Fan Speeds:\n"
+    info+=$(_fan_read_speeds)
+    info+="\nTemperatures:\n"
+    info+=$(_fan_read_temps)
+
+    # CPU governor
+    local gov=""
+    if [ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
+        gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)
+        info+="\nCPU Governor: $gov\n"
+    fi
+
+    # Power profile
+    if command -v powerprofilesctl &>/dev/null; then
+        local profile
+        profile=$(powerprofilesctl get 2>/dev/null)
+        info+="Power Profile: $profile\n"
+    fi
+
+    # NBFC status
+    if [ "$backend" = "nbfc" ]; then
+        local nbfc_status
+        nbfc_status=$(nbfc status 2>/dev/null || nbfc_service --status 2>/dev/null)
+        [ -n "$nbfc_status" ] && info+="\nNBFC Status:\n$nbfc_status\n"
+    fi
+
+    echo -e "$info" | "${ROFI[@]}" -p "  Fan & Performance Status" >/dev/null
+}
+
+# ── Fan Mode (Acer WMI / Predator module) ──
+
+_fan_mode_acer_wmi() {
+    local mode_file=""
+    [ -f /sys/devices/platform/acer-wmi/fan_mode ] && mode_file="/sys/devices/platform/acer-wmi/fan_mode"
+    [ -f /sys/module/acer_predator_turbo/parameters/fan_mode ] && mode_file="/sys/module/acer_predator_turbo/parameters/fan_mode"
+
+    if [ -z "$mode_file" ]; then
+        _notify "Acer WMI fan mode file not found"
+        return
+    fi
+
+    local current
+    current=$(cat "$mode_file" 2>/dev/null)
+    local current_label="unknown"
+    case "$current" in
+        0) current_label="Auto" ;;
+        1) current_label="Turbo" ;;
+        2) current_label="Silent" ;;
+        *) current_label="$current" ;;
+    esac
+
+    local choice
+    choice=$(_rofi_select "  Fan Mode ($current_label)" \
+        "  Auto (system-controlled)" \
+        "  Turbo (max performance)" \
+        "  Silent (quiet, reduced speed)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    case "$choice" in
+        *Auto*)   val=0 ;;
+        *Turbo*)  val=1 ;;
+        *Silent*) val=2 ;;
+    esac
+
+    echo "$val" | sudo tee "$mode_file" >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        _input_save "fan_mode" "$val"
+        _notify "Fan mode: $(echo "$choice" | sed 's/^[[:space:]]*//')"
+    else
+        _notify "Failed to set fan mode (needs root)"
+    fi
+}
+
+# ── Fan Speed: Manual PWM control (generic hwmon) ──
+
+_fan_speed_manual() {
+    # Find first controllable PWM fan
+    local pwm_file=""
+    local pwm_enable=""
+    for hwmon in /sys/class/hwmon/hwmon*; do
+        if [ -f "$hwmon/pwm1" ]; then
+            pwm_file="$hwmon/pwm1"
+            pwm_enable="$hwmon/pwm1_enable"
+            break
+        fi
+    done
+
+    if [ -z "$pwm_file" ]; then
+        _notify "No PWM fan control found.\nYour hardware may not support manual fan speed."
+        return
+    fi
+
+    local current
+    current=$(cat "$pwm_file" 2>/dev/null)
+    local pct=$((current * 100 / 255))
+
+    local choice
+    choice=$(_rofi_select "  Fan Speed (${pct}%)" \
+        "  Auto (system-controlled)" \
+        "  30% (quiet)" \
+        "  50% (balanced)" \
+        "  70% (cooling)" \
+        "  85% (aggressive)" \
+        "  100% (max)" \
+        "  Custom..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    if [[ "$choice" == *"Auto"* ]]; then
+        # Enable automatic fan control
+        echo "2" | sudo tee "$pwm_enable" >/dev/null 2>&1
+        _input_save "fan_speed" "auto"
+        _notify "Fan: auto mode"
+        return
+    fi
+
+    local val_pct
+    if [[ "$choice" == *"Custom"* ]]; then
+        val_pct=$(_rofi_input "  Fan speed % (20–100)")
+        [ -z "$val_pct" ] && return
+        if ! [[ "$val_pct" =~ ^[0-9]+$ ]] || [ "$val_pct" -lt 20 ] || [ "$val_pct" -gt 100 ]; then
+            _notify "Invalid: $val_pct (must be 20–100)"
+            return
+        fi
+    else
+        val_pct=$(echo "$choice" | grep -oP '\d+')
+    fi
+
+    local pwm_val=$((val_pct * 255 / 100))
+
+    # Switch to manual mode first, then set speed
+    echo "1" | sudo tee "$pwm_enable" >/dev/null 2>&1
+    echo "$pwm_val" | sudo tee "$pwm_file" >/dev/null 2>&1
+
+    if [ $? -eq 0 ]; then
+        _input_save "fan_speed" "$val_pct"
+        _notify "Fan speed: ${val_pct}%"
+    else
+        _notify "Failed to set fan speed (needs root)"
+    fi
+}
+
+# ── NBFC Fan Control ──
+
+_fan_nbfc_set_speed() {
+    local nbfc_cmd="nbfc"
+    command -v nbfc_service &>/dev/null && nbfc_cmd="nbfc_service"
+
+    local choice
+    choice=$(_rofi_select "  NBFC Fan Speed" \
+        "  Auto (recommended)" \
+        "  25% (quiet)" \
+        "  50% (balanced)" \
+        "  75% (performance)" \
+        "  100% (max)" \
+        "  Custom..." \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    if [[ "$choice" == *"Auto"* ]]; then
+        sudo $nbfc_cmd set -a 2>/dev/null
+        _notify "NBFC: auto fan speed"
+        return
+    fi
+
+    local val
+    if [[ "$choice" == *"Custom"* ]]; then
+        val=$(_rofi_input "  Fan speed % (0–100)")
+        [ -z "$val" ] && return
+    else
+        val=$(echo "$choice" | grep -oP '\d+')
+    fi
+
+    sudo $nbfc_cmd set -s "$val" 2>/dev/null
+    _notify "NBFC fan speed: ${val}%"
+}
+
+_fan_nbfc_config() {
+    local nbfc_cmd="nbfc"
+    command -v nbfc_service &>/dev/null && nbfc_cmd="nbfc_service"
+
+    local configs
+    configs=$(sudo $nbfc_cmd config -l 2>/dev/null | head -30)
+
+    if [ -z "$configs" ]; then
+        _notify "No NBFC configs found.\nCheck: sudo nbfc config -l"
+        return
+    fi
+
+    local choice
+    choice=$(echo "$configs" | "${ROFI[@]}" -p "  NBFC Config (select your laptop)")
+    [ -z "$choice" ] && return
+
+    sudo $nbfc_cmd config -s "$choice" 2>/dev/null
+    sudo systemctl restart nbfc_service 2>/dev/null || \
+        sudo systemctl restart nbfc 2>/dev/null
+    _notify "NBFC config: $choice"
+}
+
+# ── Div Acer Manager (launch GUI) ──
+
+_fan_div_acer_launch() {
+    if command -v div-acer-manager &>/dev/null; then
+        div-acer-manager &
+        disown
+        _notify "Div Acer Manager launched"
+    else
+        _notify "Div Acer Manager not installed.\n\nInstall from AUR:\nyay -S div-acer-manager-max-git\n\nGitHub:\ngithub.com/PXDiv/Div-Acer-Manager-Max"
+    fi
+}
+
+_fan_div_acer_stoa_theme() {
+    local script_dir
+    script_dir="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+    local apply_script="${script_dir}/theme/div-acer-manager/stoa-damx-apply.sh"
+
+    if [ ! -f "$apply_script" ]; then
+        _notify "Theme script not found.\nRun install.sh first."
+        return
+    fi
+
+    local choice
+    choice=$(_rofi_select "  DAMX Stoa Theme" \
+        "  Apply Stoa theme" \
+        "  Restore original theme" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *Apply*)
+            bash "$apply_script" apply 2>/dev/null
+            _notify "Stoa theme applied to Div Acer Manager.\nRestart DAMX to see changes."
+            ;;
+        *Restore*)
+            bash "$apply_script" restore 2>/dev/null
+            _notify "Original theme restored.\nRestart DAMX to see changes."
+            ;;
+    esac
+}
+
+# ── Performance Profiles (CPU governor + power profile) ──
+
+_fan_perf_profile() {
+    local current_gov=""
+    [ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ] && \
+        current_gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)
+
+    local current_pp=""
+    command -v powerprofilesctl &>/dev/null && \
+        current_pp=$(powerprofilesctl get 2>/dev/null)
+
+    local label="$current_gov"
+    [ -n "$current_pp" ] && label="$current_pp / $current_gov"
+
+    local choice
+    choice=$(_rofi_select "  Performance Profile ($label)" \
+        "  Eco (power-saver + powersave)" \
+        "  Silent (power-saver + powersave)" \
+        "  Balanced (balanced + schedutil)" \
+        "  Performance (performance + performance)" \
+        "  Turbo (performance + performance + no thermal limit)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local pp_profile gov fan_mode
+    case "$choice" in
+        *Eco*)
+            pp_profile="power-saver"
+            gov="powersave"
+            fan_mode="silent"
+            ;;
+        *Silent*)
+            pp_profile="power-saver"
+            gov="powersave"
+            fan_mode="silent"
+            ;;
+        *Balanced*)
+            pp_profile="balanced"
+            gov="schedutil"
+            fan_mode="auto"
+            ;;
+        *Performance*)
+            pp_profile="performance"
+            gov="performance"
+            fan_mode="auto"
+            ;;
+        *Turbo*)
+            pp_profile="performance"
+            gov="performance"
+            fan_mode="turbo"
+            ;;
+    esac
+
+    # Apply power profile
+    if command -v powerprofilesctl &>/dev/null && [ -n "$pp_profile" ]; then
+        powerprofilesctl set "$pp_profile" 2>/dev/null
+    fi
+
+    # Apply CPU governor
+    if [ -n "$gov" ]; then
+        for cpu_gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+            [ -f "$cpu_gov" ] && echo "$gov" | sudo tee "$cpu_gov" >/dev/null 2>&1
+        done
+    fi
+
+    # Apply fan mode (Acer WMI)
+    local backend
+    backend=$(_fan_backend)
+    if [ "$backend" = "acer-wmi" ] || [ "$backend" = "acer-predator" ]; then
+        local mode_file=""
+        [ -f /sys/devices/platform/acer-wmi/fan_mode ] && mode_file="/sys/devices/platform/acer-wmi/fan_mode"
+        [ -f /sys/module/acer_predator_turbo/parameters/fan_mode ] && mode_file="/sys/module/acer_predator_turbo/parameters/fan_mode"
+        if [ -n "$mode_file" ]; then
+            case "$fan_mode" in
+                auto)   echo "0" | sudo tee "$mode_file" >/dev/null 2>&1 ;;
+                turbo)  echo "1" | sudo tee "$mode_file" >/dev/null 2>&1 ;;
+                silent) echo "2" | sudo tee "$mode_file" >/dev/null 2>&1 ;;
+            esac
+        fi
+    fi
+
+    _input_save "perf_profile" "$(echo "$choice" | awk '{print $2}')"
+    _notify "Profile: $(echo "$choice" | sed 's/^[[:space:]]*//')"
+}
+
+# ── Keyboard Backlight Timeout (Acer) ──
+
+_fan_kb_backlight_timeout() {
+    local timeout_file=""
+    [ -f /sys/devices/platform/acer-wmi/kb_backlight_timeout ] && \
+        timeout_file="/sys/devices/platform/acer-wmi/kb_backlight_timeout"
+
+    if [ -z "$timeout_file" ]; then
+        _notify "Keyboard backlight timeout not supported.\n(Requires Acer WMI driver)"
+        return
+    fi
+
+    local current
+    current=$(cat "$timeout_file" 2>/dev/null)
+
+    local choice
+    choice=$(_rofi_select "  KB Backlight Timeout (${current}s)" \
+        "  0 (always on)" \
+        "  15 seconds" \
+        "  30 seconds" \
+        "  60 seconds" \
+        "  120 seconds" \
+        "  300 seconds" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    val=$(echo "$choice" | grep -oP '\d+')
+    echo "$val" | sudo tee "$timeout_file" >/dev/null 2>&1
+    _input_save "kb_backlight_timeout" "$val"
+    _notify "KB backlight timeout: ${val}s"
+}
+
+# ── Boot Sound Toggle (Acer) ──
+
+_fan_boot_sound() {
+    local sound_file=""
+    [ -f /sys/devices/platform/acer-wmi/boot_sound ] && \
+        sound_file="/sys/devices/platform/acer-wmi/boot_sound"
+
+    if [ -z "$sound_file" ]; then
+        _notify "Boot sound control not supported.\n(Requires Acer WMI driver)"
+        return
+    fi
+
+    local current label
+    current=$(cat "$sound_file" 2>/dev/null)
+    [ "$current" = "1" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  Boot Sound ($label)" \
+        "  Enable" \
+        "  Disable" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+    echo "$val" | sudo tee "$sound_file" >/dev/null 2>&1
+    [ "$val" = "1" ] && _notify "Boot sound: on" || _notify "Boot sound: off"
+}
+
+# ── LCD Override (Acer) ──
+
+_fan_lcd_override() {
+    local lcd_file=""
+    [ -f /sys/devices/platform/acer-wmi/lcd_override ] && \
+        lcd_file="/sys/devices/platform/acer-wmi/lcd_override"
+
+    if [ -z "$lcd_file" ]; then
+        _notify "LCD override not supported.\n(Requires Acer WMI driver)"
+        return
+    fi
+
+    local current label
+    current=$(cat "$lcd_file" 2>/dev/null)
+    [ "$current" = "1" ] && label="on" || label="off"
+
+    local choice
+    choice=$(_rofi_select "  LCD Override ($label)" \
+        "  Enable" \
+        "  Disable" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    [[ "$choice" == *"Enable"* ]] && val=1 || val=0
+    echo "$val" | sudo tee "$lcd_file" >/dev/null 2>&1
+    [ "$val" = "1" ] && _notify "LCD override: on" || _notify "LCD override: off"
+}
+
+# ── GPU Mode (Acer — dedicated / hybrid) ──
+
+_fan_gpu_mode() {
+    local gpu_file=""
+    [ -f /sys/devices/platform/acer-wmi/gpu_mode ] && \
+        gpu_file="/sys/devices/platform/acer-wmi/gpu_mode"
+
+    if [ -z "$gpu_file" ]; then
+        _notify "GPU mode switching not supported.\n(Requires Acer WMI driver)"
+        return
+    fi
+
+    local current label
+    current=$(cat "$gpu_file" 2>/dev/null)
+    case "$current" in
+        0) label="Integrated" ;;
+        1) label="Dedicated" ;;
+        *) label="$current" ;;
+    esac
+
+    local choice
+    choice=$(_rofi_select "  GPU Mode ($label)" \
+        "  Integrated (power-saving)" \
+        "  Dedicated (performance)" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    local val
+    [[ "$choice" == *"Integrated"* ]] && val=0 || val=1
+    echo "$val" | sudo tee "$gpu_file" >/dev/null 2>&1
+    _notify "GPU mode: $(echo "$choice" | sed 's/^[[:space:]]*//')"
+}
+
+# ── Setup Help ──
+
+_fan_setup_help() {
+    local backend
+    backend=$(_fan_backend)
+
+    local info="Current backend: $backend\n\n"
+
+    info+="Available tools for fan & performance control:\n\n"
+
+    info+="1. Div Acer Manager Max (recommended for Acer laptops)\n"
+    info+="   GUI tool with fan, profiles, RGB, LCD, boot sound.\n"
+    info+="   Install: yay -S div-acer-manager-max-git\n"
+    info+="   GitHub: github.com/PXDiv/Div-Acer-Manager-Max\n\n"
+
+    info+="2. Acer Predator kernel module\n"
+    info+="   Fan mode + RGB for Acer Nitro/Predator laptops.\n"
+    info+="   Install: yay -S acer-predator-turbo-and-rgb-keyboard-linux-module-dkms\n"
+    info+="   GitHub: github.com/JafarAkhondali/acer-predator-turbo-and-rgb-keyboard-linux-module\n\n"
+
+    info+="3. NBFC — Notebook Fan Control\n"
+    info+="   Generic fan control for many laptop models.\n"
+    info+="   Install: yay -S nbfc-git\n"
+    info+="   GitHub: github.com/erpalma/nbfc\n\n"
+
+    info+="4. Generic hwmon (built-in)\n"
+    info+="   Direct PWM fan control via sysfs.\n"
+    info+="   No additional packages needed.\n"
+    info+="   Requires: lm_sensors (sudo sensors-detect)\n\n"
+
+    info+="After installing, restart this panel to detect the backend.\n"
+
+    echo -e "$info" | "${ROFI[@]}" -p "  Setup Help" >/dev/null
+}
+
+# ── Main Fan & Performance menu ──
+
+_menu_fan_perf() {
+    local backend
+    backend=$(_fan_backend)
+
+    while true; do
+        # Build menu dynamically based on backend
+        local items=()
+        items+=("  Status & sensors")
+        items+=("  Performance profiles")
+
+        case "$backend" in
+            div-acer)
+                items+=("  Div Acer Manager (launch)")
+                items+=("  Div Acer Manager (Stoa theme)")
+                items+=("  Fan mode (Acer)")
+                items+=("  Fan speed (manual)")
+                items+=("  GPU mode")
+                items+=("  KB backlight timeout")
+                items+=("  Boot sound")
+                items+=("  LCD override")
+                ;;
+            acer-wmi|acer-predator)
+                items+=("  Fan mode (Acer)")
+                items+=("  Fan speed (manual)")
+                items+=("  GPU mode")
+                items+=("  KB backlight timeout")
+                items+=("  Boot sound")
+                items+=("  LCD override")
+                ;;
+            nbfc)
+                items+=("  Fan speed (NBFC)")
+                items+=("  NBFC config (select laptop)")
+                ;;
+            hwmon)
+                items+=("  Fan speed (manual)")
+                ;;
+            none)
+                items+=("  Fan speed (manual)")
+                ;;
+        esac
+
+        items+=("  Setup help & install")
+        items+=("  Back")
+
+        local choice
+        choice=$(printf '%s\n' "${items[@]}" | "${ROFI[@]}" -p "  Fan & Performance ($backend)")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Status"*)             _fan_status ;;
+            *"Performance profile"*) _fan_perf_profile ;;
+            *"Div Acer Manager (Stoa"*) _fan_div_acer_stoa_theme ;;
+            *"Div Acer"*)           _fan_div_acer_launch ;;
+            *"Fan mode"*)           _fan_mode_acer_wmi ;;
+            *"Fan speed (NBFC)"*)   _fan_nbfc_set_speed ;;
+            *"Fan speed"*)          _fan_speed_manual ;;
+            *"NBFC config"*)        _fan_nbfc_config ;;
+            *"GPU mode"*)           _fan_gpu_mode ;;
+            *"KB backlight"*)       _fan_kb_backlight_timeout ;;
+            *"Boot sound"*)         _fan_boot_sound ;;
+            *"LCD override"*)       _fan_lcd_override ;;
+            *"Setup help"*)         _fan_setup_help ;;
         esac
     done
 }

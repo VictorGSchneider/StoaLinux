@@ -125,7 +125,7 @@ XDG_PKGS="xdg-utils v4l-utils"
 NIGHTLIGHT_PKGS="gammastep"
 
 # Power management (power profiles)
-POWER_MGMT_PKGS="power-profiles-daemon"
+POWER_MGMT_PKGS="power-profiles-daemon lm_sensors"
 
 # Printing (CUPS)
 PRINT_PKGS="cups cups-pdf system-config-printer"
@@ -636,6 +636,7 @@ echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}
 echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+I → Firewall)${R}"
 echo -e "  ${S}  stoa-maintain     — Backup, restore & cleanup (Super+I → Maintenance)${R}"
 echo -e "  ${S}  stoa-predict      — Text prediction + emoji suggestions (Super+Shift+S)${R}"
+echo -e "  ${S}  stoa-settings     → Fan & Performance — fan mode, speed, profiles, GPU (Super+I → Power → Fan)${R}"
 echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
 echo -e "  ${S}  dfm               — Dotfile Manager GUI (Super+G)${R}"
 echo ""
