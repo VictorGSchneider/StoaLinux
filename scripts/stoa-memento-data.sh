@@ -52,22 +52,27 @@ quote=""
 command -v stoa-quotes-sync &>/dev/null && quote=$(stoa-quotes-sync next 2>/dev/null)
 quote="${quote:-The happiness of your life depends upon the quality of your thoughts. — Marcus Aurelius}"
 
-# Escape double quotes for valid JSON
-quote_escaped="${quote//\"/\\\"}"
-name_escaped="${NAME//\"/\\\"}"
-
-# ── Output JSON ──
-cat <<JSON
-{
-    "name": "$name_escaped",
-    "days_lived": $days_lived,
-    "weeks_lived": $weeks_lived,
-    "years_lived": $years_lived,
-    "year_pct": $year_pct,
-    "total_weeks": $total_weeks,
-    "life_years": $LIFE_YEARS,
-    "current_year": $(date +%Y),
-    "today": "$(date '+%d %b %Y')",
-    "quote": "$quote_escaped"
-}
-JSON
+# ── Output JSON (using jq for safe escaping) ──
+jq -n \
+    --arg name "$NAME" \
+    --argjson days_lived "$days_lived" \
+    --argjson weeks_lived "$weeks_lived" \
+    --arg years_lived "$years_lived" \
+    --arg year_pct "$year_pct" \
+    --argjson total_weeks "$total_weeks" \
+    --argjson life_years "$LIFE_YEARS" \
+    --argjson current_year "$(date +%Y)" \
+    --arg today "$(date '+%d %b %Y')" \
+    --arg quote "$quote" \
+    '{
+        name: $name,
+        days_lived: $days_lived,
+        weeks_lived: $weeks_lived,
+        years_lived: ($years_lived | tonumber),
+        year_pct: ($year_pct | tonumber),
+        total_weeks: $total_weeks,
+        life_years: $life_years,
+        current_year: $current_year,
+        today: $today,
+        quote: $quote
+    }'

@@ -196,18 +196,21 @@ _rdp_connect() {
         fi
     fi
 
-    local cmd="xfreerdp /v:${RDP_IP}:${RDP_PORT} /u:${RDP_USER} /p:${RDP_PASS} /cert:ignore"
-    cmd+=" ${RDP_FLAGS}"
+    local -a cmd=(xfreerdp "/v:${RDP_IP}:${RDP_PORT}" "/u:${RDP_USER}" "/p:${RDP_PASS}" /cert:ignore)
+
+    # Split RDP_FLAGS on spaces into array elements
+    read -ra flags <<< "$RDP_FLAGS"
+    cmd+=("${flags[@]}")
 
     if [ "$MULTIMON" = "true" ]; then
-        cmd+=" /multimon"
+        cmd+=(/multimon)
     fi
 
     if [ -n "$app" ]; then
-        cmd+=" /app:\"${app}\""
+        cmd+=("/app:${app}")
     fi
 
-    eval "$cmd" &
+    "${cmd[@]}" &
     disown
 }
 

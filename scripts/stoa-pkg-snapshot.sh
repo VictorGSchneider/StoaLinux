@@ -8,7 +8,15 @@
 # Saves a full package list so you know exactly what changed
 # if something breaks after an update.
 
-SNAPSHOT_DIR="${HOME:-/root}/.config/stoa/pkg-snapshots"
+# When run as root (pacman hook), find the real user's home
+if [ "$(id -u)" -eq 0 ]; then
+    _real_user=$(logname 2>/dev/null || who | awk 'NR==1{print $1}')
+    _real_home=$(getent passwd "$_real_user" 2>/dev/null | cut -d: -f6)
+    _real_home="${_real_home:-/root}"
+else
+    _real_home="$HOME"
+fi
+SNAPSHOT_DIR="${_real_home}/.config/stoa/pkg-snapshots"
 MAX_SNAPSHOTS=20
 
 mkdir -p "$SNAPSHOT_DIR"

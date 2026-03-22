@@ -16,7 +16,24 @@ ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 mkdir -p "$PINS_DIR"
 touch "$PINS_FILE"
 
+# Detect session type
+_is_wayland() { [ -n "${WAYLAND_DISPLAY:-}" ]; }
+
+_copy() {
+    if _is_wayland; then
+        wl-copy
+    else
+        xclip -selection clipboard
+    fi
+}
+
 _show() {
+    # cliphist is Wayland-only
+    if ! _is_wayland; then
+        notify-send -t 3000 "Clipboard" "Clipboard history requires Wayland (cliphist)"
+        return 1
+    fi
+
     # Build list: pinned on top, then normal history
     local pinned=""
     local history
@@ -36,9 +53,9 @@ _show() {
 
     # If it's a pinned item, remove prefix and copy
     if [[ "$choice" == "📌 "* ]]; then
-        printf '%s' "${choice#📌 }" | wl-copy
+        printf '%s' "${choice#📌 }" | _copy
     else
-        printf '%s' "$choice" | cliphist decode | wl-copy
+        printf '%s' "$choice" | cliphist decode | _copy
     fi
 }
 

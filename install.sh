@@ -57,7 +57,6 @@ _link "${STOA_DIR}/config/nvim/init.vim"            "${CONFIG_DIR}/nvim/init.vim
 _link "${STOA_DIR}/config/nvim/colors/stoa.vim"     "${CONFIG_DIR}/nvim/colors/stoa.vim"
 _link "${STOA_DIR}/config/rofi/config.rasi"         "${CONFIG_DIR}/rofi/config.rasi"
 _link "${STOA_DIR}/config/dunst/dunstrc"            "${CONFIG_DIR}/dunst/dunstrc"
-_link "${STOA_DIR}/config/neofetch/config.conf"     "${CONFIG_DIR}/neofetch/config.conf"
 _link "${STOA_DIR}/config/zathura/zathurarc"        "${CONFIG_DIR}/zathura/zathurarc"
 _link "${STOA_DIR}/config/mpv/mpv.conf"             "${CONFIG_DIR}/mpv/mpv.conf"
 _link "${STOA_DIR}/config/btop/btop.conf"           "${CONFIG_DIR}/btop/btop.conf"
@@ -67,6 +66,8 @@ _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xm
 _link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
 _link "${STOA_DIR}/config/Code/User/settings.json"  "${CONFIG_DIR}/Code/User/settings.json"
+_link "${STOA_DIR}/config/fastfetch/config.jsonc"      "${CONFIG_DIR}/fastfetch/config.jsonc"
+_link "${STOA_DIR}/config/fastfetch/stoa-temple.txt"   "${CONFIG_DIR}/fastfetch/stoa-temple.txt"
 
 # ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird + VS Code) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
@@ -93,43 +94,13 @@ if [ -d "${HOME}/.steam" ]; then
         echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
 fi
 
-# OnlyOffice — install Stoa theme JSON
-ONLYOFFICE_THEME_DIR="${HOME}/.local/share/onlyoffice/desktopeditors/themes"
-if command -v desktopeditors &>/dev/null || [ -d "/opt/onlyoffice" ]; then
-    mkdir -p "$ONLYOFFICE_THEME_DIR"
-    cp "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" "${ONLYOFFICE_THEME_DIR}/stoa-onlyoffice.json" 2>/dev/null && \
-        echo -e "  ${O}[+] OnlyOffice Stoa theme installed${R}" || true
-    echo -e "  ${S}    To activate: File → Advanced Settings → Interface theme → Stoa${R}"
-fi
-
-# Betterbird — apply Stoa CSS to all profiles
-if [ -d "${HOME}/.betterbird" ]; then
-    for profile_dir in "${HOME}/.betterbird/"*.default*; do
-        [ -d "$profile_dir" ] || continue
-        chrome_dir="${profile_dir}/chrome"
-        mkdir -p "$chrome_dir"
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
-        # Enable toolkit.legacyUserProfileCustomizations.stylesheets
-        prefs_file="${profile_dir}/user.js"
-        if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
-            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
-        fi
-        echo -e "  ${O}[+] Betterbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
-    done
-elif [ -d "${HOME}/.thunderbird" ]; then
-    for profile_dir in "${HOME}/.thunderbird/"*.default*; do
-        [ -d "$profile_dir" ] || continue
-        chrome_dir="${profile_dir}/chrome"
-        mkdir -p "$chrome_dir"
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
-        prefs_file="${profile_dir}/user.js"
-        if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
-            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
-        fi
-        echo -e "  ${O}[+] Thunderbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
-    done
+# ── Pacman hook (auto-apply theme after installs) ──
+if [ -d /etc/pacman.d/hooks ] || sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null; then
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook" /etc/pacman.d/hooks/ 2>/dev/null && \
+    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" /usr/local/bin/ 2>/dev/null && \
+    sudo chmod +x /usr/local/bin/stoa-theme-enforce 2>/dev/null && \
+    echo -e "  ${O}[+] Pacman theme hook installed${R}" || \
+    echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
 fi
 
 # VS Code — install Stoa theme as extension
@@ -182,6 +153,7 @@ _link "${STOA_DIR}/scripts/stoa-winapps.sh"      "${HOME}/.local/bin/stoa-winapp
 _link "${STOA_DIR}/scripts/stoa-capture.sh"       "${HOME}/.local/bin/stoa-capture"
 _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
 _link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
+_link "${STOA_DIR}/scripts/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-setup"
 _link "${STOA_DIR}/scripts/stoa-maintain.sh"      "${HOME}/.local/bin/stoa-maintain"
 _link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 cp    "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
@@ -202,6 +174,7 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-capture" \
          "${HOME}/.local/bin/stoa-doctor" \
          "${HOME}/.local/bin/stoa-pkg-snapshot" \
+         "${HOME}/.local/bin/stoa-gpu-setup"
          "${HOME}/.local/bin/stoa-maintain" \
          "${HOME}/.local/bin/stoa-predict" \
          "${HOME}/.local/bin/stoa-predict.py"

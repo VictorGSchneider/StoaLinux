@@ -19,10 +19,18 @@ CURRENT="${STOA_SHOW_KEYBINDS:-true}"
 
 # Toggle
 if [ "$CURRENT" = "true" ]; then
-    sed -i 's/^STOA_SHOW_KEYBINDS=.*/STOA_SHOW_KEYBINDS=false/' "$STOA_CONF"
+    if grep -q '^STOA_SHOW_KEYBINDS=' "$STOA_CONF"; then
+        sed -i 's/^STOA_SHOW_KEYBINDS=.*/STOA_SHOW_KEYBINDS=false/' "$STOA_CONF"
+    else
+        echo "STOA_SHOW_KEYBINDS=false" >> "$STOA_CONF"
+    fi
     notify-send -t 2000 "Stoa" "Bar keybinds: disabled"
 else
-    sed -i 's/^STOA_SHOW_KEYBINDS=.*/STOA_SHOW_KEYBINDS=true/' "$STOA_CONF"
+    if grep -q '^STOA_SHOW_KEYBINDS=' "$STOA_CONF"; then
+        sed -i 's/^STOA_SHOW_KEYBINDS=.*/STOA_SHOW_KEYBINDS=true/' "$STOA_CONF"
+    else
+        echo "STOA_SHOW_KEYBINDS=true" >> "$STOA_CONF"
+    fi
     notify-send -t 2000 "Stoa" "Bar keybinds: enabled"
 fi
 

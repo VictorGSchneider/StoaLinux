@@ -5,10 +5,10 @@
 # ║                                                              ║
 # ║  Full package manager via rofi.                              ║
 # ║  Pacman + AUR + Flatpak + Snap + AppImage + DEB/RPM.        ║
-# ║  Auto-aplica tema Stoa em tudo que for instalado.           ║
+# ║  Auto-applies Stoa theme on everything installed.            ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-ROFI="rofi -dmenu -i -config ${HOME}/.config/rofi/config.rasi"
+ROFI=(rofi -dmenu -i -config "${HOME}/.config/rofi/config.rasi")
 APPIMAGE_DIR="${HOME}/Applications"
 
 # ── Helpers ──────────────────────────────────────────────────
@@ -16,12 +16,12 @@ APPIMAGE_DIR="${HOME}/Applications"
 _notify() { dunstify -t 2500 "Stoa Store" "$1" 2>/dev/null; }
 
 _rofi() {
-    $ROFI -p "$1"
+    "${ROFI[@]}" -p "$1"
 }
 
 _rofi_list() {
     local prompt="$1"; shift
-    printf '%s\n' "$@" | $ROFI -p "$prompt"
+    printf '%s\n' "$@" | "${ROFI[@]}" -p "$prompt"
 }
 
 _confirm() {
@@ -41,17 +41,17 @@ _has_aur() { [[ "$(_helper)" != "pacman" ]]; }
 _is_installed() { pacman -Qi "$1" &>/dev/null; }
 
 _run_in_term() {
-    kitty -e bash -c "$1; echo; echo 'Pressione Enter...'; read"
+    alacritty -e bash -c "$1; echo; echo 'Press Enter to close...'; read"
 }
 
 _apply_stoa_theme() {
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
     [ ! -f "$gtk3" ] && return
     local t i c f
-    t=$(grep "^gtk-theme-name"       "$gtk3" | cut -d= -f2)
-    i=$(grep "^gtk-icon-theme-name"  "$gtk3" | cut -d= -f2)
-    c=$(grep "^gtk-cursor-theme-name" "$gtk3" | cut -d= -f2)
-    f=$(grep "^gtk-font-name"        "$gtk3" | cut -d= -f2)
+    t=$(grep "^gtk-theme-name"       "$gtk3" | sed 's/^[^=]*=\s*//')
+    i=$(grep "^gtk-icon-theme-name"  "$gtk3" | sed 's/^[^=]*=\s*//')
+    c=$(grep "^gtk-cursor-theme-name" "$gtk3" | sed 's/^[^=]*=\s*//')
+    f=$(grep "^gtk-font-name"        "$gtk3" | sed 's/^[^=]*=\s*//')
     if command -v gsettings &>/dev/null; then
         gsettings set org.gnome.desktop.interface gtk-theme    "${t:-Adwaita-dark}"    2>/dev/null
         gsettings set org.gnome.desktop.interface icon-theme   "${i:-Colloid-dark}"    2>/dev/null
@@ -1111,8 +1111,8 @@ _cleanup() {
             local count; count=$(echo "$orphans" | wc -l)
             echo "$orphans" | _rofi "  $count orphans (read-only)"
             _confirm "Remove $count orphans?" && \
-                _run_in_term "sudo pacman -Rns \$(pacman -Qdtq)"
-            _notify "Orphans removed"
+                _run_in_term "sudo pacman -Rns \$(pacman -Qdtq)" && \
+                _notify "Orphans removed"
             ;;
         *"Clean package"*)
             _confirm "Clean old cached packages? (keep last 3)" || return
@@ -1190,11 +1190,11 @@ _setup_hook() {
     local stoa_dir
     stoa_dir="$(dirname "$(readlink -f "$0")")/.."
 
-    if [ -f "$stoa_dir/pacman-hooks/stoa-theme-enforce" ]; then
+    if [ -f "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" ]; then
         sudo mkdir -p /etc/pacman.d/hooks
-        sudo cp "$stoa_dir/pacman-hooks/stoa-theme-enforce" "$script"
+        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" "$script"
         sudo chmod +x "$script"
-        sudo cp "$stoa_dir/pacman-hooks/stoa-theme.hook" "$hook"
+        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme.hook" "$hook"
     else
         # Inline fallback
         sudo mkdir -p /etc/pacman.d/hooks
@@ -1202,8 +1202,8 @@ _setup_hook() {
 #!/bin/bash
 U="${SUDO_USER:-$USER}"; H=$(eval echo "~$U")
 g="$H/.config/gtk-3.0/settings.ini"; [ ! -f "$g" ] && exit 0
-t=$(grep "^gtk-theme-name" "$g"|cut -d= -f2)
-i=$(grep "^gtk-icon-theme-name" "$g"|cut -d= -f2)
+t=$(grep "^gtk-theme-name" "$g"|sed 's/^[^=]*=\s*//')
+i=$(grep "^gtk-icon-theme-name" "$g"|sed 's/^[^=]*=\s*//')
 command -v gsettings &>/dev/null && su - "$U" -c "
 export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$(id -u)/bus
 gsettings set org.gnome.desktop.interface gtk-theme '${t:-Adwaita-dark}' 2>/dev/null
@@ -1715,8 +1715,8 @@ _install_rpm() {
         return
     fi
 
-    _notify "Converting .rpm to Arch package..."
-    _run_in_term "cd /tmp && debtap -Q '$path' && sudo pacman -U /tmp/*.pkg.tar* && rm -f /tmp/*.pkg.tar*"
+    _notify "Extracting .rpm package..."
+    _run_in_term "cd /tmp && mkdir -p stoa-rpm-extract && cd stoa-rpm-extract && rpmextract.sh '$path' && echo '── Contents extracted to /tmp/stoa-rpm-extract ──' && ls -la && echo && echo 'Install manually: sudo cp -r usr/ /usr/' && echo 'Or convert first: install debtap, then alien -d file.rpm, then debtap file.deb'"
     _apply_stoa_theme
     _notify "RPM package installed"
 }
@@ -2480,7 +2480,7 @@ menu_lang_packages() {
             cat
             echo "─────────────────────"
             echo "  Back"
-        } | $ROFI -p "  Language packages")
+        } | "${ROFI[@]}" -p "  Language packages")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
 
         case "$choice" in
