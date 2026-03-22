@@ -213,7 +213,7 @@ Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hy
 - **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
 - **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, notifies via dunst if anything is missing. Full log at `~/.config/stoa/doctor.log`.
 
-### DFM — Dotfile Manager
+### [DFM — Dotfile Manager](https://github.com/VictorGSchneider/DFM)
 
 A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G` or `dfm`.
 

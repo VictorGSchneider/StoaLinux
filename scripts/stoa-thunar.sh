@@ -35,7 +35,7 @@ if $is_image; then
     menu+="  OCR — extract text from image\n"
 fi
 
-choice=$(printf "$menu" | rofi "${ROFI_ARGS[@]}" -p "Stoatools ($count file(s))")
+choice=$(printf '%b' "$menu" | rofi "${ROFI_ARGS[@]}" -p "Stoatools ($count file(s))")
 [ -z "$choice" ] && exit 0
 
 case "$choice" in

@@ -39,7 +39,7 @@ export KEYTIMEOUT=1
 # ── Stoic Prompt ──
 # Symbol: Greek column (Ι) in bronze
 autoload -Uz vcs_info
-precmd() { vcs_info }
+precmd() { vcs_info; }
 setopt prompt_subst
 
 zstyle ':vcs_info:git:*' formats ' %F{#8a9a6c}%b%f'
@@ -77,6 +77,6 @@ export LESS_TERMCAP_mb=$'\e[1;38;2;179;107;90m'
 export LESS_TERMCAP_md=$'\e[1;38;2;196;154;92m'
 export LESS_TERMCAP_me=$'\e[0m'
 export LESS_TERMCAP_se=$'\e[0m'
-export LESS_TERMCAP_so=$'\e[1;38;2;33;30;25;48;2;196;154;92m'
+export LESS_TERMCAP_so=$'\e[1;38;2;212;207;196;48;2;196;154;92m'
 export LESS_TERMCAP_ue=$'\e[0m'
 export LESS_TERMCAP_us=$'\e[4;38;2;138;154;108m'
