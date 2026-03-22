@@ -7,7 +7,7 @@
     "hostname": "stoa",
     "kernels": ["linux"],
     "locale_config": {
-        "kb_layout": "br",
+        "kb_layout": "br-abnt2",
         "sys_enc": "UTF-8",
         "sys_lang": "pt_BR.UTF-8"
     },
@@ -78,6 +78,7 @@
         "hyprlock",
         "i3lock-color",
         "github-cli",
+        "gnupg",
         "nftables",
         "libinput-gestures"
     ],

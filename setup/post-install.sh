@@ -62,6 +62,9 @@ NOTES_PKGS="obsidian"
 # Office (AUR)
 OFFICE_PKGS="onlyoffice-bin"
 
+# IDE (AUR)
+IDE_PKGS="visual-studio-code-bin"
+
 # Email (AUR)
 EMAIL_PKGS="betterbird-bin"
 
@@ -132,7 +135,7 @@ UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq cu
 DFM_PKGS="python python-gobject gtk4 libadwaita"
 
 # Developer tools
-DEV_PKGS="github-cli"
+DEV_PKGS="github-cli gnupg"
 
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
@@ -144,6 +147,7 @@ echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
+echo -e "  ${S}IDE:        ${IDE_PKGS} (AUR)${R}"
 echo -e "  ${S}Office:     ${OFFICE_PKGS} (AUR)${R}"
 echo -e "  ${S}Email:      ${EMAIL_PKGS} (AUR)${R}"
 echo -e "  ${S}VPN:        ${VPN_PKGS} (AUR)${R}"
@@ -426,6 +430,26 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${O}[✓] Betterbird installed.${R}"
     else
         echo -e "  ${S}[~] Betterbird already installed.${R}"
+    fi
+
+    # Visual Studio Code (AUR) — "The craftsman loves his tools." — Seneca
+    echo ""
+    if ! command -v code &>/dev/null; then
+        echo -e "  ${F}Installing Visual Studio Code (AUR)...${R}"
+        if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm visual-studio-code-bin
+        elif command -v paru &>/dev/null; then
+            paru -S --needed --noconfirm visual-studio-code-bin
+        else
+            echo -e "  ${S}Installing VS Code manually via makepkg...${R}"
+            _tmpdir=$(mktemp -d)
+            git clone https://aur.archlinux.org/visual-studio-code-bin.git "$_tmpdir/visual-studio-code-bin"
+            (cd "$_tmpdir/visual-studio-code-bin" && makepkg -si --noconfirm)
+            rm -rf "$_tmpdir"
+        fi
+        echo -e "  ${O}[✓] VS Code installed.${R}"
+    else
+        echo -e "  ${S}[~] VS Code already installed.${R}"
     fi
 
     # ProtonVPN CLI (AUR) — "The wise man guards his retreat." — Seneca
