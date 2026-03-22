@@ -68,6 +68,7 @@ if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
     _check_bin wl-paste     "Clipboard (wl-clipboard)"
     _check_bin cliphist     "Clipboard history (cliphist)"
     _check_optional satty   "Screenshot editor (satty)"
+    _check_bin hyprpolkitagent "Polkit agent (hyprpolkitagent)"
 
     # ── Hyprland version check ──
     if command -v hyprctl &>/dev/null; then
