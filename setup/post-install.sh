@@ -113,6 +113,12 @@ THEME_PKGS="qt5ct qt6ct"
 # Firewall
 FIREWALL_PKGS="nftables"
 
+# Bluetooth
+BLUETOOTH_PKGS="bluez bluez-utils"
+
+# XDG + hardware utils
+XDG_PKGS="xdg-utils v4l-utils"
+
 # Night light (blue light filter — Wayland)
 NIGHTLIGHT_PKGS="gammastep"
 
@@ -140,7 +146,7 @@ DEV_PKGS="github-cli gnupg"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -164,6 +170,8 @@ echo -e "  ${S}Fonts:      ${FONT_PKGS}${R}"
 echo -e "  ${S}Theme:      ${THEME_PKGS}${R}"
 echo -e "  ${S}Gestures:   ${GESTURE_PKGS}${R}"
 echo -e "  ${S}Firewall:   ${FIREWALL_PKGS}${R}"
+echo -e "  ${S}Bluetooth:  ${BLUETOOTH_PKGS}${R}"
+echo -e "  ${S}XDG/HW:     ${XDG_PKGS}${R}"
 echo -e "  ${S}Night:      ${NIGHTLIGHT_PKGS}${R}"
 echo -e "  ${S}Power:      ${POWER_MGMT_PKGS}${R}"
 echo -e "  ${S}Print:      ${PRINT_PKGS}${R}"
