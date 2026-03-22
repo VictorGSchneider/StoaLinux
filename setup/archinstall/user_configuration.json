@@ -85,7 +85,7 @@
         "github-cli",
         "gnupg",
         "nftables",
-        "libinput-gestures"
+        "libinput-gestures",
         "rclone",
         "flatpak",
         "xdg-utils",
