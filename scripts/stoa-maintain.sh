@@ -588,11 +588,6 @@ full_cleanup() {
     log_msg INFO "Full cleanup completed."
 }
 
-# ── Backward-compatible aliases ──
-restaurar_configs() { restore_interactive "$@"; }
-restaurar_tudo() { restore_all "$@"; }
-limpeza_completa() { full_cleanup "$@"; }
-
 # ── Schedule cleanup at boot ──
 
 schedule_cleanup() {
@@ -674,7 +669,7 @@ while [ $# -gt 0 ]; do
         --backup)               ACTION="backup"; shift ;;
         --restore)              ACTION="restore"; CLI_FILE="${2:-}"; shift; [ -n "$CLI_FILE" ] && shift ;;
         --restore-interactive)  ACTION="restore_interactive"; CLI_FILE="${2:-}"; shift; [ -n "$CLI_FILE" ] && shift ;;
-        --cleanup|--limpeza)    ACTION="cleanup"; shift ;;
+        --cleanup)              ACTION="cleanup"; shift ;;
         --list)                 ACTION="list"; CLI_FILE="${2:-}"; shift; [ -n "$CLI_FILE" ] && shift ;;
         --schedule)             ACTION="schedule"; shift ;;
         --dry-run)              DRY_RUN=1; shift ;;
