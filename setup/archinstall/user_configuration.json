@@ -7,7 +7,7 @@
     "hostname": "stoa",
     "kernels": ["linux"],
     "locale_config": {
-        "kb_layout": "pt_BR.abnt2",
+        "kb_layout": "pt_br.abnt2",
         "sys_enc": "UTF-8",
         "sys_lang": "pt_BR.UTF-8"
     },
@@ -83,6 +83,9 @@
         "qalculate-gtk",
         "hyprlock",
         "github-cli",
+        "gnupg",
+        "nftables",
+        "libinput-gestures"
         "rclone",
         "flatpak",
         "xdg-utils",

@@ -4898,6 +4898,511 @@ menu_disks() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   SYSTEM HEALTH (stoa-doctor integration)
+# ══════════════════════════════════════════════════════════════
+
+# ── Run doctor and show results ──
+_health_doctor() {
+    _notify "Running health check..."
+    stoa-doctor 2>/dev/null
+    local log="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/doctor.log"
+    if [ -f "$log" ]; then
+        cat "$log" | "${ROFI[@]}" -p "  Doctor Report"
+    else
+        _notify "No doctor log found"
+    fi
+}
+
+# ── View last doctor log ──
+_health_last_log() {
+    local log="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/doctor.log"
+    if [ -f "$log" ]; then
+        cat "$log" | "${ROFI[@]}" -p "  Last Report"
+    else
+        _notify "No doctor log found — run health check first"
+    fi
+}
+
+# ── Package snapshots ──
+_health_pkg_snapshots() {
+    local snap_dir="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/pkg-snapshots"
+    mkdir -p "$snap_dir"
+
+    local snaps=()
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        local name size
+        name=$(basename "$f")
+        size=$(wc -l < "$f" 2>/dev/null)
+        snaps+=("$name  ($size packages)")
+    done < <(ls -1t "$snap_dir"/pkg-snapshot-*.txt 2>/dev/null)
+
+    [ ${#snaps[@]} -eq 0 ] && { _notify "No snapshots yet — they're created before pacman transactions"; return; }
+
+    local choice
+    choice=$(printf '%s\n' "${snaps[@]}" | "${ROFI[@]}" -p "  Snapshots (${#snaps[@]})")
+    [ -z "$choice" ] && return
+
+    local selected_file
+    selected_file="$snap_dir/$(echo "$choice" | awk '{print $1}')"
+    [ ! -f "$selected_file" ] && return
+
+    local action
+    action=$(_rofi_select "  $choice" \
+        "  View snapshot" \
+        "  Compare with current" \
+        "  Compare two snapshots" \
+        "  Back")
+    [ -z "$action" ] || [[ "$action" == *"Back"* ]] && return
+
+    case "$action" in
+        *"View"*)
+            cat "$selected_file" | "${ROFI[@]}" -p "  Snapshot"
+            ;;
+        *"with current"*)
+            local lines=()
+            lines+=("─── Changes since $(basename "$selected_file" .txt) ───")
+            lines+=("")
+
+            # Packages added since snapshot
+            local added
+            added=$(diff <(awk '{print $1}' "$selected_file" | grep -v '^#' | sort) \
+                         <(pacman -Qq 2>/dev/null | sort) \
+                    | grep '^>' | sed 's/^> //' )
+            if [ -n "$added" ]; then
+                lines+=("─── Added ───")
+                while IFS= read -r pkg; do
+                    local ver
+                    ver=$(pacman -Q "$pkg" 2>/dev/null | awk '{print $2}')
+                    lines+=("  + $pkg  $ver")
+                done <<< "$added"
+                lines+=("")
+            fi
+
+            # Packages removed since snapshot
+            local removed
+            removed=$(diff <(awk '{print $1}' "$selected_file" | grep -v '^#' | sort) \
+                           <(pacman -Qq 2>/dev/null | sort) \
+                      | grep '^<' | sed 's/^< //')
+            if [ -n "$removed" ]; then
+                lines+=("─── Removed ───")
+                while IFS= read -r pkg; do
+                    lines+=("  − $pkg")
+                done <<< "$removed"
+                lines+=("")
+            fi
+
+            # Packages with version changes
+            local changed
+            changed=$(diff <(grep -v '^#' "$selected_file" | sort) \
+                           <(pacman -Q 2>/dev/null | sort) \
+                     | grep '^[<>]' | grep -v '^---' || true)
+            if [ -n "$changed" ]; then
+                local upgrades=()
+                while IFS= read -r pkg_name; do
+                    local old_ver new_ver
+                    old_ver=$(grep "^$pkg_name " "$selected_file" 2>/dev/null | awk '{print $2}')
+                    new_ver=$(pacman -Q "$pkg_name" 2>/dev/null | awk '{print $2}')
+                    [ -n "$old_ver" ] && [ -n "$new_ver" ] && [ "$old_ver" != "$new_ver" ] && \
+                        upgrades+=("  ↑ $pkg_name  $old_ver → $new_ver")
+                done < <(diff <(awk '{print $1}' "$selected_file" | grep -v '^#' | sort) \
+                              <(pacman -Qq 2>/dev/null | sort) \
+                         | grep -v '^[<>]' | grep -v '^---' || \
+                         comm -12 <(awk '{print $1}' "$selected_file" | grep -v '^#' | sort) \
+                                  <(pacman -Qq 2>/dev/null | sort))
+                if [ ${#upgrades[@]} -gt 0 ]; then
+                    lines+=("─── Upgraded ───")
+                    for u in "${upgrades[@]}"; do
+                        lines+=("$u")
+                    done
+                fi
+            fi
+
+            [ ${#lines[@]} -le 2 ] && lines+=("  No changes detected")
+
+            printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Diff"
+            ;;
+        *"two snapshots"*)
+            local snap2
+            snap2=$(printf '%s\n' "${snaps[@]}" | "${ROFI[@]}" -p "  Compare with")
+            [ -z "$snap2" ] && return
+            local file2="$snap_dir/$(echo "$snap2" | awk '{print $1}')"
+            [ ! -f "$file2" ] && return
+
+            local lines=()
+            lines+=("─── $(basename "$selected_file") vs $(basename "$file2") ───")
+            lines+=("")
+
+            local d
+            d=$(diff <(grep -v '^#' "$selected_file" | sort) \
+                      <(grep -v '^#' "$file2" | sort) || true)
+            if [ -z "$d" ]; then
+                lines+=("  Identical snapshots")
+            else
+                while IFS= read -r line; do
+                    case "$line" in
+                        "< "*) lines+=("  − ${line#< }") ;;
+                        "> "*) lines+=("  + ${line#> }") ;;
+                    esac
+                done <<< "$d"
+            fi
+
+            printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Diff"
+            ;;
+    esac
+}
+
+# ── System uptime & kernel ──
+_health_system_info() {
+    local lines=()
+    lines+=("─── System ───")
+    lines+=("  Hostname: $(hostname)")
+    lines+=("  Kernel: $(uname -r)")
+    lines+=("  Arch: $(uname -m)")
+    lines+=("  Uptime: $(uptime -p 2>/dev/null | sed 's/^up //')")
+    lines+=("  Boot: $(who -b 2>/dev/null | awk '{print $3, $4}')")
+    lines+=("")
+
+    # WM info
+    if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        local hypr_ver
+        hypr_ver=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/hyprland-version" 2>/dev/null || echo "?")
+        lines+=("  Session: Wayland (Hyprland $hypr_ver)")
+    else
+        lines+=("  Session: Xorg (i3)")
+    fi
+
+    # Shell
+    lines+=("  Shell: $SHELL")
+
+    # Locale
+    local lang
+    lang=$(locale 2>/dev/null | grep "^LANG=" | cut -d= -f2)
+    lines+=("  Locale: $lang")
+
+    lines+=("")
+    lines+=("─── Packages ───")
+    lines+=("  Total: $(pacman -Qq 2>/dev/null | wc -l)")
+    lines+=("  Explicit: $(pacman -Qqe 2>/dev/null | wc -l)")
+    lines+=("  Dependencies: $(pacman -Qqd 2>/dev/null | wc -l)")
+    lines+=("  AUR/foreign: $(pacman -Qqm 2>/dev/null | wc -l)")
+    lines+=("  Orphans: $(pacman -Qqtd 2>/dev/null | wc -l)")
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  System"
+}
+
+# ── Services status ──
+_health_services() {
+    local lines=()
+    lines+=("─── Critical Services ───")
+
+    local services=(
+        "pipewire:PipeWire (audio)"
+        "pipewire-pulse:PipeWire-Pulse"
+        "wireplumber:WirePlumber (audio routing)"
+        "NetworkManager:NetworkManager"
+        "bluetooth:Bluetooth"
+        "cups:CUPS (printing)"
+        "nftables:Firewall (nftables)"
+        "power-profiles-daemon:Power Profiles"
+    )
+
+    for entry in "${services[@]}"; do
+        local svc name status
+        svc="${entry%%:*}"
+        name="${entry#*:}"
+
+        if systemctl is-active --quiet "$svc" 2>/dev/null; then
+            status="● running"
+        elif systemctl --user is-active --quiet "$svc" 2>/dev/null; then
+            status="● running (user)"
+        elif systemctl is-enabled --quiet "$svc" 2>/dev/null; then
+            status="○ enabled (not running)"
+        else
+            status="✕ inactive"
+        fi
+        lines+=("  $status    $name")
+    done
+
+    lines+=("")
+    lines+=("─── Stoa Processes ───")
+
+    local stoa_procs=("waybar" "dunst" "swaybg" "eww" "gammastep" "hyprpolkitagent")
+    for proc in "${stoa_procs[@]}"; do
+        if pgrep -x "$proc" &>/dev/null; then
+            lines+=("  ● running    $proc")
+        else
+            lines+=("  ○ stopped    $proc")
+        fi
+    done
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Services"
+}
+
+# ── Failed systemd units ──
+_health_failed_units() {
+    local lines=()
+    lines+=("─── Failed Units ───")
+
+    local failed
+    failed=$(systemctl --failed --no-legend 2>/dev/null)
+    local user_failed
+    user_failed=$(systemctl --user --failed --no-legend 2>/dev/null)
+
+    if [ -z "$failed" ] && [ -z "$user_failed" ]; then
+        lines+=("  All units OK — no failures")
+    else
+        if [ -n "$failed" ]; then
+            lines+=("" "─── System ───")
+            while IFS= read -r line; do
+                [ -n "$line" ] && lines+=("  ✕ $line")
+            done <<< "$failed"
+        fi
+        if [ -n "$user_failed" ]; then
+            lines+=("" "─── User ───")
+            while IFS= read -r line; do
+                [ -n "$line" ] && lines+=("  ✕ $line")
+            done <<< "$user_failed"
+        fi
+    fi
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Failed Units"
+}
+
+# ── Journal errors (recent) ──
+_health_journal() {
+    local choice
+    choice=$(_rofi_select "  Journal" \
+        "  Errors (last boot)" \
+        "  Warnings (last boot)" \
+        "  Kernel messages (dmesg)" \
+        "  Journal disk usage" \
+        "  Back")
+    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+    case "$choice" in
+        *Errors*)
+            journalctl -b -p err --no-pager -n 100 2>/dev/null | "${ROFI[@]}" -p "  Errors"
+            ;;
+        *Warnings*)
+            journalctl -b -p warning --no-pager -n 100 2>/dev/null | "${ROFI[@]}" -p "  Warnings"
+            ;;
+        *Kernel*)
+            dmesg --level=err,warn -T 2>/dev/null | tail -80 | "${ROFI[@]}" -p "  dmesg"
+            ;;
+        *"disk usage"*)
+            journalctl --disk-usage 2>/dev/null | "${ROFI[@]}" -p "  Journal"
+            ;;
+    esac
+}
+
+# ── Pacman: pending updates ──
+_health_updates() {
+    _notify "Checking for updates..."
+    local updates
+    updates=$(checkupdates 2>/dev/null)
+
+    if [ -z "$updates" ]; then
+        _notify "System is up to date"
+        return
+    fi
+
+    local count
+    count=$(echo "$updates" | wc -l)
+
+    local lines=()
+    lines+=("─── $count updates available ───")
+    lines+=("")
+    while IFS= read -r line; do
+        lines+=("  $line")
+    done <<< "$updates"
+
+    local choice
+    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Updates ($count)")
+
+    # Offer to update
+    if [ -n "$choice" ]; then
+        _rofi_confirm "Run system update? (sudo pacman -Syu)" || return
+        kitty --hold -e sudo pacman -Syu &
+        disown
+    fi
+}
+
+# ── Security: check for known vulnerable packages ──
+_health_security() {
+    local lines=()
+    lines+=("─── Security ───")
+
+    # Check if any packages have known vulnerabilities via arch-audit
+    if command -v arch-audit &>/dev/null; then
+        local vulns
+        vulns=$(arch-audit 2>/dev/null)
+        if [ -z "$vulns" ]; then
+            lines+=("  No known vulnerabilities")
+        else
+            lines+=("")
+            while IFS= read -r v; do
+                lines+=("  ⚠ $v")
+            done <<< "$vulns"
+        fi
+    else
+        lines+=("  arch-audit not installed")
+        lines+=("  Install: sudo pacman -S arch-audit")
+    fi
+
+    lines+=("")
+    lines+=("─── GPG Keys ───")
+    if command -v gpg &>/dev/null; then
+        local key_count
+        key_count=$(gpg --list-keys 2>/dev/null | grep -c "^pub" || echo "0")
+        lines+=("  GPG keys in keyring: $key_count")
+
+        local pacman_keys
+        pacman_keys=$(pacman-key --list-keys 2>/dev/null | grep -c "^pub" || echo "?")
+        lines+=("  Pacman keyring: $pacman_keys keys")
+    else
+        lines+=("  gnupg not installed")
+    fi
+
+    lines+=("")
+    lines+=("─── Firewall ───")
+    if command -v nft &>/dev/null; then
+        if sudo nft list ruleset 2>/dev/null | grep -q "chain"; then
+            lines+=("  ● nftables active")
+            local rules
+            rules=$(sudo nft list ruleset 2>/dev/null | grep -c "rule" || echo "0")
+            lines+=("  Rules loaded: $rules")
+        else
+            lines+=("  ○ nftables — no rules loaded")
+        fi
+    else
+        lines+=("  ✕ nftables not installed")
+    fi
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Security"
+}
+
+# ── Temperatures & fans ──
+_health_thermals() {
+    local lines=()
+    lines+=("─── Temperatures ───")
+
+    # CPU thermal zones
+    for tz in /sys/class/thermal/thermal_zone*; do
+        [ -d "$tz" ] || continue
+        local type temp
+        type=$(cat "$tz/type" 2>/dev/null)
+        temp=$(cat "$tz/temp" 2>/dev/null)
+        [ -n "$temp" ] && lines+=("  $type: $((temp / 1000))°C")
+    done
+
+    # hwmon sensors
+    if command -v sensors &>/dev/null; then
+        lines+=("")
+        lines+=("─── Sensors ───")
+        while IFS= read -r line; do
+            [ -n "$line" ] && lines+=("  $line")
+        done < <(sensors 2>/dev/null)
+    else
+        lines+=("")
+        lines+=("  lm_sensors not installed — install: sudo pacman -S lm_sensors")
+    fi
+
+    # Fans
+    local fans_found=false
+    for hwmon in /sys/class/hwmon/hwmon*; do
+        for fan in "$hwmon"/fan*_input; do
+            [ -f "$fan" ] || continue
+            fans_found=true
+            local rpm label
+            rpm=$(cat "$fan" 2>/dev/null)
+            label=$(cat "${fan%_input}_label" 2>/dev/null || basename "$fan" | sed 's/_input//')
+            lines+=("  Fan $label: ${rpm} RPM")
+        done
+    done
+    $fans_found || lines+=("  No fan sensors detected")
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Thermals"
+}
+
+# ── Stoa config files integrity ──
+_health_config_check() {
+    local lines=()
+    lines+=("─── Config Files ───")
+
+    local configs=(
+        "${HOME}/.config/hypr/hyprland.conf:Hyprland config"
+        "${HOME}/.config/waybar/config:Waybar config"
+        "${HOME}/.config/waybar/style.css:Waybar style"
+        "${HOME}/.config/rofi/config.rasi:Rofi config"
+        "${HOME}/.config/dunst/dunstrc:Dunst config"
+        "${HOME}/.config/kitty/kitty.conf:Kitty config"
+        "${HOME}/.config/eww/eww.yuck:EWW widgets"
+        "${HOME}/.config/eww/eww.scss:EWW styles"
+        "${HOME}/.config/i3/config:i3 config"
+        "${HOME}/.config/stoa/stoa.conf:Stoa config"
+    )
+
+    for entry in "${configs[@]}"; do
+        local path name status
+        path="${entry%%:*}"
+        name="${entry#*:}"
+
+        if [ -L "$path" ]; then
+            local target
+            target=$(readlink -f "$path" 2>/dev/null)
+            if [ -f "$target" ]; then
+                status="● symlink OK"
+            else
+                status="✕ broken symlink → $target"
+            fi
+        elif [ -f "$path" ]; then
+            status="● file (not symlinked)"
+        else
+            status="✕ missing"
+        fi
+        lines+=("  $status    $name")
+    done
+
+    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Configs"
+}
+
+# ── System Health menu ──
+menu_health() {
+    while true; do
+        local choice
+        choice=$(_rofi_select "  System Health" \
+            "  Run Health Check" \
+            "  Last Doctor Report" \
+            "  System Info" \
+            "  Services Status" \
+            "  Failed Units" \
+            "  Temperatures & Fans" \
+            "  Journal (errors/warnings)" \
+            "  Pending Updates" \
+            "  Package Snapshots" \
+            "  Security" \
+            "  Config Integrity" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *"Run Health"*)     _health_doctor ;;
+            *"Last Doctor"*)    _health_last_log ;;
+            *"System Info"*)    _health_system_info ;;
+            *"Services"*)       _health_services ;;
+            *"Failed"*)         _health_failed_units ;;
+            *"Temperatures"*)   _health_thermals ;;
+            *"Journal"*)        _health_journal ;;
+            *"Updates"*)        _health_updates ;;
+            *"Snapshots"*)      _health_pkg_snapshots ;;
+            *"Security"*)       _health_security ;;
+            *"Config"*)         _health_config_check ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
 #   MAIN MENU
 # ══════════════════════════════════════════════════════════════
 
@@ -4926,6 +5431,7 @@ main_menu() {
             "  Accessibility" \
             "  Screensaver" \
             "  Lock Screen" \
+            "  System Health" \
             "  Stoa Config" \
             "  Power")
         [ -z "$choice" ] && exit 0
@@ -4952,6 +5458,7 @@ main_menu() {
             *Accessibility*) menu_accessibility ;;
             *Screensaver*)  menu_screensaver ;;
             *Lock*)         menu_lockscreen ;;
+            *"System Health"*) menu_health ;;
             *Stoa*)         menu_stoa ;;
             *Power*)        menu_power ;;
         esac

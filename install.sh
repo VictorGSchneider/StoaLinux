@@ -65,8 +65,9 @@ _link "${STOA_DIR}/config/imv/config"               "${CONFIG_DIR}/imv/config"
 _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xml"
 _link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
+_link "${STOA_DIR}/config/Code/User/settings.json"  "${CONFIG_DIR}/Code/User/settings.json"
 
-# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird) ──
+# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird + VS Code) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
 _link "${STOA_DIR}/theme/gtk-3.0/stoa-gtk.css"  "${CONFIG_DIR}/gtk-3.0/gtk.css"
 _link "${STOA_DIR}/theme/gtk-4.0/settings.ini"  "${CONFIG_DIR}/gtk-4.0/settings.ini"
@@ -99,6 +100,14 @@ if [ -d /etc/pacman.d/hooks ] || sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null; 
     echo -e "  ${O}[+] Pacman theme hook installed${R}" || \
     echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
 fi
+
+# VS Code — install Stoa theme as extension
+VSCODE_EXT_DIR="${HOME}/.vscode/extensions/stoa-theme"
+mkdir -p "$VSCODE_EXT_DIR/themes"
+cp "${STOA_DIR}/theme/vscode/package.json" "$VSCODE_EXT_DIR/"
+cp "${STOA_DIR}/theme/vscode/themes/stoa-color-theme.json" "$VSCODE_EXT_DIR/themes/"
+echo -e "  ${O}[+] VS Code Stoa theme installed${R}"
+echo -e "  ${S}    To activate: Ctrl+K Ctrl+T → Stoa${R}"
 
 # ── Stoa data dirs ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
@@ -191,6 +200,21 @@ x-scheme-handler/about=brave-browser.desktop
 x-scheme-handler/unknown=brave-browser.desktop
 x-scheme-handler/mailto=betterbird.desktop
 message/rfc822=betterbird.desktop
+text/plain=code.desktop
+text/x-python=code.desktop
+text/x-csrc=code.desktop
+text/x-chdr=code.desktop
+text/x-c++src=code.desktop
+text/x-java=code.desktop
+text/x-shellscript=code.desktop
+text/x-script.python=code.desktop
+application/javascript=code.desktop
+application/json=code.desktop
+application/x-yaml=code.desktop
+application/xml=code.desktop
+application/toml=code.desktop
+text/x-rust=code.desktop
+text/x-go=code.desktop
 text/markdown=obsidian.desktop
 application/vnd.openxmlformats-officedocument.wordprocessingml.document=onlyoffice-desktopeditors.desktop
 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=onlyoffice-desktopeditors.desktop
