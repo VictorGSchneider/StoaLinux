@@ -11,11 +11,12 @@
 #     type:  screenshot | recording
 #     delay: seconds (0, 3, 5, 10) — screenshot only
 
-set -uo pipefail
+set -o pipefail
 
 SCREENSHOT_DIR="${HOME}/Pictures/screenshots"
 RECORD_DIR="${HOME}/Videos/recordings"
 PIDFILE="/tmp/stoa-record.pid"
+SESSION="${XDG_SESSION_TYPE:-x11}"
 
 mkdir -p "$SCREENSHOT_DIR" "$RECORD_DIR"
 
@@ -40,7 +41,7 @@ _stop_recording() {
 }
 
 _get_window_geom() {
-    if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+    if [ "$SESSION" = "wayland" ]; then
         local json
         json=$(hyprctl activewindow -j 2>/dev/null)
         if [ -n "$json" ]; then
@@ -63,7 +64,7 @@ _screenshot() {
 
     [ "$delay" -gt 0 ] 2>/dev/null && sleep "$delay"
 
-    if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+    if [ "$SESSION" = "wayland" ]; then
         case "$mode" in
             selection)
                 local geom
@@ -97,8 +98,9 @@ _screenshot() {
 _record() {
     local mode="$1"
     local filename="${RECORD_DIR}/recording-$(date +%Y%m%d-%H%M%S).mp4"
+    local rec_pid
 
-    if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+    if [ "$SESSION" = "wayland" ]; then
         if ! command -v wf-recorder &>/dev/null; then
             _notify "wf-recorder not found" "critical"
             return 1
@@ -108,6 +110,7 @@ _record() {
                 local geom
                 geom=$(slurp 2>/dev/null) || return 0
                 wf-recorder -g "$geom" -f "$filename" --audio &
+                rec_pid=$!
                 ;;
             window)
                 local geom
@@ -117,42 +120,64 @@ _record() {
                 else
                     wf-recorder -f "$filename" --audio &
                 fi
+                rec_pid=$!
                 ;;
             screen)
                 wf-recorder -f "$filename" --audio &
+                rec_pid=$!
                 ;;
         esac
     else
-        local resolution
-        resolution=$(xdpyinfo 2>/dev/null | grep dimensions | awk '{print $2}')
-        resolution="${resolution:-1920x1080}"
-
+        if ! command -v ffmpeg &>/dev/null; then
+            _notify "ffmpeg not found" "critical"
+            return 1
+        fi
         case "$mode" in
             selection)
                 local geom
-                geom=$(slop -f "%x,%y %wx%h" 2>/dev/null) || return 0
-                local offset size
-                offset=$(echo "$geom" | awk '{print $1}')
-                size=$(echo "$geom" | awk '{print $2}')
-                ffmpeg -y -f x11grab -video_size "$size" -i "${DISPLAY}+${offset}" \
+                geom=$(slop -f "%w %h %x %y" 2>/dev/null) || return 0
+                local sw sh sx sy
+                read -r sw sh sx sy <<< "$geom"
+                ffmpeg -y -f x11grab -video_size "${sw}x${sh}" -i "${DISPLAY}+${sx},${sy}" \
                        -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
                        -c:a aac "$filename" &
-                ;;
-            screen)
-                ffmpeg -y -f x11grab -video_size "$resolution" -i "${DISPLAY}+0,0" \
-                       -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
-                       -c:a aac "$filename" &
+                rec_pid=$!
                 ;;
             window)
+                local wid wgeom wx wy ww wh
+                wid=$(xdotool getactivewindow 2>/dev/null)
+                if [ -n "$wid" ]; then
+                    wgeom=$(xdotool getwindowgeometry --shell "$wid" 2>/dev/null)
+                    eval "$wgeom"
+                    ffmpeg -y -f x11grab -video_size "${WIDTH}x${HEIGHT}" -i "${DISPLAY}+${X},${Y}" \
+                           -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
+                           -c:a aac "$filename" &
+                else
+                    local resolution
+                    resolution=$(xdpyinfo 2>/dev/null | grep dimensions | awk '{print $2}')
+                    resolution="${resolution:-1920x1080}"
+                    ffmpeg -y -f x11grab -video_size "$resolution" -i "${DISPLAY}+0,0" \
+                           -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
+                           -c:a aac "$filename" &
+                fi
+                rec_pid=$!
+                ;;
+            screen)
+                local resolution
+                resolution=$(xdpyinfo 2>/dev/null | grep dimensions | awk '{print $2}')
+                resolution="${resolution:-1920x1080}"
                 ffmpeg -y -f x11grab -video_size "$resolution" -i "${DISPLAY}+0,0" \
                        -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
                        -c:a aac "$filename" &
+                rec_pid=$!
                 ;;
         esac
     fi
 
-    echo $! > "$PIDFILE"
-    _notify "Recording started — press Print to stop" "low"
+    if [ -n "${rec_pid:-}" ]; then
+        echo "$rec_pid" > "$PIDFILE"
+        _notify "Recording started — press Print to stop" "low"
+    fi
 }
 
 # ── Main ──

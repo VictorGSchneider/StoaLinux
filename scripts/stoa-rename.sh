@@ -99,7 +99,7 @@ declare -A rename_map
 for f in "${files[@]}"; do
     dir=$(dirname "$f")
     old_name=$(basename "$f")
-    new_name=$(echo "$old_name" | sed -E "s/${FIND_PATTERN}/${REPLACE_STR}/${SED_FLAGS}")
+    new_name=$(echo "$old_name" | sed -E "s|${FIND_PATTERN}|${REPLACE_STR}|${SED_FLAGS}")
 
     if [ "$old_name" != "$new_name" ]; then
         preview+="${old_name}  →  ${new_name}"$'\n'
