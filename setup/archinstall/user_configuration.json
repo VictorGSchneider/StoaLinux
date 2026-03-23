@@ -7,7 +7,7 @@
     "hostname": "stoa",
     "kernels": ["linux"],
     "locale_config": {
-        "kb_layout": "br",
+        "kb_layout": "br-abnt2",
         "sys_enc": "UTF-8",
         "sys_lang": "pt_BR.UTF-8"
     },
@@ -85,7 +85,6 @@
         "github-cli",
         "gnupg",
         "nftables",
-        "libinput-gestures",
         "rclone",
         "flatpak",
         "xdg-utils",
@@ -94,7 +93,7 @@
         "bluez-utils",
         "fastfetch"
     ],
-    "parallel downloads": 5,
+    "parallel downloads": 10,
     "profile_config": {
         "gfx_driver": null,
         "greeter": null,
