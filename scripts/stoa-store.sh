@@ -1029,10 +1029,43 @@ _check_broken_deps() {
 
 # ── Update ───────────────────────────────────────────────────
 
+# Update everything in one shot: system (pacman/AUR) + Flatpak + Snap.
+_update_all() {
+    local h; h=$(_helper)
+
+    local summary="System"
+    [ "$h" != "pacman" ] && summary="System + AUR ($h)"
+    command -v flatpak &>/dev/null && summary+=" + Flatpak"
+    command -v snap    &>/dev/null && summary+=" + Snap"
+
+    _confirm "Update all: ${summary}?" || return
+
+    local script
+    if [ "$h" = "pacman" ]; then
+        script="echo '── System (pacman) ──'; sudo pacman -Syu"
+    else
+        script="echo '── System + AUR (${h}) ──'; ${h} -Syu"
+    fi
+
+    if command -v flatpak &>/dev/null; then
+        script+="; echo; echo '── Flatpak ──'; flatpak update"
+    fi
+
+    if command -v snap &>/dev/null; then
+        script+="; echo; echo '── Snap ──'; sudo snap refresh"
+    fi
+
+    _notify "Updating ${summary}..."
+    _run_in_term "$script"
+    _apply_stoa_theme
+    _notify "Update all complete"
+}
+
 _update() {
     local h; h=$(_helper)
 
     local items=(
+        "  Update all (pacman + AUR + Flatpak + Snap)"
         "  Full system update (pacman + AUR)"
         "  Check for updates"
         "  Update mirrors (reflector)"
@@ -1045,6 +1078,9 @@ _update() {
     [ -z "$action" ] && return
 
     case "$action" in
+        *"Update all"*)
+            _update_all
+            ;;
         *Full*)
             if [ "$h" = "pacman" ]; then
                 _run_in_term "sudo pacman -Syu"
@@ -2521,6 +2557,7 @@ main() {
         choice=$(_rofi_list "  Stoa Store (${sources})" \
             "  Search & install" \
             "  Package browser" \
+            "  Update all" \
             "  Update system" \
             "  Cleanup" \
             "  System info" \
@@ -2539,6 +2576,7 @@ main() {
         case "$choice" in
             *"Search & install"*)  _search_install ;;
             *"Package browser"*)   _installed ;;
+            *"Update all"*)        _update_all ;;
             *Update*)              _update ;;
             *Cleanup*)             _cleanup ;;
             *info*)                _stats ;;
