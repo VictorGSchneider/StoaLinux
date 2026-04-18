@@ -188,7 +188,9 @@ case "${1:-}" in
             eww close capture 2>/dev/null
             exit 0
         fi
-        if eww active-windows 2>/dev/null | grep -q "capture"; then
+        # `eww active-windows` is not a real subcommand. Use `eww windows`
+        # which marks active windows with '*' in its output.
+        if eww windows 2>/dev/null | grep -Eq '^\*.*capture$'; then
             eww close capture
         else
             eww update capture-mode="screen" capture-type="screenshot" capture-delay=0 2>/dev/null
