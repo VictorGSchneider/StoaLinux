@@ -324,7 +324,9 @@ if $IS_NVIDIA; then
     MKINITCPIO="/etc/mkinitcpio.conf"
     NVIDIA_MODULES="nvidia nvidia_modeset nvidia_uvm nvidia_drm"
 
-    if grep -q "nvidia" "$MKINITCPIO" 2>/dev/null; then
+    # Only treat the MODULES=(...) line as authoritative — comments or
+    # other lines mentioning "nvidia" must not skip the edit.
+    if grep -qE '^\s*MODULES=\([^)]*nvidia' "$MKINITCPIO" 2>/dev/null; then
         echo -e "  ${S}[~] NVIDIA modules already present in mkinitcpio.${R}"
     else
         echo -e "  ${S}Adding modules: ${NVIDIA_MODULES}${R}"

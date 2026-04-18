@@ -6,7 +6,9 @@
 
 WIDGET="memento"
 
-if eww active-windows | grep -q "$WIDGET"; then
+# `eww active-windows` is not a real subcommand; `eww windows` marks
+# active windows with a leading `*`.
+if eww windows 2>/dev/null | grep -Eq "^\*.*${WIDGET}$"; then
     eww close "$WIDGET"
 else
     eww open "$WIDGET"

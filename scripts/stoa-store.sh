@@ -41,7 +41,22 @@ _has_aur() { [[ "$(_helper)" != "pacman" ]]; }
 _is_installed() { pacman -Qi "$1" &>/dev/null; }
 
 _run_in_term() {
-    alacritty -e bash -c "$1; echo; echo 'Press Enter to close...'; read"
+    # Stoa ships kitty by default; fall back to whatever terminal is on PATH
+    # (alacritty/foot/xterm) before erroring out.
+    local term="${TERMINAL:-}"
+    if [ -z "$term" ] || ! command -v "$term" &>/dev/null; then
+        for candidate in kitty alacritty foot xterm; do
+            if command -v "$candidate" &>/dev/null; then
+                term="$candidate"
+                break
+            fi
+        done
+    fi
+    if [ -z "$term" ] || ! command -v "$term" &>/dev/null; then
+        _notify "No terminal emulator found (need kitty/alacritty/foot/xterm)"
+        return 1
+    fi
+    "$term" -e bash -c "$1; echo; echo 'Press Enter to close...'; read"
 }
 
 _apply_stoa_theme() {
@@ -1236,7 +1251,9 @@ _setup_hook() {
         sudo mkdir -p /etc/pacman.d/hooks
         sudo tee "$script" > /dev/null <<'ENFORCE'
 #!/bin/bash
-U="${SUDO_USER:-$USER}"; H=$(eval echo "~$U")
+U="${SUDO_USER:-$USER}"
+H=$(getent passwd "$U" | cut -d: -f6)
+[ -z "$H" ] && exit 0
 g="$H/.config/gtk-3.0/settings.ini"; [ ! -f "$g" ] && exit 0
 t=$(grep "^gtk-theme-name" "$g"|sed 's/^[^=]*=\s*//')
 i=$(grep "^gtk-icon-theme-name" "$g"|sed 's/^[^=]*=\s*//')

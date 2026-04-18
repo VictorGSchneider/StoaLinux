@@ -13,8 +13,11 @@
 #   stoa-predict select-emoji <idx>  — accept emoji at index
 #   stoa-predict stop                — stop daemon
 
-PIDFILE="/tmp/stoa-predict.pid"
-SUGGEST_FILE="/tmp/stoa-predict.json"
+# Prefer the per-user XDG_RUNTIME_DIR (typically /run/user/$UID) over
+# world-writable /tmp. Falls back to /tmp only when unset (non-systemd).
+_STOA_RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
+PIDFILE="${_STOA_RUNTIME}/stoa-predict.pid"
+SUGGEST_FILE="${_STOA_RUNTIME}/stoa-predict.json"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 PREDICT_PY="${SCRIPT_DIR}/stoa-predict.py"
 
@@ -78,18 +81,18 @@ _select() {
 
     [ -z "$word" ] && return
 
-    # Erase the typed prefix with backspaces, then type the full word
+    # Erase the typed prefix with backspaces, then type the full word.
+    # Build a single wtype invocation so all keystrokes land in one batch
+    # — looping one `wtype -k BackSpace` per char dropped events on fast typers.
     local prefix_len=${#prefix}
     if [ "$prefix_len" -gt 0 ] && command -v wtype &>/dev/null; then
-        # Send backspaces to erase prefix
+        local wtype_args=()
         local i
         for ((i = 0; i < prefix_len; i++)); do
-            wtype -k BackSpace
+            wtype_args+=(-k BackSpace)
         done
-        # Small delay for apps to process
-        sleep 0.05
-        # Type the complete word + space
-        wtype -- "${word} "
+        wtype_args+=(-s 30 -- "${word} ")
+        wtype "${wtype_args[@]}"
     fi
 
     # Clear suggestions

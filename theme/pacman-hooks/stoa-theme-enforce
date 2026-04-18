@@ -5,7 +5,9 @@
 # ╚══════════════════════════════════════════════════════════════╝
 
 REAL_USER="${SUDO_USER:-$USER}"
-REAL_HOME=$(eval echo "~${REAL_USER}")
+# Resolve home via getent to avoid `eval` on a user-controlled string.
+REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+[ -z "$REAL_HOME" ] && exit 0
 
 gtk3="${REAL_HOME}/.config/gtk-3.0/settings.ini"
 gtk4="${REAL_HOME}/.config/gtk-4.0/settings.ini"
