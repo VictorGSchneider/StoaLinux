@@ -13,8 +13,11 @@
 #   stoa-predict select-emoji <idx>  — accept emoji at index
 #   stoa-predict stop                — stop daemon
 
-PIDFILE="/tmp/stoa-predict.pid"
-SUGGEST_FILE="/tmp/stoa-predict.json"
+# Prefer the per-user XDG_RUNTIME_DIR (typically /run/user/$UID) over
+# world-writable /tmp. Falls back to /tmp only when unset (non-systemd).
+_STOA_RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
+PIDFILE="${_STOA_RUNTIME}/stoa-predict.pid"
+SUGGEST_FILE="${_STOA_RUNTIME}/stoa-predict.json"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 PREDICT_PY="${SCRIPT_DIR}/stoa-predict.py"
 

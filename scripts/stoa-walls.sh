@@ -11,6 +11,14 @@ mkdir -p "$WALLDIR"
 WIDTH=1920
 HEIGHT=1080
 
+# Require ImageMagick 7 (`magick`). ImageMagick 6 (`convert`) is not
+# supported because the rectangle/gradient syntax we use below differs.
+if ! command -v magick &>/dev/null; then
+    echo "stoa-walls: 'magick' (ImageMagick 7) not found." >&2
+    echo "            Install: sudo pacman -S imagemagick" >&2
+    exit 1
+fi
+
 echo "Generating Stoic wallpapers..."
 
 # 1. Marble — subtle gradient

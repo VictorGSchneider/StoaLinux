@@ -15,7 +15,8 @@ set -o pipefail
 
 SCREENSHOT_DIR="${HOME}/Pictures/screenshots"
 RECORD_DIR="${HOME}/Videos/recordings"
-PIDFILE="/tmp/stoa-record.pid"
+# Use the per-user runtime dir when available instead of world-writable /tmp.
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/stoa-record.pid"
 SESSION="${XDG_SESSION_TYPE:-x11}"
 
 mkdir -p "$SCREENSHOT_DIR" "$RECORD_DIR"
