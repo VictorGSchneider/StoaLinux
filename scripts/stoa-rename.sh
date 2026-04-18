@@ -99,7 +99,9 @@ declare -A rename_map
 for f in "${files[@]}"; do
     dir=$(dirname "$f")
     old_name=$(basename "$f")
-    new_name=$(echo "$old_name" | sed -E "s|${FIND_PATTERN}|${REPLACE_STR}|${SED_FLAGS}")
+    # Use SOH (\x01) as sed delimiter — safe against `|` inside user regex
+    # alternation like `(foo|bar)`, which would otherwise break the s command.
+    new_name=$(printf '%s' "$old_name" | sed -E $'s\x01'"${FIND_PATTERN}"$'\x01'"${REPLACE_STR}"$'\x01'"${SED_FLAGS}")
 
     if [ "$old_name" != "$new_name" ]; then
         preview+="${old_name}  →  ${new_name}"$'\n'
