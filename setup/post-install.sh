@@ -148,7 +148,7 @@ DEV_PKGS="github-cli gnupg"
 # Shell and extras
 SHELL_PKGS="zsh git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
+ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
@@ -515,8 +515,21 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         else
             git clone https://github.com/VictorGSchneider/DFM.git "$DFM_DIR"
         fi
-        pip install -e "$DFM_DIR" --break-system-packages 2>/dev/null || \
-            pip install -e "$DFM_DIR"
+        # Prefer pipx (PEP 668 friendly). Fall back to a user venv, then
+        # last-resort --break-system-packages only if neither is available.
+        if command -v pipx &>/dev/null; then
+            pipx install --force "$DFM_DIR"
+        elif command -v python3 &>/dev/null; then
+            DFM_VENV="${HOME}/.local/share/dfm-venv"
+            python3 -m venv "$DFM_VENV"
+            "$DFM_VENV/bin/pip" install --upgrade pip >/dev/null
+            "$DFM_VENV/bin/pip" install -e "$DFM_DIR"
+            mkdir -p "${HOME}/.local/bin"
+            ln -sf "$DFM_VENV/bin/dfm" "${HOME}/.local/bin/dfm"
+        else
+            pip install -e "$DFM_DIR" --break-system-packages 2>/dev/null || \
+                pip install -e "$DFM_DIR"
+        fi
         echo -e "  ${O}[✓] DFM installed.${R}"
         echo -e "  ${S}    Launch: dfm  or  Super+G${R}"
     else

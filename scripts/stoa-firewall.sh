@@ -108,9 +108,21 @@ _apply_rules() {
     tmpfile=$(mktemp)
     _generate_rules > "$tmpfile"
 
-    # Flush old stoa rules and apply new
+    # Dry-run validate the new ruleset BEFORE flushing the old one.
+    # Without this, a syntax error leaves the firewall fully open.
+    if ! sudo nft -c -f "$tmpfile" 2>/dev/null; then
+        echo -e "  ${T}[!] Generated nftables ruleset failed validation; keeping previous ruleset.${R}" >&2
+        rm -f "$tmpfile"
+        return 1
+    fi
+
+    # Flush old stoa rules and apply validated new ones
     sudo nft delete table inet stoa_firewall 2>/dev/null
-    sudo nft -f "$tmpfile"
+    if ! sudo nft -f "$tmpfile"; then
+        echo -e "  ${T}[!] nft -f failed unexpectedly after validation; firewall may be inactive.${R}" >&2
+        rm -f "$tmpfile"
+        return 1
+    fi
     rm -f "$tmpfile"
 
     # Save persistent rules

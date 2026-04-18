@@ -87,12 +87,16 @@ if [ -f "${STOA_DIR}/theme/yacreader/stoa-yacreader.qss" ]; then
     _link "${STOA_DIR}/theme/yacreader/stoa-yacreader.qss" "${CONFIG_DIR}/YACReader/stoa-yacreader.qss"
 fi
 
-# OnlyOffice theme
+# OnlyOffice theme — only seed settings.json when absent to preserve user prefs
 ONLYOFFICE_DIR="${HOME}/.config/onlyoffice/desktopeditors"
 if [ -d "${HOME}/.config/onlyoffice" ] || command -v onlyoffice-desktopeditors &>/dev/null; then
     mkdir -p "$ONLYOFFICE_DIR"
-    cp "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" "${ONLYOFFICE_DIR}/settings.json" 2>/dev/null && \
-        echo -e "  ${O}[+] OnlyOffice Stoa theme applied${R}" || true
+    if [ ! -f "${ONLYOFFICE_DIR}/settings.json" ]; then
+        cp "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" "${ONLYOFFICE_DIR}/settings.json" 2>/dev/null && \
+            echo -e "  ${O}[+] OnlyOffice Stoa theme applied${R}" || true
+    else
+        echo -e "  ${S}[~] OnlyOffice settings.json preserved${R}"
+    fi
 fi
 
 # Betterbird theme (userChrome.css)
@@ -153,6 +157,8 @@ elif [ -d "${HOME}/.thunderbird" ]; then
         fi
         echo -e "  ${O}[+] Thunderbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
     done
+fi
+
 # ── Pacman hook (auto-apply theme after installs) ──
 if [ -d /etc/pacman.d/hooks ] || sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null; then
     sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook" /etc/pacman.d/hooks/ 2>/dev/null && \
@@ -233,7 +239,7 @@ chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
          "${HOME}/.local/bin/stoa-capture" \
          "${HOME}/.local/bin/stoa-doctor" \
          "${HOME}/.local/bin/stoa-pkg-snapshot" \
-         "${HOME}/.local/bin/stoa-gpu-setup"
+         "${HOME}/.local/bin/stoa-gpu-setup" \
          "${HOME}/.local/bin/stoa-maintain" \
          "${HOME}/.local/bin/stoa-predict" \
          "${HOME}/.local/bin/stoa-predict.py"

@@ -71,6 +71,9 @@ _ocr_from_screen() {
     local lang="$1"
     local tmpfile="${OCR_TMPDIR}/stoa-ocr-$$.png"
 
+    # Ensure the screenshot is removed even if tesseract or notify fails.
+    trap 'rm -f "$tmpfile"' RETURN
+
     # Capture screen area
     _screenshot_area "$tmpfile"
 
@@ -80,7 +83,6 @@ _ocr_from_screen() {
     fi
 
     _ocr_from_file "$tmpfile" "$lang"
-    rm -f "$tmpfile"
 }
 
 # Check dependencies

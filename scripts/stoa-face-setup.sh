@@ -103,15 +103,39 @@ _setup_pam() {
         return 0
     fi
 
-    # Add howdy as first auth method (sufficient = face OR password)
-    local tmpfile
-    tmpfile=$(mktemp)
-    echo "auth      sufficient pam_howdy.so" > "$tmpfile"
-    cat "$pam_file" >> "$tmpfile"
-    mv "$tmpfile" "$pam_file"
-    chmod 644 "$pam_file"
+    # Backup original before modifying — a broken /etc/pam.d/sudo can
+    # lock you out of privilege escalation, so keep a restorable copy.
+    local backup="${pam_file}.stoa-bak.$(date +%Y%m%d-%H%M%S)"
+    cp -a "$pam_file" "$backup" || {
+        echo -e "  ${T}[!] Could not create backup ${backup}${R}" >&2
+        return 1
+    }
 
-    echo -e "  ${O}[✓] PAM configured for ${service}${R}"
+    # Stage the new file INSIDE /etc/pam.d so the final mv is a same-
+    # filesystem atomic rename (mktemp defaults to /tmp which may be a
+    # different mount, making mv a copy+delete that could leave the
+    # target truncated on failure).
+    local tmpfile
+    tmpfile=$(mktemp "${pam_file}.stoa.XXXXXX") || {
+        echo -e "  ${T}[!] Could not create temp file next to ${pam_file}${R}" >&2
+        return 1
+    }
+    {
+        echo "auth      sufficient pam_howdy.so"
+        cat "$pam_file"
+    } > "$tmpfile" || {
+        rm -f "$tmpfile"
+        echo -e "  ${T}[!] Failed to write new PAM config${R}" >&2
+        return 1
+    }
+    chmod 644 "$tmpfile"
+    mv "$tmpfile" "$pam_file" || {
+        rm -f "$tmpfile"
+        echo -e "  ${T}[!] Failed to replace ${pam_file} (backup at ${backup})${R}" >&2
+        return 1
+    }
+
+    echo -e "  ${O}[✓] PAM configured for ${service} (backup: ${backup})${R}"
 }
 
 # ══════════════════════════════════════════════════════════════

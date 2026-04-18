@@ -15,7 +15,8 @@ set -o pipefail
 
 SCREENSHOT_DIR="${HOME}/Pictures/screenshots"
 RECORD_DIR="${HOME}/Videos/recordings"
-PIDFILE="/tmp/stoa-record.pid"
+# Use the per-user runtime dir when available instead of world-writable /tmp.
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/stoa-record.pid"
 SESSION="${XDG_SESSION_TYPE:-x11}"
 
 mkdir -p "$SCREENSHOT_DIR" "$RECORD_DIR"
@@ -188,7 +189,9 @@ case "${1:-}" in
             eww close capture 2>/dev/null
             exit 0
         fi
-        if eww active-windows 2>/dev/null | grep -q "capture"; then
+        # `eww active-windows` is not a real subcommand. Use `eww windows`
+        # which marks active windows with '*' in its output.
+        if eww windows 2>/dev/null | grep -Eq '^\*.*capture$'; then
             eww close capture
         else
             eww update capture-mode="screen" capture-type="screenshot" capture-delay=0 2>/dev/null

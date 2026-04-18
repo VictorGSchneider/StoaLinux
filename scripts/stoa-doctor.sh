@@ -68,7 +68,13 @@ if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
     _check_bin wl-paste     "Clipboard (wl-clipboard)"
     _check_bin cliphist     "Clipboard history (cliphist)"
     _check_optional satty   "Screenshot editor (satty)"
-    _check_bin hyprpolkitagent "Polkit agent (hyprpolkitagent)"
+    if [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ] \
+        || command -v hyprpolkitagent &>/dev/null \
+        || command -v lxpolkit &>/dev/null; then
+        echo "[OK] Polkit agent present" >> "$LOG"
+    else
+        echo "[WARN] No polkit authentication agent found (polkit-gnome / hyprpolkitagent / lxpolkit)" >> "$LOG"
+    fi
 
     # ── Hyprland version check ──
     if command -v hyprctl &>/dev/null; then
