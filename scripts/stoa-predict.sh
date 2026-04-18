@@ -78,18 +78,18 @@ _select() {
 
     [ -z "$word" ] && return
 
-    # Erase the typed prefix with backspaces, then type the full word
+    # Erase the typed prefix with backspaces, then type the full word.
+    # Build a single wtype invocation so all keystrokes land in one batch
+    # — looping one `wtype -k BackSpace` per char dropped events on fast typers.
     local prefix_len=${#prefix}
     if [ "$prefix_len" -gt 0 ] && command -v wtype &>/dev/null; then
-        # Send backspaces to erase prefix
+        local wtype_args=()
         local i
         for ((i = 0; i < prefix_len; i++)); do
-            wtype -k BackSpace
+            wtype_args+=(-k BackSpace)
         done
-        # Small delay for apps to process
-        sleep 0.05
-        # Type the complete word + space
-        wtype -- "${word} "
+        wtype_args+=(-s 30 -- "${word} ")
+        wtype "${wtype_args[@]}"
     fi
 
     # Clear suggestions

@@ -142,8 +142,21 @@ echo -e "  ${B}[3/4] Installing yay (AUR helper)...${R}"
 # Trap ensures cleanup even if script is interrupted
 _cleanup_sudoers() { arch-chroot "$INSTALL_ROOT" rm -f /etc/sudoers.d/stoa-temp 2>/dev/null; }
 trap _cleanup_sudoers EXIT
-arch-chroot "$INSTALL_ROOT" bash -c \
-    "echo '${CREATED_USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/stoa-temp" 2>/dev/null
+# Stage to a temp file, validate with visudo -cf, then move into place.
+# An invalid sudoers drop-in locks the whole system out of sudo.
+arch-chroot "$INSTALL_ROOT" bash -c "
+    set -e
+    tmp=\$(mktemp /etc/sudoers.d/.stoa-temp.XXXXXX)
+    printf '%s\n' '${CREATED_USER} ALL=(ALL) NOPASSWD: ALL' > \"\$tmp\"
+    chmod 0440 \"\$tmp\"
+    if visudo -cf \"\$tmp\" >/dev/null; then
+        mv \"\$tmp\" /etc/sudoers.d/stoa-temp
+    else
+        rm -f \"\$tmp\"
+        echo 'visudo rejected temporary sudoers entry' >&2
+        exit 1
+    fi
+"
 
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c '
     cd /tmp
