@@ -19,7 +19,14 @@ fi
 SNAPSHOT_DIR="${_real_home}/.config/stoa/pkg-snapshots"
 MAX_SNAPSHOTS=20
 
-mkdir -p "$SNAPSHOT_DIR"
+# When invoked as the pacman hook we are root but the target dir lives in
+# the user's home — create it with the user's ownership so the user can
+# read/rotate their own snapshots.
+if [ "$(id -u)" -eq 0 ] && [ -n "${_real_user:-}" ] && id "$_real_user" &>/dev/null; then
+    install -d -m 0755 -o "$_real_user" -g "$_real_user" "$SNAPSHOT_DIR"
+else
+    mkdir -p "$SNAPSHOT_DIR"
+fi
 
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 SNAPSHOT="${SNAPSHOT_DIR}/pkg-snapshot-${TIMESTAMP}.txt"
@@ -36,6 +43,12 @@ pacman -Q > "$SNAPSHOT" 2>/dev/null
     echo "#"
     cat "$SNAPSHOT"
 } > "${SNAPSHOT}.tmp" && mv "${SNAPSHOT}.tmp" "$SNAPSHOT"
+
+# Hand the snapshot file back to the user when invoked from the pacman
+# hook, otherwise rotation by `stoa-maintain` (run as user) can't touch it.
+if [ "$(id -u)" -eq 0 ] && [ -n "${_real_user:-}" ] && id "$_real_user" &>/dev/null; then
+    chown "$_real_user:$_real_user" "$SNAPSHOT" 2>/dev/null
+fi
 
 # Rotate: keep only the last N snapshots
 ls -1t "$SNAPSHOT_DIR"/pkg-snapshot-*.txt 2>/dev/null | tail -n +$((MAX_SNAPSHOTS + 1)) | xargs -r rm -f

@@ -28,8 +28,9 @@ DICT_PATHS = [
     Path("/usr/share/dict/words"),
     Path("/usr/share/dict/american-english"),
 ]
-PIDFILE = "/tmp/stoa-predict.pid"
-SUGGEST_FILE = "/tmp/stoa-predict.json"
+_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+PIDFILE = f"{_RUNTIME_DIR}/stoa-predict.pid"
+SUGGEST_FILE = f"{_RUNTIME_DIR}/stoa-predict.json"
 
 # ── Keycode to character mapping (US/BR base — lowercase) ──
 KEY_MAP = {
