@@ -29,6 +29,12 @@ PRESETS=(
     "Custom..."
 )
 
+if ! command -v magick &>/dev/null; then
+    echo "stoa-resize: ImageMagick 7 (magick) not found in PATH"
+    notify-send -t 3000 "Image Resizer" "ImageMagick 7 (magick) not installed"
+    exit 1
+fi
+
 if [ $# -eq 0 ]; then
     echo "Usage: stoa-resize image1 [image2 ...]"
     notify-send -t 3000 "Image Resizer" "Usage: stoa-resize image1 [image2 ...]"
