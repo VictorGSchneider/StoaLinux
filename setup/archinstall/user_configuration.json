@@ -56,6 +56,7 @@
         "ttf-font-awesome",
         "git",
         "zsh",
+        "bash",
         "base-devel",
         "pipewire",
         "pipewire-pulse",

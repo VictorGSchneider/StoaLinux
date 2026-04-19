@@ -78,9 +78,14 @@ git clone https://github.com/VictorGSchneider/StoaLinux.git
 cd StoaLinux && chmod +x install.sh && ./install.sh
 ```
 
-Shell (add manually):
+Shell — zsh is the Stoa default login shell; bash is kept as a fallback. The
+setup scripts (`arch-install.sh` / `post-install.sh`) seed both rc files and
+`chsh` into zsh automatically. On an existing system where the setup scripts
+weren't run, wire it up manually:
 ```bash
-echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
+echo 'source ~/StoaLinux/shell/.zshrc'  >> ~/.zshrc
+echo 'source ~/StoaLinux/shell/.bashrc' >> ~/.bashrc
+chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
 ```
 
 > `install.sh` deploys configs and `stoa-*` binaries as **symlinks** into the

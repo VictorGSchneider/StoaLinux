@@ -11,6 +11,13 @@
 
 ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
+# Require ImageMagick 7 (`magick`). Legacy `convert` differs in resize syntax.
+if ! command -v magick &>/dev/null; then
+    notify-send -t 5000 "Image Resizer" "ImageMagick 7 (magick) not found.\nInstall: sudo pacman -S imagemagick"
+    echo "stoa-resize: 'magick' not found. Install: sudo pacman -S imagemagick" >&2
+    exit 1
+fi
+
 PRESETS=(
     "25%   — Thumbnail"
     "50%   — Half"
