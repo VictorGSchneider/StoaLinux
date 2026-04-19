@@ -1,0 +1,94 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Vendored upstream code (scripts/vendor/**) is excluded from every check —
+# we forward-port bug fixes upstream-first, so we don't gate our CI on it.
+
+jobs:
+  lint:
+    name: lint (shell / json / python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: List targets
+        id: targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t SH_FILES < <(
+              find . -type f -name '*.sh' \
+                  -not -path './.git/*' \
+                  -not -path './scripts/vendor/*' \
+              | sort
+          )
+          mapfile -t JSON_FILES < <(
+              find . -type f -name '*.json' \
+                  -not -path './.git/*' \
+                  -not -path './scripts/vendor/*' \
+              | sort
+          )
+          mapfile -t PY_FILES < <(
+              find . -type f -name '*.py' \
+                  -not -path './.git/*' \
+                  -not -path './scripts/vendor/*' \
+              | sort
+          )
+          printf 'sh files:   %d\n' "${#SH_FILES[@]}"
+          printf 'json files: %d\n' "${#JSON_FILES[@]}"
+          printf 'py files:   %d\n' "${#PY_FILES[@]}"
+          printf '%s\n' "${SH_FILES[@]}"   > sh.list
+          printf '%s\n' "${JSON_FILES[@]}" > json.list
+          printf '%s\n' "${PY_FILES[@]}"   > py.list
+
+      - name: Shell syntax (bash -n)
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              if ! bash -n "$f"; then
+                  echo "::error file=$f::bash -n failed"
+                  status=1
+              fi
+          done < sh.list
+          exit $status
+
+      - name: Shellcheck (errors only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # --severity=error keeps CI focused on real bugs (SC2xxx style
+          # warnings are useful but noisy on an established codebase). Raise
+          # the floor to 'warning' later once the tree is clean.
+          if [ ! -s sh.list ]; then exit 0; fi
+          xargs -a sh.list shellcheck --severity=error --shell=bash
+
+      - name: JSON validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"; then
+                  echo "::error file=$f::invalid JSON"
+                  status=1
+              fi
+          done < json.list
+          exit $status
+
+      - name: Python syntax (py_compile)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s py.list ]; then exit 0; fi
+          xargs -a py.list python3 -m py_compile
