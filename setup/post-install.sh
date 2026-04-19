@@ -145,8 +145,9 @@ DFM_PKGS="python python-gobject gtk4 libadwaita"
 # Developer tools
 DEV_PKGS="github-cli gnupg"
 
-# Shell and extras
-SHELL_PKGS="zsh git base-devel"
+# Shell and extras — zsh is the Stoa default login shell; bash stays available
+# as a fallback (and is already pulled in by `base`, but listed here for intent).
+SHELL_PKGS="zsh bash git base-devel"
 
 ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS"
 
@@ -582,34 +583,42 @@ bash "${STOA_DIR}/install.sh"
 echo ""
 echo -e "  ${F}Shell configuration:${R}"
 echo ""
-echo -e "  ${S}  1) Configure zsh (add source to .zshrc)${R}"
-echo -e "  ${S}  2) Configure bash (add source to .bashrc)${R}"
+echo -e "  ${S}  1) zsh   (default — login shell; bash kept as fallback)${R}"
+echo -e "  ${S}  2) bash  (login shell; zsh rc still seeded)${R}"
 echo -e "  ${S}  3) Skip${R}"
 read -rp "  Choose [1]: " SHELL_CHOICE
 SHELL_CHOICE="${SHELL_CHOICE:-1}"
 
+# Seed both rc files regardless of the login-shell choice. Stoa ships configs
+# for both, and we want `bash` invoked from a zsh terminal (or vice versa) to
+# still pick up the Stoa prompt/aliases.
+_seed_rc() {
+    local rc="$1" src="$2"
+    if ! grep -q "StoaLinux" "$rc" 2>/dev/null; then
+        echo "source ${src}" >> "$rc"
+        echo -e "  ${O}[✓] $(basename "$rc") configured.${R}"
+    else
+        echo -e "  ${S}[~] $(basename "$rc") already contains StoaLinux.${R}"
+    fi
+}
+
 case "$SHELL_CHOICE" in
     1)
-        ZSHRC="$HOME/.zshrc"
-        if ! grep -q "StoaLinux" "$ZSHRC" 2>/dev/null; then
-            echo "source ${STOA_DIR}/shell/.zshrc" >> "$ZSHRC"
-            echo -e "  ${O}[✓] .zshrc configured.${R}"
-        else
-            echo -e "  ${S}[~] .zshrc already contains StoaLinux.${R}"
-        fi
+        _seed_rc "$HOME/.zshrc" "${STOA_DIR}/shell/.zshrc"
+        _seed_rc "$HOME/.bashrc" "${STOA_DIR}/shell/.bashrc"
         if [ "$SHELL" != "/bin/zsh" ] && [ "$SHELL" != "/usr/bin/zsh" ]; then
-            echo -e "  ${S}Changing shell to zsh...${R}"
+            echo -e "  ${S}Changing login shell to zsh...${R}"
             chsh -s /bin/zsh
-            echo -e "  ${O}[✓] Shell changed to zsh.${R}"
+            echo -e "  ${O}[✓] Login shell changed to zsh.${R}"
         fi
         ;;
     2)
-        BASHRC="$HOME/.bashrc"
-        if ! grep -q "StoaLinux" "$BASHRC" 2>/dev/null; then
-            echo "source ${STOA_DIR}/shell/.bashrc" >> "$BASHRC"
-            echo -e "  ${O}[✓] .bashrc configured.${R}"
-        else
-            echo -e "  ${S}[~] .bashrc already contains StoaLinux.${R}"
+        _seed_rc "$HOME/.bashrc" "${STOA_DIR}/shell/.bashrc"
+        _seed_rc "$HOME/.zshrc" "${STOA_DIR}/shell/.zshrc"
+        if [ "$SHELL" = "/bin/zsh" ] || [ "$SHELL" = "/usr/bin/zsh" ]; then
+            echo -e "  ${S}Changing login shell to bash...${R}"
+            chsh -s /bin/bash
+            echo -e "  ${O}[✓] Login shell changed to bash.${R}"
         fi
         ;;
     3)
