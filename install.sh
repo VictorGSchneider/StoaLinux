@@ -39,6 +39,24 @@ _link() {
     echo -e "  ${O}[+] ${dst}${R}"
 }
 
+# Same semantics as _link, but the destination lives under a root-owned
+# path (e.g. /etc/pacman.d/hooks, /usr/local/bin). All destructive ops go
+# through `sudo` so we never silently drop a failure.
+_sudo_link() {
+    local src="$1"
+    local dst="$2"
+
+    if sudo test -e "$dst" || sudo test -L "$dst"; then
+        local backup="${dst}.bak.$(date +%s)"
+        echo -e "  ${S}[~] Backup: ${dst} → ${backup}${R}"
+        sudo mv "$dst" "$backup"
+    fi
+
+    sudo mkdir -p "$(dirname "$dst")"
+    sudo ln -sf "$src" "$dst"
+    echo -e "  ${O}[+] ${dst}${R}"
+}
+
 echo -e "${F}Creating symlinks...${R}"
 echo ""
 
@@ -99,27 +117,18 @@ if [ -d "${HOME}/.config/onlyoffice" ] || command -v onlyoffice-desktopeditors &
     fi
 fi
 
-# Betterbird theme (userChrome.css)
-BB_PROFILE_DIR=$(find "${HOME}/.betterbird" -maxdepth 2 -name "prefs.js" -printf '%h\n' 2>/dev/null | head -1)
-if [ -n "$BB_PROFILE_DIR" ]; then
-    mkdir -p "${BB_PROFILE_DIR}/chrome"
-    _link "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${BB_PROFILE_DIR}/chrome/userChrome.css"
-    echo -e "  ${O}[+] Betterbird Stoa theme applied${R}"
-fi
-
 STEAM_CSS_DIR="${HOME}/.steam/steam/steamui"
 if [ -d "${HOME}/.steam" ]; then
-    mkdir -p "$STEAM_CSS_DIR"
-    cp "${STOA_DIR}/theme/steam/stoa-steam.css" "${STEAM_CSS_DIR}/libraryroot.custom.css" 2>/dev/null && \
-        echo -e "  ${O}[+] Steam Stoa CSS applied${R}" || true
+    _link "${STOA_DIR}/theme/steam/stoa-steam.css" "${STEAM_CSS_DIR}/libraryroot.custom.css"
+    echo -e "  ${O}[+] Steam Stoa CSS linked${R}"
 fi
 
-# OnlyOffice — install Stoa theme JSON
+# OnlyOffice — install Stoa theme JSON (read-only theme file, safe to link)
 ONLYOFFICE_THEME_DIR="${HOME}/.local/share/onlyoffice/desktopeditors/themes"
 if command -v desktopeditors &>/dev/null || [ -d "/opt/onlyoffice" ]; then
-    mkdir -p "$ONLYOFFICE_THEME_DIR"
-    cp "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" "${ONLYOFFICE_THEME_DIR}/stoa-onlyoffice.json" 2>/dev/null && \
-        echo -e "  ${O}[+] OnlyOffice Stoa theme installed${R}" || true
+    _link "${STOA_DIR}/theme/onlyoffice/stoa-onlyoffice.json" \
+          "${ONLYOFFICE_THEME_DIR}/stoa-onlyoffice.json"
+    echo -e "  ${O}[+] OnlyOffice Stoa theme linked${R}"
     echo -e "  ${S}    To activate: File → Advanced Settings → Interface theme → Stoa${R}"
 fi
 
@@ -129,50 +138,45 @@ if command -v div-acer-manager &>/dev/null || [ -d "/opt/div-acer-manager-max" ]
         echo -e "  ${O}[+] Div Acer Manager Stoa theme applied${R}" || true
 fi
 
-# Betterbird — apply Stoa CSS to all profiles
-if [ -d "${HOME}/.betterbird" ]; then
-    for profile_dir in "${HOME}/.betterbird/"*.default*; do
+# Betterbird / Thunderbird — apply Stoa CSS to all profiles via symlink
+_link_mail_profiles() {
+    local label="$1" root="$2"
+    [ -d "$root" ] || return 0
+    for profile_dir in "${root}/"*.default*; do
         [ -d "$profile_dir" ] || continue
-        chrome_dir="${profile_dir}/chrome"
-        mkdir -p "$chrome_dir"
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
+        _link "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" \
+              "${profile_dir}/chrome/userChrome.css"
+        _link "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" \
+              "${profile_dir}/chrome/userContent.css"
         # Enable toolkit.legacyUserProfileCustomizations.stylesheets
-        prefs_file="${profile_dir}/user.js"
+        local prefs_file="${profile_dir}/user.js"
         if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
             echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
         fi
-        echo -e "  ${O}[+] Betterbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
+        echo -e "  ${O}[+] ${label} Stoa CSS linked ($(basename "$profile_dir"))${R}"
     done
+}
+if [ -d "${HOME}/.betterbird" ]; then
+    _link_mail_profiles "Betterbird" "${HOME}/.betterbird"
 elif [ -d "${HOME}/.thunderbird" ]; then
-    for profile_dir in "${HOME}/.thunderbird/"*.default*; do
-        [ -d "$profile_dir" ] || continue
-        chrome_dir="${profile_dir}/chrome"
-        mkdir -p "$chrome_dir"
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userChrome.css" 2>/dev/null
-        cp "${STOA_DIR}/theme/betterbird/stoa-betterbird.css" "${chrome_dir}/userContent.css" 2>/dev/null
-        prefs_file="${profile_dir}/user.js"
-        if ! grep -q 'legacyUserProfileCustomizations' "$prefs_file" 2>/dev/null; then
-            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$prefs_file"
-        fi
-        echo -e "  ${O}[+] Thunderbird Stoa CSS applied ($(basename "$profile_dir"))${R}"
-    done
+    _link_mail_profiles "Thunderbird" "${HOME}/.thunderbird"
 fi
 
 # ── Pacman hook (auto-apply theme after installs) ──
 if [ -d /etc/pacman.d/hooks ] || sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null; then
-    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook" /etc/pacman.d/hooks/ 2>/dev/null && \
-    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" /usr/local/bin/ 2>/dev/null && \
-    sudo chmod +x /usr/local/bin/stoa-theme-enforce 2>/dev/null && \
-    echo -e "  ${O}[+] Pacman theme hook installed${R}" || \
+    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook"    /etc/pacman.d/hooks/stoa-theme.hook
+    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" /usr/local/bin/stoa-theme-enforce
+    echo -e "  ${O}[+] Pacman theme hook installed${R}"
+else
     echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
 fi
 
-# VS Code — install Stoa theme as extension
+# VS Code — install Stoa theme as extension (via symlinks)
 VSCODE_EXT_DIR="${HOME}/.vscode/extensions/stoa-theme"
-mkdir -p "$VSCODE_EXT_DIR/themes"
-cp "${STOA_DIR}/theme/vscode/package.json" "$VSCODE_EXT_DIR/"
-cp "${STOA_DIR}/theme/vscode/themes/stoa-color-theme.json" "$VSCODE_EXT_DIR/themes/"
+_link "${STOA_DIR}/theme/vscode/package.json" \
+      "${VSCODE_EXT_DIR}/package.json"
+_link "${STOA_DIR}/theme/vscode/themes/stoa-color-theme.json" \
+      "${VSCODE_EXT_DIR}/themes/stoa-color-theme.json"
 echo -e "  ${O}[+] VS Code Stoa theme installed${R}"
 echo -e "  ${S}    To activate: Ctrl+K Ctrl+T → Stoa${R}"
 
@@ -221,28 +225,11 @@ _link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-s
 _link "${STOA_DIR}/scripts/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-setup"
 _link "${STOA_DIR}/scripts/stoa-maintain.sh"      "${HOME}/.local/bin/stoa-maintain"
 _link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
-cp    "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
-chmod +x "${HOME}/.local/bin/stoa-fetch" "${HOME}/.local/bin/stoa-walls" \
-         "${HOME}/.local/bin/stoa-memento" "${HOME}/.local/bin/stoa-memento-data" \
-         "${HOME}/.local/bin/stoa-keybinds-bar" "${HOME}/.local/bin/stoa-keybinds-toggle" \
-         "${HOME}/.local/bin/stoa-osd" "${HOME}/.local/bin/stoa-clipboard" \
-         "${HOME}/.local/bin/stoa-quotes-sync" "${HOME}/.local/bin/stoa-locksmith" \
-         "${HOME}/.local/bin/stoa-resize" "${HOME}/.local/bin/stoa-paste" \
-         "${HOME}/.local/bin/stoa-ocr" "${HOME}/.local/bin/stoa-rename" \
-         "${HOME}/.local/bin/stoa-thunar" "${HOME}/.local/bin/stoa-face" \
-         "${HOME}/.local/bin/stoa-settings" \
-         "${HOME}/.local/bin/stoa-store" \
-         "${HOME}/.local/bin/stoa-drive" \
-         "${HOME}/.local/bin/stoa-firewall" \
-         "${HOME}/.local/bin/stoa-screensaver" \
-         "${HOME}/.local/bin/stoa-winapps" \
-         "${HOME}/.local/bin/stoa-capture" \
-         "${HOME}/.local/bin/stoa-doctor" \
-         "${HOME}/.local/bin/stoa-pkg-snapshot" \
-         "${HOME}/.local/bin/stoa-gpu-setup" \
-         "${HOME}/.local/bin/stoa-maintain" \
-         "${HOME}/.local/bin/stoa-predict" \
-         "${HOME}/.local/bin/stoa-predict.py"
+_link "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
+
+# The bins above are all symlinks to source files tracked in-tree with +x
+# already set, so no chmod loop is needed here. If a source ever loses +x,
+# fix it in the repo rather than papering over it at install time.
 
 # ── Pacman hooks (require sudo) ──
 echo ""
@@ -250,14 +237,14 @@ echo -e "${F}Pacman hooks:${R}"
 echo ""
 HOOK_DIR="/etc/pacman.d/hooks"
 if [ -d "$HOOK_DIR" ] || sudo mkdir -p "$HOOK_DIR" 2>/dev/null; then
-    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-pkg-snapshot.hook" "${HOOK_DIR}/" 2>/dev/null \
-        && echo -e "  ${O}[+] stoa-pkg-snapshot.hook${R}" \
-        || echo -e "  ${S}[!] Could not install pkg-snapshot hook (need sudo)${R}"
-    sudo cp "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook" "${HOOK_DIR}/" 2>/dev/null \
-        && echo -e "  ${O}[+] stoa-theme.hook${R}" \
-        || echo -e "  ${S}[!] Could not install theme hook (need sudo)${R}"
-    # The hook calls /usr/local/bin/stoa-pkg-snapshot — symlink it
-    sudo ln -sf "${HOME}/.local/bin/stoa-pkg-snapshot" /usr/local/bin/stoa-pkg-snapshot 2>/dev/null
+    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-pkg-snapshot.hook" "${HOOK_DIR}/stoa-pkg-snapshot.hook"
+    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook"        "${HOOK_DIR}/stoa-theme.hook"
+    # The hooks call /usr/local/bin/{stoa-pkg-snapshot,stoa-theme-enforce}.
+    # The theme-enforce link is created above (pacman-hook block). Here we
+    # link the pkg-snapshot bin — pointing at the repo source directly so
+    # it also works when ~/.local/bin/stoa-pkg-snapshot (itself a symlink
+    # into the repo) resolves on a per-user basis.
+    _sudo_link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh" /usr/local/bin/stoa-pkg-snapshot
 else
     echo -e "  ${S}[!] Could not create ${HOOK_DIR} (need sudo)${R}"
 fi

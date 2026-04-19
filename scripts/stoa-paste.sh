@@ -23,8 +23,10 @@ _get_clipboard() {
 }
 
 _set_clipboard() {
+    # Pipe the content via stdin so text starting with `-` is not parsed
+    # as a flag by wl-copy / xclip.
     if _is_wayland; then
-        wl-copy "$1"
+        printf '%s' "$1" | wl-copy
     else
         printf '%s' "$1" | xclip -selection clipboard
     fi

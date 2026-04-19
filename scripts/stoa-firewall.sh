@@ -255,6 +255,22 @@ cmd_ports() {
     echo ""
 }
 
+# Validate that $port is a numeric 1–65535 and $proto is tcp|udp. Rejects
+# arbitrary strings that would otherwise be pasted into the whitelist, the
+# nftables ruleset, and the later `sed` deletion pattern.
+_validate_port_proto() {
+    local port="$1" proto="$2"
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+        echo -e "  ${T}Invalid port: '${port}' (expected 1-65535).${R}"
+        return 1
+    fi
+    if [ "$proto" != "tcp" ] && [ "$proto" != "udp" ]; then
+        echo -e "  ${T}Invalid protocol: '${proto}' (expected tcp or udp).${R}"
+        return 1
+    fi
+    return 0
+}
+
 cmd_allow() {
     _init_dirs
     local port="$1" proto="${2:-tcp}"
@@ -263,6 +279,8 @@ cmd_allow() {
         echo -e "  ${T}Usage: stoa-firewall allow <port> [tcp|udp]${R}"
         return 1
     fi
+
+    _validate_port_proto "$port" "$proto" || return 1
 
     if _is_allowed "$port" "$proto"; then
         echo -e "  ${S}Port ${port}/${proto} is already allowed.${R}"
@@ -283,6 +301,8 @@ cmd_deny() {
         echo -e "  ${T}Usage: stoa-firewall deny <port> [tcp|udp]${R}"
         return 1
     fi
+
+    _validate_port_proto "$port" "$proto" || return 1
 
     if ! _is_allowed "$port" "$proto"; then
         echo -e "  ${S}Port ${port}/${proto} is already blocked.${R}"
