@@ -13,7 +13,7 @@
 STOA_SS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver"
 STOA_SS_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver.conf"
 STOA_SS_VIDEO="${STOA_SS_DIR}/marble-flow.mp4"
-STOA_SS_LOCK="/tmp/stoa-screensaver-${UID}.lock"
+STOA_SS_LOCK="${XDG_RUNTIME_DIR:-/tmp}/stoa-screensaver-${UID}.lock"
 
 # ── Stoa Palette ──
 BG="#211e19"
