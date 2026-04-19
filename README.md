@@ -83,6 +83,14 @@ Shell (add manually):
 echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc   # or .bashrc
 ```
 
+> `install.sh` deploys configs and `stoa-*` binaries as **symlinks** into the
+> repo, so a `git pull` propagates updates live — no need to re-run the
+> installer after every change. Keep the clone at a stable path
+> (e.g. `~/StoaLinux`); if you move it, run `install.sh` again to refresh
+> the link targets. Two files are deliberately copied instead of linked
+> (`stoa.conf` and OnlyOffice `settings.json`) because the apps write to
+> them and a symlink would push your edits back into the repo.
+
 ## Keybinds
 
 <table>
@@ -212,6 +220,23 @@ Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hy
 - **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
 - **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
 - **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, notifies via dunst if anything is missing. Full log at `~/.config/stoa/doctor.log`.
+
+### Vendored upstreams
+
+Some `stoa-*` scripts are forks of standalone projects and live alongside a
+read-only copy of their upstream under `scripts/vendor/`. Pull new upstream
+commits with:
+
+```bash
+scripts/vendor/sync-upstream.sh brcs   # updates scripts/vendor/brcs/
+```
+
+The helper does a squashed `git subtree pull`, then prints a diffstat of
+the Stoa fork against the refreshed upstream so you can see which hunks
+are candidates to forward-port. Currently vendored: **BRCS.sh**
+([upstream](https://github.com/VictorGSchneider/BRCS.sh)) → fork at
+`scripts/stoa-maintain.sh`. See `scripts/vendor/README.md` for the full
+arrangement and the one-time bootstrap command.
 
 ### [DFM — Dotfile Manager](https://github.com/VictorGSchneider/DFM)
 
