@@ -49,6 +49,21 @@ _init_dirs() {
     touch "$WHITELIST" "$KNOWN_PORTS"
 }
 
+# ── Validate port (1-65535) and protocol (tcp|udp) ──
+# Refuses anything that could land unsanitized in nft rules or sed -i patterns.
+_validate_port_proto() {
+    local port="$1" proto="$2"
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || (( port < 1 || port > 65535 )); then
+        echo -e "  ${T}[!] Invalid port: ${port} (must be 1-65535).${R}" >&2
+        return 1
+    fi
+    if [[ "$proto" != "tcp" && "$proto" != "udp" ]]; then
+        echo -e "  ${T}[!] Invalid protocol: ${proto} (must be tcp or udp).${R}" >&2
+        return 1
+    fi
+    return 0
+}
+
 # ── Check if port is in whitelist ──
 _is_allowed() {
     local port="$1" proto="${2:-tcp}"
@@ -264,6 +279,8 @@ cmd_allow() {
         return 1
     fi
 
+    _validate_port_proto "$port" "$proto" || return 1
+
     if _is_allowed "$port" "$proto"; then
         echo -e "  ${S}Port ${port}/${proto} is already allowed.${R}"
         return 0
@@ -283,6 +300,8 @@ cmd_deny() {
         echo -e "  ${T}Usage: stoa-firewall deny <port> [tcp|udp]${R}"
         return 1
     fi
+
+    _validate_port_proto "$port" "$proto" || return 1
 
     if ! _is_allowed "$port" "$proto"; then
         echo -e "  ${S}Port ${port}/${proto} is already blocked.${R}"
