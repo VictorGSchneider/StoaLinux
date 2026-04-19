@@ -199,9 +199,14 @@ arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
     "cd ~/StoaLinux && chmod +x install.sh && bash install.sh" 2>/dev/null || true
 
-# Configure zsh
+# Configure shell — zsh is the Stoa default login shell; bash stays as a fallback
+# (its rc is seeded too, so `bash` from a zsh terminal keeps Stoa styling).
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
     "grep -q StoaLinux ~/.zshrc 2>/dev/null || echo 'source ~/StoaLinux/shell/.zshrc' >> ~/.zshrc" 2>/dev/null || true
+arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
+    "grep -q StoaLinux ~/.bashrc 2>/dev/null || echo 'source ~/StoaLinux/shell/.bashrc' >> ~/.bashrc" 2>/dev/null || true
+# Make zsh the login shell for the created user (bash remains available via `chsh -s /bin/bash`).
+arch-chroot "$INSTALL_ROOT" chsh -s /bin/zsh "$CREATED_USER" 2>/dev/null || true
 
 # .xinitrc for Xorg fallback
 arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
