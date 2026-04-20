@@ -1,21 +1,25 @@
 #!/bin/bash
-# ╔══════════════════════════════════════════════════════════════╗
+# ╔═══════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Vendor Sync                                   ║
 # ║  Pull upstream commits into scripts/vendor/<name> and show   ║
 # ║  the diff against the Stoa fork so you can forward-port.     ║
-# ╚══════════════════════════════════════════════════════════════╝
+# ╚═══════════════════════════════════════════════════════════╝
 #
 # Usage:
 #   scripts/vendor/sync-upstream.sh <vendor-name>
 #   scripts/vendor/sync-upstream.sh brcs
+#   scripts/vendor/sync-upstream.sh dfm
 #
 # Add new vendored projects to the VENDORS table below.
 
 set -euo pipefail
 
 # name|prefix|upstream-url|branch|stoa-fork-path (relative to repo root)
+# Leave the fork path empty when the vendor has no single-file Stoa fork
+# (e.g. a Python package vendored for reference only).
 VENDORS=(
     "brcs|scripts/vendor/brcs|https://github.com/VictorGSchneider/BRCS.sh.git|main|scripts/stoa-maintain.sh"
+    "dfm|scripts/vendor/dfm|https://github.com/VictorGSchneider/DFM.git|main|"
 )
 
 B='\033[38;2;196;154;92m'
@@ -104,11 +108,18 @@ main() {
             echo ""
             echo -e "${S}Full diff: diff -u ${upstream_file} ${fork}${R}"
         fi
+    else
+        echo ""
+        echo -e "${S}No Stoa fork configured for ${name} — skipping diff summary.${R}"
     fi
 
     echo ""
     echo -e "${O}Done. Review any incoming changes and forward-port bug fixes${R}"
-    echo -e "${O}into ${fork} as needed, then commit.${R}"
+    if [ -n "$fork" ]; then
+        echo -e "${O}into ${fork} as needed, then commit.${R}"
+    else
+        echo -e "${O}into the matching Stoa sources as needed, then commit.${R}"
+    fi
 }
 
 main "$@"
