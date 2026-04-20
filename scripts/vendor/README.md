@@ -12,6 +12,7 @@ diverged.
 | Prefix                     | Upstream                                         | Branch | Stoa fork        |
 |----------------------------|--------------------------------------------------|--------|------------------|
 | `scripts/vendor/brcs`      | https://github.com/VictorGSchneider/BRCS.sh      | `main` | `scripts/stoa-maintain.sh` |
+| `scripts/vendor/dfm`       | https://github.com/VictorGSchneider/DFM          | `main` | — (reference only) |
 
 ## Initial import (one-time, per subtree)
 
@@ -23,6 +24,11 @@ import has to be run on a workstation that can `git fetch` from the upstream.
 git subtree add \
     --prefix=scripts/vendor/brcs \
     https://github.com/VictorGSchneider/BRCS.sh.git \
+    main --squash
+
+git subtree add \
+    --prefix=scripts/vendor/dfm \
+    https://github.com/VictorGSchneider/DFM.git \
     main --squash
 ```
 
@@ -37,18 +43,26 @@ to do about conflicts:
 
 ```bash
 ./scripts/vendor/sync-upstream.sh brcs
+./scripts/vendor/sync-upstream.sh dfm
 ```
 
-Equivalent raw command:
+Equivalent raw commands:
 
 ```bash
 git subtree pull \
     --prefix=scripts/vendor/brcs \
     https://github.com/VictorGSchneider/BRCS.sh.git \
     main --squash
+
+git subtree pull \
+    --prefix=scripts/vendor/dfm \
+    https://github.com/VictorGSchneider/DFM.git \
+    main --squash
 ```
 
-## Relationship to `scripts/stoa-maintain.sh`
+## Relationship to Stoa sources
+
+### `scripts/vendor/brcs` ↔ `scripts/stoa-maintain.sh`
 
 `stoa-maintain.sh` is our customized fork of `BRCS.sh` — it carries the
 Stoa color palette, different CLI banners, and integrates with the rest of
@@ -64,3 +78,17 @@ When you run `sync-upstream.sh brcs`, the vendored copy is updated; the
 fork is **not** touched automatically. The helper will print a diff
 summary and tell you whether there are hunks you probably want to
 forward-port.
+
+### `scripts/vendor/dfm` ↔ (reference only)
+
+DFM is a Python/GTK4 application rather than a single-file shell script,
+so there is no one-to-one “Stoa fork” counterpart inside this repo — the
+vendor is a reference snapshot of the upstream Python package. Use it to:
+
+1. Diff against when checking what changed upstream:
+   `diff -u -r scripts/vendor/dfm/dfm /path/to/local/dfm`.
+2. Cherry-pick fixes into any Stoa scripts that interact with DFM data
+   (backups, themes, config paths) after a sync.
+
+Because there is no direct fork file, `sync-upstream.sh dfm` skips the
+diff summary step and just updates the vendored snapshot.
