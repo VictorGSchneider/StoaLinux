@@ -12,7 +12,7 @@ diverged.
 | Prefix                     | Upstream                                         | Branch | Stoa fork        |
 |----------------------------|--------------------------------------------------|--------|------------------|
 | `scripts/vendor/brcs`      | https://github.com/VictorGSchneider/BRCS.sh      | `main` | `scripts/stoa-maintain.sh` |
-| `scripts/vendor/dfm`       | https://github.com/VictorGSchneider/DFM          | `main` | — (reference only) |
+| `scripts/vendor/dfm`       | https://github.com/VictorGSchneider/DFM          | `main` | `scripts/stoa-dfm/`        |
 
 ## Initial import (one-time, per subtree)
 
@@ -79,16 +79,27 @@ fork is **not** touched automatically. The helper will print a diff
 summary and tell you whether there are hunks you probably want to
 forward-port.
 
-### `scripts/vendor/dfm` ↔ (reference only)
+### `scripts/vendor/dfm` ↔ `scripts/stoa-dfm/`
 
-DFM is a Python/GTK4 application rather than a single-file shell script,
-so there is no one-to-one “Stoa fork” counterpart inside this repo — the
-vendor is a reference snapshot of the upstream Python package. Use it to:
+`scripts/stoa-dfm/` is our customized fork of the DFM Python package —
+the place where Stoa-specific tweaks live (color palette, CLI banners,
+default paths, integration with the rest of the Stoa scripts). It is
+**not** a symlink to the vendored copy. The vendored
+`scripts/vendor/dfm/` is our reference snapshot of the upstream Python
+package, used to:
 
-1. Diff against when checking what changed upstream:
-   `diff -u -r scripts/vendor/dfm/dfm /path/to/local/dfm`.
-2. Cherry-pick fixes into any Stoa scripts that interact with DFM data
-   (backups, themes, config paths) after a sync.
+1. Diff against when you want to know what changed upstream:
+   `diff -urN scripts/vendor/dfm scripts/stoa-dfm`.
+2. Cherry-pick bug-fix hunks into `scripts/stoa-dfm/` after a sync.
 
-Because there is no direct fork file, `sync-upstream.sh dfm` skips the
-diff summary step and just updates the vendored snapshot.
+Unlike the brcs fork (a single file), the DFM fork is a directory that
+mirrors the `dfm/` package layout plus `setup.py` and `requirements.txt`
+so the fork is directly installable (`pip install ./scripts/stoa-dfm`).
+Upstream-only files like `LICENSE`, `README.md`, and `screenshots/` are
+not duplicated into the fork — Stoa ships its own.
+
+When you run `sync-upstream.sh dfm`, the vendored copy is updated; the
+fork is **not** touched automatically. The helper will walk every entry
+in `scripts/stoa-dfm/`, diff it against the matching path under
+`scripts/vendor/dfm/`, and print a diffstat summary so you can
+forward-port bug fixes deliberately.
