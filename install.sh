@@ -231,6 +231,37 @@ _link "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predic
 # already set, so no chmod loop is needed here. If a source ever loses +x,
 # fix it in the repo rather than papering over it at install time.
 
+# ── DFM — Dotfile Manager (installed from the in-tree Stoa fork) ──
+# The Stoa fork lives at scripts/stoa-dfm/ (see scripts/vendor/README.md).
+# Install it editable so a `git pull` on StoaLinux propagates changes to the
+# running binary, matching the symlink semantics used for every other stoa-*
+# script. pipx is preferred (PEP 668 friendly); fall back to a user-local
+# venv when pipx is unavailable.
+DFM_SRC="${STOA_DIR}/scripts/stoa-dfm"
+DFM_VENV="${HOME}/.local/share/dfm-venv"
+DFM_BIN="${HOME}/.local/bin/dfm"
+
+if [ -d "$DFM_SRC" ] && [ -f "${DFM_SRC}/setup.py" ]; then
+    if command -v pipx &>/dev/null; then
+        pipx install --force --editable "$DFM_SRC" >/dev/null
+        echo -e "  ${O}[+] dfm (pipx, editable from scripts/stoa-dfm)${R}"
+    elif command -v python3 &>/dev/null; then
+        python3 -m venv "$DFM_VENV"
+        "$DFM_VENV/bin/pip" install --upgrade pip >/dev/null
+        "$DFM_VENV/bin/pip" install -e "$DFM_SRC" >/dev/null
+        ln -sf "$DFM_VENV/bin/dfm" "$DFM_BIN"
+        echo -e "  ${O}[+] dfm (venv, editable from scripts/stoa-dfm)${R}"
+    else
+        echo -e "  ${S}[!] python3 not found — skipping dfm install${R}"
+    fi
+
+    # Desktop entry so rofi drun / app grids pick it up.
+    if [ -f "${DFM_SRC}/data/dfm.desktop" ]; then
+        _link "${DFM_SRC}/data/dfm.desktop" \
+              "${HOME}/.local/share/applications/dfm.desktop"
+    fi
+fi
+
 # ── Pacman hooks (require sudo) ──
 echo ""
 echo -e "${F}Pacman hooks:${R}"
