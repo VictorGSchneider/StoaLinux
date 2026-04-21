@@ -15,11 +15,12 @@
 set -euo pipefail
 
 # name|prefix|upstream-url|branch|stoa-fork-path (relative to repo root)
-# Leave the fork path empty when the vendor has no single-file Stoa fork
-# (e.g. a Python package vendored for reference only).
+# The fork path may be either a single file (like scripts/stoa-maintain.sh
+# for brcs) or a directory (like scripts/stoa-dfm for dfm). Leave it empty
+# only when the vendor has no Stoa fork at all.
 VENDORS=(
     "brcs|scripts/vendor/brcs|https://github.com/VictorGSchneider/BRCS.sh.git|main|scripts/stoa-maintain.sh"
-    "dfm|scripts/vendor/dfm|https://github.com/VictorGSchneider/DFM.git|main|"
+    "dfm|scripts/vendor/dfm|https://github.com/VictorGSchneider/DFM.git|main|scripts/stoa-dfm"
 )
 
 B='\033[38;2;196;154;92m'
@@ -92,6 +93,7 @@ main() {
     fi
 
     if [ -n "$fork" ] && [ -f "$fork" ]; then
+        # Single-file fork (e.g. brcs → scripts/stoa-maintain.sh).
         echo ""
         echo -e "${F}Diff summary — Stoa fork vs. vendored upstream:${R}"
         echo -e "${S}  (fork: ${fork})${R}"
@@ -108,6 +110,37 @@ main() {
             echo ""
             echo -e "${S}Full diff: diff -u ${upstream_file} ${fork}${R}"
         fi
+    elif [ -n "$fork" ] && [ -d "$fork" ]; then
+        # Directory fork (e.g. dfm → scripts/stoa-dfm). Compare against the
+        # matching subtree of the vendored upstream: diff only the paths that
+        # also exist in the fork, so unrelated top-level upstream files
+        # (LICENSE, README, screenshots/, …) don't pollute the summary.
+        echo ""
+        echo -e "${F}Diff summary — Stoa fork vs. vendored upstream:${R}"
+        echo -e "${S}  (fork:           ${fork}/)${R}"
+        echo -e "${S}  (upstream copy:  ${prefix}/)${R}"
+        echo ""
+        # Enumerate fork entries and diff each against the vendored copy.
+        # -N treats missing files as empty, so additions show up cleanly.
+        local entry upstream_entry
+        local any_diff=0
+        while IFS= read -r -d '' entry; do
+            local rel="${entry#"$fork"/}"
+            upstream_entry="${prefix}/${rel}"
+            if [ -e "$upstream_entry" ] || [ -e "$entry" ]; then
+                if ! diff -urN "$upstream_entry" "$entry" >/dev/null 2>&1; then
+                    any_diff=1
+                    diff -urN "$upstream_entry" "$entry" | diffstat -p0 2>/dev/null \
+                        || diff --brief -r "$upstream_entry" "$entry" \
+                        || true
+                fi
+            fi
+        done < <(find "$fork" -mindepth 1 -maxdepth 1 -print0)
+        if [ "$any_diff" -eq 0 ]; then
+            echo -e "${S}(fork is identical to upstream)${R}"
+        fi
+        echo ""
+        echo -e "${S}Full diff: diff -urN ${prefix} ${fork}${R}"
     else
         echo ""
         echo -e "${S}No Stoa fork configured for ${name} — skipping diff summary.${R}"
