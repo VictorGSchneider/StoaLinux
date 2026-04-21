@@ -238,14 +238,19 @@ scripts/vendor/sync-upstream.sh brcs   # updates scripts/vendor/brcs/
 
 The helper does a squashed `git subtree pull`, then prints a diffstat of
 the Stoa fork against the refreshed upstream so you can see which hunks
-are candidates to forward-port. Currently vendored: **BRCS.sh**
-([upstream](https://github.com/VictorGSchneider/BRCS.sh)) → fork at
-`scripts/stoa-maintain.sh`. See `scripts/vendor/README.md` for the full
-arrangement and the one-time bootstrap command.
+are candidates to forward-port. Currently vendored:
+
+- **BRCS.sh** ([upstream](https://github.com/VictorGSchneider/BRCS.sh)) →
+  fork at `scripts/stoa-maintain.sh`
+- **DFM** ([upstream](https://github.com/VictorGSchneider/DFM)) →
+  directory-based fork at `scripts/stoa-dfm/`
+
+See `scripts/vendor/README.md` for the full arrangement and the one-time
+bootstrap command.
 
 ### [DFM — Dotfile Manager](https://github.com/VictorGSchneider/DFM)
 
-A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G` or `dfm`.
+A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G`, from rofi drun, or `dfm`.
 
 - **Smart widgets** — auto-generated toggles, sliders, color pickers, and path selectors based on config file content
 - **Versioned backups** — automatic snapshots before every edit, with rollback support
@@ -253,6 +258,14 @@ A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizi
 - **GitHub sync** — push/pull dotfiles via `gh`, create repos, share as Gists
 - **80+ known configs** — shells, window managers, terminals, status bars, editors, and more
 - **Profile management** — switch between configuration sets and built-in templates
+
+`install.sh` installs the in-tree fork (`scripts/stoa-dfm/`) as an editable
+package — `pipx install --editable` when available, a user venv otherwise —
+so a `git pull` on StoaLinux propagates live to the running `dfm` binary,
+matching the symlink semantics used for every other stoa-\* script. The
+XDG desktop entry (`data/dfm.desktop`) is symlinked into
+`~/.local/share/applications/` so rofi drun and app grids pick it up.
+`stoa-doctor` flags a missing `dfm` binary on login.
 
 ### Text Prediction
 
