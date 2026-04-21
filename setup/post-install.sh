@@ -506,36 +506,10 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     else
         echo -e "  ${S}[~] ProtonVPN CLI already installed.${R}"
     fi
-    # DFM — Dotfile Manager (GTK4 GUI) — "Know thyself." — Thales
-    echo ""
-    if ! command -v dfm &>/dev/null; then
-        echo -e "  ${F}Installing DFM — Dotfile Manager...${R}"
-        DFM_DIR="${HOME}/.local/share/dfm-app"
-        if [ -d "$DFM_DIR" ]; then
-            git -C "$DFM_DIR" pull
-        else
-            git clone https://github.com/VictorGSchneider/DFM.git "$DFM_DIR"
-        fi
-        # Prefer pipx (PEP 668 friendly). Fall back to a user venv, then
-        # last-resort --break-system-packages only if neither is available.
-        if command -v pipx &>/dev/null; then
-            pipx install --force "$DFM_DIR"
-        elif command -v python3 &>/dev/null; then
-            DFM_VENV="${HOME}/.local/share/dfm-venv"
-            python3 -m venv "$DFM_VENV"
-            "$DFM_VENV/bin/pip" install --upgrade pip >/dev/null
-            "$DFM_VENV/bin/pip" install -e "$DFM_DIR"
-            mkdir -p "${HOME}/.local/bin"
-            ln -sf "$DFM_VENV/bin/dfm" "${HOME}/.local/bin/dfm"
-        else
-            pip install -e "$DFM_DIR" --break-system-packages 2>/dev/null || \
-                pip install -e "$DFM_DIR"
-        fi
-        echo -e "  ${O}[✓] DFM installed.${R}"
-        echo -e "  ${S}    Launch: dfm  or  Super+G${R}"
-    else
-        echo -e "  ${S}[~] DFM already installed.${R}"
-    fi
+    # DFM — Dotfile Manager is installed by install.sh from the in-tree
+    # Stoa fork at scripts/stoa-dfm/ (see scripts/vendor/README.md). The
+    # Python runtime deps are already in $DFM_PKGS above; no separate clone
+    # is needed.
 else
     echo -e "  ${S}[~] Packages skipped.${R}"
 fi

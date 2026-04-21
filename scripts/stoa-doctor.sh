@@ -134,6 +134,9 @@ _check_optional alacritty "Terminal (alacritty)"
 _check_bin curl         "HTTP client (curl)"
 _check_bin tesseract    "OCR (tesseract)"
 
+# ── Dotfile Manager (Super+G) ──
+_check_bin dfm          "Dotfile Manager (dfm)"
+
 # ══════════════════════════════════════════
 #   Service checks
 # ══════════════════════════════════════════
