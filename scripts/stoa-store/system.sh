@@ -7,6 +7,7 @@ _update_all() {
     [ "$h" != "pacman" ] && summary="System + AUR ($h)"
     command -v flatpak &>/dev/null && summary+=" + Flatpak"
     command -v snap    &>/dev/null && summary+=" + Snap"
+    _damx_installed && summary+=" + DAMX"
     _confirm "Update all: ${summary}?" || return
 
     local script
@@ -18,6 +19,11 @@ _update_all() {
 
     _notify "Updating ${summary}..."
     _run_in_term "$script"
+    # DAMX ships outside the package managers above; its installer is
+    # interactive, so run it separately after the bulk update finishes.
+    if _damx_installed; then
+        _damx_run_remote_setup 4
+    fi
     _apply_stoa_theme
     _notify "Update all complete"
 }
@@ -32,6 +38,7 @@ _update() {
     )
     command -v flatpak &>/dev/null && items+=("  Update Flatpak apps")
     command -v snap    &>/dev/null && items+=("  Update Snap packages")
+    _damx_installed           && items+=("  Update DAMX (Acer)")
 
     local action; action=$(_rofi_list "  Update" "${items[@]}")
     [ -z "$action" ] && return
@@ -57,6 +64,7 @@ _update() {
             _notify "Mirrors updated" ;;
         *Flatpak*) _run_in_term "flatpak update";   _notify "Flatpak apps updated" ;;
         *Snap*)    _run_in_term "sudo snap refresh"; _notify "Snap packages updated" ;;
+        *DAMX*)    _update_damx ;;
     esac
 }
 
