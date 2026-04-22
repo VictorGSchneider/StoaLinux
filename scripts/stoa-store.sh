@@ -41,6 +41,8 @@ source "$_STOA_STORE_LIB/deb-rpm.sh"
 source "$_STOA_STORE_LIB/lang-misc.sh"
 # shellcheck source=stoa-store/lang.sh
 source "$_STOA_STORE_LIB/lang.sh"
+# shellcheck source=stoa-store/acer.sh
+source "$_STOA_STORE_LIB/acer.sh"
 
 main() {
     while true; do
@@ -50,24 +52,37 @@ main() {
         command -v flatpak &>/dev/null && sources+=" + Flatpak"
         command -v snap    &>/dev/null && sources+=" + Snap"
 
+        local items=(
+            "  Search & install"
+            "  Package browser"
+            "  Update all"
+            "  Update system"
+            "  Cleanup"
+            "  System info"
+            "─────────────────────"
+            "  Flatpak manager"
+            "  Snap manager"
+            "  AppImage manager"
+            "  DEB / RPM (convert)"
+        )
+        # Only surface the Acer submenu on Acer hardware (or when DAMX is
+        # already installed), to keep the menu tight for other users.
+        if _acer_is_laptop || _damx_installed; then
+            items+=(
+                "─────────────────────"
+                "  Acer apps (DAMX)"
+            )
+        fi
+        items+=(
+            "─────────────────────"
+            "  Developer tools"
+            "  Setup auto-theme hook"
+            "  Re-apply Stoa theme"
+            "  Install AUR helper"
+        )
+
         local choice
-        choice=$(_rofi_list "  Stoa Store (${sources})" \
-            "  Search & install" \
-            "  Package browser" \
-            "  Update all" \
-            "  Update system" \
-            "  Cleanup" \
-            "  System info" \
-            "─────────────────────" \
-            "  Flatpak manager" \
-            "  Snap manager" \
-            "  AppImage manager" \
-            "  DEB / RPM (convert)" \
-            "─────────────────────" \
-            "  Developer tools" \
-            "  Setup auto-theme hook" \
-            "  Re-apply Stoa theme" \
-            "  Install AUR helper")
+        choice=$(_rofi_list "  Stoa Store (${sources})" "${items[@]}")
         [ -z "$choice" ] && exit 0
 
         case "$choice" in
@@ -81,6 +96,7 @@ main() {
             *"Snap manager"*)     menu_snap ;;
             *"AppImage manager"*) menu_appimage ;;
             *DEB*)                menu_deb_rpm ;;
+            *"Acer apps"*)        menu_acer ;;
             *"Developer tools"*)  menu_developer ;;
             *auto-theme*)         _setup_hook ;;
             *Re-apply*)           _apply_stoa_theme; _notify "Stoa theme applied" ;;
