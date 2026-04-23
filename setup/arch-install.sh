@@ -1,7 +1,7 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Arch Install                                  ║
-# ║  "Action is the mark of wisdom." — Seneca                   ║
+# ║  STOA LINUX — Arch Install                                   ║
+# ║  "Action is the mark of wisdom." — Seneca                    ║
 # ║                                                              ║
 # ║  Uses the standard archinstall with StoaLinux config.        ║
 # ║  Disks and user are configured manually via TUI.             ║
@@ -34,7 +34,7 @@ R='\033[0m'
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     STOA LINUX — Arch Installer                      ║${R}"
-echo -e "  ${B}║     archinstall + Hyprland/Wayland + i3/Xorg          ║${R}"
+echo -e "  ${B}║     archinstall + Hyprland/Wayland + i3/Xorg         ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
@@ -225,7 +225,7 @@ echo -e "  ${B}    cd ~/StoaLinux && ./scripts/stoa-gpu-setup.sh${R}"
 
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
-echo -e "  ${B}║     Installation complete!                            ║${R}"
+echo -e "  ${B}║     Installation complete!                           ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 echo -e "  ${F}After reboot, login and start:${R}"
