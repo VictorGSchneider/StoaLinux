@@ -1,6 +1,6 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Capture (Screenshot + Recording)              ║
+# ║  STOA LINUX — Capture (Screenshot + Recording)               ║
 # ║  "Begin at once to live." — Seneca                           ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
