@@ -1,7 +1,7 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Post-Install (existing Arch)                  ║
-# ║  "Do not suffer before the time." — Seneca                  ║
+# ║  STOA LINUX — Post-Install (existing Arch)                   ║
+# ║  "Do not suffer before the time." — Seneca                   ║
 # ║                                                              ║
 # ║  Use this script on an existing Arch Linux to install        ║
 # ║  all StoaLinux packages and dotfiles.                        ║
@@ -508,14 +508,45 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     fi
     # DFM — Dotfile Manager is installed by install.sh from the in-tree
     # Stoa fork at scripts/stoa-dfm/ (see scripts/vendor/README.md). The
-    # Python runtime deps are already in $DFM_PKGS above; no separate clone
-    # is needed.
+    # Python runtime deps are already in $DFM_PKGS above; no separate clone is needed.
+    # Div Acer Manager Max (DAMX) — Nitro/Predator fan + profiles + battery.
+    # Only offered on Acer hardware, where Linuwu-Sense actually applies.
+    echo ""
+    _vendor=""
+    [ -r /sys/class/dmi/id/sys_vendor ] && _vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)
+    if [[ "$_vendor" == *Acer* ]]; then
+        if [ -d /opt/damx ] || [ -f /etc/systemd/system/damx-daemon.service ]; then
+            echo -e "  ${S}[~] Div Acer Manager Max already installed.${R}"
+            echo -e "  ${S}    Update later with: stoa-store → Acer apps → Update DAMX${R}"
+        else
+            echo -e "  ${F}Detected Acer laptop (${_vendor}).${R}"
+            read -rp "  Install Div Acer Manager Max (DAMX)? (y/n) [y]: " INSTALL_DAMX
+            INSTALL_DAMX="${INSTALL_DAMX:-y}"
+            if [ "$INSTALL_DAMX" = "y" ]; then
+                echo -e "  ${F}Installing DAMX (downloads installer from GitHub, requires sudo)...${R}"
+                _damx_tmp=$(mktemp -d)
+                if curl -fsSL \
+                    https://raw.githubusercontent.com/PXDiv/Div-Acer-Manager-Max/refs/heads/main/scripts/remoteSetup.sh \
+                    -o "$_damx_tmp/setup.sh"; then
+                    chmod +x "$_damx_tmp/setup.sh"
+                    # remoteSetup.sh is interactive; feed "1" (full install) then "q".
+                    (cd "$_damx_tmp" && printf '1\nq\n' | sudo bash ./setup.sh) \
+                        && echo -e "  ${O}[✓] DAMX installed — launch with the DAMX command.${R}" \
+                        || echo -e "  ${T}[!] DAMX installer reported errors; check the output above.${R}"
+                else
+                    echo -e "  ${T}[!] Failed to download DAMX installer. Skipping.${R}"
+                fi
+                rm -rf "$_damx_tmp"
+            else
+                echo -e "  ${S}[~] DAMX skipped. Install later via: stoa-store → Acer apps${R}"
+            fi
+        fi
+    fi
+    unset _vendor _damx_tmp
 else
     echo -e "  ${S}[~] Packages skipped.${R}"
 fi
-
 echo ""
-
 # ── Input group (required for stoa-predict) ──
 if ! groups 2>/dev/null | grep -qw input; then
     echo -e "  ${F}Adding user to 'input' group (for text prediction)...${R}"
@@ -612,7 +643,7 @@ fi
 # ── Done ──
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
-echo -e "  ${B}║     StoaLinux installed!                              ║${R}"
+echo -e "  ${B}║     StoaLinux installed!                             ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 echo -e "  ${F}To start:${R}"
@@ -635,6 +666,10 @@ echo -e "  ${S}  stoa-predict      — Text prediction + emoji suggestions (Supe
 echo -e "  ${S}  stoa-settings     → Fan & Performance — fan mode, speed, profiles, GPU (Super+I → Power → Fan)${R}"
 echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
 echo -e "  ${S}  dfm               — Dotfile Manager GUI (Super+G)${R}"
+if [ -d /opt/damx ] || [ -f /etc/systemd/system/damx-daemon.service ]; then
+    echo -e "  ${S}  DAMX              — Div Acer Manager Max (Acer profiles, fans, battery)${R}"
+    echo -e "  ${S}                      updates via: stoa-store → Acer apps → Update DAMX${R}"
+fi
 echo ""
 echo -e "  ${F}Leisure:${R}"
 echo -e "  ${S}  steam             — Gaming (Proton enabled for Windows games)${R}"
