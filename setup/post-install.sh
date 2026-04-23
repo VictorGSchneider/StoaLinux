@@ -87,7 +87,7 @@ SCREENSHOT_PKGS="grim slurp maim wf-recorder slop"
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words"
 
 # Touchpad gestures + mouse DPI/polling + RGB
-GESTURE_PKGS="libinput-gestures"
+# GESTURE_PKGS="libinput-gestures"
 MOUSE_PKGS="libratbag"
 RGB_PKGS="openrgb"
 
@@ -248,6 +248,7 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     if [ "$_aur_fresh" = 1 ]; then
         echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
     fi
+    _install_aur libinput-gestures      "libinput-gestures"     libinput-gestures
     _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
     if [ "$_aur_fresh" = 1 ]; then
         echo -e "  ${S}    To login: protonvpn-cli login <username>${R}"
