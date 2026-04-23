@@ -1,6 +1,6 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Clipboard Manager                             ║
+# ║  STOA LINUX — Clipboard Manager                              ║
 # ║  wl-clipboard + cliphist + rofi with pinned favorites        ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
