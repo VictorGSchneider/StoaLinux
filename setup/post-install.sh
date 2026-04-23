@@ -192,6 +192,36 @@ echo ""
 read -rp "  Install packages? (y/n) [y]: " INSTALL_PKGS
 INSTALL_PKGS="${INSTALL_PKGS:-y}"
 
+# ── AUR helper ──
+# Usage: _install_aur <pkg> <label> [<bin>]
+# Detects yay/paru; falls back to makepkg.
+# Pass <bin> to skip install when the command already exists.
+# Sets _aur_fresh=1 if newly installed, 0 if skipped.
+_aur_fresh=0
+_install_aur() {
+    local pkg="$1" label="$2" bin="${3:-}"
+    _aur_fresh=0
+    echo ""
+    if [ -n "$bin" ] && command -v "$bin" &>/dev/null; then
+        echo -e "  ${S}[~] ${label} already installed.${R}"
+        return 0
+    fi
+    echo -e "  ${F}Installing ${label} (AUR)...${R}"
+    if command -v yay &>/dev/null; then
+        yay -S --needed --noconfirm "$pkg"
+    elif command -v paru &>/dev/null; then
+        paru -S --needed --noconfirm "$pkg"
+    else
+        echo -e "  ${S}Installing ${label} manually via makepkg...${R}"
+        local _tmpdir; _tmpdir=$(mktemp -d)
+        git clone "https://aur.archlinux.org/${pkg}.git" "$_tmpdir/$pkg"
+        (cd "$_tmpdir/$pkg" && makepkg -si --noconfirm)
+        rm -rf "$_tmpdir"
+    fi
+    echo -e "  ${O}[✓] ${label} installed.${R}"
+    _aur_fresh=1
+}
+
 if [ "$INSTALL_PKGS" = "y" ]; then
     # Enable multilib repository (required for Steam/lib32 packages)
     if ! grep -q "^\[multilib\]" /etc/pacman.conf 2>/dev/null; then
@@ -204,313 +234,60 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     sudo pacman -S --needed $ALL_PKGS
     echo -e "  ${O}[✓] Official packages installed.${R}"
 
-    # Brave Browser (AUR)
-    echo ""
-    if ! command -v brave &>/dev/null; then
-        echo -e "  ${F}Installing Brave Browser (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm brave-bin
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm brave-bin
-        else
-            echo -e "  ${S}Installing Brave manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/brave-bin.git "$_tmpdir/brave-bin"
-            (cd "$_tmpdir/brave-bin" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] Brave installed.${R}"
-    else
-        echo -e "  ${S}[~] Brave already installed.${R}"
+    # ── AUR packages (common pattern) ──
+    _install_aur brave-bin              "Brave Browser"         brave
+    _install_aur obsidian               "Obsidian"              obsidian
+    _install_aur satty                  "Satty"                 satty
+    _install_aur eww                    "eww"                   eww
+    _install_aur enpass-bin             "Enpass"                enpass
+    _install_aur yacreader              "YACReader"             YACReader
+    _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
+    _install_aur betterbird-bin         "Betterbird"            betterbird
+    _install_aur visual-studio-code-bin "Visual Studio Code"    code
+    _install_aur howdy                  "howdy"                 howdy
+    if [ "$_aur_fresh" = 1 ]; then
+        echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
+    fi
+    _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
+    if [ "$_aur_fresh" = 1 ]; then
+        echo -e "  ${S}    To login: protonvpn-cli login <username>${R}"
+        echo -e "  ${S}    Or use: Super+I → VPN${R}"
     fi
 
-    # Obsidian (AUR)
-    echo ""
-    if ! command -v obsidian &>/dev/null; then
-        echo -e "  ${F}Installing Obsidian (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm obsidian
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm obsidian
-        else
-            echo -e "  ${S}Installing Obsidian manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/obsidian.git "$_tmpdir/obsidian"
-            (cd "$_tmpdir/obsidian" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] Obsidian installed.${R}"
-    else
-        echo -e "  ${S}[~] Obsidian already installed.${R}"
-    fi
+    # ── AUR packages with custom already-installed checks ──
 
-    # i3lock-color — Lock screen for i3 (AUR)
-    echo ""
+    # i3lock-color needs the -color variant specifically
     if ! command -v i3lock &>/dev/null || ! i3lock --version 2>&1 | grep -q "color"; then
-        echo -e "  ${F}Installing i3lock-color (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm i3lock-color
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm i3lock-color
-        else
-            echo -e "  ${S}Installing i3lock-color manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/i3lock-color.git "$_tmpdir/i3lock-color"
-            (cd "$_tmpdir/i3lock-color" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] i3lock-color installed.${R}"
+        _install_aur i3lock-color "i3lock-color"
     else
+        echo ""
         echo -e "  ${S}[~] i3lock-color already installed.${R}"
     fi
 
-    # Satty — Screenshot editor (AUR)
-    echo ""
-    if ! command -v satty &>/dev/null; then
-        echo -e "  ${F}Installing Satty (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm satty
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm satty
-        else
-            echo -e "  ${S}Installing Satty manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/satty.git "$_tmpdir/satty"
-            (cd "$_tmpdir/satty" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] Satty installed.${R}"
-    else
-        echo -e "  ${S}[~] Satty already installed.${R}"
-    fi
-
-    # eww — Widget system (AUR, Wayland)
-    echo ""
-    if ! command -v eww &>/dev/null; then
-        echo -e "  ${F}Installing eww (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm eww
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm eww
-        else
-            echo -e "  ${S}Installing eww manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/eww.git "$_tmpdir/eww"
-            (cd "$_tmpdir/eww" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] eww installed.${R}"
-    else
-        echo -e "  ${S}[~] eww already installed.${R}"
-    fi
-
-    # Enpass — Password manager (AUR)
-    echo ""
-    if ! command -v enpass &>/dev/null; then
-        echo -e "  ${F}Installing Enpass (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm enpass-bin
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm enpass-bin
-        else
-            echo -e "  ${S}Installing Enpass manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/enpass-bin.git "$_tmpdir/enpass-bin"
-            (cd "$_tmpdir/enpass-bin" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] Enpass installed.${R}"
-    else
-        echo -e "  ${S}[~] Enpass already installed.${R}"
-    fi
-
-    # YACReader — Comic book reader (AUR)
-    echo ""
-    if ! command -v YACReader &>/dev/null; then
-        echo -e "  ${F}Installing YACReader (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm yacreader
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm yacreader
-        else
-            echo -e "  ${S}Installing YACReader manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/yacreader.git "$_tmpdir/yacreader"
-            (cd "$_tmpdir/yacreader" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] YACReader installed.${R}"
-    else
-        echo -e "  ${S}[~] YACReader already installed.${R}"
-    fi
-
-    # EB Garamond font (AUR)
-    echo ""
+    # EB Garamond — font, no binary to probe
     if ! fc-list | grep -qi "EB Garamond" 2>/dev/null; then
-        echo -e "  ${F}Installing EB Garamond font (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm otf-eb-garamond
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm otf-eb-garamond
-        else
-            echo -e "  ${S}Installing EB Garamond manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/otf-eb-garamond.git "$_tmpdir/otf-eb-garamond"
-            (cd "$_tmpdir/otf-eb-garamond" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] EB Garamond installed.${R}"
+        _install_aur otf-eb-garamond "EB Garamond font"
     else
+        echo ""
         echo -e "  ${S}[~] EB Garamond already installed.${R}"
     fi
 
-    # Colloid icon theme (AUR)
-    echo ""
+    # Colloid icons + cursors — identified by directory presence
     if [ ! -d /usr/share/icons/Colloid-dark ] && [ ! -d "$HOME/.local/share/icons/Colloid-dark" ]; then
-        echo -e "  ${F}Installing Colloid icon theme (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm colloid-icon-theme-git
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm colloid-icon-theme-git
-        else
-            echo -e "  ${S}Installing Colloid icons manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/colloid-icon-theme-git.git "$_tmpdir/colloid-icon-theme-git"
-            (cd "$_tmpdir/colloid-icon-theme-git" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] Colloid icons installed.${R}"
+        _install_aur colloid-icon-theme-git "Colloid icon theme"
     else
+        echo ""
         echo -e "  ${S}[~] Colloid icons already installed.${R}"
     fi
-
-    # Colloid cursors (AUR)
-    echo ""
     if [ ! -d /usr/share/icons/Colloid-cursors ] && [ ! -d "$HOME/.local/share/icons/Colloid-cursors" ]; then
-        echo -e "  ${F}Installing Colloid cursors (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm colloid-cursors-git
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm colloid-cursors-git
-        else
-            echo -e "  ${S}Installing Colloid cursors manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/colloid-cursors-git.git "$_tmpdir/colloid-cursors-git"
-            (cd "$_tmpdir/colloid-cursors-git" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] Colloid cursors installed.${R}"
+        _install_aur colloid-cursors-git "Colloid cursors"
     else
+        echo ""
         echo -e "  ${S}[~] Colloid cursors already installed.${R}"
     fi
 
-    # howdy — Face recognition (AUR)
-    echo ""
-    if ! command -v howdy &>/dev/null; then
-        echo -e "  ${F}Installing howdy — face recognition (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm howdy
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm howdy
-        else
-            echo -e "  ${S}Installing howdy manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/howdy.git "$_tmpdir/howdy"
-            (cd "$_tmpdir/howdy" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] howdy installed.${R}"
-        echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
-    else
-        echo -e "  ${S}[~] howdy already installed.${R}"
-    fi
-
-    # OnlyOffice Desktop Editors (AUR) — "Order is the first law of heaven." — Alexander Pope
-    echo ""
-    if ! command -v desktopeditors &>/dev/null; then
-        echo -e "  ${F}Installing OnlyOffice Desktop Editors (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm onlyoffice-bin
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm onlyoffice-bin
-        else
-            echo -e "  ${S}Installing OnlyOffice manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/onlyoffice-bin.git "$_tmpdir/onlyoffice-bin"
-            (cd "$_tmpdir/onlyoffice-bin" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] OnlyOffice installed.${R}"
-    else
-        echo -e "  ${S}[~] OnlyOffice already installed.${R}"
-    fi
-
-    # Betterbird — Email client (AUR) — "Letters are our absent friends." — Seneca
-    echo ""
-    if ! command -v betterbird &>/dev/null; then
-        echo -e "  ${F}Installing Betterbird (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm betterbird-bin
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm betterbird-bin
-        else
-            echo -e "  ${S}Installing Betterbird manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/betterbird-bin.git "$_tmpdir/betterbird-bin"
-            (cd "$_tmpdir/betterbird-bin" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] Betterbird installed.${R}"
-    else
-        echo -e "  ${S}[~] Betterbird already installed.${R}"
-    fi
-
-    # Visual Studio Code (AUR) — "The craftsman loves his tools." — Seneca
-    echo ""
-    if ! command -v code &>/dev/null; then
-        echo -e "  ${F}Installing Visual Studio Code (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm visual-studio-code-bin
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm visual-studio-code-bin
-        else
-            echo -e "  ${S}Installing VS Code manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/visual-studio-code-bin.git "$_tmpdir/visual-studio-code-bin"
-            (cd "$_tmpdir/visual-studio-code-bin" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] VS Code installed.${R}"
-    else
-        echo -e "  ${S}[~] VS Code already installed.${R}"
-    fi
-
-    # ProtonVPN CLI (AUR) — "The wise man guards his retreat." — Seneca
-    echo ""
-    if ! command -v protonvpn-cli &>/dev/null; then
-        echo -e "  ${F}Installing ProtonVPN CLI (AUR)...${R}"
-        if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm protonvpn-cli
-        elif command -v paru &>/dev/null; then
-            paru -S --needed --noconfirm protonvpn-cli
-        else
-            echo -e "  ${S}Installing ProtonVPN CLI manually via makepkg...${R}"
-            _tmpdir=$(mktemp -d)
-            git clone https://aur.archlinux.org/protonvpn-cli.git "$_tmpdir/protonvpn-cli"
-            (cd "$_tmpdir/protonvpn-cli" && makepkg -si --noconfirm)
-            rm -rf "$_tmpdir"
-        fi
-        echo -e "  ${O}[✓] ProtonVPN CLI installed.${R}"
-        echo -e "  ${S}    To login: protonvpn-cli login <username>${R}"
-        echo -e "  ${S}    Or use: Super+I → VPN${R}"
-    else
-        echo -e "  ${S}[~] ProtonVPN CLI already installed.${R}"
-    fi
-    # DFM — Dotfile Manager is installed by install.sh from the in-tree
-    # Stoa fork at scripts/stoa-dfm/ (see scripts/vendor/README.md). The
-    # Python runtime deps are already in $DFM_PKGS above; no separate clone is needed.
-    # Div Acer Manager Max (DAMX) — Nitro/Predator fan + profiles + battery.
-    # Only offered on Acer hardware, where Linuwu-Sense actually applies.
+    # ── Div Acer Manager Max (DAMX) — only on Acer hardware ──
+    # DFM is installed by install.sh from the in-tree fork; no separate step needed here.
     echo ""
     _vendor=""
     [ -r /sys/class/dmi/id/sys_vendor ] && _vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)
