@@ -244,10 +244,10 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
     _install_aur betterbird-bin         "Betterbird"            betterbird
     _install_aur visual-studio-code-bin "Visual Studio Code"    code
-    _install_aur howdy                  "howdy"                 howdy
-    if [ "$_aur_fresh" = 1 ]; then
-        echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
-    fi
+    # _install_aur howdy                  "howdy"                 howdy
+    # if [ "$_aur_fresh" = 1 ]; then
+    #    echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
+    # fi
     _install_aur libinput-gestures      "libinput-gestures"     libinput-gestures
     _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
     if [ "$_aur_fresh" = 1 ]; then
