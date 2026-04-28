@@ -24,7 +24,7 @@ export BROWSER="brave"
 export EDITOR="nvim"
 export VISUAL="nvim"
 export TERMINAL="kitty"
-export FILE_MANAGER="lf"
+export FILE_MANAGER="thunar"
 export PAGER="less"
 
 # ── XDG ──
@@ -43,10 +43,10 @@ export PROTON_ENABLE_NVAPI=1
 
 # ── NVIDIA (Wayland) ──
 # Uncomment if using NVIDIA GPU with Hyprland:
-# export LIBVA_DRIVER_NAME=nvidia
-# export __GLX_VENDOR_LIBRARY_NAME=nvidia
-# export GBM_BACKEND=nvidia-drm
-# export NVD_BACKEND=direct
-# export WLR_NO_HARDWARE_CURSORS=1
-# export __GL_GSYNC_ALLOWED=1
-# export __GL_VRR_ALLOWED=1
+export LIBVA_DRIVER_NAME=nvidia
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export GBM_BACKEND=nvidia-drm
+export NVD_BACKEND=direct
+export WLR_NO_HARDWARE_CURSORS=1
+export __GL_GSYNC_ALLOWED=1
+export __GL_VRR_ALLOWED=1
