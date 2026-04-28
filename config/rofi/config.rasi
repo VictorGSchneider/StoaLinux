@@ -29,7 +29,7 @@ configuration {
 }
 
 window {
-    width:            520px;
+    width:            700px;
     border:           2px;
     border-color:     @bronze;
     border-radius:    4px;
@@ -61,7 +61,7 @@ entry {
 }
 
 listview {
-    lines:            8;
+    lines:            10;
     columns:          1;
     fixed-height:     true;
     border:           1px 0 0 0;
