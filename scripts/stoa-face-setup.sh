@@ -161,9 +161,9 @@ cmd_setup() {
         if [ -n "$aur_cmd" ]; then
             # Run AUR helper as the actual user (not root)
             local real_user="${SUDO_USER:-$USER}"
-            su - "$real_user" -c "$aur_cmd -S --needed --noconfirm howdy" || {
-                echo -e "  ${T}[!] Failed to install howdy via ${aur_cmd}.${R}"
-                echo -e "  ${S}    Install manually: ${aur_cmd} -S howdy${R}"
+            su - "$real_user" -c "$aur_cmd -S --needed --noconfirm howdy-git" || {
+                echo -e "  ${T}[!] Failed to install howdy-git via ${aur_cmd}.${R}"
+                echo -e "  ${S}    Install manually: ${aur_cmd} -S howdy-git${R}"
                 exit 1
             }
         else
@@ -191,7 +191,7 @@ cmd_setup() {
     # ── Configure howdy ──
     echo -e "  ${F}Step 3: Configuring howdy...${R}"
 
-    local howdy_config="/lib/security/howdy/config.ini"
+    local howdy_config="/etc/howdy/config.ini"
     if [ -f "$howdy_config" ]; then
         # Set device path
         sed -i "s|^device_path = .*|device_path = ${cam_device}|" "$howdy_config"
@@ -208,7 +208,7 @@ cmd_setup() {
         echo -e "  ${O}[✓] howdy configured (device: ${cam_device})${R}"
     else
         echo -e "  ${T}[!] howdy config not found at ${howdy_config}${R}"
-        echo -e "  ${S}    Config may be at a different path. Check: find / -name config.ini -path '*/howdy/*'${R}"
+        echo -e "  ${S}    Config may be at a different path. Check: find /etc /usr/lib -name config.ini -path '*/howdy/*'${R}"
     fi
     echo ""
 
@@ -341,7 +341,7 @@ cmd_status() {
     done
 
     # Check if disabled
-    local howdy_config="/lib/security/howdy/config.ini"
+    local howdy_config="/etc/howdy/config.ini"
     if [ -f "$howdy_config" ]; then
         if grep -q "^disabled = true" "$howdy_config" 2>/dev/null; then
             echo -e "  ${T}  Status: disabled${R}"
