@@ -7,4 +7,4 @@ build/
 .eggs/
 README.md
 LICENSE
-dfm.egg-info/
+scripts/stoa-dfm/dfm.egg-info/
