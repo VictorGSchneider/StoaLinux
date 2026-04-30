@@ -1,4 +1,6 @@
 #!/bin/bash
+# Force bash, not zsh
+#[ -n "$ZSH_VERSION" ] && exec bash "$0" "$@"
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — GPU + CPU Setup                               ║
 # ║  "Adapt yourself to the things among which your lot          ║
@@ -77,13 +79,23 @@ get_gpu_name() {
 
 detect_nvidia_generation() {
     local device_id id_dec
-    device_id=$(lspci -nn 2>/dev/null | grep -i 'nvidia' | grep -oP '\[10de:([0-9a-fA-F]{4})\]' | head -1 | grep -oP '[0-9a-fA-F]{4}' || true)
+    
+    # Filtra ESPECIFICAMENTE pela linha VGA (GPU dedicada)
+    # Não pega audio ou outros periféricos NVIDIA
+    # Extrai APENAS o device ID (a parte depois de "10de:")
+    device_id=$(lspci -nn 2>/dev/null | grep -i 'nvidia' | grep -iE 'vga|3d|display' | grep -oP '(?<=\[10de:)[0-9a-fA-F]{4}' | head -1 || true)
 
     if [ -z "$device_id" ]; then
         echo "unknown"
         return
     fi
 
+    # Remove espaços (safety)
+    device_id=$(echo "$device_id" | xargs)
+
+    # Debug (opcional, remova depois)
+    #echo "DEBUG: device_id = $device_id" >&2
+    
     id_dec=$((16#${device_id}))
 
     # Approximate mapping by PCI device ID ranges
