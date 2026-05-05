@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "DEBUG: Script called with args: $@" >> /tmp/stoa-capture-debug.log
+date >> /tmp/stoa-capture-debug.log
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Capture (Screenshot + Recording)               ║
 # ║  "Begin at once to live." — Seneca                           ║
@@ -15,7 +17,6 @@ set -o pipefail
 
 SCREENSHOT_DIR="${HOME}/Pictures/screenshots"
 RECORD_DIR="${HOME}/Videos/recordings"
-# Use the per-user runtime dir when available instead of world-writable /tmp.
 PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/stoa-record.pid"
 SESSION="${XDG_SESSION_TYPE:-x11}"
 
@@ -63,29 +64,39 @@ _screenshot() {
     local delay="${2:-0}"
     local filename="${SCREENSHOT_DIR}/screenshot-$(date +%Y%m%d-%H%M%S).png"
 
+    echo "DEBUG: _screenshot called with mode=$mode delay=$delay" >> /tmp/stoa-capture-debug.log
+    echo "DEBUG: SESSION=$SESSION" >> /tmp/stoa-capture-debug.log
+    echo "DEBUG: filename=$filename" >> /tmp/stoa-capture-debug.log
+
     [ "$delay" -gt 0 ] 2>/dev/null && sleep "$delay"
 
     if [ "$SESSION" = "wayland" ]; then
+        echo "DEBUG: Using Wayland path" >> /tmp/stoa-capture-debug.log
         case "$mode" in
             selection)
                 local geom
                 geom=$(slurp 2>/dev/null) || return 0
-                grim -g "$geom" - | satty -f - --output-filename "$filename"
+                echo "DEBUG: Running grim -g $geom $filename" >> /tmp/stoa-capture-debug.log
+                grim -g "$geom" "$filename" >> /tmp/stoa-capture-debug.log 2>&1
                 ;;
             window)
                 local geom
                 geom=$(_get_window_geom)
                 if [ -n "$geom" ]; then
-                    grim -g "$geom" - | satty -f - --output-filename "$filename"
+                    echo "DEBUG: Running grim -g $geom $filename" >> /tmp/stoa-capture-debug.log
+                    grim -g "$geom" "$filename" >> /tmp/stoa-capture-debug.log 2>&1
                 else
-                    grim - | satty -f - --output-filename "$filename"
+                    echo "DEBUG: Running grim $filename" >> /tmp/stoa-capture-debug.log
+                    grim "$filename" >> /tmp/stoa-capture-debug.log 2>&1
                 fi
                 ;;
             screen)
-                grim - | satty -f - --output-filename "$filename"
+                echo "DEBUG: Running grim $filename" >> /tmp/stoa-capture-debug.log
+                grim "$filename" >> /tmp/stoa-capture-debug.log 2>&1
                 ;;
         esac
     else
+        echo "DEBUG: Using X11 path" >> /tmp/stoa-capture-debug.log
         case "$mode" in
             selection) maim -s "$filename" ;;
             window)    maim -i "$(_get_window_geom)" "$filename" ;;
@@ -93,7 +104,8 @@ _screenshot() {
         esac
     fi
 
-    [ -f "$filename" ] && _notify "Screenshot saved"
+    echo "DEBUG: File exists? $([ -f "$filename" ] && echo yes || echo no)" >> /tmp/stoa-capture-debug.log
+    [ -f "$filename" ] && _notify "Screenshot saved to ~/Pictures/screenshots/"
 }
 
 _record() {
@@ -184,21 +196,23 @@ _record() {
 # ── Main ──
 case "${1:-}" in
     "")
+            echo "DEBUG: Case '' triggered (toggle)" >> /tmp/stoa-capture-debug.log
         # Toggle: stop recording → close widget → open widget
         if _stop_recording; then
             eww close capture 2>/dev/null
             exit 0
         fi
-        # `eww active-windows` is not a real subcommand. Use `eww windows`
-        # which marks active windows with '*' in its output.
-        if eww windows 2>/dev/null | grep -Eq '^\*.*capture$'; then
-            eww close capture
+        
+        # Tenta fechar. Se falhar (já tá fechado), abre
+        if eww close capture 2>/dev/null; then
+            exit 0
         else
-            eww update capture-mode="screen" capture-type="screenshot" capture-delay=0 2>/dev/null
-            eww open capture
+            eww open capture 2>/dev/null
+            exit 0
         fi
         ;;
     selection|screen|window)
+            echo "DEBUG: Case selection/screen/window triggered with args: $@" >> /tmp/stoa-capture-debug.log
         local_mode="$1"
         local_type="${2:-screenshot}"
         local_delay="${3:-0}"
