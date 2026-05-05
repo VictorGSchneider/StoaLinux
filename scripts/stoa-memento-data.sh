@@ -13,8 +13,8 @@ CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/memento.conf"
 if [ ! -f "$CONF" ]; then
     mkdir -p "$(dirname "$CONF")"
     cat > "$CONF" <<'DEFAULT'
-NAME=Marcus
-BIRTH=1990-01-01
+NAME=Victor Gabriel Schneider
+BIRTH=2000-11-01
 LIFE_YEARS=80
 DEFAULT
     echo "File created: $CONF" >&2
@@ -24,8 +24,8 @@ fi
 # ── Read config ──
 source "$CONF"
 
-NAME="${NAME:-Marcus}"
-BIRTH="${BIRTH:-1990-01-01}"
+NAME="${NAME:-Victor Gabriel Schneider}"
+BIRTH="${BIRTH:-2000-11-01}"
 LIFE_YEARS="${LIFE_YEARS:-80}"
 
 # ── Calculations ──

@@ -6,10 +6,11 @@
 
 WIDGET="memento"
 
-# `eww active-windows` is not a real subcommand; `eww windows` marks
-# active windows with a leading `*`.
-if eww windows 2>/dev/null | grep -Eq "^\*.*${WIDGET}$"; then
-    eww close "$WIDGET"
+WIDGET="memento"
+
+if eww close "$WIDGET" 2>/dev/null; then
+    exit 0
 else
-    eww open "$WIDGET"
+    eww open "$WIDGET" 2>/dev/null
+    exit 0
 fi

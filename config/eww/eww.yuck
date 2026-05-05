@@ -83,7 +83,7 @@
                       :height "580px"
                       :anchor "center")
   :stacking "overlay"
-  :focusable true
+  :focusable false   ;
   (memento-mori))
 
 ;; ══════════════════════════════════════════════════════════════
@@ -136,7 +136,7 @@
 
       ;; Capture button
       (button :class {capture-type == "screenshot" ? "cap-shutter-btn" : "cap-shutter-btn recording"}
-              :onclick "stoa-capture ${capture-mode} ${capture-type} ${capture-delay}"
+              :onclick "/home/zeno/.local/bin/stoa-capture ${capture-mode} ${capture-type}"
         (label :class "cap-shutter-icon"
                :text {capture-type == "screenshot" ? "●" : "●"}))
 
