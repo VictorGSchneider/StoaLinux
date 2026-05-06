@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "DEBUG: Script called with args: $@" >> /tmp/stoa-capture-debug.log
+echo "DEBUG: Script called with args: $*" >> /tmp/stoa-capture-debug.log
 date >> /tmp/stoa-capture-debug.log
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Capture (Screenshot + Recording)               ║
