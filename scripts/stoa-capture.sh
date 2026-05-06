@@ -212,7 +212,7 @@ case "${1:-}" in
         fi
         ;;
     selection|screen|window)
-            echo "DEBUG: Case selection/screen/window triggered with args: $@" >> /tmp/stoa-capture-debug.log
+            echo "DEBUG: Case selection/screen/window triggered with args: $*" >> /tmp/stoa-capture-debug.log
         local_mode="$1"
         local_type="${2:-screenshot}"
         local_delay="${3:-0}"
