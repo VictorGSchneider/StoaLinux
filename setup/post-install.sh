@@ -193,34 +193,8 @@ read -rp "  Install packages? (y/n) [y]: " INSTALL_PKGS
 INSTALL_PKGS="${INSTALL_PKGS:-y}"
 
 # ── AUR helper ──
-# Usage: _install_aur <pkg> <label> [<bin>]
-# Detects yay/paru; falls back to makepkg.
-# Pass <bin> to skip install when the command already exists.
-# Sets _aur_fresh=1 if newly installed, 0 if skipped.
-_aur_fresh=0
-_install_aur() {
-    local pkg="$1" label="$2" bin="${3:-}"
-    _aur_fresh=0
-    echo ""
-    if [ -n "$bin" ] && command -v "$bin" &>/dev/null; then
-        echo -e "  ${S}[~] ${label} already installed.${R}"
-        return 0
-    fi
-    echo -e "  ${F}Installing ${label} (AUR)...${R}"
-    if command -v yay &>/dev/null; then
-        yay -S --needed --noconfirm "$pkg"
-    elif command -v paru &>/dev/null; then
-        paru -S --needed --noconfirm "$pkg"
-    else
-        echo -e "  ${S}Installing ${label} manually via makepkg...${R}"
-        local _tmpdir; _tmpdir=$(mktemp -d)
-        git clone "https://aur.archlinux.org/${pkg}.git" "$_tmpdir/$pkg"
-        (cd "$_tmpdir/$pkg" && makepkg -si --noconfirm)
-        rm -rf "$_tmpdir"
-    fi
-    echo -e "  ${O}[✓] ${label} installed.${R}"
-    _aur_fresh=1
-}
+# shellcheck source=lib/aur.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/aur.sh"
 
 if [ "$INSTALL_PKGS" = "y" ]; then
     # Enable multilib repository (required for Steam/lib32 packages)
@@ -244,10 +218,10 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
     _install_aur betterbird-bin         "Betterbird"            betterbird
     _install_aur visual-studio-code-bin "Visual Studio Code"    code
-    # _install_aur howdy                  "howdy"                 howdy
-    # if [ "$_aur_fresh" = 1 ]; then
-    #    echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
-    # fi
+    _install_aur howdy-git              "howdy"                 howdy
+    if [ "$_aur_fresh" = 1 ]; then
+        echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
+    fi
     _install_aur libinput-gestures      "libinput-gestures"     libinput-gestures
     _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
     if [ "$_aur_fresh" = 1 ]; then
