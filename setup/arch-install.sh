@@ -30,6 +30,10 @@ O='\033[38;2;138;154;108m'
 T='\033[38;2;179;107;90m'
 R='\033[0m'
 
+# ── Shared helpers ──
+# shellcheck source=lib/aur.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/aur.sh"
+
 # ── Banner ──
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
@@ -170,9 +174,19 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     echo -e "  ${O}[✓] yay installed.${R}"
 
     # ── AUR packages ──
-    echo -e "  ${S}Installing AUR packages: brave-bin, obsidian, visual-studio-code-bin, eww-wayland, satty, enpass-bin, howdy-git...${R}"
-    arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-        "yay -S --needed --noconfirm brave-bin obsidian visual-studio-code-bin eww-wayland satty enpass-bin howdy-git i3lock-color otf-eb-garamond colloid-icon-theme-git colloid-cursors-git yacreader" 2>/dev/null || true
+    echo -e "  ${S}Installing AUR packages...${R}"
+    _install_aur_chroot brave-bin                 "Brave Browser"
+    _install_aur_chroot obsidian                  "Obsidian"
+    _install_aur_chroot visual-studio-code-bin    "Visual Studio Code"
+    _install_aur_chroot eww-wayland               "eww (Wayland)"
+    _install_aur_chroot satty                     "Satty"
+    _install_aur_chroot enpass-bin                "Enpass"
+    _install_aur_chroot howdy-git                 "howdy"
+    _install_aur_chroot i3lock-color              "i3lock-color"
+    _install_aur_chroot otf-eb-garamond           "EB Garamond font"
+    _install_aur_chroot colloid-icon-theme-git    "Colloid icon theme"
+    _install_aur_chroot colloid-cursors-git       "Colloid cursors"
+    _install_aur_chroot yacreader                 "YACReader"
     echo -e "  ${O}[✓] AUR packages installed.${R}"
 else
     echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
