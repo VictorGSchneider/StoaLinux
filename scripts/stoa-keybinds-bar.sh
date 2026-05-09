@@ -9,13 +9,11 @@
 
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 
-# Load config
 if [ -f "$STOA_CONF" ]; then
     # shellcheck source=/dev/null
     source "$STOA_CONF"
 fi
 
-# Default: enabled
 STOA_SHOW_KEYBINDS="${STOA_SHOW_KEYBINDS:-true}"
 
 if [ "$STOA_SHOW_KEYBINDS" != "true" ]; then
@@ -23,40 +21,80 @@ if [ "$STOA_SHOW_KEYBINDS" != "true" ]; then
     exit 0
 fi
 
-# Compact text for the bar
-TEXT="⏎ Term │ A Store │ B Brave │ C Calc │ D Rofi │ E Files │ G DFM │ I Settings │ N Monitor │ O Notes │ W WinApps │ V Clipboard │ Esc Lock │ Q Close │ F Full │ HJKL Nav"
+# ── Compact bar text (grouped by category) ──
+SEP=" • "
+WIN="⏎ Term${SEP}Q Close${SEP}F Full${SEP}⇧␣ Float"
+NAV="HJKL Focus${SEP}⇧HJKL Move${SEP}R Resize${SEP}1–0 WS"
+APP="␣ Rofi${SEP}B Brave${SEP}E Files${SEP}C Calc${SEP}O Notes${SEP}N Top"
+TOOL="V Clip${SEP}⇧T OCR${SEP}⇧P Paste${SEP}Print Capture"
+TEXT="${WIN}  │  ${NAV}  │  ${APP}  │  ${TOOL}"
 
-# Full tooltip
-TOOLTIP="╔═══ STOA KEYBINDS ═══╗\n"
-TOOLTIP+="Super+Enter   Terminal\n"
-TOOLTIP+="Super+A       App Store\n"
-TOOLTIP+="Super+B       Brave Browser\n"
-TOOLTIP+="Super+C       Calculator\n"
-TOOLTIP+="Super+D       Rofi (launcher)\n"
-TOOLTIP+="Super+E       Files (lf)\n"
-TOOLTIP+="Super+I       Settings\n"
-TOOLTIP+="Super+N       Monitor (btop)\n"
-TOOLTIP+="Super+O       Obsidian\n"
-TOOLTIP+="Super+M       Memento Mori\n"
-TOOLTIP+="Super+G       DFM (Dotfile Manager)\n"
-TOOLTIP+="Super+W       WinApps (Windows)\n"
-TOOLTIP+="Super+V       Clipboard (history)\n"
-TOOLTIP+="Super+Shift+V Pin clipboard item\n"
-TOOLTIP+="Super+Shift+T OCR (text extractor)\n"
-TOOLTIP+="Super+Shift+P Advanced Paste\n"
-TOOLTIP+="Super+Escape  Lock screen\n"
-TOOLTIP+="Super+Q       Close window\n"
-TOOLTIP+="Super+F       Fullscreen\n"
-TOOLTIP+="Super+Shift+Space  Floating\n"
-TOOLTIP+="─────────────────────\n"
-TOOLTIP+="Super+HJKL    Navigation\n"
-TOOLTIP+="Super+Shift+HJKL  Move window\n"
-TOOLTIP+="Super+R       Resize mode\n"
-TOOLTIP+="Super+1-0     Workspaces I-X\n"
-TOOLTIP+="─────────────────────\n"
-TOOLTIP+="Print         Capture (screenshot/recording)\n"
-TOOLTIP+="Super+/       Hide/show keybinds\n"
-TOOLTIP+="╚═════════════════════╝"
+# ── Full tooltip (organized into sections) ──
+read -r -d '' TOOLTIP <<'EOF'
+╔════════════ STOA KEYBINDS ════════════╗
 
-# Waybar JSON format
-printf '{"text": "%s", "tooltip": "%s", "class": "keybinds"}' "$TEXT" "$TOOLTIP"
+▸ Window
+  Super+Return         Terminal (kitty)
+  Super+Q              Close window
+  Super+F              Fullscreen
+  Super+Shift+Space    Toggle floating
+  Super+Escape         Lock screen
+  Super+Ctrl+E         Exit Hyprland
+
+▸ Mouse
+  Super+LeftDrag       Move window
+  Super+RightDrag      Resize window
+
+▸ Navigation
+  Super+H/J/K/L        Move focus
+  Super+Shift+H/J/K/L  Move window
+  Super+R              Resize mode (HJKL, Esc to exit)
+
+▸ Workspaces
+  Super+1–0            Switch to workspace 1–10
+  Super+Shift+1–0      Move window to workspace 1–10
+
+▸ Apps
+  Super+Space          Rofi (launcher)
+  Super+A              App Store
+  Super+B              Brave
+  Super+C              Calculator
+  Super+E              Files (Thunar)
+  Super+Shift+E        Files (lf in kitty)
+  Super+G              DFM (Dotfile Manager)
+  Super+M              Memento Mori
+  Super+N              Monitor (btop)
+  Super+O              Obsidian
+  Super+S              Settings
+  Super+W              WinApps
+
+▸ Clipboard
+  Super+V              Show history
+  Super+Shift+V        Pin item
+  Super+Shift+B        Clear
+
+▸ Tools
+  Super+Shift+T        OCR
+  Super+Shift+P        Advanced paste
+  Super+Shift+S        Predict toggle
+  Print                Screenshot / recording
+
+▸ Bar
+  Super+/              Toggle this keybinds bar
+
+╚═══════════════════════════════════════╝
+EOF
+
+# Escape for JSON: backslashes, quotes, then convert real newlines to \n
+escape_json() {
+    local s=$1
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\n'/\\n}
+    printf '%s' "$s"
+}
+
+TEXT_JSON=$(escape_json "$TEXT")
+TOOLTIP_JSON=$(escape_json "$TOOLTIP")
+
+printf '{"text": "%s", "tooltip": "%s", "class": "keybinds"}\n' "$TEXT_JSON" "$TOOLTIP_JSON"
