@@ -95,6 +95,20 @@ window#waybar {
     font-size: 11px;
 }
 
+#custom-keybinds-info {
+    padding: 0 10px;
+    color: @fg_dim;
+    font-size: 14px;
+}
+
+#custom-keybinds-info:hover {
+    color: @bronze;
+}
+
+#custom-keybinds-info.off {
+    color: @stone;
+}
+
 /* ── Active Window ── */
 
 #window {
