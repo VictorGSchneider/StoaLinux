@@ -1,11 +1,10 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Keybinds Bar                                  ║
-# ║  Waybar module: shows main keybinds in the bar               ║
+# ║  Waybar custom modules:                                      ║
+# ║    bar  → compact apps line in the top center                ║
+# ║    info → keyboard icon + full keybinds tooltip on the right ║
 # ╚══════════════════════════════════════════════════════════════╝
-#
-# Reads STOA_SHOW_KEYBINDS from stoa.conf.
-# Waybar hides custom modules with empty output.
 
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 
@@ -15,19 +14,11 @@ if [ -f "$STOA_CONF" ]; then
 fi
 
 STOA_SHOW_KEYBINDS="${STOA_SHOW_KEYBINDS:-true}"
+MODE="${1:-bar}"
 
-if [ "$STOA_SHOW_KEYBINDS" != "true" ]; then
-    echo ""
-    exit 0
-fi
-
-# ── Compact bar text (grouped by category) ──
+# ── Compact bar text: only the most-used apps ──
 SEP=" • "
-WIN="⏎ Term${SEP}Q Close${SEP}F Full${SEP}⇧␣ Float"
-NAV="HJKL Focus${SEP}⇧HJKL Move${SEP}R Resize${SEP}1–0 WS"
-APP="␣ Rofi${SEP}B Brave${SEP}E Files${SEP}C Calc${SEP}O Notes${SEP}N Top"
-TOOL="V Clip${SEP}⇧T OCR${SEP}⇧P Paste${SEP}Print Capture"
-TEXT="${WIN}  │  ${NAV}  │  ${APP}  │  ${TOOL}"
+BAR_TEXT="⏎ Term${SEP}␣ Rofi${SEP}B Brave${SEP}E Files${SEP}O Notes${SEP}V Clip"
 
 # ── Full tooltip (organized into sections) ──
 read -r -d '' TOOLTIP <<'EOF'
@@ -80,7 +71,8 @@ read -r -d '' TOOLTIP <<'EOF'
   Print                Screenshot / recording
 
 ▸ Bar
-  Super+/              Toggle this keybinds bar
+  Super+/              Toggle keybinds bar
+  Click ⌨ icon         Toggle keybinds bar
 
 ╚═══════════════════════════════════════╝
 EOF
@@ -94,7 +86,32 @@ escape_json() {
     printf '%s' "$s"
 }
 
-TEXT_JSON=$(escape_json "$TEXT")
-TOOLTIP_JSON=$(escape_json "$TOOLTIP")
+emit() {
+    local text=$1 tooltip=$2 class=$3
+    printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' \
+        "$(escape_json "$text")" \
+        "$(escape_json "$tooltip")" \
+        "$class"
+}
 
-printf '{"text": "%s", "tooltip": "%s", "class": "keybinds"}\n' "$TEXT_JSON" "$TOOLTIP_JSON"
+case "$MODE" in
+    bar)
+        if [ "$STOA_SHOW_KEYBINDS" != "true" ]; then
+            echo ""
+            exit 0
+        fi
+        emit "$BAR_TEXT" "$TOOLTIP" "keybinds"
+        ;;
+    info)
+        if [ "$STOA_SHOW_KEYBINDS" = "true" ]; then
+            class="keybinds-info on"
+        else
+            class="keybinds-info off"
+        fi
+        emit "⌨" "$TOOLTIP" "$class"
+        ;;
+    *)
+        echo "usage: $0 {bar|info}" >&2
+        exit 2
+        ;;
+esac
