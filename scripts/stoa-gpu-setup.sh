@@ -563,11 +563,50 @@ if $IS_NVIDIA; then
 
     # Resolve the NVIDIA card path NOW so we can write a literal value
     # (Hyprland does not expand $(...) in env lines).
+    #
+    # IMPORTANT: AQ_DRM_DEVICES / WLR_DRM_DEVICES are colon-separated
+    # lists of paths. The /dev/dri/by-path/pci-0000:XX:XX.X-card form
+    # contains colons inside the path itself, which Aquamarine
+    # mis-parses as multiple device entries:
+    #
+    #   ERR drm: Failed to canonicalize path /dev/dri/by-path/pci-0000
+    #   ERR drm: Failed to canonicalize path 01
+    #   ERR drm: Failed to canonicalize path 00.0-card
+    #   ERR drm: Found no gpus to use, cannot continue
+    #
+    # Workaround: install a udev rule that creates a stable symlink
+    # /dev/dri/nvidia-card pointing at whichever cardN is the NVIDIA
+    # device, and use that path (no colons).
     NV_CARD_PATH=""
     if $IS_HYBRID; then
-        NV_BUSID=$(lspci 2>/dev/null | awk '/NVIDIA/ && /VGA|3D|Display/{print $1; exit}')
-        if [ -n "$NV_BUSID" ]; then
-            NV_CARD_PATH="/dev/dri/by-path/pci-0000:${NV_BUSID}-card"
+        NV_UDEV_RULE="/etc/udev/rules.d/99-stoa-nvidia-drm.rules"
+        if [ ! -f "$NV_UDEV_RULE" ] || ! grep -q 'nvidia-card' "$NV_UDEV_RULE" 2>/dev/null; then
+            echo -e "  ${S}Installing udev rule for stable NVIDIA DRM symlink...${R}"
+            printf '%s\n' \
+                '# stoa-gpu-setup: stable symlink to the NVIDIA DRM card so' \
+                '# AQ_DRM_DEVICES / WLR_DRM_DEVICES can avoid the by-path' \
+                '# form (which contains colons and breaks the parser).' \
+                'SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ATTRS{vendor}=="0x10de", SYMLINK+="dri/nvidia-card"' \
+                | sudo tee "$NV_UDEV_RULE" > /dev/null
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --subsystem-match=drm
+        fi
+        # Wait briefly for the symlink to settle.
+        for _ in 1 2 3 4 5; do
+            [ -e /dev/dri/nvidia-card ] && break
+            sleep 0.2
+        done
+        if [ -e /dev/dri/nvidia-card ]; then
+            NV_CARD_PATH="/dev/dri/nvidia-card"
+        else
+            # Fallback: scan /sys for the cardN whose vendor is 0x10de.
+            for c in /sys/class/drm/card[0-9]*; do
+                v=$(cat "$c/device/vendor" 2>/dev/null || true)
+                if [ "$v" = "0x10de" ]; then
+                    NV_CARD_PATH="/dev/dri/$(basename "$c")"
+                    break
+                fi
+            done
         fi
     fi
 
@@ -581,8 +620,11 @@ if $IS_NVIDIA; then
                 echo "env = AQ_DRM_DEVICES, ${NV_CARD_PATH}"
                 echo "env = WLR_DRM_DEVICES, ${NV_CARD_PATH}"
             else
-                echo "# (NVIDIA bus id could not be resolved automatically — set"
-                echo "#  AQ_DRM_DEVICES manually to /dev/dri/by-path/pci-XXXX:XX:XX.X-card)"
+                echo "# (NVIDIA card could not be resolved automatically — set"
+                echo "#  AQ_DRM_DEVICES manually to /dev/dri/cardN, where cardN"
+                echo "#  is the one whose /sys/class/drm/cardN/device/vendor is 0x10de."
+                echo "#  Do NOT use /dev/dri/by-path/... — it contains ':' which"
+                echo "#  Aquamarine mis-parses as a list separator.)"
             fi
             echo "env = __NV_PRIME_RENDER_OFFLOAD, 1"
             echo "env = __VK_LAYER_NV_optimus, NVIDIA_only"
