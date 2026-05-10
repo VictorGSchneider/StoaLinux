@@ -633,32 +633,60 @@ if $IS_NVIDIA; then
     # /dev/dri/nvidia-card pointing at whichever cardN is the NVIDIA
     # device, and use that path (no colons).
     NV_CARD_PATH=""
+    IGPU_CARD_PATH=""
     if $IS_HYBRID; then
+        # Stable symlinks for both DRM cards. /dev/dri/cardN numbering
+        # is non-deterministic across boots (we have seen NVIDIA flip
+        # between card0 and card1 on the same machine), so we resolve
+        # both vendors via udev SYMLINK rules.
+        case "$IGPU_VENDOR" in
+            amd)   IGPU_VID="0x1002" ;;
+            intel) IGPU_VID="0x8086" ;;
+            *)     IGPU_VID="" ;;
+        esac
         NV_UDEV_RULE="/etc/udev/rules.d/99-stoa-nvidia-drm.rules"
-        if [ ! -f "$NV_UDEV_RULE" ] || ! grep -q 'nvidia-card' "$NV_UDEV_RULE" 2>/dev/null; then
-            echo -e "  ${S}Installing udev rule for stable NVIDIA DRM symlink...${R}"
+        # Always rewrite — old versions of this rule only created the
+        # nvidia symlink, missing the iGPU one we now also need for
+        # AQ_DRM_DEVICES to enumerate the eDP panel.
+        {
             printf '%s\n' \
-                '# stoa-gpu-setup: stable symlink to the NVIDIA DRM card so' \
-                '# AQ_DRM_DEVICES / WLR_DRM_DEVICES can avoid the by-path' \
-                '# form (which contains colons and breaks the parser).' \
-                'SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ATTRS{vendor}=="0x10de", SYMLINK+="dri/nvidia-card"' \
-                | sudo tee "$NV_UDEV_RULE" > /dev/null
-            sudo udevadm control --reload-rules
-            sudo udevadm trigger --subsystem-match=drm
-        fi
-        # Wait briefly for the symlink to settle.
+                '# stoa-gpu-setup: stable symlinks for both DRM cards so' \
+                '# AQ_DRM_DEVICES / WLR_DRM_DEVICES can list them in a' \
+                '# colon-separated value without using /dev/dri/by-path/' \
+                '# (which contains colons and breaks the parser) and' \
+                '# without depending on cardN numbering (which varies' \
+                '# between boots).' \
+                'SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ATTRS{vendor}=="0x10de", SYMLINK+="dri/nvidia-card"'
+            [ -n "$IGPU_VID" ] && \
+                printf 'SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ATTRS{vendor}=="%s", SYMLINK+="dri/igpu-card"\n' "$IGPU_VID"
+        } | sudo tee "$NV_UDEV_RULE" > /dev/null
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --subsystem-match=drm
+        # Wait briefly for both symlinks to settle.
         for _ in 1 2 3 4 5; do
-            [ -e /dev/dri/nvidia-card ] && break
+            [ -e /dev/dri/nvidia-card ] && [ -e /dev/dri/igpu-card ] && break
             sleep 0.2
         done
+        # Resolve nvidia path.
         if [ -e /dev/dri/nvidia-card ]; then
             NV_CARD_PATH="/dev/dri/nvidia-card"
         else
-            # Fallback: scan /sys for the cardN whose vendor is 0x10de.
             for c in /sys/class/drm/card[0-9]*; do
                 v=$(cat "$c/device/vendor" 2>/dev/null || true)
                 if [ "$v" = "0x10de" ]; then
                     NV_CARD_PATH="/dev/dri/$(basename "$c")"
+                    break
+                fi
+            done
+        fi
+        # Resolve iGPU path.
+        if [ -e /dev/dri/igpu-card ]; then
+            IGPU_CARD_PATH="/dev/dri/igpu-card"
+        elif [ -n "$IGPU_VID" ]; then
+            for c in /sys/class/drm/card[0-9]*; do
+                v=$(cat "$c/device/vendor" 2>/dev/null || true)
+                if [ "$v" = "$IGPU_VID" ]; then
+                    IGPU_CARD_PATH="/dev/dri/$(basename "$c")"
                     break
                 fi
             done
@@ -670,14 +698,25 @@ if $IS_NVIDIA; then
         echo "$HYPR_MARKER_BEGIN"
         if $IS_HYBRID; then
             echo "# Hybrid laptop (${IGPU_VENDOR} iGPU + NVIDIA dGPU, muxless HDMI):"
-            echo "# Force NVIDIA as primary KMS device so HDMI on the dGPU port works."
-            if [ -n "$NV_CARD_PATH" ]; then
+            echo "# List BOTH cards — NVIDIA first so the dGPU is the primary KMS"
+            echo "# device (HDMI on the dGPU port lights up), iGPU second so the"
+            echo "# laptop's eDP panel (wired to the iGPU) is also enumerated."
+            if [ -n "$NV_CARD_PATH" ] && [ -n "$IGPU_CARD_PATH" ]; then
+                echo "env = AQ_DRM_DEVICES, ${NV_CARD_PATH}:${IGPU_CARD_PATH}"
+                echo "env = WLR_DRM_DEVICES, ${NV_CARD_PATH}:${IGPU_CARD_PATH}"
+            elif [ -n "$NV_CARD_PATH" ]; then
+                # iGPU symlink missing — fall back to nvidia-only and warn.
+                # NOTE: this will leave the eDP panel dark on hybrid laptops.
+                echo "# WARNING: iGPU card path could not be resolved; using"
+                echo "# NVIDIA only. eDP panel will stay on TTY until the iGPU"
+                echo "# udev symlink (/dev/dri/igpu-card) is created."
                 echo "env = AQ_DRM_DEVICES, ${NV_CARD_PATH}"
                 echo "env = WLR_DRM_DEVICES, ${NV_CARD_PATH}"
             else
                 echo "# (NVIDIA card could not be resolved automatically — set"
-                echo "#  AQ_DRM_DEVICES manually to /dev/dri/cardN, where cardN"
-                echo "#  is the one whose /sys/class/drm/cardN/device/vendor is 0x10de."
+                echo "#  AQ_DRM_DEVICES manually to /dev/dri/cardA:/dev/dri/cardB"
+                echo "#  where cardA is whose /sys/class/drm/cardA/device/vendor"
+                echo "#  is 0x10de and cardB is the iGPU (0x1002 AMD / 0x8086 Intel)."
                 echo "#  Do NOT use /dev/dri/by-path/... — it contains ':' which"
                 echo "#  Aquamarine mis-parses as a list separator.)"
             fi
