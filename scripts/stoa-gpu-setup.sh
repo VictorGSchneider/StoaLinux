@@ -59,6 +59,10 @@ detect_cpu() {
 }
 
 detect_gpu() {
+    # Returns the *primary* GPU vendor for driver-selection purposes.
+    # If NVIDIA is present we treat it as primary (it owns HDMI on
+    # most muxless gaming laptops); the iGPU is reported separately
+    # by detect_igpu().
     local vga_line
     vga_line=$(lspci 2>/dev/null | grep -iE 'vga|3d|display' || true)
 
@@ -73,6 +77,40 @@ detect_gpu() {
     fi
 }
 
+# Detects an AMD/Intel iGPU sitting alongside an NVIDIA dGPU.
+# Echoes "amd", "intel", or "" if no secondary GPU is present.
+detect_igpu() {
+    local vga_line
+    vga_line=$(lspci 2>/dev/null | grep -iE 'vga|3d|display' || true)
+    # Only meaningful when an NVIDIA card is also present.
+    if ! echo "$vga_line" | grep -qi 'nvidia'; then
+        echo ""
+        return
+    fi
+    if echo "$vga_line" | grep -iE 'amd|radeon|advanced micro' | grep -qiE 'vga|3d|display'; then
+        echo "amd"
+    elif echo "$vga_line" | grep -i 'intel' | grep -qiE 'vga|3d|display'; then
+        echo "intel"
+    else
+        echo ""
+    fi
+}
+
+# Lists every installed kernel package (linux, linux-zen, linux-lts, ...).
+# nvidia-dkms is required whenever a non-default kernel is installed,
+# because the prebuilt `nvidia` package only ships modules for `linux`.
+detect_kernels() {
+    pacman -Qq 2>/dev/null | grep -E '^linux(-zen|-lts|-hardened|-rt|-rt-lts)?$' || true
+}
+
+needs_dkms() {
+    # Returns 0 (true) if any kernel other than plain `linux` is installed.
+    local kernels
+    kernels=$(detect_kernels)
+    [ -z "$kernels" ] && return 1
+    echo "$kernels" | grep -qvE '^linux$'
+}
+
 get_gpu_name() {
     lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1 | sed 's/.*: //' || echo "Unknown"
 }
@@ -83,7 +121,7 @@ detect_nvidia_generation() {
     # Filtra ESPECIFICAMENTE pela linha VGA (GPU dedicada)
     # Não pega audio ou outros periféricos NVIDIA
     # Extrai APENAS o device ID (a parte depois de "10de:")
-    device_id=$(lspci -nn 2>/dev/null | grep -i 'nvidia' | grep -iE 'vga|3d|display' | grep -oP '(?<=\[10de:)[0-9a-fA-F]{4}' | head -1 || true)
+    device_id=$(lspci -nn 2>/dev/null | grep -i 'nvidia' | grep -iE 'vga|3d|display' | grep -oP '\[10de:\K[0-9a-fA-F]{4}' | head -1 || true)
 
     if [ -z "$device_id" ]; then
         echo "unknown"
@@ -183,14 +221,32 @@ esac
 
 echo ""
 
+# ── Kernel(s) ──
+INSTALLED_KERNELS=$(detect_kernels)
+USE_DKMS=false
+if needs_dkms; then
+    USE_DKMS=true
+fi
+if [ -n "$INSTALLED_KERNELS" ]; then
+    echo -e "  ${B}Kernel:${R} ${F}$(echo "$INSTALLED_KERNELS" | tr '\n' ' ')${R}"
+    if $USE_DKMS; then
+        echo -e "  ${S}      Non-default kernel detected → will use DKMS NVIDIA driver.${R}"
+    fi
+    echo ""
+fi
+
 # ── GPU ──
 GPU_VENDOR=$(detect_gpu)
 GPU_NAME=$(get_gpu_name)
+IGPU_VENDOR=$(detect_igpu)
 GPU_DRIVER_PKGS=""
+IGPU_DRIVER_PKGS=""
 NVIDIA_DRIVER=""
 NVIDIA_GEN=""
 IS_NVIDIA=false
 IS_KEPLER=false
+IS_HYBRID=false
+[ -n "$IGPU_VENDOR" ] && IS_HYBRID=true
 
 case "$GPU_VENDOR" in
     nvidia)
@@ -200,15 +256,27 @@ case "$GPU_VENDOR" in
         echo -e "  ${B}GPU:${R}  ${F}${GPU_NAME}${R}"
         echo -e "  ${S}      Vendor: NVIDIA — Generation: ${NVIDIA_GEN}${R}"
 
+        # Pick the right metapackage. `nvidia` only ships modules for
+        # the stock `linux` kernel; anything else (linux-zen / -lts /
+        # -hardened) MUST use the DKMS variant or the module won't
+        # build on kernel updates.
+        if $USE_DKMS; then
+            _nv_default="nvidia-dkms"
+            _nv_open="nvidia-open-dkms"
+        else
+            _nv_default="nvidia"
+            _nv_open="nvidia-open"
+        fi
+
         case "$NVIDIA_GEN" in
             blackwell|ada|ampere|turing)
-                NVIDIA_DRIVER="nvidia"
-                echo -e "  ${S}      Recommended driver: nvidia (proprietary)${R}"
-                echo -e "  ${S}      Alternative: nvidia-open (open kernel modules, Turing+)${R}"
+                NVIDIA_DRIVER="$_nv_default"
+                echo -e "  ${S}      Recommended driver: ${_nv_default} (proprietary)${R}"
+                echo -e "  ${S}      Alternative: ${_nv_open} (open kernel modules, Turing+)${R}"
                 ;;
             pascal|maxwell)
-                NVIDIA_DRIVER="nvidia"
-                echo -e "  ${S}      Recommended driver: nvidia (proprietary)${R}"
+                NVIDIA_DRIVER="$_nv_default"
+                echo -e "  ${S}      Recommended driver: ${_nv_default} (proprietary)${R}"
                 ;;
             kepler)
                 IS_KEPLER=true
@@ -237,16 +305,16 @@ case "$GPU_VENDOR" in
             if [ "$CONFIRM_DRIVER" != "y" ]; then
                 echo ""
                 echo -e "  ${F}Choose NVIDIA driver:${R}"
-                echo -e "  ${S}    1) nvidia           (Maxwell/Pascal/Turing/Ampere/Ada/Blackwell)${R}"
-                echo -e "  ${S}    2) nvidia-open      (Turing+ — open kernel modules)${R}"
+                echo -e "  ${S}    1) ${_nv_default}        (Maxwell/Pascal/Turing/Ampere/Ada/Blackwell)${R}"
+                echo -e "  ${S}    2) ${_nv_open}     (Turing+ — open kernel modules)${R}"
                 echo -e "  ${S}    3) nvidia-470xx-dkms (Kepler — GTX 600/700, AUR)${R}"
                 echo -e "  ${S}    4) Cancel (use Nouveau)${R}"
                 read -rp "  Choose [1]: " DRIVER_CHOICE
                 DRIVER_CHOICE="${DRIVER_CHOICE:-1}"
 
                 case "$DRIVER_CHOICE" in
-                    1) NVIDIA_DRIVER="nvidia"; IS_KEPLER=false ;;
-                    2) NVIDIA_DRIVER="nvidia-open"; IS_KEPLER=false ;;
+                    1) NVIDIA_DRIVER="$_nv_default"; IS_KEPLER=false ;;
+                    2) NVIDIA_DRIVER="$_nv_open"; IS_KEPLER=false ;;
                     3) NVIDIA_DRIVER="nvidia-470xx-dkms"; IS_KEPLER=true ;;
                     4) IS_NVIDIA=false; NVIDIA_DRIVER="" ;;
                 esac
@@ -258,6 +326,24 @@ case "$GPU_VENDOR" in
                     GPU_DRIVER_PKGS="nvidia-utils nvidia-settings libva-nvidia-driver"
                 else
                     GPU_DRIVER_PKGS="${NVIDIA_DRIVER} nvidia-utils nvidia-settings libva-nvidia-driver"
+                fi
+
+                # Hybrid laptop: also install the iGPU's mesa stack so
+                # the desktop renders on the iGPU and the dGPU only
+                # wakes up for HDMI / offload (PRIME render offload).
+                if $IS_HYBRID; then
+                    case "$IGPU_VENDOR" in
+                        amd)
+                            IGPU_DRIVER_PKGS="mesa vulkan-radeon libva-mesa-driver mesa-vdpau"
+                            echo -e "  ${O}      Hybrid: AMD iGPU + NVIDIA dGPU detected.${R}"
+                            echo -e "  ${S}      Adding: ${IGPU_DRIVER_PKGS}${R}"
+                            ;;
+                        intel)
+                            IGPU_DRIVER_PKGS="mesa vulkan-intel intel-media-driver libva-intel-driver"
+                            echo -e "  ${O}      Hybrid: Intel iGPU + NVIDIA dGPU detected.${R}"
+                            echo -e "  ${S}      Adding: ${IGPU_DRIVER_PKGS}${R}"
+                            ;;
+                    esac
                 fi
             fi
         fi
@@ -295,6 +381,7 @@ echo ""
 ALL_PKGS=""
 [ -n "$CPU_UCODE_PKG" ] && ALL_PKGS="$CPU_UCODE_PKG"
 [ -n "$GPU_DRIVER_PKGS" ] && ALL_PKGS="$ALL_PKGS $GPU_DRIVER_PKGS"
+[ -n "$IGPU_DRIVER_PKGS" ] && ALL_PKGS="$ALL_PKGS $IGPU_DRIVER_PKGS"
 ALL_PKGS=$(echo "$ALL_PKGS" | xargs) # trim
 
 if [ -z "$ALL_PKGS" ]; then
@@ -360,14 +447,28 @@ echo ""
 # ══════════════════════════════════════════════════════════════
 
 if $IS_NVIDIA; then
-    echo -e "  ${F}[4/5] Configuring nvidia-drm modeset${R}"
+    echo -e "  ${F}[4/5] Configuring nvidia-drm modeset + nouveau blacklist${R}"
 
     MODPROBE_CONF="/etc/modprobe.d/nvidia.conf"
     if [ -f "$MODPROBE_CONF" ] && grep -q "modeset=1" "$MODPROBE_CONF" 2>/dev/null; then
         echo -e "  ${S}[~] nvidia-drm modeset already configured.${R}"
     else
-        echo "options nvidia_drm modeset=1 fbdev=1" | sudo tee "$MODPROBE_CONF" > /dev/null
+        # fbdev support is on by default in driver 545+; setting it
+        # explicitly to 1 has caused boot-time blank screens on some
+        # hybrid laptops, so we omit it.
+        echo "options nvidia_drm modeset=1" | sudo tee "$MODPROBE_CONF" > /dev/null
         echo -e "  ${O}[✓] /etc/modprobe.d/nvidia.conf created.${R}"
+    fi
+
+    # Nouveau must be out of the way before nvidia loads, otherwise
+    # the proprietary driver fails to bind on some boots and HDMI
+    # comes up using Nouveau (which can't drive RTX 4000-series).
+    NOUVEAU_BLACKLIST="/etc/modprobe.d/blacklist-nouveau.conf"
+    if [ -f "$NOUVEAU_BLACKLIST" ] && grep -q '^blacklist nouveau' "$NOUVEAU_BLACKLIST" 2>/dev/null; then
+        echo -e "  ${S}[~] Nouveau already blacklisted.${R}"
+    else
+        printf 'blacklist nouveau\noptions nouveau modeset=0\n' | sudo tee "$NOUVEAU_BLACKLIST" > /dev/null
+        echo -e "  ${O}[✓] Nouveau blacklisted.${R}"
     fi
 else
     echo -e "  ${S}[4/5] modprobe — non-NVIDIA GPU, no changes needed.${R}"
@@ -379,46 +480,120 @@ echo ""
 # [5/5] Environment variables (NVIDIA only)
 # ══════════════════════════════════════════════════════════════
 
+echo -e "  ${F}[5/5] Configuring environment variables (Hyprland + stoa-env)${R}"
+
+STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+HYPR_CONF="${STOA_DIR}/config/hypr/hyprland.conf"
+ENV_FILE="${STOA_DIR}/shell/stoa-env.sh"
+
+# Helper: uncomment a `# export FOO=...` line in stoa-env.sh.
+_uncomment_env() {
+    local key="$1"
+    sed -i "s|^# export ${key}=|export ${key}=|" "$ENV_FILE"
+}
+
 if $IS_NVIDIA; then
-    echo -e "  ${F}[5/5] Enabling NVIDIA variables in Hyprland and stoa-env${R}"
-
-    STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-    HYPR_CONF="${STOA_DIR}/config/hypr/hyprland.conf"
-    ENV_FILE="${STOA_DIR}/shell/stoa-env.sh"
-
-    # Hyprland — add env vars if they don't exist yet
-    if grep -q "LIBVA_DRIVER_NAME" "$HYPR_CONF" 2>/dev/null; then
-        echo -e "  ${S}[~] NVIDIA variables already present in hyprland.conf.${R}"
+    # On a hybrid laptop the iGPU still drives the desktop; VAAPI
+    # should target the iGPU vendor. Only set LIBVA_DRIVER_NAME=nvidia
+    # on dGPU-only systems.
+    if $IS_HYBRID; then
+        case "$IGPU_VENDOR" in
+            amd)
+                _uncomment_env LIBVA_DRIVER_NAME
+                sed -i 's|^export LIBVA_DRIVER_NAME=.*|export LIBVA_DRIVER_NAME=radeonsi|' "$ENV_FILE"
+                _uncomment_env VDPAU_DRIVER
+                sed -i 's|^export VDPAU_DRIVER=.*|export VDPAU_DRIVER=radeonsi|' "$ENV_FILE"
+                ;;
+            intel)
+                _uncomment_env LIBVA_DRIVER_NAME
+                sed -i 's|^export LIBVA_DRIVER_NAME=.*|export LIBVA_DRIVER_NAME=iHD|' "$ENV_FILE"
+                _uncomment_env VDPAU_DRIVER
+                sed -i 's|^export VDPAU_DRIVER=.*|export VDPAU_DRIVER=va_gl|' "$ENV_FILE"
+                ;;
+        esac
+        # Variables that are still safe / desirable on hybrid:
+        _uncomment_env WLR_NO_HARDWARE_CURSORS
+        _uncomment_env __GL_GSYNC_ALLOWED
+        _uncomment_env __GL_VRR_ALLOWED
+        echo -e "  ${O}[✓] Hybrid env vars set (iGPU=${IGPU_VENDOR} VAAPI, NVIDIA for offload/HDMI).${R}"
     else
-        cat >> "$HYPR_CONF" << 'NVIDIA_EOF'
-
-# ── NVIDIA (Wayland) ──
-env = LIBVA_DRIVER_NAME, nvidia
-env = __GLX_VENDOR_LIBRARY_NAME, nvidia
-env = GBM_BACKEND, nvidia-drm
-env = NVD_BACKEND, direct
-env = WLR_NO_HARDWARE_CURSORS, 1
-env = __GL_GSYNC_ALLOWED, 1
-env = __GL_VRR_ALLOWED, 1
-NVIDIA_EOF
-        echo -e "  ${O}[✓] NVIDIA variables added to hyprland.conf.${R}"
+        # Pure NVIDIA system.
+        for v in LIBVA_DRIVER_NAME VDPAU_DRIVER __GLX_VENDOR_LIBRARY_NAME GBM_BACKEND \
+                 NVD_BACKEND WLR_NO_HARDWARE_CURSORS __GL_GSYNC_ALLOWED __GL_VRR_ALLOWED; do
+            _uncomment_env "$v"
+        done
+        echo -e "  ${O}[✓] NVIDIA env vars uncommented in stoa-env.sh.${R}"
     fi
 
-    # stoa-env.sh — uncomment NVIDIA variables
-    if grep -q "^export LIBVA_DRIVER_NAME" "$ENV_FILE" 2>/dev/null; then
-        echo -e "  ${S}[~] NVIDIA variables already active in stoa-env.sh.${R}"
-    elif grep -q "# export LIBVA_DRIVER_NAME" "$ENV_FILE" 2>/dev/null; then
-        sed -i 's/^# export LIBVA_DRIVER_NAME/export LIBVA_DRIVER_NAME/' "$ENV_FILE"
-        sed -i 's/^# export __GLX_VENDOR_LIBRARY_NAME/export __GLX_VENDOR_LIBRARY_NAME/' "$ENV_FILE"
-        sed -i 's/^# export GBM_BACKEND/export GBM_BACKEND/' "$ENV_FILE"
-        sed -i 's/^# export NVD_BACKEND/export NVD_BACKEND/' "$ENV_FILE"
-        sed -i 's/^# export WLR_NO_HARDWARE_CURSORS/export WLR_NO_HARDWARE_CURSORS/' "$ENV_FILE"
-        sed -i 's/^# export __GL_GSYNC_ALLOWED/export __GL_GSYNC_ALLOWED/' "$ENV_FILE"
-        sed -i 's/^# export __GL_VRR_ALLOWED/export __GL_VRR_ALLOWED/' "$ENV_FILE"
-        echo -e "  ${O}[✓] NVIDIA variables uncommented in stoa-env.sh.${R}"
+    # Hyprland: drop a stoa-managed env block (idempotent — wrapped
+    # in a marker so we can rewrite it without dragging stale vars).
+    HYPR_MARKER_BEGIN="# >>> stoa-gpu-setup: env (auto-managed) >>>"
+    HYPR_MARKER_END="# <<< stoa-gpu-setup: env (auto-managed) <<<"
+    if grep -qF "$HYPR_MARKER_BEGIN" "$HYPR_CONF" 2>/dev/null; then
+        # Strip the previous block before writing the new one.
+        sed -i "/$HYPR_MARKER_BEGIN/,/$HYPR_MARKER_END/d" "$HYPR_CONF"
     fi
+
+    # Resolve the NVIDIA card path NOW so we can write a literal value
+    # (Hyprland does not expand $(...) in env lines).
+    NV_CARD_PATH=""
+    if $IS_HYBRID; then
+        NV_BUSID=$(lspci 2>/dev/null | awk '/NVIDIA/ && /VGA|3D|Display/{print $1; exit}')
+        if [ -n "$NV_BUSID" ]; then
+            NV_CARD_PATH="/dev/dri/by-path/pci-0000:${NV_BUSID}-card"
+        fi
+    fi
+
+    {
+        echo ""
+        echo "$HYPR_MARKER_BEGIN"
+        if $IS_HYBRID; then
+            echo "# Hybrid laptop (${IGPU_VENDOR} iGPU + NVIDIA dGPU, muxless HDMI):"
+            echo "# Force NVIDIA as primary KMS device so HDMI on the dGPU port works."
+            if [ -n "$NV_CARD_PATH" ]; then
+                echo "env = AQ_DRM_DEVICES, ${NV_CARD_PATH}"
+                echo "env = WLR_DRM_DEVICES, ${NV_CARD_PATH}"
+            else
+                echo "# (NVIDIA bus id could not be resolved automatically — set"
+                echo "#  AQ_DRM_DEVICES manually to /dev/dri/by-path/pci-XXXX:XX:XX.X-card)"
+            fi
+            echo "env = __NV_PRIME_RENDER_OFFLOAD, 1"
+            echo "env = __VK_LAYER_NV_optimus, NVIDIA_only"
+            case "$IGPU_VENDOR" in
+                amd)   echo "env = LIBVA_DRIVER_NAME, radeonsi" ;;
+                intel) echo "env = LIBVA_DRIVER_NAME, iHD" ;;
+            esac
+        else
+            echo "# Pure NVIDIA (Wayland):"
+            echo "env = LIBVA_DRIVER_NAME, nvidia"
+            echo "env = __GLX_VENDOR_LIBRARY_NAME, nvidia"
+            echo "env = GBM_BACKEND, nvidia-drm"
+            echo "env = NVD_BACKEND, direct"
+        fi
+        echo "env = WLR_NO_HARDWARE_CURSORS, 1"
+        echo "env = __GL_GSYNC_ALLOWED, 1"
+        echo "env = __GL_VRR_ALLOWED, 1"
+        echo "$HYPR_MARKER_END"
+    } >> "$HYPR_CONF"
+    echo -e "  ${O}[✓] hyprland.conf env block updated.${R}"
+    [ -n "$NV_CARD_PATH" ] && echo -e "  ${S}      NVIDIA DRM card: ${NV_CARD_PATH}${R}"
+
+elif [ "$GPU_VENDOR" = "amd" ]; then
+    _uncomment_env LIBVA_DRIVER_NAME
+    sed -i 's|^export LIBVA_DRIVER_NAME=.*|export LIBVA_DRIVER_NAME=radeonsi|' "$ENV_FILE"
+    _uncomment_env VDPAU_DRIVER
+    sed -i 's|^export VDPAU_DRIVER=.*|export VDPAU_DRIVER=radeonsi|' "$ENV_FILE"
+    echo -e "  ${O}[✓] AMD VAAPI/VDPAU env vars set.${R}"
+
+elif [ "$GPU_VENDOR" = "intel" ]; then
+    _uncomment_env LIBVA_DRIVER_NAME
+    sed -i 's|^export LIBVA_DRIVER_NAME=.*|export LIBVA_DRIVER_NAME=iHD|' "$ENV_FILE"
+    _uncomment_env VDPAU_DRIVER
+    sed -i 's|^export VDPAU_DRIVER=.*|export VDPAU_DRIVER=va_gl|' "$ENV_FILE"
+    echo -e "  ${O}[✓] Intel VAAPI/VDPAU env vars set.${R}"
+
 else
-    echo -e "  ${S}[5/5] Environment variables — non-NVIDIA GPU, no changes needed.${R}"
+    echo -e "  ${S}[~] Unknown GPU — leaving env vars untouched.${R}"
 fi
 
 echo ""
@@ -446,11 +621,17 @@ fi
 if $IS_NVIDIA; then
     echo -e "  ${F}NVIDIA configured:${R}"
     echo -e "  ${S}  Driver: ${NVIDIA_DRIVER}${R}"
+    if $IS_HYBRID; then
+        echo -e "  ${S}  Hybrid: ${IGPU_VENDOR} iGPU + NVIDIA dGPU${R}"
+        echo -e "  ${S}  iGPU: ${IGPU_DRIVER_PKGS}${R}"
+        echo -e "  ${S}  HDMI on dGPU via AQ_DRM_DEVICES${R}"
+    fi
     echo -e "  ${S}  nvidia-utils, nvidia-settings, libva-nvidia-driver${R}"
     echo -e "  ${S}  /etc/mkinitcpio.conf — early KMS modules${R}"
-    echo -e "  ${S}  /etc/modprobe.d/nvidia.conf — DRM modeset + fbdev${R}"
-    echo -e "  ${S}  hyprland.conf — NVIDIA/Wayland env vars${R}"
-    echo -e "  ${S}  stoa-env.sh — NVIDIA env vars${R}"
+    echo -e "  ${S}  /etc/modprobe.d/nvidia.conf — DRM modeset${R}"
+    echo -e "  ${S}  /etc/modprobe.d/blacklist-nouveau.conf${R}"
+    echo -e "  ${S}  hyprland.conf — Wayland env vars${R}"
+    echo -e "  ${S}  stoa-env.sh — VAAPI/VDPAU env vars${R}"
     echo ""
     echo -e "  ${T}Reboot the system to apply changes.${R}"
 elif [ "$GPU_VENDOR" = "amd" ]; then
