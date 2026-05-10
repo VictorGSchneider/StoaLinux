@@ -476,15 +476,49 @@ echo ""
 if $IS_NVIDIA; then
     echo -e "  ${F}[4/5] Configuring nvidia-drm modeset + nouveau blacklist${R}"
 
+    NV_MODPROBE_CHANGED=false
+
+    # Bumblebee was the pre-2019 way to drive NVIDIA Optimus; it ships
+    # /usr/lib/modprobe.d/bumblebee.conf with `blacklist nvidia`,
+    # `blacklist nvidia-drm`, `blacklist nvidia-modeset`, and
+    # `blacklist nvidia-uvm`. Coexisting with the modern PRIME stack
+    # means nvidia_modeset / nvidia_drm refuse to autoload at boot,
+    # the dGPU stays in D3cold, and HDMI on the dGPU port goes dark.
+    # Drop bumblebee whenever we're configuring the proprietary driver.
+    if pacman -Qq bumblebee >/dev/null 2>&1; then
+        echo -e "  ${T}      Bumblebee detected (deprecated, conflicts with PRIME).${R}"
+        echo -e "  ${S}      Removing bumblebee + bbswitch...${R}"
+        sudo pacman -Rns --noconfirm bumblebee bbswitch 2>/dev/null || \
+            sudo pacman -Rns --noconfirm bumblebee 2>/dev/null || true
+        NV_MODPROBE_CHANGED=true
+    fi
+    if [ -f /usr/lib/modprobe.d/bumblebee.conf ]; then
+        echo -e "  ${S}      Removing leftover /usr/lib/modprobe.d/bumblebee.conf...${R}"
+        sudo rm -f /usr/lib/modprobe.d/bumblebee.conf
+        NV_MODPROBE_CHANGED=true
+    fi
+
     MODPROBE_CONF="/etc/modprobe.d/nvidia.conf"
-    if [ -f "$MODPROBE_CONF" ] && grep -q "modeset=1" "$MODPROBE_CONF" 2>/dev/null; then
-        echo -e "  ${S}[~] nvidia-drm modeset already configured.${R}"
+    # Build the desired contents, then only write if different so
+    # re-runs don't bump mkinitcpio unnecessarily.
+    NV_MODPROBE_DESIRED=$(cat <<'EOF'
+options nvidia_drm modeset=1
+# Keep the dGPU in PCI D0 (always-on) so HDMI hot-plug on the dGPU
+# port works without a "wake the card up" round trip. Costs ~3-5W
+# at idle but matches expectations for presentation laptops.
+options nvidia NVreg_DynamicPowerManagement=0x00
+# Save vidmem across suspend so resuming on battery doesn't blank
+# the screen.
+options nvidia NVreg_PreserveVideoMemoryAllocations=1
+EOF
+    )
+    if ! [ -f "$MODPROBE_CONF" ] || \
+       ! diff -q <(printf '%s\n' "$NV_MODPROBE_DESIRED") "$MODPROBE_CONF" >/dev/null 2>&1; then
+        printf '%s\n' "$NV_MODPROBE_DESIRED" | sudo tee "$MODPROBE_CONF" > /dev/null
+        echo -e "  ${O}[✓] /etc/modprobe.d/nvidia.conf written (modeset + always-on PM).${R}"
+        NV_MODPROBE_CHANGED=true
     else
-        # fbdev support is on by default in driver 545+; setting it
-        # explicitly to 1 has caused boot-time blank screens on some
-        # hybrid laptops, so we omit it.
-        echo "options nvidia_drm modeset=1" | sudo tee "$MODPROBE_CONF" > /dev/null
-        echo -e "  ${O}[✓] /etc/modprobe.d/nvidia.conf created.${R}"
+        echo -e "  ${S}[~] /etc/modprobe.d/nvidia.conf already up to date.${R}"
     fi
 
     # Nouveau must be out of the way before nvidia loads, otherwise
@@ -496,6 +530,27 @@ if $IS_NVIDIA; then
     else
         printf 'blacklist nouveau\noptions nouveau modeset=0\n' | sudo tee "$NOUVEAU_BLACKLIST" > /dev/null
         echo -e "  ${O}[✓] Nouveau blacklisted.${R}"
+        NV_MODPROBE_CHANGED=true
+    fi
+
+    # nvidia-utils ships /usr/lib/systemd/system/nvidia-{suspend,resume,
+    # hibernate}.service. They aren't enabled by default but are
+    # required for the dGPU to round-trip cleanly through suspend.
+    for svc in nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service; do
+        if systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+            if ! systemctl is-enabled --quiet "$svc" 2>/dev/null; then
+                sudo systemctl enable "$svc" >/dev/null 2>&1 || true
+                echo -e "  ${O}[✓] Enabled ${svc}.${R}"
+            fi
+        fi
+    done
+
+    # If we touched any modprobe.d entry the running initramfs is
+    # stale; rebuild it so the changes apply on next boot.
+    if $NV_MODPROBE_CHANGED; then
+        echo -e "  ${S}modprobe.d changed → regenerating initramfs...${R}"
+        sudo mkinitcpio -P
+        echo -e "  ${O}[✓] Initramfs regenerated.${R}"
     fi
 else
     echo -e "  ${S}[4/5] modprobe — non-NVIDIA GPU, no changes needed.${R}"
@@ -697,8 +752,10 @@ if $IS_NVIDIA; then
     fi
     echo -e "  ${S}  nvidia-utils, nvidia-settings, libva-nvidia-driver${R}"
     echo -e "  ${S}  /etc/mkinitcpio.conf — early KMS modules${R}"
-    echo -e "  ${S}  /etc/modprobe.d/nvidia.conf — DRM modeset${R}"
+    echo -e "  ${S}  /etc/modprobe.d/nvidia.conf — DRM modeset + always-on PM${R}"
     echo -e "  ${S}  /etc/modprobe.d/blacklist-nouveau.conf${R}"
+    echo -e "  ${S}  bumblebee (deprecated) removed if present${R}"
+    echo -e "  ${S}  nvidia-{suspend,resume,hibernate}.service enabled${R}"
     echo -e "  ${S}  hyprland.conf — Wayland env vars${R}"
     echo -e "  ${S}  stoa-env.sh — VAAPI/VDPAU env vars${R}"
     echo ""
