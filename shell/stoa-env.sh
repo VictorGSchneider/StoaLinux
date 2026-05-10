@@ -41,12 +41,30 @@ export XCURSOR_SIZE=24
 export STEAM_FORCE_DESKTOPUI_SCALING=1
 export PROTON_ENABLE_NVAPI=1
 
-# ── NVIDIA (Wayland) ──
-# Uncomment if using NVIDIA GPU with Hyprland:
-export LIBVA_DRIVER_NAME=nvidia
-export __GLX_VENDOR_LIBRARY_NAME=nvidia
-export GBM_BACKEND=nvidia-drm
-export NVD_BACKEND=direct
-export WLR_NO_HARDWARE_CURSORS=1
-export __GL_GSYNC_ALLOWED=1
-export __GL_VRR_ALLOWED=1
+# ── GPU / Wayland — set by stoa-gpu-setup.sh ──
+# These are commented out by default. Run `scripts/stoa-gpu-setup.sh`
+# and it will uncomment the lines matching your GPU. Setting them
+# manually for the wrong vendor breaks VAAPI / Wayland (e.g.
+# LIBVA_DRIVER_NAME=nvidia on an AMD/Intel iGPU disables hw decode).
+
+# NVIDIA (proprietary, Wayland):
+# export LIBVA_DRIVER_NAME=nvidia
+# export VDPAU_DRIVER=nvidia
+# export __GLX_VENDOR_LIBRARY_NAME=nvidia
+# export GBM_BACKEND=nvidia-drm
+# export NVD_BACKEND=direct
+# export WLR_NO_HARDWARE_CURSORS=1
+# export __GL_GSYNC_ALLOWED=1
+# export __GL_VRR_ALLOWED=1
+
+# AMD (radeonsi / RADV):
+# export LIBVA_DRIVER_NAME=radeonsi
+# export VDPAU_DRIVER=radeonsi
+
+# Intel (iHD for Gen8+, i965 for older):
+# export LIBVA_DRIVER_NAME=iHD
+# export VDPAU_DRIVER=va_gl
+
+# Hybrid laptops (AMD/Intel iGPU + NVIDIA dGPU, muxless HDMI on dGPU):
+# Use the iGPU's VAAPI driver above, and let stoa-gpu-setup.sh add
+# AQ_DRM_DEVICES to hyprland.conf so HDMI lights up on the NVIDIA card.
