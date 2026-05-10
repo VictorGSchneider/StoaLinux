@@ -386,6 +386,19 @@ ALL_PKGS=""
 [ -n "$CPU_UCODE_PKG" ] && ALL_PKGS="$CPU_UCODE_PKG"
 [ -n "$GPU_DRIVER_PKGS" ] && ALL_PKGS="$ALL_PKGS $GPU_DRIVER_PKGS"
 [ -n "$IGPU_DRIVER_PKGS" ] && ALL_PKGS="$ALL_PKGS $IGPU_DRIVER_PKGS"
+
+# DKMS needs kernel headers for every kernel it has to build against,
+# otherwise `mkinitcpio -P` reports `module not found: nvidia` for any
+# kernel that's installed but missing -headers. Add headers for each
+# detected kernel package.
+HEADER_PKGS=""
+if $IS_NVIDIA && $USE_DKMS; then
+    for k in $INSTALLED_KERNELS; do
+        HEADER_PKGS="$HEADER_PKGS ${k}-headers"
+    done
+    [ -n "$HEADER_PKGS" ] && ALL_PKGS="$ALL_PKGS $HEADER_PKGS"
+fi
+
 ALL_PKGS=$(echo "$ALL_PKGS" | xargs) # trim
 
 if [ -z "$ALL_PKGS" ]; then
@@ -409,6 +422,16 @@ else
             echo -e "  ${F}Installing ${NVIDIA_DRIVER} (AUR)...${R}"
             install_aur_package "$NVIDIA_DRIVER"
             echo -e "  ${O}[✓] ${NVIDIA_DRIVER} installed.${R}"
+        fi
+
+        # Force DKMS to build the NVIDIA module against every installed
+        # kernel. Without this, the next mkinitcpio -P fails with
+        # `module not found: nvidia` for any kernel whose headers were
+        # only just installed.
+        if $IS_NVIDIA && $USE_DKMS && command -v dkms >/dev/null 2>&1; then
+            echo -e "  ${S}Running dkms autoinstall for all kernels...${R}"
+            sudo dkms autoinstall || true
+            echo -e "  ${O}[✓] DKMS modules built.${R}"
         fi
     else
         echo -e "  ${S}[~] Packages skipped.${R}"
