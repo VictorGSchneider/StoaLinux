@@ -334,12 +334,16 @@ case "$GPU_VENDOR" in
                 if $IS_HYBRID; then
                     case "$IGPU_VENDOR" in
                         amd)
-                            IGPU_DRIVER_PKGS="mesa vulkan-radeon libva-mesa-driver mesa-vdpau"
+                            # mesa-vdpau used to ship the radeonsi VDPAU
+                            # driver as a separate package; on modern
+                            # Arch it has been folded back into `mesa`
+                            # and is no longer a valid pacman target.
+                            IGPU_DRIVER_PKGS="mesa vulkan-radeon libva-mesa-driver"
                             echo -e "  ${O}      Hybrid: AMD iGPU + NVIDIA dGPU detected.${R}"
                             echo -e "  ${S}      Adding: ${IGPU_DRIVER_PKGS}${R}"
                             ;;
                         intel)
-                            IGPU_DRIVER_PKGS="mesa vulkan-intel intel-media-driver libva-intel-driver"
+                            IGPU_DRIVER_PKGS="mesa vulkan-intel intel-media-driver"
                             echo -e "  ${O}      Hybrid: Intel iGPU + NVIDIA dGPU detected.${R}"
                             echo -e "  ${S}      Adding: ${IGPU_DRIVER_PKGS}${R}"
                             ;;
