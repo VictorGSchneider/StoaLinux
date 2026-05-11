@@ -72,6 +72,11 @@ _screenshot() {
 
     if [ "$SESSION" = "wayland" ]; then
         echo "DEBUG: Using Wayland path" >> /tmp/stoa-capture-debug.log
+        if ! command -v grim &>/dev/null; then
+            _notify "grim not installed — cannot take screenshot" "critical"
+            echo "DEBUG: grim missing" >> /tmp/stoa-capture-debug.log
+            return 1
+        fi
         case "$mode" in
             selection)
                 local geom
@@ -105,7 +110,11 @@ _screenshot() {
     fi
 
     echo "DEBUG: File exists? $([ -f "$filename" ] && echo yes || echo no)" >> /tmp/stoa-capture-debug.log
-    [ -f "$filename" ] && _notify "Screenshot saved to ~/Pictures/screenshots/"
+    if [ -f "$filename" ]; then
+        _notify "Screenshot saved to ~/Pictures/screenshots/"
+    else
+        _notify "Screenshot failed — see /tmp/stoa-capture-debug.log" "critical"
+    fi
 }
 
 _record() {
@@ -223,8 +232,8 @@ case "${1:-}" in
         if [ "$local_type" = "recording" ]; then
             _record "$local_mode"
         else
-            # Small delay so the eww window disappears from the screenshot
-            sleep 0.3
+            # Wait for eww layer-shell window to fully unmap before capturing
+            sleep 0.5
             _screenshot "$local_mode" "$local_delay"
         fi
         ;;
