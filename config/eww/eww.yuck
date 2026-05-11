@@ -136,7 +136,7 @@
 
       ;; Capture button
       (button :class {capture-type == "screenshot" ? "cap-shutter-btn" : "cap-shutter-btn recording"}
-              :onclick "stoa-capture ${capture-mode} ${capture-type} ${capture-delay}"
+              :onclick "setsid -f stoa-capture ${capture-mode} ${capture-type} ${capture-delay}"
         (label :class "cap-shutter-icon"
                :text {capture-type == "screenshot" ? "●" : "●"}))
 
@@ -157,7 +157,7 @@
 (defwindow capture
   :monitor 0
   :geometry (geometry :x "0%"
-                      :y "-80px"
+                      :y "120px"
                       :width "380px"
                       :height "220px"
                       :anchor "bottom center")
