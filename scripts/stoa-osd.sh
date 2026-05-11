@@ -68,7 +68,7 @@ _read_lock_state() {
     # Give the kernel a moment to propagate the LED change after the
     # keypress. Without this the sysfs value still reflects the
     # pre-toggle state on fast hardware.
-    sleep 0.05
+    sleep 0.15
 
     # A system can expose multiple LED nodes for the same lock (e.g.
     # input2::capslock, input5::capslock for a second keyboard, plus
