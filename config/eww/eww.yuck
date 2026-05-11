@@ -136,7 +136,7 @@
 
       ;; Capture button
       (button :class {capture-type == "screenshot" ? "cap-shutter-btn" : "cap-shutter-btn recording"}
-              :onclick "setsid -f stoa-capture ${capture-mode} ${capture-type} ${capture-delay}"
+              :onclick "(stoa-capture ${capture-mode} ${capture-type} ${capture-delay} </dev/null >/dev/null 2>&1 &)"
         (label :class "cap-shutter-icon"
                :text {capture-type == "screenshot" ? "●" : "●"}))
 
