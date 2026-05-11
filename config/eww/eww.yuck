@@ -136,7 +136,7 @@
 
       ;; Capture button
       (button :class {capture-type == "screenshot" ? "cap-shutter-btn" : "cap-shutter-btn recording"}
-              :onclick "/home/zeno/.local/bin/stoa-capture ${capture-mode} ${capture-type}"
+              :onclick "stoa-capture ${capture-mode} ${capture-type} ${capture-delay}"
         (label :class "cap-shutter-icon"
                :text {capture-type == "screenshot" ? "●" : "●"}))
 
@@ -157,9 +157,9 @@
 (defwindow capture
   :monitor 0
   :geometry (geometry :x "0%"
-                      :y "-40px"
+                      :y "80px"
                       :width "380px"
-                      :height "160px"
+                      :height "200px"
                       :anchor "bottom center")
   :stacking "overlay"
   :focusable true
