@@ -157,9 +157,9 @@
 (defwindow capture
   :monitor 0
   :geometry (geometry :x "0%"
-                      :y "80px"
+                      :y "-80px"
                       :width "380px"
-                      :height "200px"
+                      :height "220px"
                       :anchor "bottom center")
   :stacking "overlay"
   :focusable true
