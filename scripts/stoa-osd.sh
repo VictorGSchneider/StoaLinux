@@ -65,12 +65,27 @@ _read_lock_state() {
     local lock_name="$1"
     local state=""
 
-    local led_path
+    # Give the kernel a moment to propagate the LED change after the
+    # keypress. Without this the sysfs value still reflects the
+    # pre-toggle state on fast hardware.
+    sleep 0.05
+
+    # A system can expose multiple LED nodes for the same lock (e.g.
+    # input2::capslock, input5::capslock for a second keyboard, plus
+    # vendor LEDs like tpacpi::numlock). Iterating only the first match
+    # is unreliable because some of those LEDs stay latched on and the
+    # script then reports "Enabled" forever. Treat the lock as enabled
+    # if *any* matching LED reports a non-zero brightness.
+    local led_path val
     for led_path in /sys/class/leds/*${lock_name}*/brightness; do
-        if [ -f "$led_path" ]; then
-            state=$(cat "$led_path")
+        [ -f "$led_path" ] || continue
+        val=$(cat "$led_path" 2>/dev/null)
+        [[ "$val" =~ ^[0-9]+$ ]] || continue
+        if [ "$val" -gt 0 ]; then
+            state=1
             break
         fi
+        state=0
     done
 
     # Fallback: xset (X11) — only if no LED file was found
