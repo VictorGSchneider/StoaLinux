@@ -221,7 +221,19 @@ case "${1:-}" in
         fi
         ;;
     selection|screen|window)
-            echo "DEBUG: Case selection/screen/window triggered with args: $*" >> /tmp/stoa-capture-debug.log
+        echo "DEBUG: Case selection/screen/window triggered with args: $*" >> /tmp/stoa-capture-debug.log
+
+        # eww kills its onclick child after 200ms. Re-exec ourselves detached
+        # so the actual capture work survives. _STOA_CAPTURE_DETACHED guards
+        # against infinite recursion.
+        if [ -z "${_STOA_CAPTURE_DETACHED:-}" ]; then
+            echo "DEBUG: Re-execing detached" >> /tmp/stoa-capture-debug.log
+            _STOA_CAPTURE_DETACHED=1 nohup "$0" "$@" </dev/null >>/tmp/stoa-capture-debug.log 2>&1 &
+            disown 2>/dev/null || true
+            exit 0
+        fi
+
+        echo "DEBUG: Running in detached mode" >> /tmp/stoa-capture-debug.log
         local_mode="$1"
         local_type="${2:-screenshot}"
         local_delay="${3:-0}"
