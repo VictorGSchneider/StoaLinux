@@ -15,6 +15,17 @@ STOA_SS_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver.conf"
 STOA_SS_VIDEO="${STOA_SS_DIR}/marble-flow.mp4"
 STOA_SS_LOCK="${XDG_RUNTIME_DIR:-/tmp}/stoa-screensaver-${UID}.lock"
 
+# ── ImageMagick detection ──
+# Support both IM7 (`magick`) and IM6 (`convert`). The plasma/CLUT/draw
+# syntax used below is identical across both versions.
+if command -v magick &>/dev/null; then
+    IM=(magick)
+elif command -v convert &>/dev/null; then
+    IM=(convert)
+else
+    IM=()
+fi
+
 # ── Stoa Palette ──
 BG="#211e19"
 BG_LIGHT="#2d2921"
@@ -51,11 +62,9 @@ _ss_get() {
 # ── Generation ──
 
 _gen_gradient_clut() {
-    # Create a color lookup table from Stoa palette
-    # This maps plasma grayscale → Stoa colors with smooth transitions
     local clut_path="${STOA_SS_DIR}/stoa-clut.png"
 
-    magick -size 1x1 xc:"$BG" xc:"$BG_LIGHT" xc:"$STONE" xc:"$BRONZE" xc:"$GOLD" xc:"$OLIVE" \
+    "${IM[@]}" -size 1x1 xc:"$BG" xc:"$BG_LIGHT" xc:"$STONE" xc:"$BRONZE" xc:"$GOLD" xc:"$OLIVE" \
         +append -filter Cubic -resize 256x1! \
         "$clut_path"
 
@@ -63,10 +72,9 @@ _gen_gradient_clut() {
 }
 
 _gen_warm_clut() {
-    # Warm variant: bg → terracotta → bronze → gold
     local clut_path="${STOA_SS_DIR}/stoa-clut-warm.png"
 
-    magick -size 1x1 xc:"$BG" xc:"#1a1714" xc:"$TERRACOTTA" xc:"$BRONZE" xc:"$GOLD" xc:"$FG" \
+    "${IM[@]}" -size 1x1 xc:"$BG" xc:"#1a1714" xc:"$TERRACOTTA" xc:"$BRONZE" xc:"$GOLD" xc:"$FG" \
         +append -filter Cubic -resize 256x1! \
         "$clut_path"
 
@@ -74,10 +82,9 @@ _gen_warm_clut() {
 }
 
 _gen_cool_clut() {
-    # Cool variant: bg → stone → olive → bronze
     local clut_path="${STOA_SS_DIR}/stoa-clut-cool.png"
 
-    magick -size 1x1 xc:"$BG" xc:"#1a1714" xc:"$STONE" xc:"$OLIVE" xc:"$BRONZE" xc:"$BG_LIGHT" \
+    "${IM[@]}" -size 1x1 xc:"$BG" xc:"#1a1714" xc:"$STONE" xc:"$OLIVE" xc:"$BRONZE" xc:"$BG_LIGHT" \
         +append -filter Cubic -resize 256x1! \
         "$clut_path"
 
@@ -87,6 +94,17 @@ _gen_cool_clut() {
 generate() {
     local style="${1:-marble}"
     mkdir -p "$STOA_SS_DIR"
+
+    # Dependency check — fail loudly instead of producing an empty video.
+    local missing=()
+    [ ${#IM[@]} -eq 0 ] && missing+=("imagemagick (magick or convert)")
+    command -v ffmpeg &>/dev/null || missing+=("ffmpeg")
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo "  ERROR: missing dependencies:" >&2
+        printf '    - %s\n' "${missing[@]}" >&2
+        echo "  Install on Arch: sudo pacman -S imagemagick ffmpeg" >&2
+        return 1
+    fi
 
     echo "  Generating Stoa screensaver ($style)..."
     echo ""
@@ -138,7 +156,7 @@ generate() {
         # 3. Map grayscale to Stoa colors via CLUT
         # 4. Add subtle vignette for depth
         # 5. Scale to full HD
-        magick -size ${gen_w}x${gen_h} -seed "$seed" plasma: \
+        if ! "${IM[@]}" -size ${gen_w}x${gen_h} -seed "$seed" plasma: \
             -blur 0x${blur_sigma} \
             -modulate "$((85 + phase % 20)),70,100" \
             "$current_clut" -clut \
@@ -149,7 +167,13 @@ generate() {
             -compose multiply -composite \
             -resize 1920x1080! \
             -quality 92 \
-            "$(printf '%s/frame_%04d.jpg' "$frame_dir" "$i")"
+            "$(printf '%s/frame_%04d.jpg' "$frame_dir" "$i")"; then
+            echo "" >&2
+            echo "  ERROR: ImageMagick failed rendering frame $i." >&2
+            echo "  Check /etc/ImageMagick-*/policy.xml for disabled coders (plasma)." >&2
+            rm -rf "$frame_dir"
+            return 1
+        fi
 
         # Progress
         progress=$(( (i + 1) * 100 / total_frames ))
@@ -161,13 +185,18 @@ generate() {
     echo ""
     echo "  Encoding video..."
 
-    # Encode with ffmpeg — high quality, smooth looping
-    ffmpeg -y -framerate "$fps" \
+    # Encode with ffmpeg — high quality, smooth looping.
+    # Keep stderr visible so codec/policy issues are diagnosable.
+    if ! ffmpeg -y -hide_banner -loglevel error -framerate "$fps" \
         -i "${frame_dir}/frame_%04d.jpg" \
         -c:v libx264 -preset slow -crf 18 \
         -pix_fmt yuv420p \
         -movflags +faststart \
-        "$STOA_SS_VIDEO" 2>/dev/null
+        "$STOA_SS_VIDEO"; then
+        echo "  ERROR: ffmpeg failed encoding $STOA_SS_VIDEO" >&2
+        rm -rf "$frame_dir"
+        return 1
+    fi
 
     # Clean up frames
     rm -rf "$frame_dir"
@@ -188,52 +217,56 @@ start() {
         return
     fi
 
+    if ! command -v mpv &>/dev/null; then
+        echo "stoa-screensaver: mpv not installed." >&2
+        return 1
+    fi
+
     # Generate if not exists
     if [ ! -f "$STOA_SS_VIDEO" ]; then
-        generate
+        if ! generate; then
+            return 1
+        fi
     fi
 
     # Dim the screen slightly before starting
-    local original_brightness
-    original_brightness=$(brightnessctl get 2>/dev/null)
-
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        # Wayland: mpv fullscreen, any key/mouse exits
-        mpv --fullscreen --loop-file=inf --no-audio \
-            --no-input-default-bindings \
-            --input-conf=/dev/null \
-            --osd-level=0 \
-            --no-osc --no-terminal \
-            --input-vo-keyboard=yes \
-            --force-window=yes \
-            --idle=no \
-            "$STOA_SS_VIDEO" &
-        local mpv_pid=$!
-        echo "$mpv_pid" > "$STOA_SS_LOCK"
-
-        # Wait for any input event to kill it
-        # mpv will catch keyboard via its window
-        wait "$mpv_pid" 2>/dev/null
-    else
-        # Xorg: same approach
-        mpv --fullscreen --loop-file=inf --no-audio \
-            --no-input-default-bindings \
-            --input-conf=/dev/null \
-            --osd-level=0 \
-            --no-osc --no-terminal \
-            --input-vo-keyboard=yes \
-            --force-window=yes \
-            --idle=no \
-            "$STOA_SS_VIDEO" &
-        local mpv_pid=$!
-        echo "$mpv_pid" > "$STOA_SS_LOCK"
-        wait "$mpv_pid" 2>/dev/null
+    local original_brightness=""
+    if command -v brightnessctl &>/dev/null; then
+        original_brightness=$(brightnessctl get 2>/dev/null)
     fi
+
+    # Minimal keybindings: any key (or mouse click) exits.
+    # We use --input-conf with a tiny generated file rather than disabling
+    # bindings entirely (the previous version made the screensaver impossible
+    # to dismiss with the keyboard).
+    local mpv_conf="${STOA_SS_DIR}/mpv-input.conf"
+    cat > "$mpv_conf" <<'EOF'
+ANY_UNICODE quit
+ESC         quit
+ENTER       quit
+SPACE       quit
+MBTN_LEFT   quit
+MBTN_RIGHT  quit
+MBTN_MID    quit
+EOF
+
+    mpv --fullscreen --loop-file=inf --no-audio \
+        --no-config \
+        --input-conf="$mpv_conf" \
+        --osd-level=0 \
+        --no-osc --no-terminal \
+        --cursor-autohide=always \
+        --force-window=yes \
+        --idle=no \
+        "$STOA_SS_VIDEO" &
+    local mpv_pid=$!
+    echo "$mpv_pid" > "$STOA_SS_LOCK"
+    wait "$mpv_pid" 2>/dev/null
 
     rm -f "$STOA_SS_LOCK"
 
     # Restore brightness
-    if [ -n "$original_brightness" ]; then
+    if [ -n "$original_brightness" ] && command -v brightnessctl &>/dev/null; then
         brightnessctl set "$original_brightness" -q 2>/dev/null
     fi
 }
