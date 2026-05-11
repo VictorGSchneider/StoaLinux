@@ -392,6 +392,18 @@ else
     echo -e "  ${S}[~] .xinitrc already exists.${R}"
 fi
 
+# ── Stoa Greeter (autologin → Hyprland → hyprlock) ──
+echo ""
+echo -e "  ${F}Stoa Greeter — boot straight into hyprlock as the login screen?${R}"
+echo -e "  ${S}  Configures tty1 autologin and exec's Hyprland from .zprofile/.bash_profile.${R}"
+echo -e "  ${S}  hyprlock runs as the first exec-once, so the password prompt is the greeter.${R}"
+read -rp "  Enable now? [y/N]: " GREETER_CHOICE
+if [ "${GREETER_CHOICE,,}" = "y" ] || [ "${GREETER_CHOICE,,}" = "yes" ]; then
+    bash "${STOA_DIR}/setup/enable-stoa-greeter.sh"
+else
+    echo -e "  ${S}[~] Skipped. Enable later with: bash ${STOA_DIR}/setup/enable-stoa-greeter.sh${R}"
+fi
+
 # ── Done ──
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
