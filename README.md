@@ -220,6 +220,25 @@ Change the entire color scheme from `Super+I → Theme → Color Palette`:
 
 Changes propagate automatically to: Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland, Kitty, and Dunst reload live — other apps take effect on restart.
 
+### Stoa Greeter
+
+Boot straight into a hyprlock prompt themed exactly like `Super+Esc` — no
+display manager required. Enable it with:
+
+```bash
+bash setup/enable-stoa-greeter.sh           # enable
+bash setup/enable-stoa-greeter.sh --disable # undo
+```
+
+What it wires up:
+
+- **systemd autologin** on `tty1` via drop-in (`/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf`)
+- **`.zprofile` / `.bash_profile`** sourcing `shell/stoa-autostart-hyprland.sh` to `exec Hyprland` when the shell lands on `tty1`
+- **`exec-once = hyprlock`** as the first autostart entry in `hyprland.conf`, so the lock page renders before anything else
+- **`grace = 0`** in `hyprlock.conf` (a non-zero grace would let any keypress in the first N seconds bypass the password — fine for a normal lock, fatal for a greeter)
+
+`post-install.sh` offers to run it interactively at the end.
+
 ### System Resilience
 
 - **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
