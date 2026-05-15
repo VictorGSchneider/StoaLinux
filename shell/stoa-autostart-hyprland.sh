@@ -9,5 +9,5 @@
 # ╚══════════════════════════════════════════════════════════════╝
 
 if [ -z "$WAYLAND_DISPLAY" ] && [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && command -v Hyprland >/dev/null 2>&1; then
-    exec Hyprland
+    exec start-hyprland
 fi
