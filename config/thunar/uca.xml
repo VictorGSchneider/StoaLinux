@@ -5,20 +5,38 @@
   ║  "The tools of virtue are always at hand." — Seneca         ║
   ╚══════════════════════════════════════════════════════════════╝
 -->
+<?xml version="1.0" encoding="UTF-8"?>
 <actions>
-
-  <action>
-    <icon>applications-utilities</icon>
-    <name>Stoatools</name>
-    <unique-id>stoatools-menu</unique-id>
-    <command>~/.local/bin/stoa-thunar %F</command>
-    <description>Open Stoatools menu (resize, rename, OCR, locksmith)</description>
-    <patterns>*</patterns>
-    <other-files/>
-    <text-files/>
-    <image-files/>
-    <audio-files/>
-    <video-files/>
-  </action>
-
+<action>
+	<icon>applications-utilities</icon>
+	<name>Stoatools</name>
+	<submenu></submenu>
+	<unique-id>stoatools-menu</unique-id>
+	<command>~/.local/bin/stoa-thunar %F</command>
+	<description>Open Stoatools menu (resize, rename, OCR, locksmith)</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>kitty</icon>
+	<name>Open Terminal Here</name>
+	<submenu></submenu>
+	<unique-id>1778890416598063-1</unique-id>
+	<command>kitty --directory=%f</command>
+	<description>Open Terminal Here</description>
+	<range>*</range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
 </actions>
