@@ -30,7 +30,13 @@ setopt hist_ignore_space
 # ── Completion ──
 autoload -Uz compinit && compinit
 zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}''r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' completer _expand _complete _ignored _approximate
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path ~/.cache/zsh
+zstyle ':completion:*:sudo:*' command-path /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin
+zstyle ':completion:*:*:*:*:descriptions' format '%F{#c49a5c}-- %d --%f'
+zstyle ':completion:*:options' description 'yes'
 
 # ── Vi mode ──
 bindkey -v
@@ -61,6 +67,15 @@ alias df='df -h'
 alias du='du -sh'
 alias free='free -h'
 alias cls='clear'
+alias update='sudo pacman -Syu'
+alias update-aur='yay -Syu'
+alias update-all='sudo pacman -Syu && yay -Syu'
+alias search='yay -Ss'
+alias install='sudo pacman -S'
+alias install-aur='yay -S'
+alias remove='sudo pacman -R'
+alias clean='sudo pacman -Rns $(pacman -Qtdq)'
+alias list-explicit='pacman -Qe'
 alias sync-stoa='cd ~/StoaLinux && git pull --autostash && git add -A && git commit -m "$(printf '\''chore: sync %s\n\nChanges:\n%s'\'' "$(date '\''+%Y-%m-%d %H:%M'\'')" "$(git diff --cached --name-status)")" && git push'
 
 # ── Stoa Environment (toolkits + default apps) ──
