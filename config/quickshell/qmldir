@@ -1,0 +1,4 @@
+singleton Theme 1.0 Theme.qml
+singleton Config 1.0 Config.qml
+BarText 1.0 BarText.qml
+Bar 1.0 Bar.qml
