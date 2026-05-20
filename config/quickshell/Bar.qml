@@ -57,6 +57,15 @@ PanelWindow {
     property string keybindsText: ""
     property string keybindsTooltip: ""
 
+    // ── Quick Settings polled state ──
+    property bool   dndOn: false
+    property bool   nightOn: false
+    property bool   bluetoothOn: false
+    property int    brightnessPct: -1     // -1 = no brightness device
+    property bool   mediaPlaying: false
+    property string mediaTitle: ""
+    property string mediaArtist: ""
+
     // CPU diff state
     property var _cpuPrev: ({ total: 0, idle: 0 })
 
@@ -73,6 +82,11 @@ PanelWindow {
             netProc.running = true;
             batProc.running = true;
             volProc.running = true;
+            dndProc.running = true;
+            nightProc.running = true;
+            btProc.running = true;
+            briProc.running = true;
+            mediaProc.running = true;
         }
     }
 
@@ -211,6 +225,63 @@ PanelWindow {
         return m + "m";
     }
 
+    // ── Quick Settings pollers ──
+
+    Process {
+        id: dndProc
+        command: ["bash", "-c", "dunstctl is-paused 2>/dev/null || echo false"]
+        stdout: StdioCollector { onStreamFinished: bar.dndOn = text.trim() === "true" }
+    }
+    Process {
+        id: nightProc
+        command: ["bash", "-c", "pgrep -x gammastep >/dev/null && echo on || echo off"]
+        stdout: StdioCollector { onStreamFinished: bar.nightOn = text.trim() === "on" }
+    }
+    Process {
+        id: btProc
+        command: ["bash", "-c",
+            "bluetoothctl show 2>/dev/null | grep -q 'Powered: yes' && echo on || echo off"]
+        stdout: StdioCollector { onStreamFinished: bar.bluetoothOn = text.trim() === "on" }
+    }
+    Process {
+        id: briProc
+        // brightnessctl -m emits: device,class,current,percent,max
+        command: ["bash", "-c",
+            "brightnessctl -m 2>/dev/null | awk -F, '{gsub(/%/,\"\",$4); print $4}' || echo ''"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const t = text.trim();
+                bar.brightnessPct = t.length > 0 ? parseInt(t) : -1;
+            }
+        }
+    }
+    Process {
+        id: mediaProc
+        command: ["bash", "-c", `
+            st=$(playerctl status 2>/dev/null)
+            if [ -z "$st" ]; then echo "none"; exit 0; fi
+            ti=$(playerctl metadata title 2>/dev/null)
+            ar=$(playerctl metadata artist 2>/dev/null)
+            echo "$st"
+            echo "$ti"
+            echo "$ar"
+        `]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = text.split("\n");
+                if (lines[0] === "none" || !lines[0]) {
+                    bar.mediaPlaying = false;
+                    bar.mediaTitle = "";
+                    bar.mediaArtist = "";
+                    return;
+                }
+                bar.mediaPlaying = lines[0].trim() === "Playing";
+                bar.mediaTitle   = (lines[1] || "").trim();
+                bar.mediaArtist  = (lines[2] || "").trim();
+            }
+        }
+    }
+
     Process {
         id: volProc
         command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || echo '0.00'"]
@@ -263,15 +334,6 @@ PanelWindow {
             spacing: 0
             Layout.alignment: Qt.AlignVCenter
 
-            // Scroll anywhere in the workspace strip → prev/next (matches i3/sway feel).
-            // WheelHandler doesn't eat clicks, so the per-WS MouseAreas still work.
-            WheelHandler {
-                onWheel: function(event) {
-                    Hyprland.dispatch(event.angleDelta.y > 0 ? "workspace e-1"
-                                                              : "workspace e+1");
-                }
-            }
-
             Repeater {
                 model: 10
                 delegate: Item {
@@ -321,6 +383,14 @@ PanelWindow {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: Hyprland.dispatch("workspace " + wsId)
+                        // Scroll anywhere on a workspace button → prev/next.
+                        // Inverted Y so wheel-up moves to lower-id workspace
+                        // (matches i3/sway/gnome convention).
+                        onWheel: function(wheel) {
+                            Hyprland.dispatch(wheel.angleDelta.y > 0
+                                ? "workspace e-1"
+                                : "workspace e+1");
+                        }
                     }
                 }
             }
@@ -568,6 +638,34 @@ PanelWindow {
                         if (wheel.angleDelta.y > 0) osdUp.running = true;
                         else                       osdDown.running = true;
                     }
+                }
+            }
+
+            // Quick Settings trigger
+            Item {
+                id: qsSlot
+                width: qsIcon.implicitWidth + 16
+                height: bar.implicitHeight
+                Text {
+                    id: qsIcon
+                    anchors.centerIn: parent
+                    text: ""
+                    color: qsMouse.containsMouse || qsPanel.visible
+                           ? Theme.bronze : Theme.fgDim
+                    font.pixelSize: 13
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                }
+                MouseArea {
+                    id: qsMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: qsPanel.visible = !qsPanel.visible
+                }
+                QuickSettings {
+                    id: qsPanel
+                    target: qsSlot
+                    bar: bar
                 }
             }
 
