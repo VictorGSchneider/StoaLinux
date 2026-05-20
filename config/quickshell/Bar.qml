@@ -127,14 +127,15 @@ PanelWindow {
         }
     }
 
-    // Network: try wifi first (nmcli), then default route iface address.
+    // Network: try wifi first (iwgetid), then default route iface address.
     Process {
         id: netProc
         command: ["bash", "-c", `
             ssid=$(iwgetid -r 2>/dev/null || true)
             if [ -n "$ssid" ]; then
                 sig=$(awk 'NR==3 {gsub(/\\./,\"\",$3); print int($3)}' /proc/net/wireless 2>/dev/null)
-                echo "wifi $ssid ${sig:-0}"
+                [ -z "$sig" ] && sig=0
+                echo "wifi $ssid $sig"
             else
                 ip=$(ip -4 -o route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
                 if [ -n "$ip" ]; then echo "eth $ip"; else echo "down"; fi
