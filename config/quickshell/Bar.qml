@@ -197,7 +197,7 @@ PanelWindow {
     // Keybinds bar JSON (compact line).
     Process {
         id: keybindsBarProc
-        command: ["bash", "-lc", "stoa-keybinds-bar bar"]
+        command: ["stoa-keybinds-bar", "bar"]
         stdout: StdioCollector {
             onStreamFinished: {
                 if (!text.trim()) { bar.keybindsText = ""; bar.keybindsTooltip = ""; return; }
@@ -212,30 +212,14 @@ PanelWindow {
         }
     }
 
-    Process {
-        id: clipboardShow
-        command: ["bash", "-lc", "stoa-clipboard show"]
-    }
-    Process {
-        id: clipboardPin
-        command: ["bash", "-lc", "stoa-clipboard pin"]
-    }
-    Process {
-        id: keybindsToggle
-        command: ["bash", "-lc", "stoa-keybinds-toggle"]
-    }
-    Process {
-        id: volumeMuteToggle
-        command: ["bash", "-lc", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"]
-    }
-    Process {
-        id: osdUp
-        command: ["bash", "-lc", "stoa-osd volume-up"]
-    }
-    Process {
-        id: osdDown
-        command: ["bash", "-lc", "stoa-osd volume-down"]
-    }
+    // One-shot click handlers — call binaries directly (no bash -lc, which
+    // loads .bashrc each time and adds ~hundreds of ms of perceived delay).
+    Process { id: clipboardShow;     command: ["stoa-clipboard", "show"] }
+    Process { id: clipboardPin;      command: ["stoa-clipboard", "pin"] }
+    Process { id: keybindsToggle;    command: ["stoa-keybinds-toggle"] }
+    Process { id: volumeMuteToggle;  command: ["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"] }
+    Process { id: osdUp;             command: ["stoa-osd", "volume-up"] }
+    Process { id: osdDown;           command: ["stoa-osd", "volume-down"] }
 
     // ── Layout ──
 
@@ -311,9 +295,14 @@ PanelWindow {
             font.family: Theme.fontFamily
             font.pixelSize: 11
             leftPadding: 12; rightPadding: 12
+            // Match full bar height so the hover/tooltip area covers the
+            // visible bar slice, not just the text bounding box.
+            height: Theme.barHeight
+            verticalAlignment: Text.AlignVCenter
             Layout.alignment: Qt.AlignVCenter
             ToolTip.visible: kbHover.containsMouse && bar.keybindsTooltip.length > 0
             ToolTip.text: bar.keybindsTooltip
+            ToolTip.delay: 100
             MouseArea { id: kbHover; anchors.fill: parent; hoverEnabled: true }
         }
 
@@ -328,6 +317,8 @@ PanelWindow {
             font.pixelSize: 12
             leftPadding: 12; rightPadding: 12
             elide: Text.ElideRight
+            height: Theme.barHeight
+            verticalAlignment: Text.AlignVCenter
             Layout.maximumWidth: 600
             Layout.alignment: Qt.AlignVCenter
             function _rewrite(cls, title) {
@@ -369,6 +360,7 @@ PanelWindow {
                 }
                 ToolTip.visible: kbInfoMouse.containsMouse && bar.keybindsTooltip.length > 0
                 ToolTip.text: bar.keybindsTooltip
+                ToolTip.delay: 100
             }
 
             // Clipboard
@@ -394,6 +386,7 @@ PanelWindow {
                 }
                 ToolTip.visible: clipMouse.containsMouse
                 ToolTip.text: "Clipboard (Super+V) │ Fixar (Super+Shift+V)"
+                ToolTip.delay: 100
             }
 
             BarText { text: "  " + bar.diskFree }
