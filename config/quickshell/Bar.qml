@@ -24,7 +24,6 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import "."
 
@@ -289,21 +288,23 @@ PanelWindow {
         Item { Layout.fillWidth: true; Layout.preferredWidth: 1 }
 
         Text {
+            id: keybindsCentre
             visible: Config.showKeybinds && bar.keybindsText.length > 0
             text: bar.keybindsText
             color: Theme.stone
             font.family: Theme.fontFamily
             font.pixelSize: 11
             leftPadding: 12; rightPadding: 12
-            // Match full bar height so the hover/tooltip area covers the
-            // visible bar slice, not just the text bounding box.
             height: Theme.barHeight
             verticalAlignment: Text.AlignVCenter
             Layout.alignment: Qt.AlignVCenter
-            ToolTip.visible: kbHover.containsMouse && bar.keybindsTooltip.length > 0
-            ToolTip.text: bar.keybindsTooltip
-            ToolTip.delay: 100
             MouseArea { id: kbHover; anchors.fill: parent; hoverEnabled: true }
+            BarPopup {
+                target: keybindsCentre
+                content: bar.keybindsTooltip
+                monospace: true
+                visible: kbHover.containsMouse && bar.keybindsTooltip.length > 0
+            }
         }
 
         Text {
@@ -341,6 +342,7 @@ PanelWindow {
 
             // Keybinds info (keyboard icon)
             Item {
+                id: kbInfoSlot
                 width: kbInfo.implicitWidth + 20
                 height: bar.implicitHeight
                 Text {
@@ -358,13 +360,17 @@ PanelWindow {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: keybindsToggle.running = true
                 }
-                ToolTip.visible: kbInfoMouse.containsMouse && bar.keybindsTooltip.length > 0
-                ToolTip.text: bar.keybindsTooltip
-                ToolTip.delay: 100
+                BarPopup {
+                    target: kbInfoSlot
+                    content: bar.keybindsTooltip
+                    monospace: true
+                    visible: kbInfoMouse.containsMouse && bar.keybindsTooltip.length > 0
+                }
             }
 
             // Clipboard
             Item {
+                id: clipSlot
                 width: clipText.implicitWidth + 16
                 height: bar.implicitHeight
                 Text {
@@ -384,9 +390,11 @@ PanelWindow {
                         else clipboardShow.running = true;
                     }
                 }
-                ToolTip.visible: clipMouse.containsMouse
-                ToolTip.text: "Clipboard (Super+V) │ Fixar (Super+Shift+V)"
-                ToolTip.delay: 100
+                BarPopup {
+                    target: clipSlot
+                    content: "Clipboard (Super+V) │ Fixar (Super+Shift+V)"
+                    visible: clipMouse.containsMouse
+                }
             }
 
             BarText { text: "  " + bar.diskFree }
