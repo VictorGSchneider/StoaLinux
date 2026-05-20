@@ -23,7 +23,9 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import Quickshell.Services.SystemTray
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import "."
 
@@ -49,6 +51,7 @@ PanelWindow {
     property bool   netDisconnected: true
     property int    batteryPct: -1
     property string batteryStatus: "Unknown"
+    property int    batterySecs: 0    // remaining (Discharging) or to-full (Charging)
     property int    volumePct: 0
     property bool   volumeMuted: false
     property string keybindsText: ""
@@ -167,17 +170,45 @@ PanelWindow {
             if [ -z "$bat" ]; then echo "none"; exit 0; fi
             cap=$(cat "$bat/capacity")
             st=$(cat "$bat/status")
-            echo "$cap $st"
+            secs=0
+            if [ "$st" = "Discharging" ]; then
+                secs=$(cat "$bat/time_to_empty_now" 2>/dev/null || echo 0)
+            elif [ "$st" = "Charging" ]; then
+                secs=$(cat "$bat/time_to_full_now" 2>/dev/null || echo 0)
+            fi
+            # Fallback: compute from energy + power if kernel didn't expose time fields.
+            if [ -z "$secs" ] || [ "$secs" = "0" ]; then
+                energy=$(cat "$bat/energy_now" 2>/dev/null || echo 0)
+                power=$(cat "$bat/power_now" 2>/dev/null || echo 0)
+                full=$(cat "$bat/energy_full" 2>/dev/null || echo 0)
+                if [ "$power" -gt 0 ] 2>/dev/null; then
+                    if [ "$st" = "Discharging" ]; then
+                        secs=$(( energy * 3600 / power ))
+                    elif [ "$st" = "Charging" ] && [ "$full" -gt 0 ]; then
+                        secs=$(( (full - energy) * 3600 / power ))
+                    fi
+                fi
+            fi
+            echo "$cap $st $secs"
         `]
         stdout: StdioCollector {
             onStreamFinished: {
                 const t = text.trim();
                 if (t === "none") { bar.batteryPct = -1; return; }
-                const sp = t.indexOf(" ");
-                bar.batteryPct    = parseInt(t.substring(0, sp));
-                bar.batteryStatus = t.substring(sp + 1);
+                const parts = t.split(" ");
+                bar.batteryPct    = parseInt(parts[0]);
+                bar.batteryStatus = parts[1] || "Unknown";
+                bar.batterySecs   = parseInt(parts[2] || "0");
             }
         }
+    }
+
+    function _fmtTime(secs: int): string {
+        if (secs <= 0) return "";
+        const h = Math.floor(secs / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        if (h > 0) return h + "h " + m + "m";
+        return m + "m";
     }
 
     Process {
@@ -232,6 +263,15 @@ PanelWindow {
             spacing: 0
             Layout.alignment: Qt.AlignVCenter
 
+            // Scroll anywhere in the workspace strip → prev/next (matches i3/sway feel).
+            // WheelHandler doesn't eat clicks, so the per-WS MouseAreas still work.
+            WheelHandler {
+                onWheel: function(event) {
+                    Hyprland.dispatch(event.angleDelta.y > 0 ? "workspace e-1"
+                                                              : "workspace e+1");
+                }
+            }
+
             Repeater {
                 model: 10
                 delegate: Item {
@@ -255,6 +295,7 @@ PanelWindow {
                     Rectangle {
                         anchors.fill: parent
                         color: wsMouse.containsMouse ? Theme.bgLight : "transparent"
+                        Behavior on color { ColorAnimation { duration: 120 } }
                     }
                     Rectangle {
                         anchors.left: parent.left
@@ -268,10 +309,11 @@ PanelWindow {
                         anchors.centerIn: parent
                         text: ["I","II","III","IV","V","VI","VII","VIII","IX","X"][index]
                         color: urgent ? Theme.terracotta
-                                      : active ? Theme.fg
+                                      : (active || wsMouse.containsMouse) ? Theme.fg
                                                : hasWindows ? Theme.fgDim : Theme.stone
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSize
+                        Behavior on color { ColorAnimation { duration: 120 } }
                     }
                     MouseArea {
                         id: wsMouse
@@ -368,6 +410,69 @@ PanelWindow {
                 }
             }
 
+            // ── System tray ──
+            // Standard SNI tray (xdg-app-indicators). Left = activate, middle =
+            // secondary, right = native menu via display(), scroll = scroll().
+            Row {
+                spacing: 4
+                anchors.verticalCenter: parent.verticalCenter
+                Repeater {
+                    model: SystemTray.items.values
+                    delegate: Item {
+                        id: trayDel
+                        required property var modelData
+                        width: 22
+                        height: bar.implicitHeight
+
+                        Image {
+                            anchors.centerIn: parent
+                            width: 16
+                            height: 16
+                            sourceSize.width: 16
+                            sourceSize.height: 16
+                            source: trayDel.modelData.icon
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                        }
+                        MouseArea {
+                            id: trayMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                            onClicked: function(mouse) {
+                                if (mouse.button === Qt.LeftButton) {
+                                    if (trayDel.modelData.onlyMenu && trayDel.modelData.hasMenu) {
+                                        const p = trayDel.mapToItem(null, 0, trayDel.height);
+                                        trayDel.modelData.display(bar, p.x, p.y);
+                                    } else {
+                                        trayDel.modelData.activate();
+                                    }
+                                } else if (mouse.button === Qt.MiddleButton) {
+                                    trayDel.modelData.secondaryActivate();
+                                } else if (mouse.button === Qt.RightButton
+                                           && trayDel.modelData.hasMenu) {
+                                    const p = trayDel.mapToItem(null, 0, trayDel.height);
+                                    trayDel.modelData.display(bar, p.x, p.y);
+                                }
+                            }
+                            onWheel: function(wheel) {
+                                trayDel.modelData.scroll(wheel.angleDelta.y, false);
+                            }
+                        }
+                        BarPopup {
+                            target: trayDel
+                            content: trayDel.modelData.tooltipTitle.length > 0
+                                     ? trayDel.modelData.tooltipTitle
+                                     : trayDel.modelData.title
+                            visible: trayMouse.containsMouse
+                                     && (trayDel.modelData.tooltipTitle.length > 0
+                                         || trayDel.modelData.title.length > 0)
+                        }
+                    }
+                }
+            }
+
             // Clipboard
             Item {
                 id: clipSlot
@@ -402,15 +507,41 @@ PanelWindow {
                 text: bar.netText
                 color: bar.netDisconnected ? Theme.stone : Theme.fgDim
             }
-            BarText {
+            Item {
+                id: batSlot
                 visible: bar.batteryPct >= 0
-                text: {
-                    const icon = bar.batteryStatus === "Charging" ? "" : "";
-                    return icon + " " + bar.batteryPct + "%";
+                width: visible ? batText.implicitWidth + 2 * Theme.modulePad : 0
+                height: bar.implicitHeight
+                Text {
+                    id: batText
+                    anchors.centerIn: parent
+                    text: {
+                        const icon = bar.batteryStatus === "Charging" ? "" : "";
+                        return icon + " " + bar.batteryPct + "%";
+                    }
+                    color: bar.batteryPct < 15 ? Theme.terracotta
+                           : bar.batteryPct < 30 ? Theme.gold
+                                                  : Theme.fgDim
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSize
                 }
-                color: bar.batteryPct < 15 ? Theme.terracotta
-                       : bar.batteryPct < 30 ? Theme.gold
-                                              : Theme.fgDim
+                MouseArea {
+                    id: batHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                }
+                BarPopup {
+                    target: batSlot
+                    content: {
+                        const head = bar.batteryStatus + " — " + bar.batteryPct + "%";
+                        const t = bar._fmtTime(bar.batterySecs);
+                        if (!t) return head;
+                        if (bar.batteryStatus === "Charging")    return head + "\nFull in " + t;
+                        if (bar.batteryStatus === "Discharging") return head + "\n" + t + " remaining";
+                        return head;
+                    }
+                    visible: batHover.containsMouse
+                }
             }
             BarText { text: "  " + bar.cpuPct + "%" }
             BarText {
@@ -440,10 +571,94 @@ PanelWindow {
                 }
             }
 
-            // Clock
-            BarText {
-                text: " " + Qt.formatDateTime(clockNow.now, "ddd dd MMM  HH:mm")
-                color: Theme.fg
+            // Clock — left-click opens nothing, right-click toggles a calendar popup.
+            Item {
+                id: clockSlot
+                width: clockText.implicitWidth + 2 * Theme.modulePad
+                height: bar.implicitHeight
+                Text {
+                    id: clockText
+                    anchors.centerIn: parent
+                    text: " " + Qt.formatDateTime(clockNow.now, "ddd dd MMM  HH:mm")
+                    color: Theme.fg
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSize
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: function(mouse) {
+                        if (mouse.button === Qt.RightButton) {
+                            calendarPopup.visible = !calendarPopup.visible;
+                        }
+                    }
+                }
+
+                PopupWindow {
+                    id: calendarPopup
+                    anchor.item: clockSlot
+                    anchor.edges: Edges.Bottom
+                    anchor.gravity: Edges.Bottom | Edges.Left
+                    color: "transparent"
+                    visible: false
+                    grabFocus: true
+                    implicitWidth: calCard.implicitWidth
+                    implicitHeight: calCard.implicitHeight
+
+                    Rectangle {
+                        id: calCard
+                        anchors.fill: parent
+                        color: Theme.bgLight
+                        border.color: Theme.stone
+                        border.width: 1
+                        radius: 4
+                        implicitWidth: calCol.implicitWidth + 24
+                        implicitHeight: calCol.implicitHeight + 24
+
+                        Column {
+                            id: calCol
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: Qt.formatDate(clockNow.now, "MMMM yyyy")
+                                color: Theme.fg
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 14
+                            }
+                            DayOfWeekRow {
+                                width: monthGrid.width
+                                locale: monthGrid.locale
+                                delegate: Text {
+                                    text: model.shortName
+                                    color: Theme.stone
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 11
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                            }
+                            MonthGrid {
+                                id: monthGrid
+                                month: clockNow.now.getMonth()
+                                year: clockNow.now.getFullYear()
+                                spacing: 4
+                                delegate: Text {
+                                    required property var model
+                                    text: model.day
+                                    horizontalAlignment: Text.AlignHCenter
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 12
+                                    color: model.today ? Theme.bronze
+                                           : model.month === monthGrid.month ? Theme.fg
+                                                                              : Theme.stone
+                                    opacity: model.month === monthGrid.month ? 1.0 : 0.45
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
