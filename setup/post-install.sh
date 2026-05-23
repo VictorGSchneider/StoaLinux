@@ -106,8 +106,11 @@ CLIPBOARD_PKGS="wl-clipboard cliphist"
 # Widgets (eww — AUR, Wayland)
 WIDGET_PKGS="eww"
 
-# Shell engine — QML-based bar / widgets (AUR, replaces waybar+eww+dunst over time)
-SHELL_PKGS_QS="quickshell-git"
+# Shell engine — Noctalia (Quickshell-based, AUR). Replaces waybar+eww+
+# dunst+rofi+hyprlock+stoa-osd+cliphist as the visible shell. Pulls in
+# the noctalia-qs fork of Quickshell as a dependency, so do NOT also
+# install upstream quickshell-git on the same system.
+SHELL_PKGS_QS="noctalia-shell"
 
 # Fonts and theme
 FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome"
@@ -188,7 +191,7 @@ echo -e "  ${S}WinApps:    ${WINAPPS_PKGS}${R}"
 echo -e "  ${S}DFM:        ${DFM_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
-echo -e "  ${S}QML shell:  ${SHELL_PKGS_QS} (AUR)${R}"
+echo -e "  ${S}Shell:      ${SHELL_PKGS_QS} (AUR — Quickshell-based)${R}"
 echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
 echo ""
@@ -217,7 +220,7 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur obsidian               "Obsidian"              obsidian
     _install_aur satty                  "Satty"                 satty
     _install_aur eww                    "eww"                   eww
-    _install_aur quickshell-git         "Quickshell"            quickshell
+    _install_aur noctalia-shell         "Noctalia Shell"        noctalia-shell
     _install_aur enpass-bin             "Enpass"                enpass
     _install_aur yacreader              "YACReader"             YACReader
     _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors

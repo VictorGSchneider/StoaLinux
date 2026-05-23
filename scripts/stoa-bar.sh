@@ -1,11 +1,10 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Bar launcher                                  ║
-# ║  Picks the bar engine based on STOA_BAR in stoa.conf:       ║
-# ║    quickshell  → ~/.config/quickshell/shell.qml (default)   ║
-# ║    waybar      → ~/.config/waybar (legacy)                  ║
-# ║  Falls back to whichever binary is installed if the config  ║
-# ║  doesn't specify a preference.                               ║
+# ║  Picks the shell engine based on STOA_BAR in stoa.conf:     ║
+# ║    noctalia    → Noctalia Shell (Quickshell, default)       ║
+# ║    waybar      → legacy GTK fallback                        ║
+# ║  Auto-detects whichever is installed if STOA_BAR is unset.  ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 set -e
@@ -16,21 +15,20 @@ if [ -f "$STOA_CONF" ]; then
     source "$STOA_CONF"
 fi
 
-# Default: quickshell if present, otherwise waybar.
 if [ -z "${STOA_BAR:-}" ]; then
-    if command -v quickshell >/dev/null 2>&1; then
-        STOA_BAR=quickshell
+    if command -v noctalia-shell >/dev/null 2>&1; then
+        STOA_BAR=noctalia
     else
         STOA_BAR=waybar
     fi
 fi
 
 case "$STOA_BAR" in
-    quickshell)
-        if command -v quickshell >/dev/null 2>&1; then
-            exec quickshell
+    noctalia)
+        if command -v noctalia-shell >/dev/null 2>&1; then
+            exec noctalia-shell
         fi
-        echo "stoa-bar: quickshell not installed, falling back to waybar" >&2
+        echo "stoa-bar: noctalia-shell not installed, falling back to waybar" >&2
         ;&
     waybar|*)
         exec waybar

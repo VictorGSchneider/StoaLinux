@@ -65,7 +65,8 @@ _link "${STOA_DIR}/config/hypr/hyprland.conf"   "${CONFIG_DIR}/hypr/hyprland.con
 _link "${STOA_DIR}/config/hypr/hyprlock.conf"   "${CONFIG_DIR}/hypr/hyprlock.conf"
 _link "${STOA_DIR}/config/waybar/config"        "${CONFIG_DIR}/waybar/config"
 _link "${STOA_DIR}/config/waybar/style.css"     "${CONFIG_DIR}/waybar/style.css"
-_link "${STOA_DIR}/config/quickshell"           "${CONFIG_DIR}/quickshell"
+_link "${STOA_DIR}/config/noctalia/colorschemes/Stoa" \
+      "${CONFIG_DIR}/noctalia/colorschemes/Stoa"
 _link "${STOA_DIR}/config/i3/config"            "${CONFIG_DIR}/i3/config"
 _link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
 _link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"
