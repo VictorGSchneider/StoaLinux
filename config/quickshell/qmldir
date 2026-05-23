@@ -1,0 +1,7 @@
+singleton Theme 1.0 Theme.qml
+singleton Config 1.0 Config.qml
+BarText 1.0 BarText.qml
+BarPopup 1.0 BarPopup.qml
+StoaSlider 1.0 StoaSlider.qml
+QuickSettings 1.0 QuickSettings.qml
+Bar 1.0 Bar.qml
