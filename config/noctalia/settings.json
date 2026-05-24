@@ -309,7 +309,7 @@
         "monitorForColors": "",
         "predefinedScheme": "Stoa",
         "schedulingMode": "off",
-        "syncGsettings": true,
+        "syncGsettings": false,
         "useWallpaperColors": false
     },
     "controlCenter": {
