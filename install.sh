@@ -67,6 +67,8 @@ _link "${STOA_DIR}/config/waybar/config"        "${CONFIG_DIR}/waybar/config"
 _link "${STOA_DIR}/config/waybar/style.css"     "${CONFIG_DIR}/waybar/style.css"
 _link "${STOA_DIR}/config/noctalia/colorschemes/Stoa" \
       "${CONFIG_DIR}/noctalia/colorschemes/Stoa"
+_link "${STOA_DIR}/config/noctalia/plugins.json" \
+      "${CONFIG_DIR}/noctalia/plugins.json"
 _link "${STOA_DIR}/config/i3/config"            "${CONFIG_DIR}/i3/config"
 _link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
 _link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"
