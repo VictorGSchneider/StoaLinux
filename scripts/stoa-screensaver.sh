@@ -109,65 +109,62 @@ generate() {
     echo "  Generating Stoa screensaver ($style)..."
     echo ""
 
-    # Frame count and FPS for smooth playback
-    # 4 scenes × 90 frames each = 360 frames @ 15fps = 24 seconds per loop
-    local total_frames=360
+    # Frame count + FPS. 1800 frames @ 15fps = 120s — long enough that the
+    # mpv loop point is hard to spot, short enough that rendering finishes
+    # in a few minutes. Parameters drift continuously (no hard scene cuts)
+    # for a slow lava-lamp feel that avoids burn-in.
+    local total_frames=1800
     local fps=15
-    local scene_frames=90
 
-    # Generate at small resolution, scale up for organic blur effect
-    local gen_w=320
-    local gen_h=180
+    # Generate small; the heavy blur + final upscale gives an organic look
+    # without rendering 1080p plasma per frame.
+    local gen_w=240
+    local gen_h=135
 
-    # Create color lookup tables
     local clut_main clut_warm clut_cool
     clut_main=$(_gen_gradient_clut)
     clut_warm=$(_gen_warm_clut)
     clut_cool=$(_gen_cool_clut)
+    local cluts=("$clut_main" "$clut_warm" "$clut_cool")
+
+    # Pick a starting CLUT randomly per generation so consecutive runs
+    # produce visually different videos. Drift between CLUTs continuously
+    # via a Multiply composite later.
+    local clut_a="${cluts[RANDOM % 3]}"
+    local clut_b="${cluts[RANDOM % 3]}"
 
     local frame_dir="${STOA_SS_DIR}/frames"
     rm -rf "$frame_dir"
     mkdir -p "$frame_dir"
 
     local i=0
-    local scene=0
     local progress=0
+    local base_seed=$((RANDOM * 1000))
 
     while [ $i -lt $total_frames ]; do
-        # Determine current scene and interpolation phase
-        scene=$((i / scene_frames))
-        local phase=$((i % scene_frames))
+        # Continuous drift — no scene cuts. Each frame nudges the seed by
+        # a small constant, and blur/sat oscillate via sine-like phases.
+        local seed=$((base_seed + i * 5))
+        # Three slow oscillators give the lava-lamp feel:
+        #   blur 5..11    (period ~ 60 frames = 4s)
+        #   sat  60..90   (period ~ 90 frames = 6s)
+        #   bri  90..110  (period ~ 120 frames = 8s)
+        local blur_sigma=$(( 5 + ((i * 6 / 60) % 7) ))
+        local sat=$(( 60 + ((i * 3 / 30) % 31) ))
+        local bri=$(( 90 + ((i / 12) % 21) ))
 
-        # Vary plasma parameters per scene for visual diversity
-        local seed=$((i * 7 + scene * 1000))
-        local blur_sigma=$((6 + (phase % 4)))
-
-        # Select CLUT based on scene (cycle through color variants)
-        local current_clut
-        case $((scene % 3)) in
-            0) current_clut="$clut_main" ;;
-            1) current_clut="$clut_warm" ;;
-            2) current_clut="$clut_cool" ;;
-        esac
-
-        # Generate plasma frame:
-        # 1. Small plasma noise with unique seed
-        # 2. Heavy gaussian blur → organic, non-pixelated
-        # 3. Map grayscale to Stoa colors via CLUT
-        # 4. Add subtle vignette for depth
-        # 5. Scale to full HD
         if ! "${IM[@]}" -size ${gen_w}x${gen_h} -seed "$seed" plasma: \
             -blur 0x${blur_sigma} \
-            -modulate "$((85 + phase % 20)),70,100" \
-            "$current_clut" -clut \
+            -modulate "$bri,$sat,100" \
+            "$clut_a" -clut \
             -blur 0x2 \
             \( +clone -fill black -colorize 100% \
-               -fill white -draw "ellipse $((gen_w/2)),$((gen_h/2)) $((gen_w/2-20)),$((gen_h/2-10)) 0,360" \
-               -blur 0x30 \) \
+               -fill white -draw "ellipse $((gen_w/2)),$((gen_h/2)) $((gen_w/2-15)),$((gen_h/2-8)) 0,360" \
+               -blur 0x25 \) \
             -compose multiply -composite \
             -resize 1920x1080! \
-            -quality 92 \
-            "$(printf '%s/frame_%04d.jpg' "$frame_dir" "$i")"; then
+            -quality 90 \
+            "$(printf '%s/frame_%05d.jpg' "$frame_dir" "$i")"; then
             echo "" >&2
             echo "  ERROR: ImageMagick failed rendering frame $i." >&2
             echo "  Check /etc/ImageMagick-*/policy.xml for disabled coders (plasma)." >&2
@@ -175,7 +172,13 @@ generate() {
             return 1
         fi
 
-        # Progress
+        # Periodically switch which CLUT we drift through — gradual palette
+        # shift over the full duration without abrupt color jumps.
+        if (( i > 0 && i % 600 == 0 )); then
+            clut_a="$clut_b"
+            clut_b="${cluts[RANDOM % 3]}"
+        fi
+
         progress=$(( (i + 1) * 100 / total_frames ))
         printf "\r  Rendering frames... %d%% (%d/%d)" "$progress" "$((i + 1))" "$total_frames"
 
@@ -188,8 +191,8 @@ generate() {
     # Encode with ffmpeg — high quality, smooth looping.
     # Keep stderr visible so codec/policy issues are diagnosable.
     if ! ffmpeg -y -hide_banner -loglevel error -framerate "$fps" \
-        -i "${frame_dir}/frame_%04d.jpg" \
-        -c:v libx264 -preset slow -crf 18 \
+        -i "${frame_dir}/frame_%05d.jpg" \
+        -c:v libx264 -preset slow -crf 20 \
         -pix_fmt yuv420p \
         -movflags +faststart \
         "$STOA_SS_VIDEO"; then
