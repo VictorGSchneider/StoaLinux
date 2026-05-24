@@ -69,6 +69,20 @@ _link "${STOA_DIR}/config/noctalia/colorschemes/Stoa" \
       "${CONFIG_DIR}/noctalia/colorschemes/Stoa"
 _link "${STOA_DIR}/config/noctalia/plugins.json" \
       "${CONFIG_DIR}/noctalia/plugins.json"
+
+# Noctalia settings.json — opinionated Stoa seed (floating bar, Stoa
+# color scheme, EB Garamond, layout incl. screen-toolkit/clipper/
+# keybind-cheatsheet plugin widgets). Copy-seed semantics like
+# stoa.conf: only place when absent so the user's tweaks survive
+# reinstalls. Wipe ~/.config/noctalia/settings.json to reset.
+mkdir -p "${CONFIG_DIR}/noctalia"
+if [ ! -f "${CONFIG_DIR}/noctalia/settings.json" ]; then
+    cp "${STOA_DIR}/config/noctalia/settings.json" \
+       "${CONFIG_DIR}/noctalia/settings.json"
+    echo -e "  ${O}[+] ${CONFIG_DIR}/noctalia/settings.json${R}"
+else
+    echo -e "  ${S}[~] noctalia/settings.json already exists (preserved)${R}"
+fi
 _link "${STOA_DIR}/config/i3/config"            "${CONFIG_DIR}/i3/config"
 _link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
 _link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"
