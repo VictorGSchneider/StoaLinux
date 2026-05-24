@@ -76,7 +76,7 @@ alias install-aur='yay -S'
 alias remove='sudo pacman -R'
 alias clean='sudo pacman -Rns $(pacman -Qtdq)'
 alias list-explicit='pacman -Qe'
-alias sync-stoa='cd ~/StoaLinux && git pull --autostash && git add -A && git commit -m "$(printf '\''chore: sync %s\n\nChanges:\n%s'\'' "$(date '\''+%Y-%m-%d %H:%M'\'')" "$(git diff --cached --name-status)")" && git push'
+alias sync-stoa='stoa-sync'
 
 # ── Stoa Environment (toolkits + default apps) ──
 [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa-env.sh" ] && \

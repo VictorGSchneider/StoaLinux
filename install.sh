@@ -244,6 +244,7 @@ _link "${STOA_DIR}/scripts/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-se
 _link "${STOA_DIR}/scripts/stoa-display.sh"      "${HOME}/.local/bin/stoa-display"
 _link "${STOA_DIR}/scripts/stoa-maintain.sh"      "${HOME}/.local/bin/stoa-maintain"
 _link "${STOA_DIR}/scripts/stoa-bar.sh"           "${HOME}/.local/bin/stoa-bar"
+_link "${STOA_DIR}/scripts/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
 _link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
 
