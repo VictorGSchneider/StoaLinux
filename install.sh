@@ -213,6 +213,14 @@ else
     echo -e "  ${S}[~] stoa.conf already exists (preserved)${R}"
 fi
 
+# stoa-sync manifest (same copy-seed semantics — user uncomments paths)
+if [ ! -f "${CONFIG_DIR}/stoa/sync.list" ]; then
+    cp "${STOA_DIR}/config/stoa/sync.list" "${CONFIG_DIR}/stoa/sync.list"
+    echo -e "  ${O}[+] ${CONFIG_DIR}/stoa/sync.list${R}"
+else
+    echo -e "  ${S}[~] stoa/sync.list already exists (preserved)${R}"
+fi
+
 # ── Scripts ──
 mkdir -p "${HOME}/.local/bin"
 _link "${STOA_DIR}/scripts/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"

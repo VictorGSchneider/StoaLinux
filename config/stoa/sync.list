@@ -1,0 +1,41 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — Sync manifest                                 ║
+# ║  Read by `stoa-sync` (alias `sync-stoa`).                   ║
+# ║                                                              ║
+# ║  One path per line. Lines starting with # are ignored.       ║
+# ║  `~` and `$VAR` are expanded. Both files and directories OK. ║
+# ║                                                              ║
+# ║  Each listed path is mirrored into the repo at               ║
+# ║  dotfiles/<path-relative-to-$HOME>. Already-symlinked files  ║
+# ║  (kitty, hyprland, rofi, eww, waybar, etc.) are caught by    ║
+# ║  `git add -A` automatically — don't add them here.           ║
+# ║                                                              ║
+# ║  Uncomment what you want versioned. Heads up: some of these  ║
+# ║  may contain tokens or personal IDs — sanitize before        ║
+# ║  publishing.                                                 ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ── Shell rcs (only your personal additions live here; the bulk
+#    comes from sourcing shell/.{bash,zsh}rc) ──
+# ~/.zshrc
+# ~/.bashrc
+
+# ── Git ──
+# ~/.gitconfig
+
+# ── SSH (config only — never list the private keys) ──
+# ~/.ssh/config
+
+# ── VS Code (settings.json is already Stoa-symlinked) ──
+# ~/.config/Code/User/keybindings.json
+# ~/.config/Code/User/snippets
+
+# ── Tmux ──
+# ~/.tmux.conf
+
+# ── Obsidian app preferences (NOT the vault data) ──
+# ~/.config/obsidian/obsidian.json
+
+# ── Discord (skip — large, has tokens/cache) ──
+
+# ── Brave (skip — browser profile, has cookies/tokens) ──
