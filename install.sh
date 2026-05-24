@@ -213,6 +213,14 @@ else
     echo -e "  ${S}[~] stoa.conf already exists (preserved)${R}"
 fi
 
+# stoa-sync manifest (same copy-seed semantics — user uncomments paths)
+if [ ! -f "${CONFIG_DIR}/stoa/sync.list" ]; then
+    cp "${STOA_DIR}/config/stoa/sync.list" "${CONFIG_DIR}/stoa/sync.list"
+    echo -e "  ${O}[+] ${CONFIG_DIR}/stoa/sync.list${R}"
+else
+    echo -e "  ${S}[~] stoa/sync.list already exists (preserved)${R}"
+fi
+
 # ── Scripts ──
 mkdir -p "${HOME}/.local/bin"
 _link "${STOA_DIR}/scripts/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"
@@ -244,6 +252,7 @@ _link "${STOA_DIR}/scripts/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-se
 _link "${STOA_DIR}/scripts/stoa-display.sh"      "${HOME}/.local/bin/stoa-display"
 _link "${STOA_DIR}/scripts/stoa-maintain.sh"      "${HOME}/.local/bin/stoa-maintain"
 _link "${STOA_DIR}/scripts/stoa-bar.sh"           "${HOME}/.local/bin/stoa-bar"
+_link "${STOA_DIR}/scripts/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
 _link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
 
