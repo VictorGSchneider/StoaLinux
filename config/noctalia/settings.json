@@ -18,6 +18,9 @@
         "ignoreMouseInput": false,
         "overviewLayer": false,
         "pinnedApps": [
+            "brave-browser",
+            "eu.betterbird.Betterbird",
+            "code"
         ],
         "position": "top_center",
         "screenshotAnnotationTool": "",
@@ -89,7 +92,7 @@
                     "useDistroLogo": false
                 },
                 {
-                    "characterCount": 2,
+                    "characterCount": 10,
                     "colorizeIcons": false,
                     "emptyColor": "secondary",
                     "enableScrollWheel": true,
