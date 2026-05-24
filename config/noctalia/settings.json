@@ -299,6 +299,12 @@
                 },
                 {
                     "id": "plugin:clipper"
+                },
+                {
+                    "id": "plugin:hyprland-steam-overlay"
+                },
+                {
+                    "id": "plugin:usb-drive-manager"
                 }
             ]
         }

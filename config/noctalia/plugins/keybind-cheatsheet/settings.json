@@ -455,8 +455,8 @@
     }
   ],
   "detectedCompositor": "hyprland",
-  "windowWidth": 1400,
-  "windowHeight": 850,
+  "windowWidth": 800,
+  "windowHeight": 600,
   "autoHeight": true,
   "columnCount": 3,
   "modKeyVariable": "$mod",
