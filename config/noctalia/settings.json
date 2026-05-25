@@ -242,6 +242,11 @@
                     "useCustomFont": false
                 },
                 {
+                    "defaultSettings": {
+                        "density": "comfortable",
+                        "maxHistorySize": 100,
+                        "showImagePreviews": true
+                    },
                     "id": "plugin:clipboard"
                 },
                 {
