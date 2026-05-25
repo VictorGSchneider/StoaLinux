@@ -45,12 +45,21 @@ float fbm(vec2 p) {
     return sum;
 }
 
-vec3 pickAccent(float s) {
+vec3 pickAccentA(float s) {
     float k = mod(s, 4.0);
     if (k < 1.0) return bronze;
     if (k < 2.0) return gold;
     if (k < 3.0) return olive;
     return stone;
+}
+
+vec3 pickAccentB(float s) {
+    // Always different from A so we always get a 2-tone vein.
+    float k = mod(s * 0.31 + 1.0, 4.0);
+    if (k < 1.0) return bronze;
+    if (k < 2.0) return gold;
+    if (k < 3.0) return olive;
+    return vec3(0.702, 0.420, 0.353);  // terracotta
 }
 
 void main() {
@@ -62,12 +71,17 @@ void main() {
     float w2 = fbm(p + vec2(5.2, 1.3));
     float m  = fbm(p + 3.0 * vec2(w1, w2));
 
+    // A second slow field selects WHICH accent each vein takes — so a
+    // single wallpaper carries two intertwined accent colors instead of
+    // a single monotone vein.
+    float blend = smoothstep(0.3, 0.7, fbm(p * 0.6 + vec2(7.3, 2.1)));
+    vec3 accent = mix(pickAccentA(u_seed), pickAccentB(u_seed), blend);
+
     // Sharp veining where the warped field crosses 0.5.
     float vein = 1.0 - smoothstep(0.0, 0.05, abs(m - 0.5));
 
-    vec3 col    = mix(bg2, bgLight, smoothstep(0.3, 0.8, m));
-    vec3 accent = pickAccent(u_seed);
-    col += accent * vein * 0.45;
+    vec3 col = mix(bg2, bgLight, smoothstep(0.3, 0.8, m));
+    col += accent * vein * 0.5;
 
     // Soft vignette pulls focus toward the center.
     float vig = 1.0 - 0.5 * length(uv - 0.5);
