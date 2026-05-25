@@ -242,7 +242,7 @@
                     "useCustomFont": false
                 },
                 {
-                    "id": "plugin:clipper"
+                    "id": "plugin:clipboard"
                 },
                 {
                     "blacklist": [
@@ -256,6 +256,16 @@
                     ]
                 },
                 {
+                    "defaultSettings": {
+                        "autoLaunchSteam": true,
+                        "chatWidthPercent": 25,
+                        "friendsWidthPercent": 10,
+                        "gapSize": 10,
+                        "mainWidthPercent": 60,
+                        "topMarginPercent": 2.5,
+                        "useCustomLayout": false,
+                        "windowHeightPercent": 95
+                    },
                     "id": "plugin:hyprland-steam-overlay"
                 },
                 {
@@ -265,6 +275,15 @@
                     "id": "plugin:plugin-manager"
                 },
                 {
+                    "defaultSettings": {
+                        "autoMount": false,
+                        "fileBrowser": "yazi",
+                        "hideWhenEmpty": false,
+                        "iconColor": "none",
+                        "showBadge": false,
+                        "showNotifications": true,
+                        "terminalCommand": "kitty"
+                    },
                     "id": "plugin:usb-drive-manager"
                 },
                 {
@@ -504,13 +523,13 @@
         "radiusRatio": 2,
         "reverseScroll": false,
         "scaleRatio": 1,
-        "screenRadiusRatio": 1,
+        "screenRadiusRatio": 2,
         "shadowDirection": "bottom_right",
         "shadowOffsetX": 2,
         "shadowOffsetY": 3,
         "showChangelogOnStartup": true,
         "showHibernateOnLockScreen": false,
-        "showScreenCorners": false,
+        "showScreenCorners": true,
         "showSessionButtonsOnLockScreen": true,
         "smoothScrollEnabled": true,
         "telemetryEnabled": true
@@ -633,7 +652,7 @@
     "sessionMenu": {
         "countdownDuration": 10000,
         "enableCountdown": true,
-        "largeButtonsLayout": "single-row",
+        "largeButtonsLayout": "grid",
         "largeButtonsStyle": true,
         "position": "center",
         "powerOptions": [
@@ -732,7 +751,7 @@
         "fontDefaultScale": 1,
         "fontFixed": "monospace",
         "fontFixedScale": 1,
-        "panelBackgroundOpacity": 0.4,
+        "panelBackgroundOpacity": 0.85,
         "panelsAttachedToBar": true,
         "scrollbarAlwaysVisible": true,
         "settingsPanelMode": "attached",
@@ -776,7 +795,7 @@
         "useOriginalImages": false,
         "useSolidColor": false,
         "useWallhaven": false,
-        "viewMode": "browse",
+        "viewMode": "recursive",
         "wallhavenApiKey": "",
         "wallhavenCategories": "111",
         "wallhavenOrder": "desc",
