@@ -202,6 +202,9 @@ echo -e "  ${S}    To activate: Ctrl+K Ctrl+T → Stoa${R}"
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
 mkdir -p "${HOME}/Pictures/screenshots"
 
+# ── GLSL shaders (stoa-walls + stoa-screensaver) ──
+_link "${STOA_DIR}/theme/shaders" "${CONFIG_DIR}/stoa/shaders"
+
 # ── Environment ──
 _link "${STOA_DIR}/shell/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
 

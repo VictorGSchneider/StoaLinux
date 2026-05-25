@@ -213,35 +213,44 @@ generate() {
 }
 
 # ── Playback ──
+#
+# Renders theme/shaders/screensaver.frag fullscreen via glslViewer.
+# GPU-accelerated, infinite (no loop point — u_time drives continuous
+# evolution of the plasma + slow palette cycling), so no pre-rendered
+# video file is kept around and burn-in is impossible by construction.
+#
+# Fallback: if glslViewer isn't installed, fall back to the legacy
+# mpv playback of $STOA_SS_VIDEO (pre-generated marble-flow.mp4).
+
+STOA_SS_SHADER="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/shaders/screensaver.frag"
 
 start() {
-    # Prevent multiple instances
+    # Prevent multiple instances.
     if [ -f "$STOA_SS_LOCK" ] && kill -0 "$(cat "$STOA_SS_LOCK")" 2>/dev/null; then
         return
     fi
 
+    # Preferred: GLSL via glslViewer (GPU, infinite).
+    if command -v glslViewer &>/dev/null && [ -f "$STOA_SS_SHADER" ]; then
+        glslViewer --fullscreen "$STOA_SS_SHADER" >/dev/null 2>&1 &
+        local pid=$!
+        echo "$pid" > "$STOA_SS_LOCK"
+        wait "$pid" 2>/dev/null
+        rm -f "$STOA_SS_LOCK"
+        return
+    fi
+
+    # Legacy fallback: pre-rendered mpv video. Kept so a system without
+    # glslViewer (e.g. mid-upgrade or no GPU drivers) still gets a
+    # screensaver instead of a black screen.
     if ! command -v mpv &>/dev/null; then
-        echo "stoa-screensaver: mpv not installed." >&2
+        echo "stoa-screensaver: neither glslViewer nor mpv available." >&2
         return 1
     fi
-
-    # Generate if not exists
     if [ ! -f "$STOA_SS_VIDEO" ]; then
-        if ! generate; then
-            return 1
-        fi
+        if ! generate; then return 1; fi
     fi
 
-    # Dim the screen slightly before starting
-    local original_brightness=""
-    if command -v brightnessctl &>/dev/null; then
-        original_brightness=$(brightnessctl get 2>/dev/null)
-    fi
-
-    # Minimal keybindings: any key (or mouse click) exits.
-    # We use --input-conf with a tiny generated file rather than disabling
-    # bindings entirely (the previous version made the screensaver impossible
-    # to dismiss with the keyboard).
     local mpv_conf="${STOA_SS_DIR}/mpv-input.conf"
     cat > "$mpv_conf" <<'EOF'
 ANY_UNICODE quit
@@ -265,13 +274,7 @@ EOF
     local mpv_pid=$!
     echo "$mpv_pid" > "$STOA_SS_LOCK"
     wait "$mpv_pid" 2>/dev/null
-
     rm -f "$STOA_SS_LOCK"
-
-    # Restore brightness
-    if [ -n "$original_brightness" ] && command -v brightnessctl &>/dev/null; then
-        brightnessctl set "$original_brightness" -q 2>/dev/null
-    fi
 }
 
 stop() {
@@ -281,7 +284,8 @@ stop() {
         kill "$pid" 2>/dev/null
         rm -f "$STOA_SS_LOCK"
     fi
-    # Also kill any stray mpv screensaver instances
+    # Kill stray screensaver instances of either backend.
+    pkill -f "glslViewer.*screensaver.frag" 2>/dev/null
     pkill -f "mpv.*marble-flow" 2>/dev/null
 }
 
