@@ -39,16 +39,22 @@ float fbm(vec2 p) {
     return s;
 }
 
-// Two-accent palette selected from the seed — every parchment carries
-// at least two of bronze/gold/olive/terracotta so it never feels
-// monochrome.
+// GLSL ES 2.0 (the glslViewer target) forbids dynamic indexing into
+// local arrays and the integer % operator, so the "palette" is a
+// helper that branches on the index instead.
+vec3 paletteAt(int i) {
+    if (i == 0) return bronze;
+    if (i == 1) return gold;
+    if (i == 2) return olive;
+    return terracotta;
+}
+
 void pickAccents(float s, out vec3 a, out vec3 b) {
-    vec3 pal[4];
-    pal[0] = bronze; pal[1] = gold; pal[2] = olive; pal[3] = terracotta;
-    int i = int(mod(s,         4.0));
+    int i = int(mod(s,             4.0));
     int j = int(mod(s * 0.31 + 1.0, 4.0));
-    if (j == i) j = (i + 1) % 4;
-    a = pal[i]; b = pal[j];
+    if (j == i) j = int(mod(float(i) + 1.0, 4.0));
+    a = paletteAt(i);
+    b = paletteAt(j);
 }
 
 // Warm parchment base: not pure dark — slightly biased toward bronze
@@ -76,13 +82,12 @@ void main() {
         col += a * glow * 0.9 + b * glow * 0.2;
     } else if (mode < 2.0) {
         // Corner-light mode — one quadrant lit by a soft pool.
-        vec2 corners[4];
-        corners[0] = vec2(0.15, 0.15);
-        corners[1] = vec2(0.85, 0.15);
-        corners[2] = vec2(0.15, 0.85);
-        corners[3] = vec2(0.85, 0.85);
         int idx = int(mod(u_seed * 0.13, 4.0));
-        vec2 c = corners[idx];
+        vec2 c;
+        if      (idx == 0) c = vec2(0.15, 0.15);
+        else if (idx == 1) c = vec2(0.85, 0.15);
+        else if (idx == 2) c = vec2(0.15, 0.85);
+        else               c = vec2(0.85, 0.85);
         float d = length(uv - c);
         col += a * exp(-d * 2.5) * 0.7;
         col += b * exp(-d * 1.2) * 0.15;

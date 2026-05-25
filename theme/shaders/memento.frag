@@ -38,17 +38,25 @@ float fbm(vec2 p) {
     return s;
 }
 
-// Cycle three accents from the palette per render so memento never
-// feels mono-color.
+// GLSL ES 2.0 disallows dynamic indexing into local arrays and integer
+// % — branch instead.
+vec3 paletteAt(int i) {
+    if (i == 0) return bronze;
+    if (i == 1) return gold;
+    if (i == 2) return olive;
+    if (i == 3) return terracotta;
+    return stone;
+}
+
 void pickTriad(float s, out vec3 a, out vec3 b, out vec3 c) {
-    vec3 pal[5];
-    pal[0] = bronze; pal[1] = gold; pal[2] = olive; pal[3] = terracotta; pal[4] = stone;
     int i = int(mod(s,             5.0));
     int j = int(mod(s * 0.37 + 1.0, 5.0));
     int k = int(mod(s * 0.71 + 2.0, 5.0));
-    if (j == i) j = (i + 1) % 5;
-    if (k == i || k == j) k = (j + 1) % 5;
-    a = pal[i]; b = pal[j]; c = pal[k];
+    if (j == i)             j = int(mod(float(i) + 1.0, 5.0));
+    if (k == i || k == j)   k = int(mod(float(j) + 1.0, 5.0));
+    a = paletteAt(i);
+    b = paletteAt(j);
+    c = paletteAt(k);
 }
 
 void main() {
