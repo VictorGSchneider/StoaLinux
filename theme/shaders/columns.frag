@@ -36,14 +36,21 @@ float fbm(vec2 p) {
     return s;
 }
 
+// GLSL ES 2.0 disallows dynamic indexing into local arrays and integer
+// % — branch instead.
+vec3 paletteAt(int i) {
+    if (i == 0) return bronze;
+    if (i == 1) return gold;
+    if (i == 2) return olive;
+    return terracotta;
+}
+
 void pickAccents(float s, out vec3 sun, out vec3 floorAccent) {
-    vec3 pal[4];
-    pal[0] = bronze; pal[1] = gold; pal[2] = olive; pal[3] = terracotta;
     int i = int(mod(s,             4.0));
     int j = int(mod(s * 0.31 + 1.0, 4.0));
-    if (j == i) j = (i + 1) % 4;
-    sun         = pal[i];
-    floorAccent = pal[j];
+    if (j == i) j = int(mod(float(i) + 1.0, 4.0));
+    sun         = paletteAt(i);
+    floorAccent = paletteAt(j);
 }
 
 void main() {
