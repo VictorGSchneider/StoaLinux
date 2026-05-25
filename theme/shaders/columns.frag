@@ -1,7 +1,9 @@
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  STOA — Columns shader (v2)                                 ║
-// ║  Greek-temple columns with capital, base, light side, and    ║
-// ║  shadow side. Atmospheric sky behind, dark floor below.      ║
+// ║  STOA — Columns shader (v3 — actual column geometry)        ║
+// ║  Fewer, BIGGER columns (3–5, 8–15% of canvas each), with     ║
+// ║  entasis (slight bulge), capital + base bands, cylindrical   ║
+// ║  lighting from a seeded sun position, visible fluting,       ║
+// ║  textured sky and shadowed floor. No more barcode.           ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 #ifdef GL_ES
@@ -30,14 +32,6 @@ float noise(vec2 p) {
                mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
-float fbm(vec2 p) {
-    float s = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) { s += a * noise(p); p *= 2.0; a *= 0.5; }
-    return s;
-}
-
-// GLSL ES 2.0 disallows dynamic indexing into local arrays and integer
-// % — branch instead.
 vec3 paletteAt(int i) {
     if (i == 0) return bronze;
     if (i == 1) return gold;
@@ -58,70 +52,96 @@ void main() {
     vec3 sunCol, floorCol;
     pickAccents(u_seed, sunCol, floorCol);
 
-    // Sky: gradient from light-warm at horizon to dark up top, plus
-    // a soft sun pool whose x-position is seeded.
-    float sunX = 0.2 + 0.6 * fract(u_seed * 0.41);
-    float sunY = 0.25 + 0.2 * fract(u_seed * 0.17);
-    vec3 sky = mix(bg2, bgLight, 1.0 - uv.y);
-    sky = mix(sky, mix(sky, sunCol, 0.6),
-              exp(-length((uv - vec2(sunX, sunY)) * vec2(1.0, 0.7)) * 2.5) * 0.8);
-    // Atmospheric haze near horizon.
-    sky += sunCol * 0.12 * smoothstep(0.4, 0.65, 1.0 - uv.y);
+    // ── Sky ─────────────────────────────────────────────────────
+    // Seeded sun position. Two darker layers + a bright pool around the sun.
+    float sunX = 0.20 + 0.60 * fract(u_seed * 0.41);
+    float sunY = 0.12 + 0.18 * fract(u_seed * 0.17);
+    float floorY = 0.78;
 
-    // Floor: dark, with subtle warm tint coming from the accent.
-    float floorY = 0.78 + 0.05 * fract(u_seed * 0.61);
-    vec3  ground = mix(bg2 * 0.4, floorCol * 0.18, smoothstep(floorY, 1.0, uv.y));
+    vec3 sky = mix(bg2, mix(bg, sunCol * 0.5, 0.55), 1.0 - uv.y);
+    float sunD = length((uv - vec2(sunX, sunY)) * vec2(1.0, 1.3));
+    sky += sunCol * exp(-sunD * 2.5) * 1.0;
+    sky += sunCol * 0.18 * smoothstep(0.45, 0.78, 1.0 - uv.y);   // horizon glow
+    sky += vec3(noise(uv * 4.0)) * 0.03;                         // atmospheric noise
 
-    // Pick base layer.
-    vec3 col = uv.y > floorY ? sky : ground;
+    // ── Floor ───────────────────────────────────────────────────
+    vec3 ground = mix(bg2 * 0.4, floorCol * 0.22, smoothstep(floorY, 1.0, uv.y));
+    // Subtle warm reflection of the sun on the floor.
+    float refl = exp(-pow((uv.x - sunX) * 4.0, 2.0)) * smoothstep(floorY, 1.0, uv.y);
+    ground += sunCol * refl * 0.20;
+
+    // Start with sky/ground.
+    vec3 col = uv.y > floorY ? ground : sky;
 
     // ── Columns ─────────────────────────────────────────────────
-    float nCols   = floor(5.0 + hash1(0.0) * 5.0);   // 5–9 columns
-    float minD    = 1.0;
-    float colShade = 0.0;     // 0 inside lit half, 1 inside shadow half
-    float capRel  = 0.0;      // 1 if in capital / base band of nearest column
-    bool  insideCol = false;
+    float nCols   = floor(3.0 + hash1(0.0) * 3.0);   // 3–5 columns
+    float topY    = 0.08;                            // columns start here
+    float botY    = floorY + 0.005;
 
-    for (int i = 0; i < 12; i++) {
+    bool inside = false;
+    vec3 stoneCol = vec3(0.0);
+
+    for (int i = 0; i < 6; i++) {
         if (float(i) >= nCols) break;
+
         float fi    = (float(i) + 0.5) / nCols;
-        float cx    = fi + (hash1(float(i) + 1.0) - 0.5) * 0.03;
-        float halfW = 0.020 + hash1(float(i) + 2.0) * 0.020;
-        float d     = abs(uv.x - cx) - halfW;
-        if (d < minD) {
-            minD = d;
-            // Lighting: dot(column_normal, light_dir). Light from sun pos.
-            float sideOffset = (uv.x - cx) / halfW;     // -1..1
-            float lightDirX  = sunX - cx;                // sign tells which side
-            colShade = clamp(0.5 - 0.5 * sideOffset * sign(lightDirX), 0.0, 1.0);
-            // Capital + base bands.
-            float capBand  = smoothstep(0.92, 0.95, uv.y) - smoothstep(0.96, 1.00, uv.y);
-            float baseBand = smoothstep(floorY - 0.04, floorY - 0.01, uv.y)
-                           - smoothstep(floorY, floorY + 0.01, uv.y);
-            float topBand  = smoothstep(0.05, 0.08, 1.0 - uv.y) - smoothstep(0.10, 0.13, 1.0 - uv.y);
-            capRel = max(capBand, max(baseBand, topBand));
-            insideCol = (d < 0.0);
+        float cx    = fi + (hash1(float(i) + 1.0) - 0.5) * 0.025;
+        // BIG columns: 7–13% of screen width each.
+        float halfW = 0.035 + hash1(float(i) + 2.0) * 0.030;
+
+        // Vertical normalised position along the column (0 top, 1 bottom).
+        float vn = clamp((uv.y - topY) / (botY - topY), 0.0, 1.0);
+
+        // Entasis: slight bulge in the middle. Plus wider capital + base bands.
+        float entasis    = 1.0 + 0.04 * sin(vn * 3.14159);
+        float capBulge   = 1.0 + 0.25 * smoothstep(0.10, 0.0, vn);
+        float baseBulge  = 1.0 + 0.20 * smoothstep(0.92, 1.0, vn);
+        float effHalfW   = halfW * entasis * capBulge * baseBulge;
+
+        float d = abs(uv.x - cx) - effHalfW;
+
+        if (d < 0.0 && uv.y >= topY && uv.y <= botY) {
+            inside = true;
+
+            // Cross-column position 0..1 (0 = left edge, 1 = right edge).
+            float t = (uv.x - cx + effHalfW) / (2.0 * effHalfW);
+
+            // Cylindrical lighting based on sun direction. The lit half
+            // brightens toward stone+sun, the dark half collapses to deep shadow.
+            float lightSign = sign(sunX - cx);
+            float litness   = lightSign > 0.0 ? t : 1.0 - t;
+            // Curve it so the centre of the lit side really blooms.
+            litness = pow(litness, 1.4);
+
+            vec3 lit  = mix(stone * 1.1, sunCol, 0.30);
+            vec3 dark = bg2 * 0.55;
+            stoneCol  = mix(dark, lit, litness);
+
+            // Vertical fluting — visible grooves running top to bottom.
+            float flutes = 6.0;
+            float flute  = 0.5 + 0.5 * sin(t * flutes * 6.2832);
+            stoneCol *= 0.85 + 0.15 * flute;
+
+            // Capital + base look brighter (carved detail).
+            float capBand  = smoothstep(0.08, 0.0,  vn);
+            float baseBand = smoothstep(0.94, 1.0, vn);
+            stoneCol = mix(stoneCol, stoneCol * 1.35, max(capBand, baseBand) * 0.7);
         }
     }
 
-    if (insideCol) {
-        // Stone column gradient — light side warmer, shadow side cool & dark.
-        vec3 lightCol = mix(stone * 1.1, sunCol * 0.6, 0.35);
-        vec3 darkCol  = bg2 * 0.55;
-        col = mix(lightCol, darkCol, colShade);
-        // Capital / base bulge in lighter stone.
-        col = mix(col, stone * 1.25, capRel * 0.6);
-        // Subtle vertical fluting — sinusoidal banding within the column.
-        col *= 1.0 - 0.10 * abs(sin((uv.x * 60.0)));
-    }
+    if (inside) col = stoneCol;
 
-    // Thin accent edge on the lit side of each column rim.
-    float rim = exp(-pow(minD * 900.0, 2.0));
-    col += sunCol * rim * 0.35;
-
-    // Sky atmospheric noise so it never looks like a flat gradient.
-    if (!insideCol && uv.y < floorY) {
-        col += vec3(noise(uv * 4.0)) * 0.025;
+    // Subtle ambient-occlusion shadow on the floor at the foot of each
+    // column — darken just below each centre. Cheap approximation.
+    if (uv.y > floorY && uv.y < floorY + 0.05) {
+        float ao = 0.0;
+        for (int j = 0; j < 6; j++) {
+            if (float(j) >= nCols) break;
+            float fj = (float(j) + 0.5) / nCols;
+            float cx = fj + (hash1(float(j) + 1.0) - 0.5) * 0.025;
+            ao += exp(-pow((uv.x - cx) * 25.0, 2.0));
+        }
+        col *= 1.0 - ao * 0.4 * smoothstep(floorY + 0.05, floorY, uv.y);
     }
 
     gl_FragColor = vec4(col, 1.0);

@@ -1,8 +1,9 @@
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  STOA — Memento shader (v2)                                 ║
-// ║  Aged sepia background with multiple soft light pools in     ║
-// ║  varying accent colors. Text overlay (MEMENTO MORI + quote)  ║
-// ║  is composited by stoa-walls.sh afterwards.                  ║
+// ║  STOA — Memento shader (v3 — dramatic duotone)              ║
+// ║  One strong light source from a seeded position, deep shadow ║
+// ║  on the opposite side, warm fBm sepia base, scattered dust   ║
+// ║  particles. Reads "vanitas oil-painting" instead of "flat    ║
+// ║  brown square". Text overlay still composited afterwards.    ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 #ifdef GL_ES
@@ -38,8 +39,6 @@ float fbm(vec2 p) {
     return s;
 }
 
-// GLSL ES 2.0 disallows dynamic indexing into local arrays and integer
-// % — branch instead.
 vec3 paletteAt(int i) {
     if (i == 0) return bronze;
     if (i == 1) return gold;
@@ -48,53 +47,51 @@ vec3 paletteAt(int i) {
     return stone;
 }
 
-void pickTriad(float s, out vec3 a, out vec3 b, out vec3 c) {
-    int i = int(mod(s,             5.0));
-    int j = int(mod(s * 0.37 + 1.0, 5.0));
-    int k = int(mod(s * 0.71 + 2.0, 5.0));
-    if (j == i)             j = int(mod(float(i) + 1.0, 5.0));
-    if (k == i || k == j)   k = int(mod(float(j) + 1.0, 5.0));
-    a = paletteAt(i);
-    b = paletteAt(j);
-    c = paletteAt(k);
-}
-
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution.xy;
 
-    vec3 a, b, c; pickTriad(u_seed, a, b, c);
+    // Two accents (warm + cool) for the duotone.
+    int iA = int(mod(u_seed,             5.0));
+    int iB = int(mod(u_seed * 0.37 + 1.0, 5.0));
+    if (iB == iA) iB = int(mod(float(iA) + 1.0, 5.0));
+    vec3 warmA = paletteAt(iA);
+    vec3 coolB = paletteAt(iB);
 
-    // Aged sepia base — warmer than pure dark, with surface variation.
+    // Aged sepia base with real fBm texture (no flat color).
     float field = fbm(uv * 1.8);
-    float grain = fbm(uv * 50.0) * 0.05;
-    vec3  base = mix(bg2, mix(bg, a * 0.28, 0.4), smoothstep(0.2, 0.85, field));
-    base += vec3(grain);
+    vec3 base = mix(bg2, mix(bg, warmA * 0.30, 0.5), smoothstep(0.2, 0.85, field));
 
-    // Three soft glow pools in different accents.
-    vec3 col = base;
-    for (int i = 0; i < 3; i++) {
-        float fi = float(i);
-        vec2 p = vec2(
-            0.15 + 0.7 * fract(u_seed * (0.13 + fi * 0.21)),
-            0.15 + 0.7 * fract(u_seed * (0.29 + fi * 0.17))
-        );
-        // Avoid the dead-center band where text lands.
-        if (abs(p.y - 0.5) < 0.18 && abs(p.x - 0.5) < 0.35) {
-            p.y += sign(p.y - 0.5) * 0.25;
-        }
-        float r = length(uv - p);
-        vec3 cc = (i == 0) ? a : (i == 1 ? b : c);
-        col += cc * exp(-r * 4.0) * 0.18;
-    }
+    // SINGLE strong light source from a seeded edge position. Pushed off
+    // to a side or corner so the canvas reads "chiaroscuro candle" not
+    // "blob in the middle".
+    float lightAng = u_seed * 0.137;
+    vec2  lightPos = vec2(0.5 + 0.45 * cos(lightAng),
+                          0.5 + 0.45 * sin(lightAng * 1.3));
+    float lightD = length((uv - lightPos) * vec2(1.0, 1.1));
+    float litness = exp(-lightD * 1.6);
 
-    // Subtle ink-wash sweep across the canvas.
-    float ang = u_seed * 0.11;
-    vec2  dir = vec2(cos(ang), sin(ang));
-    float t   = dot(uv - 0.5, dir);
-    col += b * 0.05 * smoothstep(-0.2, 0.2, t) * smoothstep(0.4, 0.0, t);
+    // Compose: deep shadow tint on the far side, strong warm tint near the light.
+    vec3 col = mix(base * 0.55, base + warmA * 0.55, litness);
 
-    // Vignette that protects the text region in the middle.
-    col *= 1.0 - 0.45 * length(uv - 0.5);
+    // A second softer light pool in the cool accent so the canvas isn't monochromatic.
+    vec2 light2 = vec2(0.5 - 0.40 * cos(lightAng),
+                       0.5 - 0.30 * sin(lightAng * 1.3));
+    float light2D = length(uv - light2);
+    col += coolB * exp(-light2D * 2.5) * 0.25;
+
+    // Scattered dust particles — high-freq noise thresholded so only the
+    // peaks become specks.
+    float dustField = fbm(uv * 28.0);
+    float dust = smoothstep(0.62, 0.78, dustField);
+    col += warmA * dust * 0.20;
+
+    // Subtle fold/wrinkle texture: low-freq noise riding the surface.
+    col += vec3(fbm(uv * 4.0) - 0.5) * 0.06;
+
+    // Vignette — but lighter on the side where the light source is, so
+    // it doesn't fight the duotone.
+    float vig = 1.0 - 0.35 * length(uv - 0.5);
+    col *= vig;
 
     gl_FragColor = vec4(col, 1.0);
 }
