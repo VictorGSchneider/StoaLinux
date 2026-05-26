@@ -69,6 +69,8 @@ _link "${STOA_DIR}/config/noctalia/colorschemes/Stoa" \
       "${CONFIG_DIR}/noctalia/colorschemes/Stoa"
 _link "${STOA_DIR}/config/noctalia/plugins.json" \
       "${CONFIG_DIR}/noctalia/plugins.json"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-memento" \
+      "${CONFIG_DIR}/noctalia/plugins/stoa-memento"
 
 # Noctalia settings.json — opinionated Stoa seed (floating bar, Stoa
 # color scheme, EB Garamond, layout incl. screen-toolkit/clipper/
