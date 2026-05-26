@@ -46,6 +46,7 @@
         "stoa-memento": {
             "enabled": true,
             "sourceUrl": "https://github.com/VictorGSchneider/StoaLinux"
+        },
         "unicode-picker": {
             "enabled": true,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
