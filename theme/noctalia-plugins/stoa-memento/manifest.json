@@ -1,10 +1,17 @@
 {
     "id": "stoa-memento",
     "name": "Stoa Memento Mori",
-    "description": "Desktop widget displaying days/weeks/years lived against a configurable life expectancy, plus a rotating Stoic quote. Stoa palette + EB Garamond.",
     "version": "1.0.0",
+    "minNoctaliaVersion": "4.6.6",
     "author": "VictorGSchneider",
-    "repository": "https://github.com/VictorGSchneider/StoaLinux",
     "license": "GPL-3.0",
-    "extensionPoints": ["DesktopWidget"]
+    "repository": "https://github.com/VictorGSchneider/StoaLinux",
+    "description": "Desktop widget showing days/weeks/years lived against a configurable life expectancy, plus a rotating Stoic quote. Stoa palette + EB Garamond.",
+    "tags": ["Desktop", "Stoic", "Time"],
+    "entryPoints": {
+        "desktopWidget": "DesktopWidget.qml"
+    },
+    "metadata": {
+        "defaultSettings": {}
+    }
 }
