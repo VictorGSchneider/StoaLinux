@@ -1,0 +1,32 @@
+{
+  "colorHistory": [],
+  "paletteColors": "",
+  "installedLangs": [
+    "eng",
+    "por"
+  ],
+  "transAvailable": false,
+  "selectedOcrLang": "por",
+  "screenshotPath": "/home/zeno/Pictures/screenshots/",
+  "videoPath": "/home/zeno/Videos/recordings",
+  "filenameFormat": "",
+  "detectedRecorder": "wf-recorder",
+  "recordSkipConfirmation": true,
+  "recordCopyToClipboard": false,
+  "gifMaxSeconds": 30,
+  "resultHex": "",
+  "resultRgb": "",
+  "resultHsv": "",
+  "resultHsl": "",
+  "colorCapturePath": "",
+  "colorCacheBust": 0,
+  "ocrResult": "",
+  "ocrCapturePath": "",
+  "qrResult": "",
+  "qrCapturePath": "",
+  "translateResult": "",
+  "x02ApiKey": "",
+  "x02Expiry": "7d",
+  "shareSkipPopover": false,
+  "searchEngineUrl": "https://search.brave.com/search?q="
+}
