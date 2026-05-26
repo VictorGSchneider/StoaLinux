@@ -34,6 +34,10 @@
         "sys-info-widget": {
             "enabled": true,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
+        },
+        "stoa-memento": {
+            "enabled": true,
+            "sourceUrl": "https://github.com/VictorGSchneider/StoaLinux"
         }
     },
     "version": 2
