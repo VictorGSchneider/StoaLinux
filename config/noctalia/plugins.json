@@ -4,6 +4,11 @@
             "enabled": true,
             "name": "Noctalia Plugins",
             "url": "https://github.com/noctalia-dev/noctalia-plugins"
+        },
+        {
+            "enabled": true,
+            "name": "Stoa Linux",
+            "url": "https://github.com/VictorGSchneider/StoaLinux"
         }
     ],
     "states": {
