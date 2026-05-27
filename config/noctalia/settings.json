@@ -141,17 +141,6 @@
                     "showBadge": true,
                     "showLabelsOnlyWhenOccupied": true,
                     "unfocusedIconsOpacity": 1
-                },
-                {
-                    "colorizeIcons": false,
-                    "hideMode": "hidden",
-                    "id": "ActiveWindow",
-                    "maxWidth": 250,
-                    "scrollingMode": "hover",
-                    "showIcon": true,
-                    "showText": true,
-                    "textColor": "none",
-                    "useFixedWidth": true
                 }
             ],
             "left": [
@@ -192,6 +181,17 @@
                     "textColor": "none",
                     "useFixedWidth": true,
                     "visualizerType": "linear"
+                },
+                {
+                    "colorizeIcons": false,
+                    "hideMode": "hidden",
+                    "id": "ActiveWindow",
+                    "maxWidth": 250,
+                    "scrollingMode": "hover",
+                    "showIcon": true,
+                    "showText": true,
+                    "textColor": "none",
+                    "useFixedWidth": true
                 }
             ],
             "right": [
@@ -279,12 +279,6 @@
                 },
                 {
                     "defaultSettings": {
-                        "iconColor": "none"
-                    },
-                    "id": "plugin:plugin-manager"
-                },
-                {
-                    "defaultSettings": {
                         "autoMount": false,
                         "fileBrowser": "yazi",
                         "hideWhenEmpty": false,
@@ -294,6 +288,28 @@
                         "terminalCommand": "kitty"
                     },
                     "id": "plugin:usb-drive-manager"
+                },
+                {
+                    "defaultSettings": {
+                        "connectedColor": "primary",
+                        "disableToastNotifications": false,
+                        "disconnectedColor": "none",
+                        "displayMode": "onhover"
+                    },
+                    "id": "plugin:network-manager-vpn"
+                },
+                {
+                    "defaultSettings": {
+                        "iconColor": "none",
+                        "niriConfigPath": "~/.config/niri/config.kdl"
+                    },
+                    "id": "plugin:display-settings"
+                },
+                {
+                    "defaultSettings": {
+                        "iconColor": "none"
+                    },
+                    "id": "plugin:plugin-manager"
                 },
                 {
                     "defaultSettings": {
@@ -608,7 +624,7 @@
         "lockScreenCountdownDuration": 10000,
         "lockScreenMonitors": [
         ],
-        "lockScreenTint": 1,
+        "lockScreenTint": 0,
         "passwordChars": true,
         "radiusRatio": 2,
         "reverseScroll": false,
