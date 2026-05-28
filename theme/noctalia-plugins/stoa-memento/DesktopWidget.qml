@@ -4,77 +4,71 @@
 // ║                                                              ║
 // ║  Data backend is the existing `stoa-memento-data` shell      ║
 // ║  script (reads ~/.config/stoa/memento.conf — NAME, BIRTH,    ║
-// ║  LIFE_YEARS) so this widget stays UI-only. The same data     ║
-// ║  feeds the legacy eww overlay (Super+M) and this widget.     ║
+// ║  LIFE_YEARS). Same JSON contract the eww overlay uses.       ║
+// ║                                                              ║
+// ║  Root is DraggableDesktopWidget per the Noctalia plugin      ║
+// ║  contract (auto-handles drag/resize/edit-mode); colours come ║
+// ║  from Color.m* so the active color scheme (Stoa) drives the  ║
+// ║  palette.                                                    ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import qs.Commons
+import qs.Modules.DesktopWidgets
+import qs.Widgets
 
-Item {
+DraggableDesktopWidget {
     id: root
 
-    // Noctalia injects these on every plugin Item.
-    required property var    pluginApi
-    required property var    screen
-    required property string widgetId
+    property var pluginApi: null
 
-    // Polled state (null until the first stoa-memento-data run lands).
+    readonly property real _width:  Math.round(380 * widgetScale)
+    readonly property real _height: Math.round(320 * widgetScale)
+
+    implicitWidth:  _width
+    implicitHeight: _height
+
+    // ── Polled state ──
     property var  memento: null
     readonly property bool hasData: memento !== null
-
-    implicitWidth: 380
-    implicitHeight: 320
-
-    // ── Stoa palette (kept inline so the plugin compiles without
-    //    pulling Noctalia's m-tokens — those are already Stoa via the
-    //    color scheme, but this widget is also legible if someone has
-    //    picked a non-Stoa scheme). ──
-    readonly property color cBg       : "#211e19"
-    readonly property color cBgLight  : "#2d2921"
-    readonly property color cFg       : "#d4cfc4"
-    readonly property color cFgDim    : "#a89f91"
-    readonly property color cBronze   : "#c49a5c"
-    readonly property color cOlive    : "#8a9a6c"
-    readonly property color cStone    : "#6e6a62"
 
     // ── Card ──
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(root.cBg.r, root.cBg.g, root.cBg.b, 0.80)
-        border.color: root.cStone
+        color: Color.mSurface
+        opacity: 0.85
+        radius: Style.radiusM
+        border.color: Color.mOutline
         border.width: 1
-        radius: 10
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 22
-            spacing: 6
+            anchors.margins: Style.marginL
+            spacing: Style.marginS
 
             // Title
-            Text {
+            NText {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 text: "MEMENTO MORI"
-                color: root.cBronze
-                font.family: "EB Garamond"
-                font.pixelSize: 22
+                color: Color.mPrimary
+                font.pointSize: Style.fontSizeXL * widgetScale
                 font.letterSpacing: 6
                 font.weight: Font.Medium
             }
-            Text {
+            NText {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 text: "Remember that you will die."
-                color: root.cFgDim
-                font.family: "EB Garamond"
+                color: Color.mOnSurfaceVariant
                 font.italic: true
-                font.pixelSize: 11
+                font.pointSize: Style.fontSizeS * widgetScale
             }
 
-            Item { Layout.preferredHeight: 8 }
+            Item { Layout.preferredHeight: Style.marginM }
 
             // Stats row — days / weeks / years
             RowLayout {
@@ -90,34 +84,31 @@ Item {
                     delegate: ColumnLayout {
                         Layout.fillWidth: true
                         required property var modelData
-                        Text {
+                        NText {
                             Layout.alignment: Qt.AlignHCenter
                             text: root.hasData ? root.memento[modelData.key] : "—"
-                            color: root.cFg
-                            font.family: "EB Garamond"
-                            font.pixelSize: 24
+                            color: Color.mOnSurface
+                            font.pointSize: Style.fontSizeXXL * widgetScale
                             font.weight: Font.Medium
                         }
-                        Text {
+                        NText {
                             Layout.alignment: Qt.AlignHCenter
                             text: modelData.label
-                            color: root.cFgDim
-                            font.family: "EB Garamond"
-                            font.pixelSize: 11
+                            color: Color.mOnSurfaceVariant
                             font.italic: true
+                            font.pointSize: Style.fontSizeS * widgetScale
                         }
                     }
                 }
             }
 
-            Item { Layout.preferredHeight: 6 }
+            Item { Layout.preferredHeight: Style.marginS }
 
             // Year progress
-            Text {
+            NText {
                 Layout.fillWidth: true
-                color: root.cFgDim
-                font.family: "EB Garamond"
-                font.pixelSize: 11
+                color: Color.mOnSurfaceVariant
+                font.pointSize: Style.fontSizeS * widgetScale
                 text: root.hasData
                     ? "Year " + root.memento.current_year + " — "
                       + (root.memento.year_pct).toFixed(1) + "%"
@@ -126,26 +117,25 @@ Item {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 4
-                color: root.cBgLight
+                color: Color.mSurfaceVariant
                 radius: 2
                 Rectangle {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: parent.width * (root.hasData ? root.memento.year_pct / 100 : 0)
-                    color: root.cBronze
+                    color: Color.mPrimary
                     radius: 2
                     Behavior on width { NumberAnimation { duration: 300 } }
                 }
             }
 
             // Life progress
-            Text {
+            NText {
                 Layout.fillWidth: true
-                Layout.topMargin: 6
-                color: root.cFgDim
-                font.family: "EB Garamond"
-                font.pixelSize: 11
+                Layout.topMargin: Style.marginS
+                color: Color.mOnSurfaceVariant
+                font.pointSize: Style.fontSizeS * widgetScale
                 text: root.hasData
                     ? root.memento.weeks_lived + " of " + root.memento.total_weeks + " weeks"
                     : "— of — weeks"
@@ -153,7 +143,7 @@ Item {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 4
-                color: root.cBgLight
+                color: Color.mSurfaceVariant
                 radius: 2
                 Rectangle {
                     anchors.left: parent.left
@@ -163,37 +153,31 @@ Item {
                            (root.hasData && root.memento.total_weeks > 0
                                 ? Math.min(1.0, root.memento.weeks_lived / root.memento.total_weeks)
                                 : 0)
-                    color: root.cOlive
+                    color: Color.mSecondary
                     radius: 2
                     Behavior on width { NumberAnimation { duration: 300 } }
                 }
             }
 
-            Item { Layout.fillHeight: true; Layout.minimumHeight: 6 }
+            Item { Layout.fillHeight: true; Layout.minimumHeight: Style.marginS }
 
-            // Rotating Stoic quote (the data script consumes the next
-            // quote from the playlist every time it's run; the bar/widget
-            // share the same playlist so they don't repeat each other).
-            Text {
+            // Rotating Stoic quote
+            NText {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 text: root.hasData ? root.memento.quote : ""
-                color: root.cFg
-                font.family: "EB Garamond"
+                color: Color.mOnSurface
                 font.italic: true
-                font.pixelSize: 11
+                font.pointSize: Style.fontSizeS * widgetScale
                 opacity: 0.85
             }
         }
     }
 
     // ── Data polling ──
-    //
-    // stoa-memento-data is cheap (~50 ms) and the underlying numeric
-    // values only change once per day. The rotating quote rolls every
-    // call, though — so polling every 60s gives a fresh aphorism without
-    // hammering the system.
+    // stoa-memento-data is cheap (~50 ms); poll every 60s — short enough
+    // for the quote to rotate frequently, infrequent enough not to thrash.
     Process {
         id: dataProc
         command: ["stoa-memento-data"]
@@ -204,7 +188,7 @@ Item {
                 try {
                     root.memento = JSON.parse(text);
                 } catch (e) {
-                    console.log("stoa-memento: JSON parse failed:", e, text);
+                    Logger.w("stoa-memento", "JSON parse failed:", e, text);
                 }
             }
         }
