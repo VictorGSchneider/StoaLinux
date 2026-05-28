@@ -2,14 +2,12 @@
 // ║  STOA LINUX — Memento Mori (Noctalia desktop widget)        ║
 // ║  "Remember that you will die." — Stoic tradition             ║
 // ║                                                              ║
-// ║  Data backend is the existing `stoa-memento-data` shell      ║
-// ║  script (reads ~/.config/stoa/memento.conf — NAME, BIRTH,    ║
-// ║  LIFE_YEARS). Same JSON contract the eww overlay uses.       ║
+// ║  Five progress bars showing how much of each natural cycle   ║
+// ║  has elapsed — day, week, month, year, lifetime. Each one    ║
+// ║  shows current % filled and the remaining time on the right. ║
 // ║                                                              ║
-// ║  Root is DraggableDesktopWidget per the Noctalia plugin      ║
-// ║  contract (auto-handles drag/resize/edit-mode); colours come ║
-// ║  from Color.m* so the active color scheme (Stoa) drives the  ║
-// ║  palette.                                                    ║
+// ║  Data backend: stoa-memento-data (reads                      ║
+// ║  ~/.config/stoa/memento.conf for NAME / BIRTH / LIFE_YEARS). ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 import QtQuick
@@ -26,7 +24,7 @@ DraggableDesktopWidget {
     property var pluginApi: null
 
     readonly property real _width:  Math.round(380 * widgetScale)
-    readonly property real _height: Math.round(320 * widgetScale)
+    readonly property real _height: Math.round(380 * widgetScale)
 
     implicitWidth:  _width
     implicitHeight: _height
@@ -70,92 +68,61 @@ DraggableDesktopWidget {
 
             Item { Layout.preferredHeight: Style.marginM }
 
-            // Stats row — days / weeks / years
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 0
+            // ── Five progress rows ──
+            // Each row: "Label … X% · Yd left" + thin bar below.
+            Repeater {
+                model: [
+                    { label: "Day",   pctKey: "day_pct",   remainKey: "day_remaining",   barColor: Color.mError      },
+                    { label: "Week",  pctKey: "week_pct",  remainKey: "week_remaining",  barColor: Color.mTertiary   },
+                    { label: "Month", pctKey: "month_pct", remainKey: "month_remaining", barColor: Color.mPrimary    },
+                    { label: "Year",  pctKey: "year_pct",  remainKey: "year_remaining",  barColor: Color.mSecondary  },
+                    { label: "Life",  pctKey: "life_pct",  remainKey: "life_remaining",  barColor: Color.mOnSurfaceVariant }
+                ]
+                delegate: ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: index === 0 ? 0 : Style.marginXS
+                    required property int index
+                    required property var modelData
+                    spacing: 2
 
-                Repeater {
-                    model: [
-                        { label: "days",  key: "days_lived"  },
-                        { label: "weeks", key: "weeks_lived" },
-                        { label: "years", key: "years_lived" }
-                    ]
-                    delegate: ColumnLayout {
+                    RowLayout {
                         Layout.fillWidth: true
-                        required property var modelData
+                        spacing: Style.marginS
                         NText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.hasData ? root.memento[modelData.key] : "—"
+                            text: modelData.label
                             color: Color.mOnSurface
-                            font.pointSize: Style.fontSizeXXL * widgetScale
+                            font.pointSize: Style.fontSizeM * widgetScale
                             font.weight: Font.Medium
                         }
+                        Item { Layout.fillWidth: true }
                         NText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: modelData.label
+                            text: root.hasData
+                                  ? root.memento[modelData.pctKey].toFixed(0) + "%  ·  "
+                                    + root.memento[modelData.remainKey] + " left"
+                                  : "—"
                             color: Color.mOnSurfaceVariant
                             font.italic: true
                             font.pointSize: Style.fontSizeS * widgetScale
                         }
                     }
-                }
-            }
-
-            Item { Layout.preferredHeight: Style.marginS }
-
-            // Year progress
-            NText {
-                Layout.fillWidth: true
-                color: Color.mOnSurfaceVariant
-                font.pointSize: Style.fontSizeS * widgetScale
-                text: root.hasData
-                    ? "Year " + root.memento.current_year + " — "
-                      + (root.memento.year_pct).toFixed(1) + "%"
-                    : "Year — —%"
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 4
-                color: Color.mSurfaceVariant
-                radius: 2
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    width: parent.width * (root.hasData ? root.memento.year_pct / 100 : 0)
-                    color: Color.mPrimary
-                    radius: 2
-                    Behavior on width { NumberAnimation { duration: 300 } }
-                }
-            }
-
-            // Life progress
-            NText {
-                Layout.fillWidth: true
-                Layout.topMargin: Style.marginS
-                color: Color.mOnSurfaceVariant
-                font.pointSize: Style.fontSizeS * widgetScale
-                text: root.hasData
-                    ? root.memento.weeks_lived + " of " + root.memento.total_weeks + " weeks"
-                    : "— of — weeks"
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 4
-                color: Color.mSurfaceVariant
-                radius: 2
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    width: parent.width *
-                           (root.hasData && root.memento.total_weeks > 0
-                                ? Math.min(1.0, root.memento.weeks_lived / root.memento.total_weeks)
-                                : 0)
-                    color: Color.mSecondary
-                    radius: 2
-                    Behavior on width { NumberAnimation { duration: 300 } }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 4
+                        color: Color.mSurfaceVariant
+                        radius: 2
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: parent.width *
+                                   (root.hasData
+                                      ? Math.min(1.0, Math.max(0.0, root.memento[modelData.pctKey] / 100))
+                                      : 0)
+                            color: modelData.barColor
+                            radius: 2
+                            Behavior on width { NumberAnimation { duration: 300 } }
+                        }
+                    }
                 }
             }
 
@@ -176,8 +143,8 @@ DraggableDesktopWidget {
     }
 
     // ── Data polling ──
-    // stoa-memento-data is cheap (~50 ms); poll every 60s — short enough
-    // for the quote to rotate frequently, infrequent enough not to thrash.
+    // The day/week/month/year fields drift continuously, so a 60s tick
+    // gives a smooth-looking progress bar without being expensive.
     Process {
         id: dataProc
         command: ["stoa-memento-data"]
