@@ -1,0 +1,17 @@
+{
+    "id": "stoa-drive-pill",
+    "name": "Stoa Drive Pill",
+    "version": "1.0.0",
+    "minNoctaliaVersion": "4.6.6",
+    "author": "VictorGSchneider",
+    "license": "GPL-3.0",
+    "repository": "https://github.com/VictorGSchneider/StoaLinux",
+    "description": "Bar indicator for rclone cloud drive mounts. Shows mounted/total count; olive = all mounted, gold = partial, grey = none/unconfigured. Click opens the stoa-drive menu.",
+    "tags": ["Bar", "Cloud", "Drive"],
+    "entryPoints": {
+        "barWidget": "BarWidget.qml"
+    },
+    "metadata": {
+        "defaultSettings": {}
+    }
+}

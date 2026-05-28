@@ -1,0 +1,35 @@
+#!/bin/bash
+# Reads rclone remote state and emits compact JSON for the
+# drive-pill bar widget.  Called by BarWidget.qml every 60 s.
+#
+# Output:
+#   {"available": false, "total": 0, "mounted": 0}   — rclone not installed
+#   {"available": true,  "total": 0, "mounted": 0}   — no remotes configured
+#   {"available": true,  "total": N, "mounted": M}   — N remotes, M mounted
+
+DRIVE_DIR="${HOME}/Drive"
+
+if ! command -v rclone &>/dev/null; then
+    echo '{"available": false, "total": 0, "mounted": 0}'
+    exit 0
+fi
+
+remotes=$(rclone listremotes 2>/dev/null | sed 's/:$//')
+
+if [ -z "$remotes" ]; then
+    echo '{"available": true, "total": 0, "mounted": 0}'
+    exit 0
+fi
+
+total=0
+mounted=0
+
+while IFS= read -r remote; do
+    [ -z "$remote" ] && continue
+    total=$((total + 1))
+    if mount 2>/dev/null | grep -qF "${remote}: on ${DRIVE_DIR}/${remote}"; then
+        mounted=$((mounted + 1))
+    fi
+done <<< "$remotes"
+
+printf '{"available": true, "total": %d, "mounted": %d}\n' "$total" "$mounted"
