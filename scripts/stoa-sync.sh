@@ -28,13 +28,26 @@ fi
 
 cd "$STOA_DIR"
 
+# Guard: validate JSON before copying to avoid committing corrupt files.
+# jq is required by stoa-doctor; if somehow missing, skip validation.
+_cp_json() {
+    local src="$1" dst="$2"
+    if command -v jq >/dev/null 2>&1; then
+        if ! jq empty "$src" 2>/dev/null; then
+            echo "stoa-sync: SKIPPING invalid JSON: $src" >&2
+            return 0
+        fi
+    fi
+    cp "$src" "$dst"
+}
+
 git pull --autostash
 
 # ── Noctalia (curated) ──
 if [ -d "$NOCTALIA" ]; then
     for f in settings.json colors.json; do
         if [ -f "$NOCTALIA/$f" ]; then
-            cp "$NOCTALIA/$f" "$STOA_DIR/config/noctalia/$f"
+            _cp_json "$NOCTALIA/$f" "$STOA_DIR/config/noctalia/$f"
         fi
     done
 
@@ -46,7 +59,7 @@ if [ -d "$NOCTALIA" ]; then
             [ -f "$src" ] || continue
             dst="$STOA_DIR/config/noctalia/plugins/$name/settings.json"
             mkdir -p "$(dirname "$dst")"
-            cp "$src" "$dst"
+            _cp_json "$src" "$dst"
         done
     fi
 
@@ -60,7 +73,7 @@ if [ -d "$NOCTALIA" ]; then
             [ -f "$src" ] || continue
             dst="$STOA_DIR/config/noctalia/colorschemes/$name/$name.json"
             mkdir -p "$(dirname "$dst")"
-            cp "$src" "$dst"
+            _cp_json "$src" "$dst"
         done
     fi
 fi
