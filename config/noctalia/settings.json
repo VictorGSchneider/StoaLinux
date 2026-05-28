@@ -499,8 +499,8 @@
                         "useCustomColors": false,
                         "visualizationMode": 5,
                         "waveThickness": 1,
-                        "x": 51,
-                        "y": 351
+                        "x": 60,
+                        "y": 340
                     },
                     {
                         "clockColor": "none",
@@ -531,10 +531,18 @@
                     {
                         "id": "Weather",
                         "roundedCorners": true,
-                        "scale": 1.942330271365635,
+                        "scale": 1.8580298847960512,
                         "showBackground": false,
                         "x": 57,
                         "y": 108
+                    },
+                    {
+                        "defaultSettings": {
+                        },
+                        "id": "plugin:stoa-memento",
+                        "showBackground": true,
+                        "x": 150,
+                        "y": 150
                     }
                 ]
             }
