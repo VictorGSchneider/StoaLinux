@@ -464,10 +464,10 @@
                         "defaultSettings": {
                         },
                         "id": "plugin:sys-info-widget",
-                        "scale": 1,
+                        "scale": 1.1644575693431525,
                         "showBackground": true,
-                        "x": 1520,
-                        "y": 640
+                        "x": 1480,
+                        "y": 560
                     },
                     {
                         "barWidth": 0.6,
@@ -503,19 +503,6 @@
                         "y": 340
                     },
                     {
-                        "clockColor": "none",
-                        "clockStyle": "binary",
-                        "customFont": "",
-                        "format": "HH:mm\\nd MMMM yyyy",
-                        "id": "Clock",
-                        "roundedCorners": true,
-                        "scale": 2.0708064175202847,
-                        "showBackground": false,
-                        "useCustomFont": false,
-                        "x": 1520,
-                        "y": 80
-                    },
-                    {
                         "hideMode": "idle",
                         "id": "MediaPlayer",
                         "roundedCorners": true,
@@ -540,9 +527,10 @@
                         "defaultSettings": {
                         },
                         "id": "plugin:stoa-memento",
+                        "scale": 1.1583771868238983,
                         "showBackground": true,
-                        "x": 150,
-                        "y": 150
+                        "x": 1440,
+                        "y": 80
                     }
                 ]
             }
@@ -697,7 +685,7 @@
         "bluetoothRssiPollIntervalMs": 60000,
         "bluetoothRssiPollingEnabled": true,
         "disableDiscoverability": false,
-        "networkPanelView": "wifi",
+        "networkPanelView": "ethernet",
         "wifiDetailsViewMode": "grid"
     },
     "nightLight": {
