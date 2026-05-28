@@ -1,35 +1,79 @@
 #!/bin/bash
-# Reads rclone remote state and emits compact JSON for the
-# drive-pill bar widget.  Called by BarWidget.qml every 60 s.
+# Reads rclone remote state + VFS cache stats for the drive-pill bar widget.
 #
-# Output:
-#   {"available": false, "total": 0, "mounted": 0}   — rclone not installed
-#   {"available": true,  "total": 0, "mounted": 0}   — no remotes configured
-#   {"available": true,  "total": N, "mounted": M}   — N remotes, M mounted
+# Output: {"available":bool,"total":N,"mounted":M,"drives":[...]}
+#
+# Each drive entry:
+#   {"name":"gdrive","type":"drive","mounted":true,
+#    "cache_pct":45,"cache_bytes":471859200,"cache_human":"450MiB","cache_files":12}
+#
+# cache_pct is relative to the --vfs-cache-max-size limit (1 GiB) used in stoa-drive.
 
 DRIVE_DIR="${HOME}/Drive"
+CACHE_DIR="${HOME}/.cache/rclone/vfs"
+CACHE_MAX=$((1 * 1024 * 1024 * 1024))   # 1 GiB — mirrors --vfs-cache-max-size in stoa-drive
+
+_human() {
+    local b=$1
+    if   [ "$b" -ge $((1024*1024*1024)) ]; then printf '%dGiB' $(( b / 1024 / 1024 / 1024 ))
+    elif [ "$b" -ge $((1024*1024))       ]; then printf '%dMiB' $(( b / 1024 / 1024 ))
+    elif [ "$b" -ge 1024                 ]; then printf '%dKiB' $(( b / 1024 ))
+    else                                        printf '%dB'    "$b"
+    fi
+}
 
 if ! command -v rclone &>/dev/null; then
-    echo '{"available": false, "total": 0, "mounted": 0}'
+    echo '{"available":false,"total":0,"mounted":0,"drives":[]}'
     exit 0
 fi
 
 remotes=$(rclone listremotes 2>/dev/null | sed 's/:$//')
-
-if [ -z "$remotes" ]; then
-    echo '{"available": true, "total": 0, "mounted": 0}'
+[ -z "$remotes" ] && {
+    echo '{"available":true,"total":0,"mounted":0,"drives":[]}'
     exit 0
-fi
+}
 
-total=0
-mounted=0
+total=0; mounted=0; drives="["; sep=""
 
 while IFS= read -r remote; do
     [ -z "$remote" ] && continue
     total=$((total + 1))
+
+    # Mount check
+    is_mounted=false
     if mount 2>/dev/null | grep -qF "${remote}: on ${DRIVE_DIR}/${remote}"; then
         mounted=$((mounted + 1))
+        is_mounted=true
     fi
+
+    # Remote type (reads local rclone config — no network call)
+    rtype=$(rclone config show "$remote" 2>/dev/null | awk '/^type/{print $3}')
+    [ -z "$rtype" ] && rtype="unknown"
+
+    # VFS cache stats
+    cache_path="${CACHE_DIR}/${remote}"
+    cache_bytes=0; cache_files=0
+    if [ -d "$cache_path" ]; then
+        cache_bytes=$(du -sb "$cache_path" 2>/dev/null | awk '{print $1}')
+        cache_bytes=${cache_bytes:-0}
+        cache_files=$(find "$cache_path" -type f \
+            ! -name "*.partial" ! -name "*.tmp" 2>/dev/null | wc -l)
+        cache_files=${cache_files:-0}
+    fi
+
+    cache_pct=0
+    [ "$cache_bytes" -gt 0 ] && cache_pct=$(( cache_bytes * 100 / CACHE_MAX ))
+    [ "$cache_pct" -gt 100 ] && cache_pct=100
+    cache_human=$(_human "$cache_bytes")
+
+    # Minimal JSON escaping (remote names are typically safe, but be defensive)
+    sname="${remote//\"/\\\"}"; stype="${rtype//\"/\\\"}"; shuman="${cache_human//\"/\\\"}"
+
+    drives+="${sep}{\"name\":\"${sname}\",\"type\":\"${stype}\",\"mounted\":${is_mounted},\
+\"cache_pct\":${cache_pct},\"cache_bytes\":${cache_bytes},\"cache_human\":\"${shuman}\",\
+\"cache_files\":${cache_files}}"
+    sep=","
 done <<< "$remotes"
 
-printf '{"available": true, "total": %d, "mounted": %d}\n' "$total" "$mounted"
+printf '{"available":true,"total":%d,"mounted":%d,"drives":%s}\n' \
+    "$total" "$mounted" "${drives}]"
