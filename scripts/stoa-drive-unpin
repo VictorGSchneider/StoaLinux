@@ -1,0 +1,45 @@
+#!/bin/bash
+# Removes files/directories from the rclone VFS cache.
+# Next access through ~/Drive/ will re-stream from the cloud.
+#
+# Usage: stoa-drive-unpin <path-under-~/Drive>...
+
+DRIVE_DIR="${HOME}/Drive"
+CACHE_DIR="${HOME}/.cache/rclone/vfs"
+
+_notify() { dunstify -t 3000 -a "Stoa Drive" "Stoa Drive" "$1" 2>/dev/null || true; }
+
+_clear_emblem() {
+    # Set to empty stringv — Thunar interprets this as "no emblems"
+    gio set -t stringv "$1" metadata::emblems "" 2>/dev/null || true
+}
+
+[ $# -eq 0 ] && { echo "Usage: stoa-drive-unpin <path>..." >&2; exit 1; }
+
+for path in "$@"; do
+    path="$(realpath "$path" 2>/dev/null || echo "$path")"
+
+    if [[ "$path" != "$DRIVE_DIR/"* ]]; then
+        _notify "Not under ~/Drive — skipping: $(basename "$path")"; continue
+    fi
+
+    rel="${path#"$DRIVE_DIR/"}"
+    remote="${rel%%/*}"
+    relpath="${rel#"$remote/"}"
+
+    if [ -z "$remote" ] || [ "$relpath" = "$rel" ]; then
+        _notify "Cannot unpin the drive root"; continue
+    fi
+
+    name="$(basename "$path")"
+    cache_path="${CACHE_DIR}/${remote}/${relpath}"
+
+    if [ -e "$cache_path" ]; then
+        rm -rf "$cache_path" "${cache_path}.partial" 2>/dev/null
+        _clear_emblem "$path"
+        _notify "'$name' removed from cache — will stream on next access"
+    else
+        _clear_emblem "$path"
+        _notify "'$name' was not in local cache"
+    fi
+done

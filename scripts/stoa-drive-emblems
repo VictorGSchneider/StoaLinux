@@ -1,0 +1,49 @@
+#!/bin/bash
+# Syncs Thunar emblems with the VFS cache for a mounted remote.
+# Files found in ~/.cache/rclone/vfs/<remote>/ get emblem-ok (green ✓).
+# Files NOT in cache get their emblem cleared (streaming-only).
+#
+# Usage: stoa-drive-emblems <remote>
+#
+# Call this after mounting a drive to see cache status at a glance in Thunar.
+# For ongoing pin/unpin the individual stoa-drive-pin/unpin scripts keep
+# emblems in sync automatically.
+
+DRIVE_DIR="${HOME}/Drive"
+CACHE_DIR="${HOME}/.cache/rclone/vfs"
+
+remote="${1:-}"
+[ -z "$remote" ] && { echo "Usage: stoa-drive-emblems <remote>" >&2; exit 1; }
+
+mount_dir="${DRIVE_DIR}/${remote}"
+cache_dir="${CACHE_DIR}/${remote}"
+
+if [ ! -d "$mount_dir" ]; then
+    dunstify -t 4000 "Stoa Drive" "$remote is not mounted" 2>/dev/null || true
+    exit 1
+fi
+
+dunstify -t 3000 "Stoa Drive" "Syncing emblems for $remote…" 2>/dev/null || true
+
+pinned=0; cleared=0
+
+# Mark cached files with emblem-ok
+if [ -d "$cache_dir" ]; then
+    while IFS= read -r -d '' cached; do
+        relpath="${cached#"$cache_dir/"}"
+        mounted_file="${mount_dir}/${relpath}"
+        [ -f "$mounted_file" ] || continue
+        gio set -t stringv "$mounted_file" metadata::emblems "emblem-ok" 2>/dev/null && pinned=$((pinned + 1)) || true
+    done < <(find "$cache_dir" -type f ! -name "*.partial" ! -name "*.tmp" -print0 2>/dev/null)
+fi
+
+# Clear emblems on files NOT in cache (streaming-only)
+while IFS= read -r -d '' mounted; do
+    relpath="${mounted#"$mount_dir/"}"
+    if [ ! -f "${cache_dir}/${relpath}" ]; then
+        gio set -t stringv "$mounted" metadata::emblems "" 2>/dev/null && cleared=$((cleared + 1)) || true
+    fi
+done < <(find "$mount_dir" -type f -print0 2>/dev/null)
+
+dunstify -t 4000 "Stoa Drive" \
+    "$remote: $pinned offline  ·  $cleared streaming" 2>/dev/null || true

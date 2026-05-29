@@ -1,0 +1,65 @@
+#!/bin/bash
+# Downloads files/directories into the rclone VFS cache so they stay
+# available offline — no network needed on next access through ~/Drive/.
+#
+# Usage: stoa-drive-pin <path-under-~/Drive>...
+#
+# The VFS cache lives at ~/.cache/rclone/vfs/<remote>/<relpath>.
+# Rclone serves files from there transparently; populating it with
+# `rclone copy` is equivalent to what the VFS layer does internally.
+
+DRIVE_DIR="${HOME}/Drive"
+CACHE_DIR="${HOME}/.cache/rclone/vfs"
+
+_notify() { dunstify -t 5000 -a "Stoa Drive" "Stoa Drive" "$1" 2>/dev/null || true; }
+
+_set_emblem() {
+    gio set -t stringv "$1" metadata::emblems "emblem-ok" 2>/dev/null || true
+}
+
+_cache_size() {
+    du -sh "$1" 2>/dev/null | awk '{print $1}' || echo "?"
+}
+
+[ $# -eq 0 ] && { echo "Usage: stoa-drive-pin <path>..." >&2; exit 1; }
+
+if ! command -v rclone &>/dev/null; then
+    _notify "rclone not installed"; exit 1
+fi
+
+for path in "$@"; do
+    path="$(realpath "$path" 2>/dev/null || echo "$path")"
+
+    if [[ "$path" != "$DRIVE_DIR/"* ]]; then
+        _notify "Not under ~/Drive — skipping: $(basename "$path")"; continue
+    fi
+
+    rel="${path#"$DRIVE_DIR/"}"
+    remote="${rel%%/*}"
+    relpath="${rel#"$remote/"}"
+
+    if [ -z "$remote" ] || [ "$relpath" = "$rel" ]; then
+        _notify "Cannot pin the drive root"; continue
+    fi
+
+    name="$(basename "$path")"
+    _notify "Downloading '$name' for offline access…"
+
+    if [ -d "$path" ]; then
+        rclone copy "${remote}:${relpath}" \
+            "${CACHE_DIR}/${remote}/${relpath}" \
+            --transfers 4 --no-traverse 2>/dev/null
+        _set_emblem "$path"
+        size=$(_cache_size "${CACHE_DIR}/${remote}/${relpath}")
+        _notify "'$name/' available offline  ($size)"
+    else
+        parent="$(dirname "$relpath")"
+        dest="${CACHE_DIR}/${remote}/${parent}"
+        mkdir -p "$dest"
+        rclone copy "${remote}:${relpath}" "${dest}/" \
+            --no-traverse 2>/dev/null
+        _set_emblem "$path"
+        size=$(_cache_size "${dest}/$(basename "$relpath")")
+        _notify "'$name' available offline  ($size)"
+    fi
+done
