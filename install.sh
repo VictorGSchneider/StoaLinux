@@ -71,6 +71,10 @@ _link "${STOA_DIR}/config/noctalia/plugins.json" \
       "${CONFIG_DIR}/noctalia/plugins.json"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-memento" \
       "${CONFIG_DIR}/noctalia/plugins/stoa-memento"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-doctor-pill" \
+      "${CONFIG_DIR}/noctalia/plugins/stoa-doctor-pill"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive-pill" \
+      "${CONFIG_DIR}/noctalia/plugins/stoa-drive-pill"
 
 # Noctalia settings.json — opinionated Stoa seed (floating bar, Stoa
 # color scheme, EB Garamond, layout incl. screen-toolkit/clipper/
@@ -247,11 +251,16 @@ _link "${STOA_DIR}/scripts/stoa-face-setup.sh"      "${HOME}/.local/bin/stoa-fac
 _link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
 _link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
 _link "${STOA_DIR}/scripts/stoa-drive.sh"           "${HOME}/.local/bin/stoa-drive"
+_link "${STOA_DIR}/scripts/stoa-drive-status"      "${HOME}/.local/bin/stoa-drive-status"
+_link "${STOA_DIR}/scripts/stoa-drive-pin"         "${HOME}/.local/bin/stoa-drive-pin"
+_link "${STOA_DIR}/scripts/stoa-drive-unpin"       "${HOME}/.local/bin/stoa-drive-unpin"
+_link "${STOA_DIR}/scripts/stoa-drive-emblems"     "${HOME}/.local/bin/stoa-drive-emblems"
 _link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-firewall"
 _link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
 _link "${STOA_DIR}/scripts/stoa-winapps.sh"      "${HOME}/.local/bin/stoa-winapps"
 _link "${STOA_DIR}/scripts/stoa-capture.sh"       "${HOME}/.local/bin/stoa-capture"
 _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
+_link "${STOA_DIR}/scripts/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"
 _link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
 _link "${STOA_DIR}/scripts/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-setup"
 _link "${STOA_DIR}/scripts/stoa-display.sh"      "${HOME}/.local/bin/stoa-display"

@@ -9,7 +9,8 @@
     "description": "Bar indicator showing stoa-doctor health status. Green = all clear, amber = warnings, red = failures. Click opens the log in a terminal.",
     "tags": ["Bar", "System", "Health"],
     "entryPoints": {
-        "barWidget": "BarWidget.qml"
+        "barWidget": "BarWidget.qml",
+        "panel": "Panel.qml"
     },
     "metadata": {
         "defaultSettings": {}

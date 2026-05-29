@@ -187,7 +187,7 @@
                     "hideMode": "hidden",
                     "id": "ActiveWindow",
                     "maxWidth": 250,
-                    "scrollingMode": "hover",
+                    "scrollingMode": "always",
                     "showIcon": true,
                     "showText": true,
                     "textColor": "none",
@@ -354,6 +354,26 @@
                         "workspaceSplitThreshold": 12
                     },
                     "id": "plugin:keybind-cheatsheet"
+                },
+                {
+                    "capsLockIcon": "letter-case",
+                    "hideWhenOff": true,
+                    "id": "LockKeys",
+                    "numLockIcon": "numbers",
+                    "scrollLockIcon": "arrow-autofit-height",
+                    "showCapsLock": true,
+                    "showNumLock": true,
+                    "showScrollLock": true
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-doctor-pill"
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-drive-pill"
                 }
             ]
         }
@@ -650,7 +670,7 @@
     },
     "idle": {
         "customCommands": "[]",
-        "enabled": true,
+        "enabled": false,
         "fadeDuration": 10,
         "lockCommand": "",
         "lockTimeout": 660,
@@ -691,7 +711,7 @@
     "nightLight": {
         "autoSchedule": true,
         "dayTemp": "4899",
-        "enabled": false,
+        "enabled": true,
         "forced": false,
         "manualSunrise": "06:30",
         "manualSunset": "18:30",
@@ -709,7 +729,7 @@
         "enableBatteryToast": true,
         "enableKeyboardLayoutToast": true,
         "enableMarkdown": true,
-        "enableMediaToast": false,
+        "enableMediaToast": true,
         "enabled": true,
         "location": "top_right",
         "lowUrgencyDuration": 5,
