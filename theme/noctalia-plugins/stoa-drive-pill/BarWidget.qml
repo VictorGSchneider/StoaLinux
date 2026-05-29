@@ -26,7 +26,18 @@ import qs.Widgets
 Item {
     id: root
 
-    property var pluginApi: null
+    property var    pluginApi: null
+    property ShellScreen screen
+    property string widgetId: ""
+    property string section: ""
+    property int    sectionWidgetIndex: -1
+
+    property string tooltipText: !_available      ? "rclone not installed"
+        : total === 0    ? "No cloud drives configured"
+        : mounted === total
+                         ? "All drives mounted (" + total + "/" + total + ")"
+        : mounted > 0    ? mounted + " / " + total + " drives mounted"
+                         : "No drives mounted — click to manage"
 
     visible: _available
     implicitWidth:  visible ? pill.implicitWidth + Style.marginM * 2 : 0
@@ -66,16 +77,6 @@ Item {
             font.weight: Font.Medium
             Behavior on color { ColorAnimation { duration: 400 } }
         }
-    }
-
-    NToolTip {
-        target: root
-        text: !root._available      ? "rclone not installed"
-              : root.total === 0    ? "No cloud drives configured"
-              : root.mounted === root.total
-                                    ? "All drives mounted (" + root.total + "/" + root.total + ")"
-              : root.mounted > 0    ? root.mounted + " / " + root.total + " drives mounted"
-                                    : "No drives mounted — click to manage"
     }
 
     // ── Click → popup ──
