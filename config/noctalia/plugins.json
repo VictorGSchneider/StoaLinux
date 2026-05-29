@@ -70,7 +70,15 @@
         },
         "stoa-memento": {
             "enabled": true,
-            "sourceUrl": "https://github.com/VictorGSchneider/StoaLinux"
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
+        },
+        "stoa-memento.bak.1779928139": {
+            "enabled": false,
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
+        },
+        "stoa-memento.bak.1779931598": {
+            "enabled": false,
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "sys-info-widget": {
             "enabled": true,
