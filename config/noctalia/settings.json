@@ -291,6 +291,16 @@
                     "id": "plugin:plugin-manager"
                 },
                 {
+                    "capsLockIcon": "letter-case",
+                    "hideWhenOff": true,
+                    "id": "LockKeys",
+                    "numLockIcon": "numbers",
+                    "scrollLockIcon": "arrow-autofit-height",
+                    "showCapsLock": true,
+                    "showNumLock": true,
+                    "showScrollLock": true
+                },
+                {
                     "defaultSettings": {
                         "autoHeight": true,
                         "bindOverrides": {
@@ -629,7 +639,7 @@
     },
     "idle": {
         "customCommands": "[]",
-        "enabled": true,
+        "enabled": false,
         "fadeDuration": 10,
         "lockCommand": "",
         "lockTimeout": 660,
@@ -688,7 +698,7 @@
         "enableBatteryToast": true,
         "enableKeyboardLayoutToast": true,
         "enableMarkdown": true,
-        "enableMediaToast": false,
+        "enableMediaToast": true,
         "enabled": true,
         "location": "top_right",
         "lowUrgencyDuration": 5,
