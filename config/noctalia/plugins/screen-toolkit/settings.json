@@ -15,7 +15,7 @@
   "detectedRecorder": "wf-recorder",
   "recordSkipConfirmation": true,
   "recordCopyToClipboard": false,
-  "gifMaxSeconds": 30,
+  "gifMaxSeconds": 60,
   "resultHex": "",
   "resultRgb": "",
   "resultHsv": "",

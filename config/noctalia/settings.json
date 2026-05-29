@@ -101,6 +101,27 @@
                     "useDistroLogo": false
                 },
                 {
+                    "defaultSettings": {
+                        "colorHistory": [
+                        ],
+                        "detectedRecorder": "",
+                        "filenameFormat": "",
+                        "gifMaxSeconds": 30,
+                        "installedLangs": [
+                            "eng"
+                        ],
+                        "paletteColors": [
+                        ],
+                        "recordCopyToClipboard": false,
+                        "recordSkipConfirmation": false,
+                        "screenshotPath": "",
+                        "selectedOcrLang": "eng",
+                        "transAvailable": false,
+                        "videoPath": ""
+                    },
+                    "id": "plugin:screen-toolkit"
+                },
+                {
                     "characterCount": 10,
                     "colorizeIcons": false,
                     "emptyColor": "secondary",
@@ -343,6 +364,16 @@
                     "showCapsLock": true,
                     "showNumLock": true,
                     "showScrollLock": true
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-doctor-pill"
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-drive-pill"
                 }
             ]
         }
