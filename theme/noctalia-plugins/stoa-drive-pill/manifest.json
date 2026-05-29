@@ -9,7 +9,8 @@
     "description": "Bar indicator for rclone cloud drive mounts. Shows mounted/total count; olive = all mounted, gold = partial, grey = none/unconfigured. Click opens the stoa-drive menu.",
     "tags": ["Bar", "Cloud", "Drive"],
     "entryPoints": {
-        "barWidget": "BarWidget.qml"
+        "barWidget": "BarWidget.qml",
+        "panel": "Panel.qml"
     },
     "metadata": {
         "defaultSettings": {}
