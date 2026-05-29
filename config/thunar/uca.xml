@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  STOA LINUX — Thunar Custom Actions (Stoatools)             ║
+  ║  STOA LINUX — Thunar Custom Actions                         ║
   ║  "The tools of virtue are always at hand." — Seneca         ║
   ╚══════════════════════════════════════════════════════════════╝
 -->
-<?xml version="1.0" encoding="UTF-8"?>
 <actions>
+
 <action>
 	<icon>applications-utilities</icon>
 	<name>Stoatools</name>
@@ -23,6 +23,7 @@
 	<text-files/>
 	<video-files/>
 </action>
+
 <action>
 	<icon>kitty</icon>
 	<name>Open Terminal Here</name>
@@ -39,4 +40,58 @@
 	<text-files/>
 	<video-files/>
 </action>
+
+<!-- ── Cloud Drive (only meaningful under ~/Drive/) ── -->
+
+<action>
+	<icon>emblem-downloads</icon>
+	<name>Make Available Offline</name>
+	<submenu></submenu>
+	<unique-id>stoa-drive-pin-1</unique-id>
+	<command>~/.local/bin/stoa-drive-pin %F</command>
+	<description>Download to local VFS cache for offline access. Green ✓ emblem appears when done.</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+
+<action>
+	<icon>emblem-synchronizing</icon>
+	<name>Remove Offline Copy</name>
+	<submenu></submenu>
+	<unique-id>stoa-drive-unpin-1</unique-id>
+	<command>~/.local/bin/stoa-drive-unpin %F</command>
+	<description>Remove from local cache; file will stream from cloud on next access.</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+
+<action>
+	<icon>emblem-ok</icon>
+	<name>Sync Drive Emblems</name>
+	<submenu></submenu>
+	<unique-id>stoa-drive-emblems-1</unique-id>
+	<command>bash -c 'r="${1#$HOME/Drive/}"; ~/.local/bin/stoa-drive-emblems "${r%%/*}"' - %f</command>
+	<description>Refresh ✓ / streaming emblems for this drive based on current VFS cache.</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+
 </actions>
