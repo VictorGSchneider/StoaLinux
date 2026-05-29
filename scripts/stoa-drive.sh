@@ -11,6 +11,16 @@ ROFI=(rofi -dmenu -config ~/.config/rofi/config.rasi)
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 DRIVE_DIR="${HOME}/Drive"
 
+# ── VFS cache settings ──
+# Override any of these in ~/.config/stoa/stoa.conf:
+#   RCLONE_CACHE_SIZE=20G        (default: 5G; use "off" for unlimited)
+#   RCLONE_CACHE_MODE=full       (default: full — caches all reads for reliable offline use)
+#   RCLONE_CACHE_MAX_AGE=720h    (default: 720h = 30 days; "off" = never evict by age)
+[ -f "$STOA_CONF" ] && source "$STOA_CONF" 2>/dev/null
+_VFS_CACHE_SIZE="${RCLONE_CACHE_SIZE:-5G}"
+_VFS_CACHE_MODE="${RCLONE_CACHE_MODE:-full}"
+_VFS_CACHE_AGE="${RCLONE_CACHE_MAX_AGE:-720h}"
+
 # ── Helpers ──
 
 _notify() { dunstify -t 2500 "Stoa Drive" "$1" 2>/dev/null; }
@@ -70,8 +80,9 @@ _mount_remote() {
     mkdir -p "$mountpoint"
 
     rclone mount "${remote}:" "$mountpoint" \
-        --vfs-cache-mode minimal \
-        --vfs-cache-max-size 1G \
+        --vfs-cache-mode     "$_VFS_CACHE_MODE" \
+        --vfs-cache-max-size "$_VFS_CACHE_SIZE" \
+        --vfs-cache-max-age  "$_VFS_CACHE_AGE"  \
         --vfs-read-chunk-size 16M \
         --vfs-read-chunk-size-limit 256M \
         --dir-cache-time 5m \

@@ -11,7 +11,26 @@
 
 DRIVE_DIR="${HOME}/Drive"
 CACHE_DIR="${HOME}/.cache/rclone/vfs"
-CACHE_MAX=$((1 * 1024 * 1024 * 1024))   # 1 GiB — mirrors --vfs-cache-max-size in stoa-drive
+
+# Read cache size from stoa.conf so the % bar matches the actual rclone limit.
+STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
+[ -f "$STOA_CONF" ] && source "$STOA_CONF" 2>/dev/null
+
+# Parse RCLONE_CACHE_SIZE (e.g. "5G", "20G", "500M", "off").
+# Returns bytes; 0 means unlimited ("off").
+_parse_cache_bytes() {
+    local s="${1:-5G}"
+    [ "$s" = "off" ] && echo 0 && return
+    local num="${s%%[GgMmKkBb]*}"
+    local unit="${s#"$num"}"; unit="${unit,,}"
+    case "$unit" in
+        g|gi) echo $(( num * 1024 * 1024 * 1024 )) ;;
+        m|mi) echo $(( num * 1024 * 1024 )) ;;
+        k|ki) echo $(( num * 1024 )) ;;
+        *)    echo "$num" ;;
+    esac
+}
+CACHE_MAX=$(_parse_cache_bytes "${RCLONE_CACHE_SIZE:-5G}")
 
 _human() {
     local b=$1
