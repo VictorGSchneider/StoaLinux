@@ -24,7 +24,18 @@ import qs.Widgets
 Item {
     id: root
 
-    property var pluginApi: null
+    property var    pluginApi: null
+    property ShellScreen screen
+    property string widgetId: ""
+    property string section: ""
+    property int    sectionWidgetIndex: -1
+
+    property string tooltipText: issues < 0 ? "Doctor log not found — run stoa-doctor"
+        : issues > 0
+            ? issues + " issue" + (issues > 1 ? "s" : "") +
+              (warnings > 0 ? "  ·  " + warnings + " warning" + (warnings > 1 ? "s" : "") : "")
+        : warnings > 0 ? warnings + " warning" + (warnings > 1 ? "s" : "")
+        : "All systems nominal"
 
     implicitWidth:  pill.implicitWidth + Style.marginM * 2
     implicitHeight: parent ? parent.height : 32
@@ -65,19 +76,6 @@ Item {
             font.weight: Font.Medium
             Behavior on color { ColorAnimation { duration: 400 } }
         }
-    }
-
-    NToolTip {
-        target: root
-        text: root.issues < 0 ? "Doctor log not found — run stoa-doctor"
-              : root.issues > 0
-                  ? root.issues + " issue" + (root.issues > 1 ? "s" : "") +
-                    (root.warnings > 0
-                        ? "  ·  " + root.warnings + " warning" + (root.warnings > 1 ? "s" : "")
-                        : "")
-              : root.warnings > 0
-                  ? root.warnings + " warning" + (root.warnings > 1 ? "s" : "")
-              : "All systems nominal"
     }
 
     // ── Click → popup menu ──
