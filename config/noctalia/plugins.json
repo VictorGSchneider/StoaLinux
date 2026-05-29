@@ -73,11 +73,11 @@
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "stoa-memento.bak.1779928139": {
-            "enabled": false,
+            "enabled": true,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "stoa-memento.bak.1779931598": {
-            "enabled": false,
+            "enabled": true,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "sys-info-widget": {
