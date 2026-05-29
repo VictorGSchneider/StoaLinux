@@ -291,16 +291,6 @@
                     "id": "plugin:plugin-manager"
                 },
                 {
-                    "capsLockIcon": "letter-case",
-                    "hideWhenOff": true,
-                    "id": "LockKeys",
-                    "numLockIcon": "numbers",
-                    "scrollLockIcon": "arrow-autofit-height",
-                    "showCapsLock": true,
-                    "showNumLock": true,
-                    "showScrollLock": true
-                },
-                {
                     "defaultSettings": {
                         "autoHeight": true,
                         "bindOverrides": {
@@ -343,6 +333,16 @@
                         "workspaceSplitThreshold": 12
                     },
                     "id": "plugin:keybind-cheatsheet"
+                },
+                {
+                    "capsLockIcon": "letter-case",
+                    "hideWhenOff": true,
+                    "id": "LockKeys",
+                    "numLockIcon": "numbers",
+                    "scrollLockIcon": "arrow-autofit-height",
+                    "showCapsLock": true,
+                    "showNumLock": true,
+                    "showScrollLock": true
                 }
             ]
         }
