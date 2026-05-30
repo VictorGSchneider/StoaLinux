@@ -364,16 +364,6 @@
                     "showCapsLock": true,
                     "showNumLock": true,
                     "showScrollLock": true
-                },
-                {
-                    "defaultSettings": {
-                    },
-                    "id": "plugin:stoa-doctor-pill"
-                },
-                {
-                    "defaultSettings": {
-                    },
-                    "id": "plugin:stoa-drive-pill"
                 }
             ]
         }
@@ -705,7 +695,7 @@
         "bluetoothRssiPollIntervalMs": 60000,
         "bluetoothRssiPollingEnabled": true,
         "disableDiscoverability": false,
-        "networkPanelView": "ethernet",
+        "networkPanelView": "wifi",
         "wifiDetailsViewMode": "grid"
     },
     "nightLight": {
