@@ -28,6 +28,11 @@ _link() {
     local src="$1"
     local dst="$2"
 
+    # Already a correct symlink — nothing to do
+    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+        return 0
+    fi
+
     if [ -e "$dst" ] || [ -L "$dst" ]; then
         local backup="${dst}.bak.$(date +%s)"
         echo -e "  ${S}[~] Backup: ${dst} → ${backup}${R}"

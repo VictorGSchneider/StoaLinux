@@ -80,8 +80,8 @@ Item {
         // Actions
         Repeater {
             model: [
-                { label: "Run Doctor", icon: "refresh",   action: "run" },
-                { label: "Open Log",   icon: "file-text", action: "log" },
+                { label: "Run Doctor", action: "run" },
+                { label: "Open Log",   action: "log" },
             ]
 
             delegate: Item {
@@ -103,12 +103,6 @@ Item {
                         leftMargin: Style.marginS; rightMargin: Style.marginS
                     }
                     spacing: Style.marginS
-
-                    NIcon {
-                        icon: modelData.icon
-                        size: 16
-                        color: Color.mOnSurface
-                    }
 
                     NText {
                         Layout.fillWidth: true
