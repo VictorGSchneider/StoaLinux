@@ -8,7 +8,6 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Widgets
-import qs.Services.UI
 
 Item {
     id: root
@@ -76,7 +75,7 @@ Item {
             if (mouse.button === Qt.LeftButton) {
                 if (pluginApi) pluginApi.togglePanel(root.screen, root)
             } else if (mouse.button === Qt.RightButton) {
-                PanelService.showContextMenu(contextMenu, root, screen)
+                contextMenu.openAtItem(root, screen)
             }
         }
     }
@@ -88,7 +87,7 @@ Item {
             { "label": "Run Doctor",  "action": "run",  "icon": "refresh" },
             { "label": "Open Log",    "action": "log",  "icon": "file-text" },
         ]
-        onAction: function(action) {
+        onTriggered: function(action, item) {
             if      (action === "run") runDoctorProc.running = true
             else if (action === "log") openLogProc.running   = true
         }

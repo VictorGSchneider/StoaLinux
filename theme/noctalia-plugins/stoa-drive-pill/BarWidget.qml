@@ -8,7 +8,6 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Widgets
-import qs.Services.UI
 
 Item {
     id: root
@@ -72,7 +71,7 @@ Item {
             if (mouse.button === Qt.LeftButton) {
                 if (pluginApi) pluginApi.togglePanel(root.screen, root)
             } else if (mouse.button === Qt.RightButton) {
-                PanelService.showContextMenu(contextMenu, root, screen)
+                contextMenu.openAtItem(root, screen)
             }
         }
     }
@@ -85,7 +84,7 @@ Item {
             { "label": "Unmount All", "action": "umountall", "icon": "cloud-off"    },
             { "label": "Open ~/Drive","action": "open",      "icon": "folder"       },
         ]
-        onAction: function(action) {
+        onTriggered: function(action, item) {
             if      (action === "mountall")  mountAllProc.running = true
             else if (action === "umountall") umountAllProc.running = true
             else if (action === "open")      openDirProc.running  = true
