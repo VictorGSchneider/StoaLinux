@@ -364,6 +364,10 @@
                     "showCapsLock": true,
                     "showNumLock": true,
                     "showScrollLock": true
+                },
+                {
+                    "iconColor": "error",
+                    "id": "SessionMenu"
                 }
             ]
         }
