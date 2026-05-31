@@ -368,6 +368,16 @@
                 {
                     "iconColor": "error",
                     "id": "SessionMenu"
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-doctor-pill"
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-drive-pill"
                 }
             ]
         }
