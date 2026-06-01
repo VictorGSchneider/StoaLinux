@@ -8,6 +8,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Widgets
+import qs.Services.UI
 
 Item {
     id: root
@@ -26,7 +27,7 @@ Item {
                          : "No drives mounted — click to manage"
 
     visible: _available
-    implicitWidth:  visible ? pill.implicitWidth + Style.marginM * 2 : 0
+    implicitWidth:  visible ? capsule.implicitWidth + Style.marginM * 2 : 0
     implicitHeight: parent ? parent.height : 32
 
     // ── Polled state ──
@@ -41,14 +42,25 @@ Item {
         return Color.mOnSurfaceVariant
     }
 
+    // ── Capsule background ──
+    Rectangle {
+        anchors.centerIn: parent
+        width:  capsule.implicitWidth + Style.marginS * 2
+        height: 22
+        radius: 11
+        color:  Color.mSurfaceVariant
+        opacity: 0.55
+        Behavior on color { ColorAnimation { duration: 400 } }
+    }
+
     // ── Pill ──
     RowLayout {
-        id: pill
+        id: capsule
         anchors.centerIn: parent
         spacing: Style.marginXS
 
         Rectangle {
-            width: 10; height: 10; radius: 5
+            width: 8; height: 8; radius: 4
             color: root.pillColor
             Behavior on color { ColorAnimation { duration: 400 } }
         }
@@ -71,7 +83,7 @@ Item {
             if (mouse.button === Qt.LeftButton) {
                 if (pluginApi) pluginApi.togglePanel(root.screen, root)
             } else if (mouse.button === Qt.RightButton) {
-                contextMenu.openAtItem(root, screen)
+                PanelService.showContextMenu(contextMenu, root, screen)
             }
         }
     }
