@@ -1,0 +1,41 @@
+/* Stoa Linux — polkit rules for wheel group
+ *
+ * Members of the wheel group may perform the actions below without
+ * re-authentication. This avoids a second password prompt right after
+ * unlocking the screen with hyprlock.
+ *
+ * Scope is intentionally limited to session / hardware / network ops;
+ * package installation still requires auth.
+ */
+polkit.addRule(function(action, subject) {
+    if (!subject.isInGroup("wheel")) return;
+
+    var allow = [
+        // Bluetooth
+        "org.bluez.",
+        // NetworkManager — connect / change settings
+        "org.freedesktop.NetworkManager.",
+        // Login1 — power, suspend, reboot (own session only)
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.reboot",
+        "org.freedesktop.login1.suspend",
+        "org.freedesktop.login1.hibernate",
+        "org.freedesktop.login1.lock-sessions",
+        // udisks2 — mount/unmount removable media
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-unmount-others",
+        "org.freedesktop.udisks2.encrypted-unlock",
+        "org.freedesktop.udisks2.eject-media",
+        // Colour profiles / display
+        "org.freedesktop.color-manager.",
+        // Timezone / hostname (used by some system settings UIs)
+        "org.freedesktop.timedate1.",
+        "org.freedesktop.hostname1.",
+    ];
+
+    for (var i = 0; i < allow.length; i++) {
+        if (action.id.indexOf(allow[i]) === 0) {
+            return polkit.Result.YES;
+        }
+    }
+});
