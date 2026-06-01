@@ -13,9 +13,9 @@
         },
         {
           "keys": "Super + SPACE",
-          "desc": "exec rofi -show drun -config ~/.config/rofi/config.rasi",
+          "desc": "exec qs -c noctalia-shell ipc call launcher toggle",
           "_verb": "exec",
-          "_param": "rofi -show drun -config ~/.config/rofi/config.rasi",
+          "_param": "qs -c noctalia-shell ipc call launcher toggle",
           "_mods": "Super",
           "_mainKey": "SPACE"
         },

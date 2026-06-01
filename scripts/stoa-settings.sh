@@ -2560,7 +2560,7 @@ window_next|  Next window|hyprctl dispatch cyclenext|i3-msg focus right
 window_prev|  Prev window|hyprctl dispatch cyclenext prev|i3-msg focus left
 window_minimize|  Minimize|hyprctl dispatch movetospecialworkspace minimize|i3-msg move scratchpad
 overview|  Overview / App switcher|rofi -show window -config ~/.config/rofi/config.rasi|rofi -show window -config ~/.config/rofi/config.rasi
-launcher|  App launcher|rofi -show drun -config ~/.config/rofi/config.rasi|rofi -show drun -config ~/.config/rofi/config.rasi
+launcher|  App launcher|qs -c noctalia-shell ipc call launcher toggle|rofi -show drun -config ~/.config/rofi/config.rasi
 volume_up|  Volume up|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0
 volume_down|  Volume down|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
 volume_mute|  Toggle mute|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle

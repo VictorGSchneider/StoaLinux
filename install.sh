@@ -307,7 +307,7 @@ if [ -d "$DFM_SRC" ] && [ -f "${DFM_SRC}/setup.py" ]; then
         echo -e "  ${S}[!] python3 not found — skipping dfm install${R}"
     fi
 
-    # Desktop entry so rofi drun / app grids pick it up.
+    # Desktop entry so the Noctalia launcher / app grids pick it up.
     if [ -f "${DFM_SRC}/data/dfm.desktop" ]; then
         _link "${DFM_SRC}/data/dfm.desktop" \
               "${HOME}/.local/share/applications/dfm.desktop"

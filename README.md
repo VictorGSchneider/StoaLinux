@@ -104,7 +104,7 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
   <tr><td><code>Super+Return</code></td><td>Terminal (Kitty)</td><td><code>Super+Shift+V</code></td><td>Clipboard pin</td></tr>
   <tr><td><code>Super+B</code></td><td>Browser (Brave)</td><td><code>Super+Shift+T</code></td><td>OCR (screen text)</td></tr>
   <tr><td><code>Super+C</code></td><td>Calculator (Qalculate)</td><td><code>Super+Shift+P</code></td><td>Advanced paste</td></tr>
-  <tr><td><code>Super+D</code></td><td>Launcher (Rofi)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
+  <tr><td><code>Super+Space</code></td><td>Launcher (Noctalia)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
   <tr><td><code>Super+E</code></td><td>Files (lf)</td><td><code>Super+Escape</code></td><td>Lock screen</td></tr>
   <tr><td><code>Super+Shift+E</code></td><td>Files (Thunar)</td><td><code>Super+Q</code></td><td>Close</td></tr>
   <tr><td><code>Super+N</code></td><td>Monitor (btop)</td><td><code>Super+F</code></td><td>Fullscreen</td></tr>
@@ -270,7 +270,7 @@ bootstrap command.
 
 ### [DFM — Dotfile Manager](https://github.com/VictorGSchneider/DFM)
 
-A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G`, from rofi drun, or `dfm`.
+A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G`, from the Noctalia launcher, or `dfm`.
 
 - **Smart widgets** — auto-generated toggles, sliders, color pickers, and path selectors based on config file content
 - **Versioned backups** — automatic snapshots before every edit, with rollback support
@@ -284,7 +284,7 @@ package — `pipx install --editable` when available, a user venv otherwise —
 so a `git pull` on StoaLinux propagates live to the running `dfm` binary,
 matching the symlink semantics used for every other stoa-\* script. The
 XDG desktop entry (`data/dfm.desktop`) is symlinked into
-`~/.local/share/applications/` so rofi drun and app grids pick it up.
+`~/.local/share/applications/` so the Noctalia launcher and other app grids pick it up.
 `stoa-doctor` flags a missing `dfm` binary on login.
 
 ### Text Prediction
