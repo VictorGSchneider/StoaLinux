@@ -122,7 +122,7 @@ end
  
 -- Core binds
 hl.bind(mod .. " + Return", function() hl.dispatch(hl.dsp.exec("kitty")) end)
-hl.bind(mod .. " + D", function() hl.dispatch(hl.dsp.exec("rofi -show drun -config ~/.config/rofi/config.rasi")) end)
+hl.bind(mod .. " + D", function() hl.dispatch(hl.dsp.exec("qs -c noctalia-shell ipc call launcher toggle")) end)
 hl.bind(mod .. " + Q", function() hl.dispatch(hl.dsp.killactive()) end)
 hl.bind(mod .. " + F", function() hl.dispatch(hl.dsp.fullscreen(0)) end)
 hl.bind(mod .. " + SHIFT + Space", function() hl.dispatch(hl.dsp.togglefloating()) end)
