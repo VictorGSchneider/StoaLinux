@@ -1,7 +1,8 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — OSD (On-Screen Display)                       ║
-# ║  Volume, brightness, CapsLock and NumLock via dunstify.      ║
+# ║  Volume, brightness, CapsLock and NumLock via notify-send.   ║
+# ║  Toasts are rendered by Noctalia (org.freedesktop.Notifs).   ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Usage:
@@ -31,12 +32,12 @@ osd_volume() {
     vol=$(echo "$vol" | awk '{printf "%.0f", $2 * 100}')
 
     if [ "$muted" -eq 1 ]; then
-        dunstify -r "$VOLUME_ID" -u low -t 1500 " Volume" "Muted" -h int:value:0
+        notify-send -r "$VOLUME_ID" -u low -t 1500 " Volume" "Muted" -h int:value:0
     else
         local icon=""
         [ "$vol" -le 30 ] && icon=""
         [ "$vol" -eq 0 ] && icon=""
-        dunstify -r "$VOLUME_ID" -u low -t 1500 "$icon Volume" "${vol}%" -h int:value:"$vol"
+        notify-send -r "$VOLUME_ID" -u low -t 1500 "$icon Volume" "${vol}%" -h int:value:"$vol"
     fi
 }
 
@@ -57,7 +58,7 @@ osd_brightness() {
         local icon=""
         [ "$pct" -le 30 ] && icon=""
         [ "$pct" -le 10 ] && icon=""
-        dunstify -r "$BRIGHTNESS_ID" -u low -t 1500 "$icon Brightness" "${pct}%" -h int:value:"$pct"
+        notify-send -r "$BRIGHTNESS_ID" -u low -t 1500 "$icon Brightness" "${pct}%" -h int:value:"$pct"
     fi
 }
 
@@ -108,9 +109,9 @@ osd_capslock() {
     state=$(_read_lock_state capslock)
 
     if [ "$state" -eq 1 ]; then
-        dunstify -r "$CAPSLOCK_ID" -u normal -t 2000 " CapsLock" "Enabled" -h int:value:100
+        notify-send -r "$CAPSLOCK_ID" -u normal -t 2000 " CapsLock" "Enabled" -h int:value:100
     else
-        dunstify -r "$CAPSLOCK_ID" -u low -t 1500 " CapsLock" "Disabled" -h int:value:0
+        notify-send -r "$CAPSLOCK_ID" -u low -t 1500 " CapsLock" "Disabled" -h int:value:0
     fi
 }
 
@@ -119,9 +120,9 @@ osd_numlock() {
     state=$(_read_lock_state numlock)
 
     if [ "$state" -eq 1 ]; then
-        dunstify -r "$NUMLOCK_ID" -u normal -t 2000 " NumLock" "Enabled" -h int:value:100
+        notify-send -r "$NUMLOCK_ID" -u normal -t 2000 " NumLock" "Enabled" -h int:value:100
     else
-        dunstify -r "$NUMLOCK_ID" -u low -t 1500 " NumLock" "Disabled" -h int:value:0
+        notify-send -r "$NUMLOCK_ID" -u low -t 1500 " NumLock" "Disabled" -h int:value:0
     fi
 }
 

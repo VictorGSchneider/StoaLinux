@@ -23,8 +23,8 @@ SESSION="${XDG_SESSION_TYPE:-x11}"
 mkdir -p "$SCREENSHOT_DIR" "$RECORD_DIR"
 
 _notify() {
-    if command -v dunstify &>/dev/null; then
-        dunstify -r 9998 -u "${2:-normal}" "Capture" "$1"
+    if command -v notify-send &>/dev/null; then
+        notify-send -r 9998 -u "${2:-normal}" "Capture" "$1"
     fi
 }
 

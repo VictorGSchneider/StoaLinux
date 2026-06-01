@@ -6,7 +6,7 @@
 #
 # Runs at startup to verify that all binaries and services
 # required by Stoa scripts are present and functional.
-# Reports issues via dunst notifications.
+# Reports issues via desktop notifications (notify-send → Noctalia).
 
 set -o pipefail
 
@@ -53,7 +53,7 @@ _check_optional() {
 # ══════════════════════════════════════════
 
 _check_bin rofi         "Settings panel (rofi)"
-_check_bin dunstify     "Notifications (dunst)"
+_check_bin notify-send  "Notifications (libnotify)"
 _check_bin jq           "JSON parser (jq)"
 _check_bin eww          "Widgets (eww)"
 _check_bin waybar       "Status bar (waybar)"
@@ -159,11 +159,15 @@ else
     _warn "PipeWire is not running — audio may not work"
 fi
 
-# Dunst
-if pgrep -x dunst &>/dev/null; then
-    _ok "Dunst is running"
+# Notification daemon — Noctalia owns org.freedesktop.Notifications on
+# the Hyprland/Wayland path. Match either binary name to cover the
+# upstream Quickshell entry point and the noctalia-shell wrapper.
+if pgrep -fx 'noctalia-shell' &>/dev/null \
+    || pgrep -f 'qs -c noctalia' &>/dev/null \
+    || pgrep -fx 'noctalia' &>/dev/null; then
+    _ok "Noctalia Shell is running (notifications)"
 else
-    _warn "Dunst is not running — notifications won't show"
+    _warn "Noctalia Shell is not running — notifications won't show"
 fi
 
 # ══════════════════════════════════════════
@@ -201,14 +205,14 @@ if [ ${#ISSUES[@]} -gt 0 ]; then
     done
     [ ${#ISSUES[@]} -gt 5 ] && msg+="… and $((${#ISSUES[@]} - 5)) more (see doctor.log)"
 
-    if command -v dunstify &>/dev/null; then
-        dunstify -r 9990 -u critical -t 10000 "Stoa Doctor" "$msg"
+    if command -v notify-send &>/dev/null; then
+        notify-send -r 9990 -u critical -t 10000 "Stoa Doctor" "$msg"
     else
         echo -e "STOA DOCTOR:\n$msg" >&2
     fi
 elif [ ${#WARNINGS[@]} -gt 0 ]; then
-    if command -v dunstify &>/dev/null; then
-        dunstify -r 9990 -u low -t 5000 "Stoa Doctor" "${#WARNINGS[@]} warnings — see ~/.config/stoa/doctor.log"
+    if command -v notify-send &>/dev/null; then
+        notify-send -r 9990 -u low -t 5000 "Stoa Doctor" "${#WARNINGS[@]} warnings — see ~/.config/stoa/doctor.log"
     fi
 fi
 

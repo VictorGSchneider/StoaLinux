@@ -219,7 +219,7 @@ Change the entire color scheme from `Super+I → Theme → Color Palette`:
 - **View Current Palette** — see the active colors at a glance
 - **Reset to Stoic** — restore the default marble/bronze palette
 
-Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
+Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Rofi, Waybar, Kitty, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
 
 ### Stoa Greeter
 
@@ -244,7 +244,7 @@ What it wires up:
 
 - **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
 - **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
-- **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, and notifies via the active desktop notification daemon (Noctalia by default, with `dunstify` as the CLI client). Full log at `~/.config/stoa/doctor.log`.
+- **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, and notifies via Noctalia Shell (which owns `org.freedesktop.Notifications` — scripts call `notify-send`). Full log at `~/.config/stoa/doctor.log`.
 
 ### Vendored upstreams
 

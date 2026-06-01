@@ -7,7 +7,7 @@
 DRIVE_DIR="${HOME}/Drive"
 CACHE_DIR="${HOME}/.cache/rclone/vfs"
 
-_notify() { dunstify -t 3000 -a "Stoa Drive" "Stoa Drive" "$1" 2>/dev/null || true; }
+_notify() { notify-send -t 3000 -a "Stoa Drive" "Stoa Drive" "$1" 2>/dev/null || true; }
 
 _clear_emblem() {
     # Set to empty stringv — Thunar interprets this as "no emblems"

@@ -14,7 +14,7 @@ WALLDIR="${HOME}/.config/stoa/wallpapers"
 
 # ── Helpers ──
 
-_notify() { dunstify -t 2500 "Stoa Settings" "$1" 2>/dev/null; }
+_notify() { notify-send -t 2500 "Stoa Settings" "$1" 2>/dev/null; }
 
 # Break symlink before modifying: copies target content into a real file
 # so sed -i doesn't modify the repo source through the symlink
@@ -1114,7 +1114,6 @@ _colors_apply() {
         "${HOME}/.config/rofi/config.rasi"
         "${HOME}/.config/waybar/style.css"
         "${HOME}/.config/kitty/kitty.conf"
-        "${HOME}/.config/dunst/dunstrc"
         "${HOME}/.config/eww/eww.scss"
         "${HOME}/.config/gtk-3.0/gtk.css"
         "${HOME}/.config/gtk-4.0/gtk.css"
@@ -1182,7 +1181,6 @@ _colors_apply() {
         hyprctl reload &>/dev/null
     fi
     pkill -USR1 kitty 2>/dev/null
-    pkill dunst 2>/dev/null; dunst -config ~/.config/dunst/dunstrc &>/dev/null &
     disown 2>/dev/null
 }
 
@@ -6247,7 +6245,7 @@ _health_services() {
     lines+=("")
     lines+=("─── Stoa Processes ───")
 
-    local stoa_procs=("waybar" "dunst" "swaybg" "eww" "gammastep" "hyprpolkitagent")
+    local stoa_procs=("noctalia-shell" "waybar" "swaybg" "eww" "gammastep" "hyprpolkitagent")
     for proc in "${stoa_procs[@]}"; do
         if pgrep -x "$proc" &>/dev/null; then
             lines+=("  ● running    $proc")
@@ -6455,7 +6453,7 @@ _health_config_check() {
         "${HOME}/.config/waybar/config:Waybar config"
         "${HOME}/.config/waybar/style.css:Waybar style"
         "${HOME}/.config/rofi/config.rasi:Rofi config"
-        "${HOME}/.config/dunst/dunstrc:Dunst config"
+        "${HOME}/.config/noctalia/settings.json:Noctalia settings"
         "${HOME}/.config/kitty/kitty.conf:Kitty config"
         "${HOME}/.config/eww/eww.yuck:EWW widgets"
         "${HOME}/.config/eww/eww.scss:EWW styles"
