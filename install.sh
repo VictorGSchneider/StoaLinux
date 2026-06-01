@@ -328,6 +328,16 @@ else
     echo -e "  ${S}[!] Could not create ${HOOK_DIR} (need sudo)${R}"
 fi
 
+# ── Polkit rules ──
+POLKIT_RULES_DIR="/etc/polkit-1/rules.d"
+if [ -d "$POLKIT_RULES_DIR" ] || sudo mkdir -p "$POLKIT_RULES_DIR" 2>/dev/null; then
+    _sudo_link "${STOA_DIR}/config/polkit/50-stoa-wheel.rules" \
+               "${POLKIT_RULES_DIR}/50-stoa-wheel.rules"
+    echo -e "  ${O}[+] Polkit wheel rules installed${R}"
+else
+    echo -e "  ${S}[!] Could not install polkit rules (need sudo)${R}"
+fi
+
 # ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"
 mkdir -p "$MIME_DIR"
