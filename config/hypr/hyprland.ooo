@@ -11,7 +11,6 @@ exec_once = {
   "waybar",
   "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",
   "swaybg -i ~/.config/stoa/wallpapers/marble.png -m fill",
-  "dunst -config ~/.config/dunst/dunstrc",
   "wl-paste --watch cliphist store",
   "stoa-quotes-sync tick",
   "stoa-drive mount-all",

@@ -52,8 +52,9 @@ WAYLAND_PKGS="hyprland waybar swaybg xdg-desktop-portal-hyprland xdg-desktop-por
 # i3 (Xorg — fallback)
 XORG_PKGS="i3-wm i3status xorg-server xorg-xinit xorg-xrandr picom xclip xdotool polkit-gnome"
 
-# Launcher, notifications
-UI_PKGS="rofi dunst libnotify"
+# Launcher, notifications (libnotify ships notify-send; noctalia is the
+# notification daemon on the Hyprland/Wayland path).
+UI_PKGS="rofi libnotify"
 
 # Browser + Notes (AUR)
 BROWSER_PKGS="brave-bin"
@@ -107,9 +108,10 @@ CLIPBOARD_PKGS="wl-clipboard cliphist"
 WIDGET_PKGS="eww"
 
 # Shell engine — Noctalia (Quickshell-based, AUR). Replaces waybar+eww+
-# dunst+rofi+hyprlock+stoa-osd+cliphist as the visible shell. Pulls in
-# the noctalia-qs fork of Quickshell as a dependency, so do NOT also
-# install upstream quickshell-git on the same system.
+# dunst+rofi+hyprlock+stoa-osd+cliphist as the visible shell, and owns
+# org.freedesktop.Notifications (so notify-send goes straight to it).
+# Pulls in the noctalia-qs fork of Quickshell as a dependency, so do
+# NOT also install upstream quickshell-git on the same system.
 SHELL_PKGS_QS="noctalia-shell"
 
 # Fonts and theme

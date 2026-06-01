@@ -21,7 +21,7 @@ SUGGEST_FILE="${_STOA_RUNTIME}/stoa-predict.json"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 PREDICT_PY="${SCRIPT_DIR}/stoa-predict.py"
 
-_notify() { dunstify -t 2500 "Text Predict" "$1" 2>/dev/null; }
+_notify() { notify-send -t 2500 "Text Predict" "$1" 2>/dev/null; }
 
 _is_running() {
     [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null

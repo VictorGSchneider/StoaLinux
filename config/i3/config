@@ -177,7 +177,9 @@ bindsym --release Num_Lock exec --no-startup-id ~/.local/bin/stoa-osd numlock
 # ── Autostart ──
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b
 exec_always --no-startup-id feh --bg-fill ~/.config/stoa/wallpapers/marble.png
-exec --no-startup-id dunst -config ~/.config/dunst/dunstrc
+# Noctalia owns notifications on the Hyprland/Wayland path; the i3 (Xorg)
+# fallback ships without a notification daemon. Install one yourself
+# (mako, deadd-notification-center, …) if you want toasts under i3.
 exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
 exec --no-startup-id xclip -selection clipboard -t SAVE_TARGETS /dev/null
 exec --no-startup-id ~/.local/bin/stoa-doctor

@@ -18,7 +18,7 @@ set -euo pipefail
 STATE_FILE="${XDG_RUNTIME_DIR:-/tmp}/stoa-display-mode"
 
 _notify() {
-    dunstify -t 2500 -i video-display "Display" "$1" 2>/dev/null || true
+    notify-send -t 2500 -i video-display "Display" "$1" 2>/dev/null || true
 }
 
 # --- Detect monitors ---------------------------------------------------

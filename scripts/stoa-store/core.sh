@@ -4,7 +4,7 @@
 ROFI=(rofi -dmenu -i -config "${HOME}/.config/rofi/config.rasi")
 APPIMAGE_DIR="${HOME}/Applications"
 
-_notify()    { dunstify -t 2500 "Stoa Store" "$1" 2>/dev/null; }
+_notify()    { notify-send -t 2500 "Stoa Store" "$1" 2>/dev/null; }
 _rofi()      { "${ROFI[@]}" -p "$1"; }
 _rofi_list() { local p="$1"; shift; printf '%s\n' "$@" | "${ROFI[@]}" -p "$p"; }
 _rofi_input(){ echo "" | "${ROFI[@]}" -p "$1"; }

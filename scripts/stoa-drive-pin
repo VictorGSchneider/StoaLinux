@@ -11,7 +11,7 @@
 DRIVE_DIR="${HOME}/Drive"
 CACHE_DIR="${HOME}/.cache/rclone/vfs"
 
-_notify() { dunstify -t 5000 -a "Stoa Drive" "Stoa Drive" "$1" 2>/dev/null || true; }
+_notify() { notify-send -t 5000 -a "Stoa Drive" "Stoa Drive" "$1" 2>/dev/null || true; }
 
 _set_emblem() {
     gio set -t stringv "$1" metadata::emblems "emblem-ok" 2>/dev/null || true
