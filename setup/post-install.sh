@@ -224,6 +224,7 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur glslviewer             "glslViewer (GPU shaders)" glslViewer
     _install_aur eww                    "eww"                   eww
     _install_aur noctalia-shell         "Noctalia Shell"        noctalia-shell
+    _install_aur hyprswitch             "Hyprswitch (Alt+Tab)"  hyprswitch
     _install_aur enpass-bin             "Enpass"                enpass
     _install_aur yacreader              "YACReader"             YACReader
     _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
