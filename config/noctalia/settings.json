@@ -91,7 +91,7 @@
                     "colorizeSystemText": "none",
                     "customIconPath": "",
                     "enableColorization": true,
-                    "icon": "rocket",
+                    "icon": "columns",
                     "iconColor": "none",
                     "id": "Launcher",
                     "useDistroLogo": false
@@ -574,7 +574,7 @@
         "indicatorColor": "primary",
         "indicatorOpacity": 0.25,
         "indicatorThickness": 6,
-        "launcherIcon": "",
+        "launcherIcon": "columns",
         "launcherIconColor": "primary",
         "launcherPosition": "start",
         "launcherUseDistroLogo": false,
