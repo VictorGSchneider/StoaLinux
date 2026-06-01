@@ -87,10 +87,6 @@
         "widgets": {
             "center": [
                 {
-                    "id": "Spacer",
-                    "width": 160
-                },
-                {
                     "colorizeSystemIcon": "primary",
                     "colorizeSystemText": "none",
                     "customIconPath": "",
@@ -144,6 +140,11 @@
                 }
             ],
             "left": [
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-doctor-pill"
+                },
                 {
                     "compactMode": true,
                     "diskPath": "/",
@@ -244,6 +245,11 @@
                     "id": "Clock",
                     "tooltipFormat": "HH:mm:ss ddd, MMM dd",
                     "useCustomFont": false
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-drive-pill"
                 },
                 {
                     "defaultSettings": {
@@ -368,16 +374,6 @@
                 {
                     "iconColor": "error",
                     "id": "SessionMenu"
-                },
-                {
-                    "defaultSettings": {
-                    },
-                    "id": "plugin:stoa-doctor-pill"
-                },
-                {
-                    "defaultSettings": {
-                    },
-                    "id": "plugin:stoa-drive-pill"
                 }
             ]
         }
