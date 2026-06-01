@@ -127,8 +127,19 @@ _check_optional bluetoothctl "Bluetooth (bluetoothctl)"
 _check_bin thunar       "File manager (Thunar)"
 
 # ── Terminal ──
-_check_optional kitty   "Terminal (kitty)"
-_check_optional alacritty "Terminal (alacritty)"
+_terminal_found=""
+for _t in kitty alacritty foot wezterm ghostty xterm konsole gnome-terminal xfce4-terminal; do
+    if command -v "$_t" &>/dev/null; then
+        _terminal_found="$_t"
+        break
+    fi
+done
+if [ -n "$_terminal_found" ]; then
+    _ok "Terminal ($_terminal_found)"
+else
+    _warn "Terminal — no terminal emulator found"
+fi
+unset _t _terminal_found
 
 # ── Utilities ──
 _check_bin curl         "HTTP client (curl)"
