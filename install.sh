@@ -51,6 +51,11 @@ _sudo_link() {
     local src="$1"
     local dst="$2"
 
+    # Already a correct symlink — nothing to do
+    if sudo test -L "$dst" && [ "$(sudo readlink "$dst")" = "$src" ]; then
+        return 0
+    fi
+
     if sudo test -e "$dst" || sudo test -L "$dst"; then
         local backup="${dst}.bak.$(date +%s)"
         echo -e "  ${S}[~] Backup: ${dst} → ${backup}${R}"
@@ -192,12 +197,11 @@ elif [ -d "${HOME}/.thunderbird" ]; then
 fi
 
 # ── Pacman hook (auto-apply theme after installs) ──
-if [ -d /etc/pacman.d/hooks ] || sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null; then
-    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook"    /etc/pacman.d/hooks/stoa-theme.hook
-    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" /usr/local/bin/stoa-theme-enforce
-    echo -e "  ${O}[+] Pacman theme hook installed${R}"
-else
-    echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
+# stoa-theme.hook and stoa-theme-enforce are linked in the Pacman hooks
+# section below together with the other hooks that require sudo.
+if ! sudo test -d /etc/pacman.d/hooks; then
+    sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null || \
+        echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
 fi
 
 # VS Code — install Stoa theme as extension (via symlinks)
