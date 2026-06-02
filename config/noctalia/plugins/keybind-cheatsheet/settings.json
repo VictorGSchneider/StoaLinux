@@ -380,6 +380,22 @@
           "_mainKey": "P"
         },
         {
+          "keys": "CAPS_LOCK",
+          "desc": "exec ~/.local/bin/stoa-osd capslock",
+          "_verb": "exec",
+          "_param": "~/.local/bin/stoa-osd capslock",
+          "_mods": "",
+          "_mainKey": "CAPS_LOCK"
+        },
+        {
+          "keys": "NUM_LOCK",
+          "desc": "exec ~/.local/bin/stoa-osd numlock",
+          "_verb": "exec",
+          "_param": "~/.local/bin/stoa-osd numlock",
+          "_mods": "",
+          "_mainKey": "NUM_LOCK"
+        },
+        {
           "keys": "PrtSc",
           "desc": "exec ~/.local/bin/stoa-capture",
           "_verb": "exec",
