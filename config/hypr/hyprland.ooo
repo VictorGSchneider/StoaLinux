@@ -189,10 +189,8 @@ hl.bind(" + XF86AudioMute", function() hl.dispatch(hl.dsp.exec("~/.local/bin/sto
 hl.bind_repeat(" + XF86MonBrightnessUp", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd brightness-up")) end)
 hl.bind_repeat(" + XF86MonBrightnessDown", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd brightness-down")) end)
  
--- CapsLock / NumLock
-hl.bind(" + Caps_Lock", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd capslock")) end)
-hl.bind(" + Num_Lock", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd numlock")) end)
- 
+-- CapsLock / NumLock — Noctalia's LockKeys widget + OSD render natively.
+
 -- Capture (screenshot + recording)
 hl.bind(" + Print", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-capture")) end)
  
