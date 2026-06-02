@@ -171,8 +171,7 @@ bindsym $mod+Shift+t exec --no-startup-id ~/.local/bin/stoa-ocr
 bindsym $mod+Shift+p exec --no-startup-id ~/.local/bin/stoa-paste
 
 # ── CapsLock / NumLock ──
-bindsym --release Caps_Lock exec --no-startup-id ~/.local/bin/stoa-osd capslock
-bindsym --release Num_Lock exec --no-startup-id ~/.local/bin/stoa-osd numlock
+# Handled by the active shell — Noctalia under Hyprland, none under i3.
 
 # ── Autostart ──
 exec_always --no-startup-id pkill picom; picom --config ~/.config/picom/picom.conf -b
