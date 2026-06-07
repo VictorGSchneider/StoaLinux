@@ -423,6 +423,80 @@ Item {
                     Layout.fillWidth: true
                     spacing: Style.marginS
 
+                    // ── Updates header ──
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Style.marginS
+
+                        NText {
+                            Layout.fillWidth: true
+                            text: "System updates"
+                            font.pointSize: Style.fontSizeXS
+                            font.weight: Font.Bold
+                            color: Color.mOnSurfaceVariant
+                        }
+                        NText {
+                            text: root.updates > 0
+                                  ? root.updates + " pending"
+                                  : "up to date"
+                            font.pointSize: Style.fontSizeXS
+                            color: root.updates >= 50 ? Color.mTertiary
+                                 : root.updates > 0   ? Color.mOnSurface
+                                                      : Color.mSecondary
+                        }
+                    }
+
+                    // ── Update buttons ──
+                    Repeater {
+                        model: [
+                            { label: "Update all (pacman + AUR)", action: "updAll" },
+                            { label: "Update system (pacman)",    action: "updSys" },
+                            { label: "Update AUR (yay)",          action: "updAur" },
+                        ]
+                        delegate: Item {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 32
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Style.radiusS
+                                color: uHover.containsMouse ? Color.mPrimaryContainer
+                                                            : Color.mSurfaceVariant
+                                opacity: uHover.containsMouse ? 1.0 : 0.5
+                                Behavior on color { ColorAnimation { duration: 120 } }
+                            }
+                            RowLayout {
+                                anchors { fill: parent; leftMargin: Style.marginS; rightMargin: Style.marginS }
+                                NText {
+                                    Layout.fillWidth: true
+                                    text: modelData.label
+                                    font.pointSize: Style.fontSizeS
+                                    color: Color.mOnSurface
+                                }
+                                NText {
+                                    text: "›"
+                                    font.pointSize: Style.fontSizeM
+                                    color: Color.mOnSurfaceVariant
+                                }
+                            }
+                            MouseArea {
+                                id: uHover
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    pluginApi?.closePanel(screen)
+                                    if      (modelData.action === "updAll") updateAllProc.running = true
+                                    else if (modelData.action === "updSys") updateSysProc.running = true
+                                    else if (modelData.action === "updAur") updateAurProc.running = true
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle { Layout.fillWidth: true; height: 1; color: Color.mOutline; opacity: 0.3 }
+
                     // Scheduled status badge
                     RowLayout {
                         Layout.fillWidth: true
@@ -573,6 +647,26 @@ Item {
         id: browseBackupsProc
         property string _dir: Quickshell.env("HOME") || ""
         command: ["xdg-open", _dir]
+    }
+
+    // Tab 2 — Updates (mirrors zsh aliases update / update-aur / update-all)
+    Process {
+        id: updateSysProc
+        command: ["kitty", "--title", "update (pacman)", "--hold",
+                  "sh", "-c", "sudo pacman -Syu"]
+        onRunningChanged: if (!running) statusProc.running = true
+    }
+    Process {
+        id: updateAurProc
+        command: ["kitty", "--title", "update-aur (yay)", "--hold",
+                  "sh", "-c", "yay -Syu"]
+        onRunningChanged: if (!running) statusProc.running = true
+    }
+    Process {
+        id: updateAllProc
+        command: ["kitty", "--title", "update-all", "--hold",
+                  "sh", "-c", "sudo pacman -Syu && yay -Syu"]
+        onRunningChanged: if (!running) statusProc.running = true
     }
 
     // Tab 2 — Maintenance
