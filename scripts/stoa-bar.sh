@@ -14,6 +14,11 @@
 
 set -e
 
+# When launched via exec-once from Hyprland (display manager or autologin),
+# ~/.local/bin is not in PATH yet. Export it here so that every Quickshell
+# Process that calls stoa-* scripts can find them without hardcoding paths.
+export PATH="${HOME}/.local/bin:${PATH}"
+
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 if [ -f "$STOA_CONF" ]; then
     # shellcheck source=/dev/null
