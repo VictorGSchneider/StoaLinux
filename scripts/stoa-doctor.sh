@@ -160,11 +160,12 @@ else
 fi
 
 # Notification daemon — Noctalia owns org.freedesktop.Notifications on
-# the Hyprland/Wayland path. Match either binary name to cover the
-# upstream Quickshell entry point and the noctalia-shell wrapper.
-if pgrep -fx 'noctalia-shell' &>/dev/null \
-    || pgrep -f 'qs -c noctalia' &>/dev/null \
-    || pgrep -fx 'noctalia' &>/dev/null; then
+# the Hyprland/Wayland path. stoa-bar launches it as
+# `quickshell -c noctalia-shell` (or `qs -c noctalia-shell`); the AUR
+# noctalia-shell package also ships a launcher of the same name. Match
+# the cmdline substring "noctalia-shell" with pgrep -f so we catch all
+# three forms.
+if pgrep -f 'noctalia-shell' &>/dev/null; then
     _ok "Noctalia Shell is running (notifications)"
 else
     _warn "Noctalia Shell is not running — notifications won't show"
