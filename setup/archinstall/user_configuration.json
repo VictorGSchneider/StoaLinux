@@ -28,7 +28,6 @@
         "xorg-xrandr",
         "picom",
         "rofi",
-        "dunst",
         "libnotify",
         "kitty",
         "neovim",

@@ -16,7 +16,7 @@
         "enableWindowsSearch": true,
         "iconMode": "tabler",
         "ignoreMouseInput": false,
-        "overviewLayer": false,
+        "overviewLayer": true,
         "pinnedApps": [
             "brave-browser",
             "eu.betterbird.Betterbird",
@@ -87,15 +87,11 @@
         "widgets": {
             "center": [
                 {
-                    "id": "Spacer",
-                    "width": 160
-                },
-                {
                     "colorizeSystemIcon": "primary",
                     "colorizeSystemText": "none",
                     "customIconPath": "",
                     "enableColorization": true,
-                    "icon": "rocket",
+                    "icon": "columns",
                     "iconColor": "none",
                     "id": "Launcher",
                     "useDistroLogo": false
@@ -145,6 +141,11 @@
             ],
             "left": [
                 {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-doctor-pill"
+                },
+                {
                     "compactMode": true,
                     "diskPath": "/",
                     "iconColor": "secondary",
@@ -187,7 +188,7 @@
                     "hideMode": "hidden",
                     "id": "ActiveWindow",
                     "maxWidth": 250,
-                    "scrollingMode": "hover",
+                    "scrollingMode": "always",
                     "showIcon": true,
                     "showText": true,
                     "textColor": "none",
@@ -244,6 +245,11 @@
                     "id": "Clock",
                     "tooltipFormat": "HH:mm:ss ddd, MMM dd",
                     "useCustomFont": false
+                },
+                {
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-drive-pill"
                 },
                 {
                     "defaultSettings": {
@@ -354,6 +360,20 @@
                         "workspaceSplitThreshold": 12
                     },
                     "id": "plugin:keybind-cheatsheet"
+                },
+                {
+                    "capsLockIcon": "letter-case",
+                    "hideWhenOff": true,
+                    "id": "LockKeys",
+                    "numLockIcon": "numbers",
+                    "scrollLockIcon": "arrow-autofit-height",
+                    "showCapsLock": true,
+                    "showNumLock": true,
+                    "showScrollLock": true
+                },
+                {
+                    "iconColor": "error",
+                    "id": "SessionMenu"
                 }
             ]
         }
@@ -554,7 +574,7 @@
         "indicatorColor": "primary",
         "indicatorOpacity": 0.25,
         "indicatorThickness": 6,
-        "launcherIcon": "",
+        "launcherIcon": "columns",
         "launcherIconColor": "primary",
         "launcherPosition": "start",
         "launcherUseDistroLogo": false,
@@ -650,7 +670,7 @@
     },
     "idle": {
         "customCommands": "[]",
-        "enabled": true,
+        "enabled": false,
         "fadeDuration": 10,
         "lockCommand": "",
         "lockTimeout": 660,
@@ -668,7 +688,7 @@
         "firstDayOfWeek": 0,
         "hideWeatherCityName": false,
         "hideWeatherTimezone": false,
-        "name": "Panambi",
+        "name": "Secaucus",
         "showCalendarEvents": true,
         "showCalendarWeather": true,
         "showWeekNumberInCalendar": true,
@@ -691,7 +711,7 @@
     "nightLight": {
         "autoSchedule": true,
         "dayTemp": "4899",
-        "enabled": false,
+        "enabled": true,
         "forced": false,
         "manualSunrise": "06:30",
         "manualSunset": "18:30",
@@ -702,14 +722,14 @@
         "disableWallpaper": true
     },
     "notifications": {
-        "backgroundOpacity": 1,
+        "backgroundOpacity": 0.5,
         "clearDismissed": true,
         "criticalUrgencyDuration": 30,
         "density": "default",
         "enableBatteryToast": true,
         "enableKeyboardLayoutToast": true,
         "enableMarkdown": true,
-        "enableMediaToast": false,
+        "enableMediaToast": true,
         "enabled": true,
         "location": "top_right",
         "lowUrgencyDuration": 5,

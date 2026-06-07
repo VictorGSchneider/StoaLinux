@@ -108,7 +108,6 @@ _link "${STOA_DIR}/config/kitty/kitty.conf" "${CONFIG_DIR}/kitty/kitty.conf"
 _link "${STOA_DIR}/config/nvim/init.vim"            "${CONFIG_DIR}/nvim/init.vim"
 _link "${STOA_DIR}/config/nvim/colors/stoa.vim"     "${CONFIG_DIR}/nvim/colors/stoa.vim"
 _link "${STOA_DIR}/config/rofi/config.rasi"         "${CONFIG_DIR}/rofi/config.rasi"
-_link "${STOA_DIR}/config/dunst/dunstrc"            "${CONFIG_DIR}/dunst/dunstrc"
 _link "${STOA_DIR}/config/zathura/zathurarc"        "${CONFIG_DIR}/zathura/zathurarc"
 _link "${STOA_DIR}/config/mpv/mpv.conf"             "${CONFIG_DIR}/mpv/mpv.conf"
 _link "${STOA_DIR}/config/btop/btop.conf"           "${CONFIG_DIR}/btop/btop.conf"
@@ -308,7 +307,7 @@ if [ -d "$DFM_SRC" ] && [ -f "${DFM_SRC}/setup.py" ]; then
         echo -e "  ${S}[!] python3 not found — skipping dfm install${R}"
     fi
 
-    # Desktop entry so rofi drun / app grids pick it up.
+    # Desktop entry so the Noctalia launcher / app grids pick it up.
     if [ -f "${DFM_SRC}/data/dfm.desktop" ]; then
         _link "${DFM_SRC}/data/dfm.desktop" \
               "${HOME}/.local/share/applications/dfm.desktop"

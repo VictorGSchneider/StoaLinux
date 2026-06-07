@@ -11,7 +11,6 @@ exec_once = {
   "waybar",
   "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",
   "swaybg -i ~/.config/stoa/wallpapers/marble.png -m fill",
-  "dunst -config ~/.config/dunst/dunstrc",
   "wl-paste --watch cliphist store",
   "stoa-quotes-sync tick",
   "stoa-drive mount-all",
@@ -123,7 +122,7 @@ end
  
 -- Core binds
 hl.bind(mod .. " + Return", function() hl.dispatch(hl.dsp.exec("kitty")) end)
-hl.bind(mod .. " + D", function() hl.dispatch(hl.dsp.exec("rofi -show drun -config ~/.config/rofi/config.rasi")) end)
+hl.bind(mod .. " + D", function() hl.dispatch(hl.dsp.exec("qs -c noctalia-shell ipc call launcher toggle")) end)
 hl.bind(mod .. " + Q", function() hl.dispatch(hl.dsp.killactive()) end)
 hl.bind(mod .. " + F", function() hl.dispatch(hl.dsp.fullscreen(0)) end)
 hl.bind(mod .. " + SHIFT + Space", function() hl.dispatch(hl.dsp.togglefloating()) end)
@@ -190,10 +189,8 @@ hl.bind(" + XF86AudioMute", function() hl.dispatch(hl.dsp.exec("~/.local/bin/sto
 hl.bind_repeat(" + XF86MonBrightnessUp", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd brightness-up")) end)
 hl.bind_repeat(" + XF86MonBrightnessDown", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd brightness-down")) end)
  
--- CapsLock / NumLock
-hl.bind(" + Caps_Lock", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd capslock")) end)
-hl.bind(" + Num_Lock", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-osd numlock")) end)
- 
+-- CapsLock / NumLock — Noctalia's LockKeys widget + OSD render natively.
+
 -- Capture (screenshot + recording)
 hl.bind(" + Print", function() hl.dispatch(hl.dsp.exec("~/.local/bin/stoa-capture")) end)
  

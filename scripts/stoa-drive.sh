@@ -23,7 +23,7 @@ _VFS_CACHE_AGE="${RCLONE_CACHE_MAX_AGE:-720h}"
 
 # ── Helpers ──
 
-_notify() { dunstify -t 2500 "Stoa Drive" "$1" 2>/dev/null; }
+_notify() { notify-send -t 2500 "Stoa Drive" "$1" 2>/dev/null; }
 
 _rofi_select() {
     local prompt="$1"

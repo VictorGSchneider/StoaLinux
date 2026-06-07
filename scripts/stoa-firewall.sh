@@ -5,7 +5,8 @@
 # ║   — Marcus Aurelius                                         ║
 # ║                                                              ║
 # ║  nftables firewall: all ports closed by default.             ║
-# ║  Port monitor: dunst notification when apps open ports.     ║
+# ║  Port monitor: notify-send/noctalia toast when apps open    ║
+# ║  ports, with inline allow/deny actions.                     ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # USAGE:
@@ -41,7 +42,7 @@ _banner() {
 }
 
 _notify() {
-    dunstify -t 3000 "Stoa Firewall" "$1" 2>/dev/null
+    notify-send -t 3000 "Stoa Firewall" "$1" 2>/dev/null
 }
 
 _init_dirs() {
@@ -393,8 +394,8 @@ cmd_monitor() {
 
             # Send notification with action
             local action
-            action=$(dunstify -t 0 -u critical \
-                -A "allow,Allow" -A "deny,Deny" \
+            action=$(notify-send -t 0 -u critical \
+                -A "allow=Allow" -A "deny=Deny" \
                 "Stoa Firewall" \
                 "New port detected: ${port}/${proto}\nProcess: ${process}\n\nAllow this port?" \
                 2>/dev/null)

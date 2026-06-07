@@ -104,7 +104,7 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
   <tr><td><code>Super+Return</code></td><td>Terminal (Kitty)</td><td><code>Super+Shift+V</code></td><td>Clipboard pin</td></tr>
   <tr><td><code>Super+B</code></td><td>Browser (Brave)</td><td><code>Super+Shift+T</code></td><td>OCR (screen text)</td></tr>
   <tr><td><code>Super+C</code></td><td>Calculator (Qalculate)</td><td><code>Super+Shift+P</code></td><td>Advanced paste</td></tr>
-  <tr><td><code>Super+D</code></td><td>Launcher (Rofi)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
+  <tr><td><code>Super+Space</code></td><td>Launcher (Noctalia)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
   <tr><td><code>Super+E</code></td><td>Files (lf)</td><td><code>Super+Escape</code></td><td>Lock screen</td></tr>
   <tr><td><code>Super+Shift+E</code></td><td>Files (Thunar)</td><td><code>Super+Q</code></td><td>Close</td></tr>
   <tr><td><code>Super+N</code></td><td>Monitor (btop)</td><td><code>Super+F</code></td><td>Fullscreen</td></tr>
@@ -219,7 +219,7 @@ Change the entire color scheme from `Super+I → Theme → Color Palette`:
 - **View Current Palette** — see the active colors at a glance
 - **Reset to Stoic** — restore the default marble/bronze palette
 
-Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Rofi, Waybar, Kitty, Dunst, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
+Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Rofi, Waybar, Kitty, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
 
 ### Stoa Greeter
 
@@ -244,7 +244,7 @@ What it wires up:
 
 - **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
 - **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
-- **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, and notifies via the active desktop notification daemon (Noctalia by default, with `dunstify` as the CLI client). Full log at `~/.config/stoa/doctor.log`.
+- **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, and notifies via Noctalia Shell (which owns `org.freedesktop.Notifications` — scripts call `notify-send`). Full log at `~/.config/stoa/doctor.log`.
 
 ### Vendored upstreams
 
@@ -270,7 +270,7 @@ bootstrap command.
 
 ### [DFM — Dotfile Manager](https://github.com/VictorGSchneider/DFM)
 
-A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G`, from rofi drun, or `dfm`.
+A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G`, from the Noctalia launcher, or `dfm`.
 
 - **Smart widgets** — auto-generated toggles, sliders, color pickers, and path selectors based on config file content
 - **Versioned backups** — automatic snapshots before every edit, with rollback support
@@ -284,7 +284,7 @@ package — `pipx install --editable` when available, a user venv otherwise —
 so a `git pull` on StoaLinux propagates live to the running `dfm` binary,
 matching the symlink semantics used for every other stoa-\* script. The
 XDG desktop entry (`data/dfm.desktop`) is symlinked into
-`~/.local/share/applications/` so rofi drun and app grids pick it up.
+`~/.local/share/applications/` so the Noctalia launcher and other app grids pick it up.
 `stoa-doctor` flags a missing `dfm` binary on login.
 
 ### Text Prediction

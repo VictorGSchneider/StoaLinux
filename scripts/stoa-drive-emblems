@@ -19,11 +19,11 @@ mount_dir="${DRIVE_DIR}/${remote}"
 cache_dir="${CACHE_DIR}/${remote}"
 
 if [ ! -d "$mount_dir" ]; then
-    dunstify -t 4000 "Stoa Drive" "$remote is not mounted" 2>/dev/null || true
+    notify-send -t 4000 "Stoa Drive" "$remote is not mounted" 2>/dev/null || true
     exit 1
 fi
 
-dunstify -t 3000 "Stoa Drive" "Syncing emblems for $remote…" 2>/dev/null || true
+notify-send -t 3000 "Stoa Drive" "Syncing emblems for $remote…" 2>/dev/null || true
 
 pinned=0; cleared=0
 
@@ -45,5 +45,5 @@ while IFS= read -r -d '' mounted; do
     fi
 done < <(find "$mount_dir" -type f -print0 2>/dev/null)
 
-dunstify -t 4000 "Stoa Drive" \
+notify-send -t 4000 "Stoa Drive" \
     "$remote: $pinned offline  ·  $cleared streaming" 2>/dev/null || true

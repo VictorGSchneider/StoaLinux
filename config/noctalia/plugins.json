@@ -62,15 +62,15 @@
         },
         "stoa-doctor-pill": {
             "enabled": true,
-            "sourceUrl": "https://github.com/VictorGSchneider/StoaLinux"
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "stoa-drive-pill": {
             "enabled": true,
-            "sourceUrl": "https://github.com/VictorGSchneider/StoaLinux"
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "stoa-memento": {
             "enabled": true,
-            "sourceUrl": "https://github.com/VictorGSchneider/StoaLinux"
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "sys-info-widget": {
             "enabled": true,
