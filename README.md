@@ -240,6 +240,36 @@ What it wires up:
 
 `post-install.sh` offers to run it interactively at the end.
 
+### Stoa Greetd (alternative — unlocks the keyring on login)
+
+Same idea as the Stoa Greeter, but using `greetd` + `tuigreet` themed in
+bronze on tty1. Because greetd opens a real PAM session,
+`pam_gnome_keyring` runs and unlocks the GNOME keyring with the login
+password — so Brave (and any other libsecret client) stops asking for
+the keyring password the first time it opens.
+
+```bash
+bash setup/enable-stoa-greetd.sh           # enable
+bash setup/enable-stoa-greetd.sh --disable # undo
+```
+
+What it wires up:
+
+- **`/etc/greetd/config.toml`** — `tuigreet --time --remember --asterisks --cmd Hyprland` themed in the Stoa palette
+- **`/etc/pam.d/greetd`** — `pam_gnome_keyring.so` in both `auth` and `session` so the keyring destrava sozinho on every login
+- **`greetd.service`** enabled on boot
+- **Stoa Greeter teardown** — autologin drop-in and `.zprofile` / `.bash_profile` hooks are removed automatically (the two flows are mutually exclusive)
+- **`exec-once = hyprlock`** in `hyprland.conf` is commented out (greetd already authenticated; locking again would force a double password). `--disable` restores it.
+
+Pick one or the other:
+
+| | Stoa Greeter (hyprlock) | Stoa Greetd (tuigreet) |
+|---|---|---|
+| Visual | hyprlock graphical lockscreen | TUI in tty1, bronze prompt |
+| PAM session | no (auth only) | yes |
+| Keyring unlocks on login | no | yes |
+| Boot weight | lighter (autologin + lock) | a touch heavier (greetd daemon) |
+
 ### System Resilience
 
 - **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
