@@ -1,0 +1,131 @@
+#!/bin/bash
+# Aggregated JSON status for the Stoa Vitals plugin (Noctalia).
+#
+# Output (single line of JSON):
+# {
+#   "doctor":      { "issues": N, "warnings": N, "log": "..." },
+#   "cpu":         { "tempC": 0.0, "loadPct": 0.0 },
+#   "gpu":         { "tempC": 0.0 },
+#   "memory":      { "usedPct": 0.0, "usedGiB": 0.0, "totalGiB": 0.0 },
+#   "disk":        { "mount": "/", "usedPct": 0, "freeGiB": 0.0 },
+#   "failedUnits": N,
+#   "updates":     N,
+#   "uptime":      "...",
+#   "snapshots":   N,
+#   "backups":     N,
+#   "scheduled":   true|false
+# }
+
+set -u
+
+STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
+DOCTOR_LOG="$STOA_DIR/doctor.log"
+SNAPSHOT_DIR="$STOA_DIR/pkg-snapshots"
+
+# ── Doctor ──
+d_issues=-1
+d_warnings=0
+if [ -f "$DOCTOR_LOG" ]; then
+    d_issues=$(grep -c '^\[FAIL\]' "$DOCTOR_LOG" 2>/dev/null || echo 0)
+    d_warnings=$(grep -c '^\[WARN\]' "$DOCTOR_LOG" 2>/dev/null || echo 0)
+    d_issues=${d_issues:-0}
+    d_warnings=${d_warnings:-0}
+fi
+
+# ── CPU temp + load ──
+cpu_temp=0
+if command -v sensors >/dev/null 2>&1; then
+    cpu_temp=$(sensors 2>/dev/null | awk '
+        /^Package id 0:|^Tctl:|^CPU:/ {
+            for (i=1;i<=NF;i++) if ($i ~ /^\+?[0-9.]+°C/) { gsub(/[+°C]/,"",$i); print $i; exit }
+        }')
+fi
+cpu_temp=${cpu_temp:-0}
+
+cpu_load=0
+if [ -r /proc/loadavg ] && [ -r /proc/cpuinfo ]; then
+    la=$(awk '{print $1}' /proc/loadavg)
+    cores=$(grep -c ^processor /proc/cpuinfo)
+    cpu_load=$(awk -v l="$la" -v c="$cores" 'BEGIN{ if(c>0) printf "%.1f", (l/c)*100; else print 0 }')
+fi
+
+# ── GPU temp (NVIDIA first, then sensors amdgpu) ──
+gpu_temp=0
+if command -v nvidia-smi >/dev/null 2>&1; then
+    gpu_temp=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1)
+elif command -v sensors >/dev/null 2>&1; then
+    gpu_temp=$(sensors 2>/dev/null | awk '
+        /^amdgpu-|^radeon-/ { in_gpu=1; next }
+        in_gpu && /^edge:|^junction:/ {
+            for (i=1;i<=NF;i++) if ($i ~ /^\+?[0-9.]+°C/) { gsub(/[+°C]/,"",$i); print $i; exit }
+        }')
+fi
+gpu_temp=${gpu_temp:-0}
+
+# ── Memory ──
+mem_used_pct=0
+mem_used_gib=0
+mem_total_gib=0
+if [ -r /proc/meminfo ]; then
+    read mem_used_pct mem_used_gib mem_total_gib < <(awk '
+        /^MemTotal:/     { tot=$2 }
+        /^MemAvailable:/ { avail=$2 }
+        END {
+            used = tot - avail
+            if (tot > 0) {
+                printf "%.1f %.2f %.2f", (used/tot)*100, used/1024/1024, tot/1024/1024
+            } else { print "0 0 0" }
+        }' /proc/meminfo)
+fi
+
+# ── Disk (root) ──
+disk_pct=0
+disk_free=0
+if df -BG / >/dev/null 2>&1; then
+    read disk_pct disk_free < <(df -BG / 2>/dev/null | awk 'NR==2 { gsub("%","",$5); gsub("G","",$4); print $5, $4 }')
+fi
+disk_pct=${disk_pct:-0}
+disk_free=${disk_free:-0}
+
+# ── Failed systemd units ──
+failed_units=0
+if command -v systemctl >/dev/null 2>&1; then
+    failed_units=$(systemctl --failed --no-legend --plain 2>/dev/null | wc -l)
+fi
+
+# ── Pending updates (arch / pacman) ──
+updates=0
+if command -v checkupdates >/dev/null 2>&1; then
+    updates=$(checkupdates 2>/dev/null | wc -l)
+elif command -v pacman >/dev/null 2>&1; then
+    updates=$(pacman -Qu 2>/dev/null | wc -l)
+fi
+
+# ── Uptime ──
+uptime_str=$(uptime -p 2>/dev/null | sed 's/^up //' || echo "unknown")
+
+# ── Snapshots & config backups ──
+snapshots=0
+if [ -d "$SNAPSHOT_DIR" ]; then
+    snapshots=$(find "$SNAPSHOT_DIR" -maxdepth 1 -type f -name '*.txt' 2>/dev/null | wc -l)
+fi
+
+hostname_str="${HOSTNAME:-$(hostname 2>/dev/null || echo host)}"
+backups=$(find "$HOME" -maxdepth 1 -type f -name "${hostname_str}.confs.*.zip" 2>/dev/null | wc -l)
+
+# ── Scheduled cleanup? ──
+scheduled=false
+if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
+    scheduled=true
+elif systemctl is-enabled stoa-maintain-cleanup.timer >/dev/null 2>&1; then
+    scheduled=true
+fi
+
+printf '{"doctor":{"issues":%s,"warnings":%s,"log":"%s"},"cpu":{"tempC":%s,"loadPct":%s},"gpu":{"tempC":%s},"memory":{"usedPct":%s,"usedGiB":%s,"totalGiB":%s},"disk":{"mount":"/","usedPct":%s,"freeGiB":%s},"failedUnits":%s,"updates":%s,"uptime":"%s","snapshots":%s,"backups":%s,"scheduled":%s}\n' \
+    "$d_issues" "$d_warnings" "$DOCTOR_LOG" \
+    "$cpu_temp" "$cpu_load" \
+    "$gpu_temp" \
+    "$mem_used_pct" "$mem_used_gib" "$mem_total_gib" \
+    "$disk_pct" "$disk_free" \
+    "$failed_units" "$updates" "$uptime_str" \
+    "$snapshots" "$backups" "$scheduled"
