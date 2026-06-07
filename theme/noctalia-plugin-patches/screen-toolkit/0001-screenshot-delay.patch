@@ -1,0 +1,129 @@
+From: Stoa Linux <stoa@local>
+Subject: [PATCH] screen-toolkit: add configurable screenshot delay
+
+Adds a new integer pluginSetting `screenshotDelaySec` (default 0,
+clamped 0-60). When > 0, the three annotate launch timers wait the
+configured number of seconds before invoking grim, so the user has
+time to compose the screen.
+
+* Settings.qml — load/save the value, expose it via a small numeric
+  input in its own "Screenshot" section above "Share".
+* Main.qml — derive `_screenshotDelayMs` from the setting and add it
+  to the three launchAnnotate*/interval fields.
+* i18n/en.json — add `settings.screenshotDelay` and
+  `settings.screenshotDelayDesc`.
+
+Default 0 preserves the current behaviour bit-for-bit.
+---
+--- a/Main.qml
++++ b/Main.qml
+@@ -64,6 +64,11 @@
+     property int    _grimH:        0
+     property int    _grimLocalX:   0
+     property int    _grimLocalY:   0
++
++    // Screenshot delay (seconds) from plugin settings, in milliseconds for
++    // use in the launchAnnotate*/interval Timers. Clamped to 0-60s.
++    readonly property int _screenshotDelayMs:
++        Math.max(0, Math.min(60, parseInt(pluginApi?.pluginSettings?.screenshotDelaySec ?? 0))) * 1000
+     Component.onCompleted: {
+         root.isRunning  = false
+         root.activeTool = ""
+@@ -441,7 +446,7 @@
+     }
+     Timer {
+         id: launchAnnotate
+-        interval: 50; repeat: false
++        interval: 50 + root._screenshotDelayMs; repeat: false
+         onTriggered: {
+             var regionStr = root._grimLocalX + "," + root._grimLocalY + " " + root._grimW + "x" + root._grimH
+             annotateRegionState._pendingRegion = regionStr
+@@ -453,14 +458,14 @@
+     }
+     Timer {
+         id: launchAnnotateActiveWindow
+-        interval: 360; repeat: false
++        interval: 360 + root._screenshotDelayMs; repeat: false
+         onTriggered: {
+             annotateWinProc.exec({ command: [root._scriptsDir + "capture.sh", "annotate-window"] })
+         }
+     }
+     Timer {
+         id: launchAnnotateFullscreen
+-        interval: 380; repeat: false
++        interval: 380 + root._screenshotDelayMs; repeat: false
+         property var targetScreen: null
+         onTriggered: {
+             var name = targetScreen?.name ?? ""
+--- a/Settings.qml
++++ b/Settings.qml
+@@ -18,6 +18,7 @@
+     property bool   recordCopyToClipboard:  false
+     property int    gifMaxSeconds:          30
+     property string searchEngineUrl:        ""
++    property int    screenshotDelaySec:     0
+     property bool   _loaded: false
+     property string _previewNow: ""
+ 
+@@ -40,6 +41,7 @@
+         recordCopyToClipboard  = pluginApi.pluginSettings.recordCopyToClipboard  ?? false
+         gifMaxSeconds          = pluginApi.pluginSettings.gifMaxSeconds          ?? 30
+         searchEngineUrl        = pluginApi.pluginSettings.searchEngineUrl        || ""
++        screenshotDelaySec     = pluginApi.pluginSettings.screenshotDelaySec     ?? 0
+         _loaded = true
+     }
+ 
+@@ -58,6 +60,7 @@
+         pluginApi.pluginSettings.recordCopyToClipboard  = root.recordCopyToClipboard
+         pluginApi.pluginSettings.gifMaxSeconds          = root.gifMaxSeconds
+         pluginApi.pluginSettings.searchEngineUrl        = root.searchEngineUrl
++        pluginApi.pluginSettings.screenshotDelaySec     = root.screenshotDelaySec
+         pluginApi.saveSettings()
+     }
+ 
+@@ -204,6 +207,34 @@
+                 }
+             }
+         }
++    }
++
++    NDivider { Layout.fillWidth: true; Layout.topMargin: Style.marginM; Layout.bottomMargin: Style.marginM }
++
++    // ── Screenshot ────────────────────────────────────────────────────────────
++    ColumnLayout {
++        Layout.fillWidth: true
++        spacing: Style.marginM
++
++        RowLayout {
++            spacing: Style.marginS
++            NIcon  { icon: "clock"; color: Color.mPrimary }
++            NLabel { label: pluginApi?.tr("settings.screenshotDelay") }
++        }
++
++        NTextInput {
++            Layout.fillWidth: true
++            description:     pluginApi?.tr("settings.screenshotDelayDesc")
++            placeholderText: "0"
++            text:            root.screenshotDelaySec.toString()
++            onTextChanged: {
++                var val = parseInt(text)
++                if (!isNaN(val)) {
++                    root.screenshotDelaySec = Math.max(0, Math.min(60, val))
++                    saveSettings()
++                }
++            }
++        }
+     }
+ 
+     NDivider { Layout.fillWidth: true; Layout.topMargin: Style.marginM; Layout.bottomMargin: Style.marginM }
+--- a/i18n/en.json
++++ b/i18n/en.json
+@@ -164,6 +164,8 @@
+     "deps": "System Dependencies",
+     "screenshotPath": "Screenshot Path",
+     "screenshotPathDesc": "Where screenshots are saved. Leave empty for ~/Pictures/Screenshots.",
++    "screenshotDelay": "Screenshot Delay (s)",
++    "screenshotDelayDesc": "Wait this many seconds before capturing. 0 = no delay. Applies to fullscreen, region and active-window annotate flows.",
+     "videoPath": "Video Path",
+     "videoPathDesc": "Where recordings are saved. Leave empty for ~/Videos.",
+     "filenameFormat": "Filename Format",
