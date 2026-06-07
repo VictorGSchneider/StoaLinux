@@ -22,6 +22,7 @@ SYNC_UNIT="stoa-drive-sync"
 #   RCLONE_DIR_CACHE_TIME=24h    (default: 24h — how long directory listings stay cached)
 #   RCLONE_ATTR_TIMEOUT=1h       (default: 1h — how long file stat()s stay cached)
 #   RCLONE_POLL_INTERVAL=1m      (default: 1m — how often to poll remote for changes)
+#   STOA_DRIVE_PREWARM=true      (default: true — walk dir tree after mount to pre-fill cache)
 #   STOA_SYNC_INTERVAL=5min      (default: 5min — bisync timer interval; systemd OnUnitActiveSec)
 #   STOA_SYNC_CONFLICT=newer     (default: newer — newer|older|larger|smaller|path1|path2|none)
 [ -f "$STOA_CONF" ] && source "$STOA_CONF" 2>/dev/null
@@ -31,6 +32,7 @@ _VFS_CACHE_AGE="${RCLONE_CACHE_MAX_AGE:-720h}"
 _DIR_CACHE_TIME="${RCLONE_DIR_CACHE_TIME:-24h}"
 _ATTR_TIMEOUT="${RCLONE_ATTR_TIMEOUT:-1h}"
 _POLL_INTERVAL="${RCLONE_POLL_INTERVAL:-1m}"
+_PREWARM="${STOA_DRIVE_PREWARM:-true}"
 _SYNC_INTERVAL="${STOA_SYNC_INTERVAL:-5min}"
 _SYNC_CONFLICT="${STOA_SYNC_CONFLICT:-newer}"
 
@@ -120,11 +122,32 @@ _mount_remote() {
 
     if [ $? -eq 0 ]; then
         _notify "Mounted: ${remote} → ~/Drive/${remote}"
+        [ "$_PREWARM" = "true" ] && _prewarm_mount "$remote"
     else
         _notify "Failed to mount ${remote}"
         rmdir "$mountpoint" 2>/dev/null
         return 1
     fi
+}
+
+# ── Pre-warm dir cache ──
+# rclone's --dir-cache-time only lives in RAM, so every fresh mount starts
+# cold — the first time you browse a folder, it stalls waiting for the API.
+# We walk the whole tree in the background right after mount so that by the
+# time the user opens Thunar the cache is already populated. Time grows with
+# folder count; ~5k folders ≈ a few seconds, ~50k ≈ ~1min.
+_prewarm_mount() {
+    local remote="$1"
+    local mountpoint="${DRIVE_DIR}/${remote}"
+    (
+        sleep 2
+        local started ended dirs
+        started=$(date +%s)
+        dirs=$(find "$mountpoint" -mindepth 1 -type d 2>/dev/null | wc -l)
+        ended=$(date +%s)
+        _notify "${remote}: cache warmed (${dirs} dirs in $((ended - started))s)"
+    ) &
+    disown
 }
 
 # ── Unmount a remote ──
@@ -725,6 +748,19 @@ case "${1:-}" in
             exit 1
         fi
         ;;
+    prewarm)
+        _check_rclone || exit 1
+        if [ -n "$2" ]; then
+            _is_mounted "$2" || { echo "Not mounted: $2"; exit 1; }
+            _prewarm_mount "$2"
+        else
+            remotes=$(_list_remotes)
+            while IFS= read -r r; do
+                [ -z "$r" ] && continue
+                _is_mounted "$r" && _prewarm_mount "$r"
+            done <<< "$remotes"
+        fi
+        ;;
     sync-all)         _check_rclone && _run_all_syncs ;;
     sync-all-quiet)   _check_rclone && _run_all_syncs quiet ;;
     sync-enable)      _enable_auto_sync ;;
@@ -763,8 +799,8 @@ case "${1:-}" in
         ;;
     *)
         echo "Usage: stoa-drive [mount-all|unmount-all|mount <name>|unmount <name>"
-        echo "                   |sync <remote:path> <local>|sync-all|sync-enable|sync-disable"
-        echo "                   |sync-status|status]"
+        echo "                   |prewarm [<name>]|sync <remote:path> <local>|sync-all"
+        echo "                   |sync-enable|sync-disable|sync-status|status]"
         exit 1
         ;;
 esac
