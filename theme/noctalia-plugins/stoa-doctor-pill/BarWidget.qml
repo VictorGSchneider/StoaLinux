@@ -136,7 +136,16 @@ Item {
     }
 
     Timer {
-        interval: 60000; running: true; repeat: true
-        onTriggered: statusProc.running = true
+        // Poll every 5 s instead of 60 s so the first read after boot —
+        // which races with stoa-doctor writing its log — gets re-tried
+        // quickly enough that the pill never appears stuck on the
+        // "log not found" state. Force a false→true transition so the
+        // Process re-spawns cleanly even if Quickshell internals didn't
+        // clear `running` after the previous exit.
+        interval: 5000; running: true; repeat: true
+        onTriggered: {
+            statusProc.running = false
+            statusProc.running = true
+        }
     }
 }

@@ -129,7 +129,15 @@ Item {
     }
 
     Timer {
-        interval: 60000; running: true; repeat: true
-        onTriggered: statusProc.running = true
+        // Poll every 5 s instead of 60 s so the first read after boot —
+        // which races with `stoa-drive mount-all` — gets re-tried before
+        // the user kills quickshell to "fix" the stuck pill. Force a
+        // false→true transition so the Process re-spawns cleanly even
+        // if Quickshell internals didn't clear `running` after exit.
+        interval: 5000; running: true; repeat: true
+        onTriggered: {
+            statusProc.running = false
+            statusProc.running = true
+        }
     }
 }
