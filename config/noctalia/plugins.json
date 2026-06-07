@@ -21,7 +21,7 @@
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "display-settings": {
-            "enabled": true,
+            "enabled": false,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "fancy-audiovisualizer": {
@@ -29,7 +29,7 @@
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "hyprland-steam-overlay": {
-            "enabled": true,
+            "enabled": false,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "kaomoji-provider": {
@@ -41,7 +41,7 @@
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "music-search": {
-            "enabled": true,
+            "enabled": false,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "network-manager-vpn": {
@@ -53,6 +53,10 @@
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },
         "polkit-agent": {
+            "enabled": true,
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
+        },
+        "privacy-indicator": {
             "enabled": true,
             "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
         },

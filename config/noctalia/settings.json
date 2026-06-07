@@ -19,8 +19,17 @@
         "overviewLayer": true,
         "pinnedApps": [
             "brave-browser",
+            "code",
+            "enpass",
+            "onlyoffice-desktopeditors",
+            "org.inkscape.Inkscape",
             "eu.betterbird.Betterbird",
-            "code"
+            "steam",
+            "obsidian",
+            "gimp",
+            "org.godotengine.Godot",
+            "kitty",
+            "thunar"
         ],
         "position": "top_center",
         "screenshotAnnotationTool": "",
@@ -49,11 +58,11 @@
         "barType": "floating",
         "capsuleColorKey": "none",
         "capsuleOpacity": 1,
-        "contentPadding": 10,
+        "contentPadding": 5,
         "density": "comfortable",
         "displayMode": "always_visible",
         "enableExclusionZoneInset": true,
-        "fontScale": 1.3,
+        "fontScale": 1.6,
         "frameRadius": 12,
         "frameThickness": 8,
         "hideOnOverview": false,
@@ -83,7 +92,7 @@
         "showOnWorkspaceSwitch": true,
         "showOutline": false,
         "useSeparateOpacity": true,
-        "widgetSpacing": 5,
+        "widgetSpacing": 2,
         "widgets": {
             "center": [
                 {
@@ -272,19 +281,6 @@
                 },
                 {
                     "defaultSettings": {
-                        "autoLaunchSteam": true,
-                        "chatWidthPercent": 25,
-                        "friendsWidthPercent": 10,
-                        "gapSize": 10,
-                        "mainWidthPercent": 60,
-                        "topMarginPercent": 2.5,
-                        "useCustomLayout": false,
-                        "windowHeightPercent": 95
-                    },
-                    "id": "plugin:hyprland-steam-overlay"
-                },
-                {
-                    "defaultSettings": {
                         "autoMount": false,
                         "fileBrowser": "yazi",
                         "hideWhenEmpty": false,
@@ -303,13 +299,6 @@
                         "displayMode": "onhover"
                     },
                     "id": "plugin:network-manager-vpn"
-                },
-                {
-                    "defaultSettings": {
-                        "iconColor": "none",
-                        "niriConfigPath": "~/.config/niri/config.kdl"
-                    },
-                    "id": "plugin:display-settings"
                 },
                 {
                     "defaultSettings": {
@@ -374,6 +363,19 @@
                 {
                     "iconColor": "error",
                     "id": "SessionMenu"
+                },
+                {
+                    "defaultSettings": {
+                        "activeColor": "primary",
+                        "camFilterRegex": "",
+                        "enableToast": true,
+                        "hideInactive": false,
+                        "iconSpacing": 4,
+                        "inactiveColor": "none",
+                        "micFilterRegex": "",
+                        "removeMargins": false
+                    },
+                    "id": "plugin:privacy-indicator"
                 }
             ]
         }
@@ -480,15 +482,6 @@
             {
                 "name": "eDP-1",
                 "widgets": [
-                    {
-                        "defaultSettings": {
-                        },
-                        "id": "plugin:sys-info-widget",
-                        "scale": 1.1644575693431525,
-                        "showBackground": true,
-                        "x": 1480,
-                        "y": 560
-                    },
                     {
                         "barWidth": 0.6,
                         "bloomIntensity": 0.5,
@@ -644,7 +637,7 @@
         "passwordChars": true,
         "radiusRatio": 2,
         "reverseScroll": false,
-        "scaleRatio": 1.05,
+        "scaleRatio": 1.1,
         "screenRadiusRatio": 2,
         "shadowDirection": "bottom_right",
         "shadowOffsetX": 2,
@@ -688,7 +681,7 @@
         "firstDayOfWeek": 0,
         "hideWeatherCityName": false,
         "hideWeatherTimezone": false,
-        "name": "Secaucus",
+        "name": "Panambi",
         "showCalendarEvents": true,
         "showCalendarWeather": true,
         "showWeekNumberInCalendar": true,
@@ -705,7 +698,7 @@
         "bluetoothRssiPollIntervalMs": 60000,
         "bluetoothRssiPollingEnabled": true,
         "disableDiscoverability": false,
-        "networkPanelView": "ethernet",
+        "networkPanelView": "wifi",
         "wifiDetailsViewMode": "grid"
     },
     "nightLight": {
@@ -763,7 +756,7 @@
             2,
             3
         ],
-        "location": "top_right",
+        "location": "top",
         "monitors": [
         ],
         "overlayLayer": true
@@ -871,7 +864,7 @@
     "ui": {
         "boxBorderEnabled": false,
         "fontDefault": "EB Garamond",
-        "fontDefaultScale": 1.1,
+        "fontDefaultScale": 1.1099999999999999,
         "fontFixed": "monospace",
         "fontFixedScale": 1.1,
         "panelBackgroundOpacity": 0.85,

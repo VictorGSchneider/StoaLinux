@@ -16,5 +16,6 @@
     "window.titleBarStyle": "custom",
     "workbench.iconTheme": "material-icon-theme",
     "workbench.startupEditor": "none",
-    "telemetry.telemetryLevel": "off"
+    "telemetry.telemetryLevel": "off",
+    "codesnippetsai.defaultModel": "DeepSeek-R1 Free - OpenRouter"
 }
