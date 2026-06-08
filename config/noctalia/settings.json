@@ -189,7 +189,7 @@
                     "showProgressRing": true,
                     "showVisualizer": true,
                     "textColor": "none",
-                    "useFixedWidth": true,
+                    "useFixedWidth": false,
                     "visualizerType": "linear"
                 },
                 {
@@ -290,15 +290,6 @@
                         "terminalCommand": "kitty"
                     },
                     "id": "plugin:usb-drive-manager"
-                },
-                {
-                    "defaultSettings": {
-                        "connectedColor": "primary",
-                        "disableToastNotifications": false,
-                        "disconnectedColor": "none",
-                        "displayMode": "onhover"
-                    },
-                    "id": "plugin:network-manager-vpn"
                 },
                 {
                     "defaultSettings": {
@@ -681,7 +672,7 @@
         "firstDayOfWeek": 0,
         "hideWeatherCityName": false,
         "hideWeatherTimezone": false,
-        "name": "Panambi",
+        "name": "Montreal",
         "showCalendarEvents": true,
         "showCalendarWeather": true,
         "showWeekNumberInCalendar": true,
