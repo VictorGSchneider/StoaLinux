@@ -18,5 +18,6 @@
     "workbench.startupEditor": "none",
     "telemetry.telemetryLevel": "off",
     "codesnippetsai.defaultModel": "DeepSeek-R1 Free - OpenRouter",
-    "http.systemCertificatesNode": true
+    "http.systemCertificatesNode": true,
+    "git.autofetch": true
 }
