@@ -1,5 +1,12 @@
 // Stoa Health — Panel
-// Three tabs (plugin-manager style): Vitals / Snapshots / Maintenance.
+// Three tabs: Vitals / Snapshots / Maintenance.
+//
+// Action lists are user-configurable through Settings.qml:
+//   pluginSettings.actions = [
+//     { id, tab: "vitals"|"snap"|"maint", label, icon, visible }
+//   ]
+// The Panel reads pluginSettings.actions, filters by tab+visible,
+// preserves the user's order, and dispatches by id.
 //
 // Every action runs through Quickshell.execDetached — never Process —
 // because Process objects are destroyed (and their children killed)
@@ -23,6 +30,34 @@ Item {
 
     readonly property string cfgIcon:     pluginApi?.pluginSettings?.icon ?? "heart"
     readonly property string cfgTerminal: pluginApi?.pluginSettings?.terminal ?? "kitty"
+
+    // Manifest defaults reproduced here so the panel still works when
+    // pluginSettings.actions is absent (first run, before any save).
+    readonly property var _defaultActions: [
+        { "id": "doctor",     "tab": "vitals", "label": "Run Doctor",                "icon": "refresh",   "visible": true },
+        { "id": "log",        "tab": "vitals", "label": "Log",                       "icon": "file-text", "visible": true },
+        { "id": "journal",    "tab": "vitals", "label": "Journal",                   "icon": "terminal",  "visible": true },
+        { "id": "pkgsnap",    "tab": "snap",   "label": "Snapshot packages now",     "icon": "save",      "visible": true },
+        { "id": "backup",     "tab": "snap",   "label": "Backup configs now",        "icon": "save",      "visible": true },
+        { "id": "lspkg",      "tab": "snap",   "label": "Browse snapshots",          "icon": "folder",    "visible": true },
+        { "id": "lsbk",       "tab": "snap",   "label": "Browse backups",            "icon": "folder",    "visible": true },
+        { "id": "updAll",     "tab": "maint",  "label": "Update all (pacman + AUR)", "icon": "download",  "visible": true },
+        { "id": "updSys",     "tab": "maint",  "label": "Update system (pacman)",    "icon": "download",  "visible": true },
+        { "id": "updAur",     "tab": "maint",  "label": "Update AUR (yay)",          "icon": "download",  "visible": true },
+        { "id": "cleanDry",   "tab": "maint",  "label": "Cleanup (dry run)",         "icon": "trash",     "visible": true },
+        { "id": "cleanApply", "tab": "maint",  "label": "Cleanup (apply)",           "icon": "trash",     "visible": true },
+        { "id": "sched",      "tab": "maint",  "label": "Toggle boot schedule",      "icon": "clock",     "visible": true },
+        { "id": "fw",         "tab": "maint",  "label": "Firewall (locksmith)",      "icon": "shield",    "visible": true }
+    ]
+    readonly property var _allActions: pluginApi?.pluginSettings?.actions ?? _defaultActions
+    function _actionsForTab(t) {
+        var out = []
+        for (var i = 0; i < _allActions.length; i++) {
+            var a = _allActions[i]
+            if (a.tab === t && a.visible !== false) out.push(a)
+        }
+        return out
+    }
 
     readonly property real contentPreferredWidth:  380
     readonly property real contentPreferredHeight: header.implicitHeight
@@ -82,6 +117,68 @@ Item {
             'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
         pluginApi?.closePanel(screen)
     }
+    function runAction(id) {
+        switch (id) {
+            case "doctor":     return runInTerm("stoa-doctor", _bin + "/stoa-doctor")
+            case "log":        return runInTerm("stoa-doctor log", "cat " + _home + "/.config/stoa/doctor.log")
+            case "journal":    return runInTerm("journal", "journalctl -p 3..4 -b --no-pager | tail -200")
+            case "pkgsnap":    return runSilent(_bin + "/stoa-pkg-snapshot && notify-send 'Stoa Health' 'Package snapshot saved'")
+            case "backup":     return runInTerm("stoa-maintain backup", _bin + "/stoa-maintain --backup")
+            case "lspkg":      return runSilent("xdg-open " + _home + "/.config/stoa/pkg-snapshots")
+            case "lsbk":       return runSilent("xdg-open " + _home)
+            case "updAll":     return runInTerm("update-all", "sudo pacman -Syu && yay -Syu")
+            case "updSys":     return runInTerm("update",     "sudo pacman -Syu")
+            case "updAur":     return runInTerm("update-aur", "yay -Syu")
+            case "cleanDry":   return runInTerm("stoa-maintain (dry-run)", _bin + "/stoa-maintain --cleanup --dry-run")
+            case "cleanApply": return runInTerm("stoa-maintain", _bin + "/stoa-maintain --cleanup")
+            case "sched":      return runInTerm("stoa-maintain (schedule)", _bin + "/stoa-maintain --schedule")
+            case "fw":         return runInTerm("stoa-locksmith", _bin + "/stoa-locksmith")
+        }
+    }
+
+    // Reusable action-row component (used in every tab)
+    Component {
+        id: actionRow
+        Item {
+            required property var modelData
+            Layout.fillWidth: true
+            Layout.preferredHeight: 32
+
+            Rectangle {
+                anchors.fill: parent
+                radius: Style.radiusS
+                color: aHover.containsMouse ? Color.mPrimaryContainer : "transparent"
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+            RowLayout {
+                anchors { fill: parent; leftMargin: Style.marginS; rightMargin: Style.marginS }
+                spacing: Style.marginS
+                NIcon {
+                    icon: modelData.icon
+                    pointSize: Style.fontSizeS
+                    color: Color.mOnSurfaceVariant
+                }
+                NText {
+                    Layout.fillWidth: true
+                    text: modelData.label
+                    font.pointSize: Style.fontSizeS
+                    color: Color.mOnSurface
+                }
+                NIcon {
+                    icon: "chevron-right"
+                    pointSize: Style.fontSizeS
+                    color: Color.mOnSurfaceVariant
+                }
+            }
+            MouseArea {
+                id: aHover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.runAction(modelData.id)
+            }
+        }
+    }
 
     // ══════════════════════════════════════════════════════════════
     //   LAYOUT
@@ -125,7 +222,6 @@ Item {
                 }
             }
 
-            // Refresh icon button
             Item {
                 implicitWidth: 28; implicitHeight: 28
                 Rectangle {
@@ -214,6 +310,7 @@ Item {
             ColumnLayout {
                 spacing: Style.marginXS
 
+                // Live readings (fixed)
                 Repeater {
                     model: [
                         { icon: "stethoscope", label: "Doctor",
@@ -269,58 +366,10 @@ Item {
                 Rectangle { Layout.fillWidth: true; height: 1; color: Color.mOutline
                             opacity: 0.3; Layout.topMargin: Style.marginXS }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.marginXS
-
-                    Repeater {
-                        model: [
-                            { icon: "refresh",   label: "Run Doctor", action: "doctor" },
-                            { icon: "file-text", label: "Log",        action: "log" },
-                            { icon: "terminal",  label: "Journal",    action: "journal" },
-                        ]
-                        delegate: Item {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 30
-                            Rectangle {
-                                anchors.fill: parent; radius: Style.radiusS
-                                color: vHover.containsMouse ? Color.mPrimaryContainer
-                                                            : Color.mSurfaceVariant
-                                Behavior on color { ColorAnimation { duration: 120 } }
-                            }
-                            RowLayout {
-                                anchors.centerIn: parent
-                                spacing: Style.marginXS
-                                NIcon {
-                                    icon: modelData.icon
-                                    pointSize: Style.fontSizeS
-                                    color: Color.mOnSurface
-                                }
-                                NText {
-                                    text: modelData.label
-                                    font.pointSize: Style.fontSizeXS
-                                    color: Color.mOnSurface
-                                }
-                            }
-                            MouseArea {
-                                id: vHover
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (modelData.action === "doctor")
-                                        root.runInTerm("stoa-doctor", root._bin + "/stoa-doctor")
-                                    else if (modelData.action === "log")
-                                        root.runInTerm("stoa-doctor log",
-                                            "cat " + root._home + "/.config/stoa/doctor.log")
-                                    else if (modelData.action === "journal")
-                                        root.runInTerm("journal",
-                                            "journalctl -p 3..4 -b --no-pager | tail -200")
-                                }
-                            }
-                        }
-                    }
+                // User-configurable Vitals actions
+                Repeater {
+                    model: root._actionsForTab("vitals")
+                    delegate: actionRow
                 }
             }
 
@@ -368,60 +417,8 @@ Item {
                 }
 
                 Repeater {
-                    model: [
-                        { icon: "save",   label: "Snapshot packages now", action: "pkg" },
-                        { icon: "save",   label: "Backup configs now",    action: "backup" },
-                        { icon: "folder", label: "Browse snapshots",      action: "lspkg" },
-                        { icon: "folder", label: "Browse backups",        action: "lsbk" },
-                    ]
-                    delegate: Item {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 32
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Style.radiusS
-                            color: sHover.containsMouse ? Color.mPrimaryContainer : "transparent"
-                            Behavior on color { ColorAnimation { duration: 120 } }
-                        }
-                        RowLayout {
-                            anchors { fill: parent; leftMargin: Style.marginS; rightMargin: Style.marginS }
-                            spacing: Style.marginS
-                            NIcon {
-                                icon: modelData.icon
-                                pointSize: Style.fontSizeS
-                                color: Color.mOnSurfaceVariant
-                            }
-                            NText {
-                                Layout.fillWidth: true
-                                text: modelData.label
-                                font.pointSize: Style.fontSizeS
-                                color: Color.mOnSurface
-                            }
-                            NIcon {
-                                icon: "chevron-right"
-                                pointSize: Style.fontSizeS
-                                color: Color.mOnSurfaceVariant
-                            }
-                        }
-                        MouseArea {
-                            id: sHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (modelData.action === "pkg")
-                                    root.runSilent(root._bin + "/stoa-pkg-snapshot && notify-send 'Stoa Health' 'Package snapshot saved'")
-                                else if (modelData.action === "backup")
-                                    root.runInTerm("stoa-maintain backup",
-                                        root._bin + "/stoa-maintain --backup")
-                                else if (modelData.action === "lspkg")
-                                    root.runSilent("xdg-open " + root._home + "/.config/stoa/pkg-snapshots")
-                                else if (modelData.action === "lsbk")
-                                    root.runSilent("xdg-open " + root._home)
-                            }
-                        }
-                    }
+                    model: root._actionsForTab("snap")
+                    delegate: actionRow
                 }
             }
 
@@ -429,7 +426,7 @@ Item {
             ColumnLayout {
                 spacing: Style.marginXS
 
-                // Updates header
+                // Updates summary header
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Style.marginS
@@ -454,60 +451,6 @@ Item {
                     }
                 }
 
-                Repeater {
-                    model: [
-                        { icon: "download", label: "Update all (pacman + AUR)",
-                          cmd: "sudo pacman -Syu && yay -Syu", title: "update-all" },
-                        { icon: "download", label: "Update system (pacman)",
-                          cmd: "sudo pacman -Syu", title: "update" },
-                        { icon: "download", label: "Update AUR (yay)",
-                          cmd: "yay -Syu", title: "update-aur" },
-                    ]
-                    delegate: Item {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 32
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Style.radiusS
-                            color: uHover.containsMouse ? Color.mPrimaryContainer
-                                                        : Color.mSurfaceVariant
-                            opacity: uHover.containsMouse ? 1.0 : 0.5
-                            Behavior on color { ColorAnimation { duration: 120 } }
-                        }
-                        RowLayout {
-                            anchors { fill: parent; leftMargin: Style.marginS; rightMargin: Style.marginS }
-                            spacing: Style.marginS
-                            NIcon {
-                                icon: modelData.icon
-                                pointSize: Style.fontSizeS
-                                color: Color.mOnSurfaceVariant
-                            }
-                            NText {
-                                Layout.fillWidth: true
-                                text: modelData.label
-                                font.pointSize: Style.fontSizeS
-                                color: Color.mOnSurface
-                            }
-                            NIcon {
-                                icon: "chevron-right"
-                                pointSize: Style.fontSizeS
-                                color: Color.mOnSurfaceVariant
-                            }
-                        }
-                        MouseArea {
-                            id: uHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.runInTerm(modelData.title, modelData.cmd)
-                        }
-                    }
-                }
-
-                Rectangle { Layout.fillWidth: true; height: 1; color: Color.mOutline
-                            opacity: 0.3; Layout.topMargin: Style.marginXS; Layout.bottomMargin: Style.marginXS }
-
                 // Scheduled badge
                 RowLayout {
                     Layout.fillWidth: true
@@ -527,73 +470,18 @@ Item {
                     }
                 }
 
+                Rectangle { Layout.fillWidth: true; height: 1; color: Color.mOutline
+                            opacity: 0.3; Layout.topMargin: Style.marginXS; Layout.bottomMargin: Style.marginXS }
+
                 Repeater {
-                    model: [
-                        { icon: "trash",  label: "Cleanup (dry run)", action: "dry",   danger: false },
-                        { icon: "trash",  label: "Cleanup (apply)",   action: "apply", danger: true },
-                        { icon: "clock",  label: root.scheduled
-                                               ? "Disable boot schedule"
-                                               : "Enable boot schedule", action: "sched", danger: false },
-                        { icon: "shield", label: "Firewall (locksmith)", action: "fw",  danger: false },
-                    ]
-                    delegate: Item {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 32
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Style.radiusS
-                            color: mHover.containsMouse ? Color.mPrimaryContainer : "transparent"
-                            Behavior on color { ColorAnimation { duration: 120 } }
-                        }
-                        RowLayout {
-                            anchors { fill: parent; leftMargin: Style.marginS; rightMargin: Style.marginS }
-                            spacing: Style.marginS
-                            NIcon {
-                                icon: modelData.icon
-                                pointSize: Style.fontSizeS
-                                color: modelData.danger ? Color.mError : Color.mOnSurfaceVariant
-                            }
-                            NText {
-                                Layout.fillWidth: true
-                                text: modelData.label
-                                font.pointSize: Style.fontSizeS
-                                color: modelData.danger ? Color.mError : Color.mOnSurface
-                            }
-                            NIcon {
-                                icon: "chevron-right"
-                                pointSize: Style.fontSizeS
-                                color: Color.mOnSurfaceVariant
-                            }
-                        }
-                        MouseArea {
-                            id: mHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (modelData.action === "dry")
-                                    root.runInTerm("stoa-maintain (dry-run)",
-                                        root._bin + "/stoa-maintain --cleanup --dry-run")
-                                else if (modelData.action === "apply")
-                                    root.runInTerm("stoa-maintain",
-                                        root._bin + "/stoa-maintain --cleanup")
-                                else if (modelData.action === "sched")
-                                    root.runInTerm("stoa-maintain (schedule)",
-                                        root._bin + "/stoa-maintain --schedule")
-                                else if (modelData.action === "fw")
-                                    root.runInTerm("stoa-locksmith",
-                                        root._bin + "/stoa-locksmith")
-                            }
-                        }
-                    }
+                    model: root._actionsForTab("maint")
+                    delegate: actionRow
                 }
             }
         }
     }
 
-    // ── Status polling (Process is fine here: it only reads while
-    //    the panel is open, and is re-spawned on every open) ──
+    // ── Status polling ──
     Process {
         id: statusProc
         command: [root._bin + "/stoa-vitals-status"]
