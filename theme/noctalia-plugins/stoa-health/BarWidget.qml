@@ -28,6 +28,13 @@ Item {
     readonly property string _home: Quickshell.env("HOME") || ""
     readonly property string _bin:  _home + "/.local/bin"
 
+    // ── User settings (Settings.qml / manifest defaults) ──
+    readonly property string cfgIcon:     pluginApi?.pluginSettings?.icon ?? "heart"
+    readonly property string cfgTerminal: pluginApi?.pluginSettings?.terminal ?? "kitty"
+    readonly property int    cfgPollMs:   (pluginApi?.pluginSettings?.pollSeconds ?? 30) * 1000
+    readonly property bool   cfgBadge:    pluginApi?.pluginSettings?.showBadge ?? true
+    readonly property bool   cfgPulse:    pluginApi?.pluginSettings?.pulse ?? true
+
     implicitWidth:  capsule.implicitWidth + Style.marginM * 2
     implicitHeight: parent ? parent.height : 32
 
@@ -76,7 +83,7 @@ Item {
 
     // ── Helpers ──
     function runInTerm(title, cmd) {
-        Quickshell.execDetached(["kitty", "--title", title, "--hold", "sh", "-c",
+        Quickshell.execDetached([root.cfgTerminal, "--title", title, "--hold", "sh", "-c",
             'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
     }
     function runSilent(cmd) {
@@ -100,14 +107,15 @@ Item {
         spacing: Style.marginXS
 
         NIcon {
-            icon: "heart"
+            icon: root.cfgIcon
             color: root.healthColor
             pointSize: Style.fontSizeM
             Behavior on color { ColorAnimation { duration: 400 } }
 
             SequentialAnimation on opacity {
-                running: root.severity === "error" || root.severity === "warn"
+                running: root.cfgPulse && (root.severity === "error" || root.severity === "warn")
                 loops: Animation.Infinite
+                onRunningChanged: if (!running) parent.opacity = 1.0
                 NumberAnimation { from: 1.0; to: 0.45; duration: 700; easing.type: Easing.InOutSine }
                 NumberAnimation { from: 0.45; to: 1.0; duration: 700; easing.type: Easing.InOutSine }
             }
@@ -115,7 +123,7 @@ Item {
 
         // Issue-count badge — only when something is wrong
         Rectangle {
-            visible: root.badgeCount > 0
+            visible: root.cfgBadge && root.badgeCount > 0
             implicitWidth: Math.max(14, badgeText.implicitWidth + 6)
             implicitHeight: 14
             radius: 7
@@ -151,14 +159,19 @@ Item {
             { "label": "Run Doctor",   "action": "doctor",   "icon": "refresh" },
             { "label": "Snapshot Now", "action": "snapshot", "icon": "save" },
             { "label": "Open Log",     "action": "log",      "icon": "file-text" },
+            { "label": "Settings",     "action": "settings", "icon": "settings" },
         ]
         onTriggered: function(action, item) {
+            contextMenu.close()
+            PanelService.closeContextMenu(screen)
             if (action === "doctor")
                 root.runInTerm("stoa-doctor", root._bin + "/stoa-doctor")
             else if (action === "snapshot")
                 root.runSilent(root._bin + "/stoa-pkg-snapshot && notify-send 'Stoa Health' 'Package snapshot saved'")
             else if (action === "log")
                 root.runInTerm("stoa-doctor log", "cat " + root._home + "/.config/stoa/doctor.log")
+            else if (action === "settings" && pluginApi?.manifest)
+                BarService.openPluginSettings(screen, pluginApi.manifest)
         }
     }
 
@@ -186,7 +199,7 @@ Item {
     }
 
     Timer {
-        interval: 30000; running: true; repeat: true
+        interval: root.cfgPollMs; running: true; repeat: true
         onTriggered: { statusProc.running = false; statusProc.running = true }
     }
 }

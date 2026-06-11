@@ -21,6 +21,9 @@ Item {
     readonly property string _home: Quickshell.env("HOME") || ""
     readonly property string _bin:  _home + "/.local/bin"
 
+    readonly property string cfgIcon:     pluginApi?.pluginSettings?.icon ?? "heart"
+    readonly property string cfgTerminal: pluginApi?.pluginSettings?.terminal ?? "kitty"
+
     readonly property real contentPreferredWidth:  380
     readonly property real contentPreferredHeight: header.implicitHeight
                                                  + tabs.implicitHeight
@@ -70,7 +73,7 @@ Item {
 
     // ── Helpers ──
     function runInTerm(title, cmd) {
-        Quickshell.execDetached(["kitty", "--title", title, "--hold", "sh", "-c",
+        Quickshell.execDetached([root.cfgTerminal, "--title", title, "--hold", "sh", "-c",
             'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
         pluginApi?.closePanel(screen)
     }
@@ -99,7 +102,7 @@ Item {
             spacing: Style.marginS
 
             NIcon {
-                icon: "heart"
+                icon: root.cfgIcon
                 color: root.statusColor
                 pointSize: Style.fontSizeL
                 Behavior on color { ColorAnimation { duration: 300 } }

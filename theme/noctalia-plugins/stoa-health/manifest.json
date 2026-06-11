@@ -10,12 +10,16 @@
     "tags": ["Bar", "System", "Health", "Maintenance", "Backup"],
     "entryPoints": {
         "barWidget": "BarWidget.qml",
-        "panel": "Panel.qml"
+        "panel": "Panel.qml",
+        "settings": "Settings.qml"
     },
     "metadata": {
         "defaultSettings": {
+            "icon": "heart",
             "terminal": "kitty",
-            "pollSeconds": 30
+            "pollSeconds": 30,
+            "showBadge": true,
+            "pulse": true
         }
     }
 }
