@@ -85,6 +85,8 @@ _link "${STOA_DIR}/theme/noctalia-plugins/stoa-doctor-pill" \
       "${CONFIG_DIR}/noctalia/plugins/stoa-doctor-pill"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive-pill" \
       "${CONFIG_DIR}/noctalia/plugins/stoa-drive-pill"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-vitals" \
+      "${CONFIG_DIR}/noctalia/plugins/stoa-vitals"
 
 # Noctalia settings.json — opinionated Stoa seed (floating bar, Stoa
 # color scheme, EB Garamond, layout incl. screen-toolkit/clipper/
