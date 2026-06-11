@@ -13,9 +13,9 @@
         },
         {
           "keys": "Super + SPACE",
-          "desc": "exec rofi -show drun -config ~/.config/rofi/config.rasi",
+          "desc": "exec qs -c noctalia-shell ipc call launcher toggle",
           "_verb": "exec",
-          "_param": "rofi -show drun -config ~/.config/rofi/config.rasi",
+          "_param": "qs -c noctalia-shell ipc call launcher toggle",
           "_mods": "Super",
           "_mainKey": "SPACE"
         },
@@ -50,6 +50,30 @@
           "_param": "",
           "_mods": "Super+Ctrl",
           "_mainKey": "E"
+        },
+        {
+          "keys": "Super + Ctrl + R",
+          "desc": "exec ~/.local/bin/stoa-bar-toggle",
+          "_verb": "exec",
+          "_param": "~/.local/bin/stoa-bar-toggle",
+          "_mods": "Super+Ctrl",
+          "_mainKey": "R"
+        },
+        {
+          "keys": "Alt + TAB",
+          "desc": "exec hyprswitch gui --mod-key alt --key tab --max-switch-offset 9 --hide-active-window-border",
+          "_verb": "exec",
+          "_param": "hyprswitch gui --mod-key alt --key tab --max-switch-offset 9 --hide-active-window-border",
+          "_mods": "Alt",
+          "_mainKey": "TAB"
+        },
+        {
+          "keys": "Shift + Alt + TAB",
+          "desc": "exec hyprswitch gui --mod-key alt --key tab --max-switch-offset 9 --hide-active-window-border -r",
+          "_verb": "exec",
+          "_param": "hyprswitch gui --mod-key alt --key tab --max-switch-offset 9 --hide-active-window-border -r",
+          "_mods": "Shift+Alt",
+          "_mainKey": "TAB"
         },
         {
           "keys": "Super + A",
@@ -106,14 +130,6 @@
           "_param": "obsidian",
           "_mods": "Super",
           "_mainKey": "O"
-        },
-        {
-          "keys": "Super + M",
-          "desc": "exec ~/.local/bin/stoa-memento",
-          "_verb": "exec",
-          "_param": "~/.local/bin/stoa-memento",
-          "_mods": "Super",
-          "_mainKey": "M"
         },
         {
           "keys": "Super + S",
@@ -378,22 +394,6 @@
           "_param": "~/.local/bin/stoa-display",
           "_mods": "Super",
           "_mainKey": "P"
-        },
-        {
-          "keys": "CAPS_LOCK",
-          "desc": "exec ~/.local/bin/stoa-osd capslock",
-          "_verb": "exec",
-          "_param": "~/.local/bin/stoa-osd capslock",
-          "_mods": "",
-          "_mainKey": "CAPS_LOCK"
-        },
-        {
-          "keys": "NUM_LOCK",
-          "desc": "exec ~/.local/bin/stoa-osd numlock",
-          "_verb": "exec",
-          "_param": "~/.local/bin/stoa-osd numlock",
-          "_mods": "",
-          "_mainKey": "NUM_LOCK"
         },
         {
           "keys": "PrtSc",

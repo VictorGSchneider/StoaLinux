@@ -150,7 +150,12 @@
             ],
             "left": [
                 {
-                    "id": "plugin:stoa-health"
+                    "defaultSettings": {
+                    },
+                    "id": "plugin:stoa-doctor-pill"
+                },
+                {
+                    "id": "plugin:stoa-vitals"
                 },
                 {
                     "compactMode": true,
@@ -670,7 +675,7 @@
         "firstDayOfWeek": 0,
         "hideWeatherCityName": false,
         "hideWeatherTimezone": false,
-        "name": "Montreal",
+        "name": "Panambi",
         "showCalendarEvents": true,
         "showCalendarWeather": true,
         "showWeekNumberInCalendar": true,
