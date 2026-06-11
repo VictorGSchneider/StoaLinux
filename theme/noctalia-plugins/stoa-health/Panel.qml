@@ -18,12 +18,18 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Widgets
+import qs.Services.UI
 
 Item {
     id: root
 
     property var       pluginApi: null
     property ShellScreen screen
+
+    // Float top-center on screen (same placement as the Clipboard
+    // History panel) instead of anchoring to the bar widget.
+    readonly property bool panelAnchorHorizontalCenter: true
+    readonly property bool panelAnchorTop: true
 
     readonly property string _home: Quickshell.env("HOME") || ""
     readonly property string _bin:  _home + "/.local/bin"
@@ -241,6 +247,34 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: { statusProc.running = false; statusProc.running = true }
+                }
+            }
+
+            // Settings gear (same as the panel-header gear on the
+            // Clipboard History plugin)
+            Item {
+                implicitWidth: 28; implicitHeight: 28
+                Rectangle {
+                    anchors.fill: parent; radius: Style.radiusS
+                    color: gearHover.containsMouse ? Color.mPrimaryContainer : "transparent"
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                }
+                NIcon {
+                    anchors.centerIn: parent
+                    icon: "settings"
+                    pointSize: Style.fontSizeM
+                    color: Color.mOnSurface
+                }
+                MouseArea {
+                    id: gearHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        pluginApi?.closePanel(screen)
+                        if (pluginApi?.manifest)
+                            BarService.openPluginSettings(screen, pluginApi.manifest)
+                    }
                 }
             }
         }

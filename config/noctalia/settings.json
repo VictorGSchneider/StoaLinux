@@ -150,9 +150,13 @@
             ],
             "left": [
                 {
+<<<<<<< HEAD
                     "defaultSettings": {
                     },
                     "id": "plugin:stoa-health"
+=======
+                    "id": "plugin:stoa-doctor-pill"
+>>>>>>> origin/main
                 },
                 {
                     "compactMode": true,
