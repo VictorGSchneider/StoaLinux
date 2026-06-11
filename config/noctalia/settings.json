@@ -150,7 +150,7 @@
             ],
             "left": [
                 {
-                    "id": "plugin:stoa-doctor-pill"
+                    "id": "plugin:stoa-health"
                 },
                 {
                     "compactMode": true,

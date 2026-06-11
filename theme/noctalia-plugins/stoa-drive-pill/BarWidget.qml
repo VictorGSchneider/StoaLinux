@@ -1,6 +1,11 @@
 // Stoa Drive Pill — Bar Widget
+// Icon-only capsule colored by mount state, with an optional m/t badge.
 // Left-click  → toggle Panel (per-drive controls)
-// Right-click → context menu (Mount All / Unmount All / Open ~/Drive)
+// Right-click → context menu (Mount All / Unmount All / Open ~/Drive / Settings)
+//
+// Actions run via Quickshell.execDetached with absolute paths so they
+// survive QML lifetime and don't depend on ~/.local/bin being in
+// Quickshell's PATH.
 
 import QtQuick
 import QtQuick.Layouts
@@ -18,6 +23,15 @@ Item {
     property string widgetId: ""
     property string section: ""
     property int    sectionWidgetIndex: -1
+
+    readonly property string _home: Quickshell.env("HOME") || ""
+    readonly property string _bin:  _home + "/.local/bin"
+
+    // ── User settings ──
+    readonly property string cfgIcon:        pluginApi?.pluginSettings?.icon ?? "cloud-upload"
+    readonly property string cfgFileManager: pluginApi?.pluginSettings?.fileManager ?? "thunar"
+    readonly property int    cfgPollMs:      (pluginApi?.pluginSettings?.pollSeconds ?? 5) * 1000
+    readonly property bool   cfgBadge:       pluginApi?.pluginSettings?.showBadge ?? true
 
     property string tooltipText: !_available      ? "rclone not installed"
         : total === 0    ? "No cloud drives configured"
@@ -42,6 +56,12 @@ Item {
         return Color.mOnSurfaceVariant
     }
 
+    function runSilent(cmd) {
+        Quickshell.execDetached(["sh", "-c",
+            'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
+        refreshTimer.restart()
+    }
+
     // ── Capsule background ──
     Rectangle {
         anchors.centerIn: parent
@@ -53,24 +73,35 @@ Item {
         Behavior on color { ColorAnimation { duration: 400 } }
     }
 
-    // ── Pill ──
+    // ── Icon + badge ──
     RowLayout {
         id: capsule
         anchors.centerIn: parent
         spacing: Style.marginXS
 
-        Rectangle {
-            width: 8; height: 8; radius: 4
+        NIcon {
+            icon: root.mounted === 0 && root.total > 0 ? "cloud-off" : root.cfgIcon
             color: root.pillColor
+            pointSize: Style.fontSizeM
             Behavior on color { ColorAnimation { duration: 400 } }
         }
 
-        NText {
-            text: root.total > 0 ? "drive " + root.mounted + "/" + root.total : "drive"
-            color: root.pillColor
-            font.pointSize: Style.fontSizeS
-            font.weight: Font.Medium
-            Behavior on color { ColorAnimation { duration: 400 } }
+        // m/t badge — only when not everything is mounted
+        Rectangle {
+            visible: root.cfgBadge && root.total > 0 && root.mounted < root.total
+            implicitWidth: badgeText.implicitWidth + 8
+            implicitHeight: 14
+            radius: 7
+            color: root.mounted > 0 ? Color.mTertiaryContainer : Color.mSurfaceVariant
+
+            NText {
+                id: badgeText
+                anchors.centerIn: parent
+                text: root.mounted + "/" + root.total
+                font.pointSize: Style.fontSizeXS
+                font.weight: Font.Bold
+                color: Color.mOnSurface
+            }
         }
     }
 
@@ -92,28 +123,28 @@ Item {
     NPopupContextMenu {
         id: contextMenu
         model: [
-            { "label": "Mount All",   "action": "mountall",  "icon": "cloud-upload" },
-            { "label": "Unmount All", "action": "umountall", "icon": "cloud-off"    },
-            { "label": "Open ~/Drive","action": "open",      "icon": "folder"       },
+            { "label": "Mount All",    "action": "mountall",  "icon": "cloud-upload" },
+            { "label": "Unmount All",  "action": "umountall", "icon": "cloud-off"    },
+            { "label": "Open ~/Drive", "action": "open",      "icon": "folder"       },
+            { "label": "Settings",     "action": "settings",  "icon": "settings"     },
         ]
         onTriggered: function(action, item) {
-            if      (action === "mountall")  mountAllProc.running = true
-            else if (action === "umountall") umountAllProc.running = true
-            else if (action === "open")      openDirProc.running  = true
+            contextMenu.close()
+            PanelService.closeContextMenu(screen)
+            if      (action === "mountall")  root.runSilent(root._bin + "/stoa-drive mount-all")
+            else if (action === "umountall") root.runSilent(root._bin + "/stoa-drive unmount-all")
+            else if (action === "open")      root.runSilent(root.cfgFileManager + " " + root._home + "/Drive")
+            else if (action === "settings" && pluginApi?.manifest)
+                BarService.openPluginSettings(screen, pluginApi.manifest)
         }
     }
 
-    // ── Processes ──
+    // ── Data polling ──
     Timer { id: refreshTimer; interval: 2000; repeat: false; onTriggered: statusProc.running = true }
 
-    Process { id: mountAllProc;  command: ["stoa-drive", "mount-all"];   onRunningChanged: if (!running) refreshTimer.restart() }
-    Process { id: umountAllProc; command: ["stoa-drive", "unmount-all"]; onRunningChanged: if (!running) refreshTimer.restart() }
-    Process { id: openDirProc;   command: ["thunar", (Quickshell.env("HOME") || "") + "/Drive"] }
-
-    // ── Data polling ──
     Process {
         id: statusProc
-        command: ["stoa-drive-status"]
+        command: [root._bin + "/stoa-drive-status"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -129,12 +160,12 @@ Item {
     }
 
     Timer {
-        // Poll every 5 s instead of 60 s so the first read after boot —
-        // which races with `stoa-drive mount-all` — gets re-tried before
-        // the user kills quickshell to "fix" the stuck pill. Force a
-        // false→true transition so the Process re-spawns cleanly even
-        // if Quickshell internals didn't clear `running` after exit.
-        interval: 5000; running: true; repeat: true
+        // Default 5 s: the first read after boot races with
+        // `stoa-drive mount-all`, so retry quickly enough that the pill
+        // never appears stuck. Force a false→true transition so the
+        // Process re-spawns cleanly even if Quickshell internals didn't
+        // clear `running` after the previous exit.
+        interval: root.cfgPollMs; running: true; repeat: true
         onTriggered: {
             statusProc.running = false
             statusProc.running = true
