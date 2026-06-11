@@ -1,12 +1,12 @@
 {
-    "id": "stoa-vitals",
-    "name": "Stoa Vitals",
+    "id": "stoa-health",
+    "name": "Stoa Health",
     "version": "1.0.0",
     "minNoctaliaVersion": "4.6.6",
     "author": "VictorGSchneider",
     "license": "GPL-3.0",
     "repository": "https://github.com/VictorGSchneider/StoaLinux",
-    "description": "Unified system health dashboard. Three tabs: Vitals (live doctor + sensors), Snapshots (package & config backups) and Maintenance (cleanup, schedule). Replaces the old stoa-settings Health and Maintenance rofi menus.",
+    "description": "Unified system health widget — merges the old doctor pill and stoa-vitals. Icon-only bar indicator colored by overall health; panel with three tabs: Vitals (doctor + sensors), Snapshots (package & config backups) and Maintenance (updates, cleanup, schedule).",
     "tags": ["Bar", "System", "Health", "Maintenance", "Backup"],
     "entryPoints": {
         "barWidget": "BarWidget.qml",

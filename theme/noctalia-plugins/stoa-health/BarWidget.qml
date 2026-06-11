@@ -1,6 +1,12 @@
-// Stoa Vitals — Bar Widget
-// Left-click  → toggle Panel (3 tabs: Vitals / Snapshots / Maintenance)
+// Stoa Health — Bar Widget
+// Icon-only capsule, colored by the worst of: doctor issues/warnings,
+// failed units, CPU/GPU temps, disk and memory pressure.
+// Left-click  → toggle Panel (Vitals / Snapshots / Maintenance)
 // Right-click → context menu (Run Doctor / Snapshot Now / Open Log)
+//
+// All actions launch via Quickshell.execDetached so they survive panel
+// close and Quickshell restarts — Process objects die with their QML
+// parent, which is why actions in the old plugins never ran.
 
 import QtQuick
 import QtQuick.Layouts
@@ -19,21 +25,23 @@ Item {
     property string section: ""
     property int    sectionWidgetIndex: -1
 
+    readonly property string _home: Quickshell.env("HOME") || ""
+    readonly property string _bin:  _home + "/.local/bin"
+
     implicitWidth:  capsule.implicitWidth + Style.marginM * 2
     implicitHeight: parent ? parent.height : 32
 
-    // ── Aggregate state ──
-    property int    doctorIssues:   -1
-    property int    doctorWarnings:  0
-    property int    failedUnits:     0
-    property real   cpuTempC:        0
-    property real   gpuTempC:        0
-    property real   memUsedPct:      0
-    property real   diskUsedPct:     0
-    property int    updates:         0
+    // ── Aggregate state (fed by stoa-vitals-status) ──
+    property int  doctorIssues:   -1
+    property int  doctorWarnings:  0
+    property int  failedUnits:     0
+    property real cpuTempC:        0
+    property real gpuTempC:        0
+    property real memUsedPct:      0
+    property int  diskUsedPct:     0
+    property int  updates:         0
 
     readonly property string severity: {
-        // critical → error → warn → ok
         if (doctorIssues > 0 || failedUnits > 0) return "error"
         if (cpuTempC >= 90 || gpuTempC >= 90 || diskUsedPct >= 95) return "error"
         if (doctorIssues < 0) return "unknown"
@@ -42,7 +50,7 @@ Item {
         return "ok"
     }
 
-    readonly property color pillColor: {
+    readonly property color healthColor: {
         switch (severity) {
             case "error":   return Color.mError
             case "warn":    return Color.mTertiary
@@ -51,17 +59,10 @@ Item {
         }
     }
 
-    readonly property string pillLabel: {
-        switch (severity) {
-            case "error":   return "vitals ✕"
-            case "warn":    return "vitals ⚠"
-            case "unknown": return "vitals"
-            default:        return "vitals"
-        }
-    }
+    readonly property int badgeCount: Math.max(0, doctorIssues) + failedUnits
 
     readonly property string tooltipText: {
-        if (severity === "unknown") return "Run stoa-doctor to populate status"
+        if (severity === "unknown") return "Stoa Health — run doctor to populate"
         var parts = []
         if (doctorIssues   > 0) parts.push(doctorIssues   + " issue"   + (doctorIssues   > 1 ? "s" : ""))
         if (doctorWarnings > 0) parts.push(doctorWarnings + " warning" + (doctorWarnings > 1 ? "s" : ""))
@@ -69,11 +70,21 @@ Item {
         if (cpuTempC >= 80)     parts.push("CPU " + cpuTempC.toFixed(0) + "°C")
         if (gpuTempC >= 80)     parts.push("GPU " + gpuTempC.toFixed(0) + "°C")
         if (diskUsedPct >= 85)  parts.push("disk " + diskUsedPct + "%")
-        if (parts.length === 0) return "All systems nominal"
-        return parts.join("  ·  ")
+        if (parts.length === 0) return "Stoa Health — all systems nominal"
+        return "Stoa Health — " + parts.join("  ·  ")
     }
 
-    // ── Capsule background ──
+    // ── Helpers ──
+    function runInTerm(title, cmd) {
+        Quickshell.execDetached(["kitty", "--title", title, "--hold", "sh", "-c",
+            'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
+    }
+    function runSilent(cmd) {
+        Quickshell.execDetached(["sh", "-c",
+            'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
+    }
+
+    // ── Capsule (matches native bar widgets) ──
     Rectangle {
         anchors.centerIn: parent
         width:  capsule.implicitWidth + Style.marginS * 2
@@ -81,20 +92,17 @@ Item {
         radius: 11
         color:  Color.mSurfaceVariant
         opacity: 0.55
-        Behavior on color { ColorAnimation { duration: 400 } }
     }
 
-    // ── Pill ──
     RowLayout {
         id: capsule
         anchors.centerIn: parent
         spacing: Style.marginXS
 
-        // Heart-shaped dot (two stacked circles + diamond — kept as a single
-        // circle for simplicity; the colour itself carries the meaning).
-        Rectangle {
-            width: 8; height: 8; radius: 4
-            color: root.pillColor
+        NIcon {
+            icon: "heart"
+            color: root.healthColor
+            pointSize: Style.fontSizeM
             Behavior on color { ColorAnimation { duration: 400 } }
 
             SequentialAnimation on opacity {
@@ -105,16 +113,25 @@ Item {
             }
         }
 
-        NText {
-            text:  root.pillLabel
-            color: root.pillColor
-            font.pointSize: Style.fontSizeS
-            font.weight: Font.Medium
-            Behavior on color { ColorAnimation { duration: 400 } }
+        // Issue-count badge — only when something is wrong
+        Rectangle {
+            visible: root.badgeCount > 0
+            implicitWidth: Math.max(14, badgeText.implicitWidth + 6)
+            implicitHeight: 14
+            radius: 7
+            color: Color.mError
+
+            NText {
+                id: badgeText
+                anchors.centerIn: parent
+                text: root.badgeCount > 9 ? "9+" : "" + root.badgeCount
+                font.pointSize: Style.fontSizeXXS !== undefined ? Style.fontSizeXXS : Style.fontSizeXS
+                font.weight: Font.Bold
+                color: Color.mOnError
+            }
         }
     }
 
-    // ── Click handler ──
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -131,40 +148,24 @@ Item {
     NPopupContextMenu {
         id: contextMenu
         model: [
-            { "label": "Run Doctor",     "action": "doctor",   "icon": "refresh" },
-            { "label": "Snapshot Now",   "action": "snapshot", "icon": "save" },
-            { "label": "Open Doctor Log", "action": "log",     "icon": "file-text" },
+            { "label": "Run Doctor",   "action": "doctor",   "icon": "refresh" },
+            { "label": "Snapshot Now", "action": "snapshot", "icon": "save" },
+            { "label": "Open Log",     "action": "log",      "icon": "file-text" },
         ]
         onTriggered: function(action, item) {
-            if      (action === "doctor")   runDoctorProc.running   = true
-            else if (action === "snapshot") snapshotProc.running    = true
-            else if (action === "log")      openLogProc.running     = true
+            if (action === "doctor")
+                root.runInTerm("stoa-doctor", root._bin + "/stoa-doctor")
+            else if (action === "snapshot")
+                root.runSilent(root._bin + "/stoa-pkg-snapshot && notify-send 'Stoa Health' 'Package snapshot saved'")
+            else if (action === "log")
+                root.runInTerm("stoa-doctor log", "cat " + root._home + "/.config/stoa/doctor.log")
         }
-    }
-
-    // ── Processes ──
-    Process {
-        id: runDoctorProc
-        command: ["stoa-doctor"]
-        onRunningChanged: if (!running) statusProc.running = true
-    }
-
-    Process {
-        id: snapshotProc
-        command: ["stoa-pkg-snapshot"]
-        onRunningChanged: if (!running) statusProc.running = true
-    }
-
-    Process {
-        id: openLogProc
-        property string _log: (Quickshell.env("HOME") || "") + "/.config/stoa/doctor.log"
-        command: ["kitty", "--title", "stoa-doctor", "--hold", "cat", _log]
     }
 
     // ── Polling ──
     Process {
         id: statusProc
-        command: ["stoa-vitals-status"]
+        command: [root._bin + "/stoa-vitals-status"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {

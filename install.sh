@@ -81,11 +81,13 @@ _link "${STOA_DIR}/config/noctalia/plugins.json" \
       "${CONFIG_DIR}/noctalia/plugins.json"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-memento" \
       "${CONFIG_DIR}/noctalia/plugins/stoa-memento"
-_link "${STOA_DIR}/theme/noctalia-plugins/stoa-doctor-pill" \
-      "${CONFIG_DIR}/noctalia/plugins/stoa-doctor-pill"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive-pill" \
       "${CONFIG_DIR}/noctalia/plugins/stoa-drive-pill"
-_link "${STOA_DIR}/theme/noctalia-plugins/stoa-vitals" \
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-health" \
+      "${CONFIG_DIR}/noctalia/plugins/stoa-health"
+# stoa-health replaces the old doctor-pill and vitals plugins — drop
+# their stale symlinks so the plugin manager doesn't try to load them
+rm -f "${CONFIG_DIR}/noctalia/plugins/stoa-doctor-pill" \
       "${CONFIG_DIR}/noctalia/plugins/stoa-vitals"
 
 # Noctalia settings.json — opinionated Stoa seed (floating bar, Stoa
