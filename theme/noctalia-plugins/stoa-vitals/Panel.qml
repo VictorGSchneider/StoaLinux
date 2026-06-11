@@ -20,9 +20,12 @@ Item {
     property ShellScreen screen
 
     readonly property real contentPreferredWidth:  380
+    // StackLayout has no currentItem (that's StackView) — index children[]
+    // by the active tab to size the panel to the visible page only.
     readonly property real contentPreferredHeight: header.implicitHeight
                                                  + tabs.implicitHeight
-                                                 + stack.currentItem.implicitHeight
+                                                 + (stack.children[root.currentTab]
+                                                    ? stack.children[root.currentTab].implicitHeight : 0)
                                                  + Style.marginM * 3
 
     // ── Aggregated status (from stoa-vitals-status) ──
