@@ -16,7 +16,7 @@
     "metadata": {
         "defaultSettings": {
             "icon": "heart",
-            "terminal": "kitty",
+            "privilege": "pkexec",
             "pollSeconds": 30,
             "showBadge": true,
             "pulse": true,
