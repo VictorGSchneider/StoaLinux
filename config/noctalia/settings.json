@@ -58,7 +58,7 @@
         "barType": "floating",
         "capsuleColorKey": "none",
         "capsuleOpacity": 1,
-        "contentPadding": 5,
+        "contentPadding": 3,
         "density": "comfortable",
         "displayMode": "always_visible",
         "enableExclusionZoneInset": true,
