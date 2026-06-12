@@ -30,5 +30,6 @@
   "x02ApiKey": "",
   "x02Expiry": "7d",
   "shareSkipPopover": false,
-  "searchEngineUrl": "https://search.brave.com/search?q="
+  "searchEngineUrl": "https://search.brave.com/search?q=",
+  "screenshotDelaySec": 0
 }
