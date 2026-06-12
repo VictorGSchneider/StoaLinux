@@ -1,7 +1,7 @@
 {
     "id": "stoa-health",
     "name": "Stoa Health",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "minNoctaliaVersion": "4.6.6",
     "author": "VictorGSchneider",
     "license": "GPL-3.0",
@@ -19,7 +19,6 @@
             "privilege": "pkexec",
             "pollSeconds": 30,
             "showBadge": true,
-            "pulse": true,
             "actions": [
                 { "id": "doctor",     "tab": "vitals", "label": "Run Doctor",                "icon": "refresh",   "visible": true },
                 { "id": "log",        "tab": "vitals", "label": "Log",                       "icon": "file-text", "visible": true },

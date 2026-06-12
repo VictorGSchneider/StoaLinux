@@ -23,7 +23,6 @@ ColumnLayout {
     property string valuePrivilege:   pluginApi?.pluginSettings?.privilege ?? "pkexec"
     property int    valuePollSeconds: pluginApi?.pluginSettings?.pollSeconds ?? 30
     property bool   valueShowBadge:   pluginApi?.pluginSettings?.showBadge ?? true
-    property bool   valuePulse:       pluginApi?.pluginSettings?.pulse ?? true
 
     // ── Action list (deep copy so we can edit before save) ──
     readonly property var _defaultActions: [
@@ -117,7 +116,6 @@ ColumnLayout {
         pluginApi.pluginSettings.privilege   = root.valuePrivilege
         pluginApi.pluginSettings.pollSeconds = root.valuePollSeconds
         pluginApi.pluginSettings.showBadge   = root.valueShowBadge
-        pluginApi.pluginSettings.pulse       = root.valuePulse
         pluginApi.pluginSettings.actions     = root.valueActions
         pluginApi.saveSettings()
     }
@@ -147,14 +145,6 @@ ColumnLayout {
         description: "Show a red counter on the icon when issues or failed units exist"
         checked: root.valueShowBadge
         onToggled: checked => root.valueShowBadge = checked
-    }
-
-    NToggle {
-        Layout.fillWidth: true
-        label: "Pulse on warning/error"
-        description: "Animate the icon when the system needs attention"
-        checked: root.valuePulse
-        onToggled: checked => root.valuePulse = checked
     }
 
     NSpinBox {
