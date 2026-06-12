@@ -151,11 +151,113 @@
             "left": [
                 {
                     "defaultSettings": {
+                        "actions": [
+                            {
+                                "icon": "refresh",
+                                "id": "doctor",
+                                "label": "Run Doctor",
+                                "tab": "vitals",
+                                "visible": true
+                            },
+                            {
+                                "icon": "file-text",
+                                "id": "log",
+                                "label": "Log",
+                                "tab": "vitals",
+                                "visible": true
+                            },
+                            {
+                                "icon": "terminal",
+                                "id": "journal",
+                                "label": "Journal",
+                                "tab": "vitals",
+                                "visible": true
+                            },
+                            {
+                                "icon": "save",
+                                "id": "pkgsnap",
+                                "label": "Snapshot packages now",
+                                "tab": "snap",
+                                "visible": true
+                            },
+                            {
+                                "icon": "save",
+                                "id": "backup",
+                                "label": "Backup configs now",
+                                "tab": "snap",
+                                "visible": true
+                            },
+                            {
+                                "icon": "folder",
+                                "id": "lspkg",
+                                "label": "Browse snapshots",
+                                "tab": "snap",
+                                "visible": true
+                            },
+                            {
+                                "icon": "folder",
+                                "id": "lsbk",
+                                "label": "Browse backups",
+                                "tab": "snap",
+                                "visible": true
+                            },
+                            {
+                                "icon": "download",
+                                "id": "updAll",
+                                "label": "Update all (pacman + AUR)",
+                                "tab": "maint",
+                                "visible": true
+                            },
+                            {
+                                "icon": "download",
+                                "id": "updSys",
+                                "label": "Update system (pacman)",
+                                "tab": "maint",
+                                "visible": true
+                            },
+                            {
+                                "icon": "download",
+                                "id": "updAur",
+                                "label": "Update AUR (yay)",
+                                "tab": "maint",
+                                "visible": true
+                            },
+                            {
+                                "icon": "trash",
+                                "id": "cleanDry",
+                                "label": "Cleanup (dry run)",
+                                "tab": "maint",
+                                "visible": true
+                            },
+                            {
+                                "icon": "trash",
+                                "id": "cleanApply",
+                                "label": "Cleanup (apply)",
+                                "tab": "maint",
+                                "visible": true
+                            },
+                            {
+                                "icon": "clock",
+                                "id": "sched",
+                                "label": "Toggle boot schedule",
+                                "tab": "maint",
+                                "visible": true
+                            },
+                            {
+                                "icon": "shield",
+                                "id": "fw",
+                                "label": "Firewall (locksmith)",
+                                "tab": "maint",
+                                "visible": true
+                            }
+                        ],
+                        "icon": "heart",
+                        "pollSeconds": 30,
+                        "pulse": true,
+                        "showBadge": true,
+                        "terminal": "kitty"
                     },
-                    "id": "plugin:stoa-doctor-pill"
-                },
-                {
-                    "id": "plugin:stoa-vitals"
+                    "id": "plugin:stoa-health"
                 },
                 {
                     "compactMode": true,

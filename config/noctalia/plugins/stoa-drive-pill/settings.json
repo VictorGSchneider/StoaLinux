@@ -1,0 +1,6 @@
+{
+  "icon": "cloud-upload",
+  "fileManager": "thunar",
+  "pollSeconds": 5,
+  "showBadge": true
+}
