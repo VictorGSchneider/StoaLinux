@@ -1,21 +1,19 @@
 // Stoa Drive Pill — Bar Widget
-// Icon-only capsule colored by mount state, with an optional m/t badge.
-// Left-click  → toggle Panel (per-drive controls)
-// Right-click → context menu (Mount All / Unmount All / Open ~/Drive / Settings)
+// Inherits NIconButton so it picks up the bar's global capsule
+// styling (color, outline, size, font scale, density), with an
+// m/t badge overlay when not all drives are mounted.
 //
-// Actions run via Quickshell.execDetached with absolute paths so they
-// survive QML lifetime and don't depend on ~/.local/bin being in
-// Quickshell's PATH.
+// Left-click  → toggle Panel (per-drive controls)
+// Right-click → Mount All / Unmount All / Open ~/Drive / Settings
 
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
-import qs.Widgets
 import qs.Services.UI
+import qs.Widgets
 
-Item {
+NIconButton {
     id: root
 
     property var    pluginApi: null
@@ -23,6 +21,7 @@ Item {
     property string widgetId: ""
     property string section: ""
     property int    sectionWidgetIndex: -1
+    property int    sectionWidgetsCount: 0
 
     readonly property string _home: Quickshell.env("HOME") || ""
     readonly property string _bin:  _home + "/.local/bin"
@@ -33,93 +32,90 @@ Item {
     readonly property int    cfgPollMs:      (pluginApi?.pluginSettings?.pollSeconds ?? 5) * 1000
     readonly property bool   cfgBadge:       pluginApi?.pluginSettings?.showBadge ?? true
 
-    property string tooltipText: !_available      ? "rclone not installed"
-        : total === 0    ? "No cloud drives configured"
-        : mounted === total
-                         ? "All drives mounted (" + total + "/" + total + ")"
-        : mounted > 0    ? mounted + " / " + total + " drives mounted"
-                         : "No drives mounted — click to manage"
-
-    visible: _available
-    implicitWidth:  visible ? capsule.implicitWidth + Style.marginM * 2 : 0
-    implicitHeight: parent ? parent.height : 32
-
     // ── Polled state ──
     property bool _available: true
-    property int  total:    0
-    property int  mounted:  0
+    property int  total:   0
+    property int  mounted: 0
 
-    readonly property color pillColor: {
-        if (total === 0)        return Color.mOnSurfaceVariant
-        if (mounted === total)  return Color.mSecondary
-        if (mounted > 0)        return Color.mTertiary
+    visible: _available
+
+    readonly property color stateColor: {
+        if (total === 0)       return Color.mOnSurfaceVariant
+        if (mounted === total) return Color.mSecondary
+        if (mounted > 0)       return Color.mTertiary
         return Color.mOnSurfaceVariant
     }
 
-    function runSilent(cmd) {
-        Quickshell.execDetached(["sh", "-c",
-            'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
+    // ── NIconButton appearance ──
+    icon: mounted === 0 && total > 0 ? "cloud-off" : cfgIcon
+    baseSize: Style.getCapsuleHeightForScreen(screen?.name)
+    applyUiScale: false
+    tooltipDirection: BarService.getTooltipDirection(screen?.name)
+    customRadius: Style.radiusL
+    colorBg: Style.capsuleColor
+    colorFg: root.stateColor
+    colorBgHover: Color.mHover
+    colorFgHover: root.stateColor
+    colorBorder: "transparent"
+    colorBorderHover: "transparent"
+
+    tooltipText: !_available  ? "rclone not installed"
+        : total === 0         ? "No cloud drives configured"
+        : mounted === total   ? "All drives mounted (" + total + "/" + total + ")"
+        : mounted > 0         ? mounted + " / " + total + " drives mounted"
+                              : "No drives mounted — click to manage"
+
+    onClicked: {
+        if (!pluginApi) return
+        const open = pluginApi.isPanelOpen?.(screen) === true
+        if (open && pluginApi.closePanel) pluginApi.closePanel(screen)
+        else if (pluginApi.openPanel)     pluginApi.openPanel(screen, root)
+    }
+    onRightClicked: PanelService.showContextMenu(contextMenu, root, screen)
+
+    function _runBg(label, cmd) {
+        var script =
+            'export PATH="$HOME/.local/bin:$PATH"; ' +
+            'notify-send "Stoa Drive" "Running: ' + label + '"; ' +
+            'if ' + cmd + '; then ' +
+            '  notify-send "Stoa Drive" "Done: ' + label + '"; ' +
+            'else ' +
+            '  notify-send -u critical "Stoa Drive" "Failed: ' + label + '"; ' +
+            'fi; ' +
+            'sleep 1'
+        Quickshell.execDetached(["sh", "-c", script])
         refreshTimer.restart()
     }
+    function _runOpen(cmd) {
+        Quickshell.execDetached(["sh", "-c",
+            'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
+    }
 
-    // ── Capsule background ──
+    // ── m/t badge overlay ──
     Rectangle {
-        anchors.centerIn: parent
-        width:  capsule.implicitWidth + Style.marginS * 2
-        height: 22
-        radius: 11
-        color:  Color.mSurfaceVariant
-        opacity: 0.55
-        Behavior on color { ColorAnimation { duration: 400 } }
-    }
-
-    // ── Icon + badge ──
-    RowLayout {
-        id: capsule
-        anchors.centerIn: parent
-        spacing: Style.marginXS
-
-        NIcon {
-            icon: root.mounted === 0 && root.total > 0 ? "cloud-off" : root.cfgIcon
-            color: root.pillColor
-            pointSize: Style.fontSizeM
-            Behavior on color { ColorAnimation { duration: 400 } }
+        visible: root.cfgBadge && root.total > 0 && root.mounted < root.total
+        anchors {
+            top: parent.top
+            right: parent.right
+            topMargin: -2
+            rightMargin: -2
         }
+        implicitWidth:  badgeText.implicitWidth + 8
+        implicitHeight: 14
+        radius: 7
+        color: root.mounted > 0 ? Color.mTertiaryContainer : Color.mErrorContainer
+        z: 2
 
-        // m/t badge — only when not everything is mounted
-        Rectangle {
-            visible: root.cfgBadge && root.total > 0 && root.mounted < root.total
-            implicitWidth: badgeText.implicitWidth + 8
-            implicitHeight: 14
-            radius: 7
-            color: root.mounted > 0 ? Color.mTertiaryContainer : Color.mSurfaceVariant
-
-            NText {
-                id: badgeText
-                anchors.centerIn: parent
-                text: root.mounted + "/" + root.total
-                font.pointSize: Style.fontSizeXS
-                font.weight: Font.Bold
-                color: Color.mOnSurface
-            }
+        Text {
+            id: badgeText
+            anchors.centerIn: parent
+            text: root.mounted + "/" + root.total
+            font.pointSize: Style.fontSizeXS
+            font.weight: Font.Bold
+            color: Color.mOnSurface
         }
     }
 
-    // ── Click handler ──
-    MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        cursorShape: Qt.PointingHandCursor
-        onClicked: function(mouse) {
-            if (mouse.button === Qt.LeftButton) {
-                if (pluginApi) pluginApi.togglePanel(root.screen, root)
-            } else if (mouse.button === Qt.RightButton) {
-                PanelService.showContextMenu(contextMenu, root, screen)
-            }
-        }
-    }
-
-    // ── Right-click context menu ──
     NPopupContextMenu {
         id: contextMenu
         model: [
@@ -131,9 +127,9 @@ Item {
         onTriggered: function(action, item) {
             contextMenu.close()
             PanelService.closeContextMenu(screen)
-            if      (action === "mountall")  root.runSilent(root._bin + "/stoa-drive mount-all")
-            else if (action === "umountall") root.runSilent(root._bin + "/stoa-drive unmount-all")
-            else if (action === "open")      root.runSilent(root.cfgFileManager + " " + root._home + "/Drive")
+            if      (action === "mountall")  root._runBg("Mount all",   root._bin + "/stoa-drive mount-all")
+            else if (action === "umountall") root._runBg("Unmount all", root._bin + "/stoa-drive unmount-all")
+            else if (action === "open")      root._runOpen(root.cfgFileManager + " " + root._home + "/Drive")
             else if (action === "settings" && pluginApi?.manifest)
                 BarService.openPluginSettings(screen, pluginApi.manifest)
         }
@@ -160,15 +156,7 @@ Item {
     }
 
     Timer {
-        // Default 5 s: the first read after boot races with
-        // `stoa-drive mount-all`, so retry quickly enough that the pill
-        // never appears stuck. Force a false→true transition so the
-        // Process re-spawns cleanly even if Quickshell internals didn't
-        // clear `running` after the previous exit.
         interval: root.cfgPollMs; running: true; repeat: true
-        onTriggered: {
-            statusProc.running = false
-            statusProc.running = true
-        }
+        onTriggered: { statusProc.running = false; statusProc.running = true }
     }
 }

@@ -1,41 +1,40 @@
 // Stoa Health — Bar Widget
-// Icon-only capsule, colored by the worst of: doctor issues/warnings,
-// failed units, CPU/GPU temps, disk and memory pressure.
-// Left-click  → toggle Panel (Vitals / Snapshots / Maintenance)
-// Right-click → context menu (Run Doctor / Snapshot Now / Open Log)
+// Inherits NIconButton so the bar's global config (capsule color,
+// outline, size, font scale, density) applies automatically — same
+// integration the official Clipboard/Plugin-Manager widgets get.
 //
-// All actions launch via Quickshell.execDetached so they survive panel
-// close and Quickshell restarts — Process objects die with their QML
-// parent, which is why actions in the old plugins never ran.
+// Left-click  → toggle panel (Vitals / Snapshots / Maintenance)
+// Right-click → Run Doctor / Snapshot Now / Open Log / Settings
+//
+// Background actions: every command runs through Quickshell.execDetached
+// wrapped in sh -c with notify-send for Running / Done / Failed — no
+// terminal is opened anywhere.
 
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
-import qs.Widgets
 import qs.Services.UI
+import qs.Widgets
 
-Item {
+NIconButton {
     id: root
 
+    // Shell-injected plugin properties
     property var    pluginApi: null
     property ShellScreen screen
     property string widgetId: ""
     property string section: ""
     property int    sectionWidgetIndex: -1
+    property int    sectionWidgetsCount: 0
 
     readonly property string _home: Quickshell.env("HOME") || ""
     readonly property string _bin:  _home + "/.local/bin"
 
-    // ── User settings (Settings.qml / manifest defaults) ──
-    readonly property string cfgIcon:     pluginApi?.pluginSettings?.icon ?? "heart"
-    readonly property int    cfgPollMs:   (pluginApi?.pluginSettings?.pollSeconds ?? 30) * 1000
-    readonly property bool   cfgBadge:    pluginApi?.pluginSettings?.showBadge ?? true
-    readonly property bool   cfgPulse:    pluginApi?.pluginSettings?.pulse ?? true
-
-    implicitWidth:  capsule.implicitWidth + Style.marginM * 2
-    implicitHeight: parent ? parent.height : 32
+    // ── User settings ──
+    readonly property string cfgIcon:   pluginApi?.pluginSettings?.icon ?? "heart"
+    readonly property int    cfgPollMs: (pluginApi?.pluginSettings?.pollSeconds ?? 30) * 1000
+    readonly property bool   cfgBadge:  pluginApi?.pluginSettings?.showBadge ?? true
 
     // ── Aggregate state (fed by stoa-vitals-status) ──
     property int  doctorIssues:   -1
@@ -67,7 +66,21 @@ Item {
 
     readonly property int badgeCount: Math.max(0, doctorIssues) + failedUnits
 
-    readonly property string tooltipText: {
+    // ── NIconButton appearance: pick up the bar's global capsule
+    //    styling, then tint the foreground with the health color ──
+    icon: root.cfgIcon
+    baseSize: Style.getCapsuleHeightForScreen(screen?.name)
+    applyUiScale: false
+    tooltipDirection: BarService.getTooltipDirection(screen?.name)
+    customRadius: Style.radiusL
+    colorBg: Style.capsuleColor
+    colorFg: root.healthColor
+    colorBgHover: Color.mHover
+    colorFgHover: root.healthColor
+    colorBorder: "transparent"
+    colorBorderHover: "transparent"
+
+    tooltipText: {
         if (severity === "unknown") return "Stoa Health — run doctor to populate"
         var parts = []
         if (doctorIssues   > 0) parts.push(doctorIssues   + " issue"   + (doctorIssues   > 1 ? "s" : ""))
@@ -80,7 +93,15 @@ Item {
         return "Stoa Health — " + parts.join("  ·  ")
     }
 
-    // ── Helpers (all detached, all silent — no terminal opened) ──
+    onClicked: {
+        if (!pluginApi) return
+        const open = pluginApi.isPanelOpen?.(screen) === true
+        if (open && pluginApi.closePanel) pluginApi.closePanel(screen)
+        else if (pluginApi.openPanel)     pluginApi.openPanel(screen, root)
+    }
+    onRightClicked: PanelService.showContextMenu(contextMenu, root, screen)
+
+    // ── Helpers ──
     function _runBg(label, cmd) {
         var script =
             'export PATH="$HOME/.local/bin:$PATH"; ' +
@@ -97,68 +118,32 @@ Item {
             'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
     }
 
-    // ── Capsule (matches native bar widgets) ──
+    // ── Badge overlay (top-right corner) ──
     Rectangle {
-        anchors.centerIn: parent
-        width:  capsule.implicitWidth + Style.marginS * 2
-        height: 22
-        radius: 11
-        color:  Color.mSurfaceVariant
-        opacity: 0.55
-    }
-
-    RowLayout {
-        id: capsule
-        anchors.centerIn: parent
-        spacing: Style.marginXS
-
-        NIcon {
-            icon: root.cfgIcon
-            color: root.healthColor
-            pointSize: Style.fontSizeM
-            Behavior on color { ColorAnimation { duration: 400 } }
-
-            SequentialAnimation on opacity {
-                running: root.cfgPulse && (root.severity === "error" || root.severity === "warn")
-                loops: Animation.Infinite
-                onRunningChanged: if (!running) parent.opacity = 1.0
-                NumberAnimation { from: 1.0; to: 0.45; duration: 700; easing.type: Easing.InOutSine }
-                NumberAnimation { from: 0.45; to: 1.0; duration: 700; easing.type: Easing.InOutSine }
-            }
+        visible: root.cfgBadge && root.badgeCount > 0
+        anchors {
+            top: parent.top
+            right: parent.right
+            topMargin: -2
+            rightMargin: -2
         }
+        implicitWidth:  Math.max(14, badgeText.implicitWidth + 6)
+        implicitHeight: 14
+        radius: 7
+        color: Color.mError
+        z: 2
 
-        // Issue-count badge — only when something is wrong
-        Rectangle {
-            visible: root.cfgBadge && root.badgeCount > 0
-            implicitWidth: Math.max(14, badgeText.implicitWidth + 6)
-            implicitHeight: 14
-            radius: 7
-            color: Color.mError
-
-            NText {
-                id: badgeText
-                anchors.centerIn: parent
-                text: root.badgeCount > 9 ? "9+" : "" + root.badgeCount
-                font.pointSize: Style.fontSizeXXS !== undefined ? Style.fontSizeXXS : Style.fontSizeXS
-                font.weight: Font.Bold
-                color: Color.mOnError
-            }
+        Text {
+            id: badgeText
+            anchors.centerIn: parent
+            text: root.badgeCount > 9 ? "9+" : "" + root.badgeCount
+            font.pointSize: Style.fontSizeXS
+            font.weight: Font.Bold
+            color: Color.mOnError
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        cursorShape: Qt.PointingHandCursor
-        onClicked: function(mouse) {
-            if (mouse.button === Qt.LeftButton) {
-                if (pluginApi) pluginApi.togglePanel(root.screen, root)
-            } else if (mouse.button === Qt.RightButton) {
-                PanelService.showContextMenu(contextMenu, root, screen)
-            }
-        }
-    }
-
+    // ── Right-click menu ──
     NPopupContextMenu {
         id: contextMenu
         model: [
@@ -170,12 +155,9 @@ Item {
         onTriggered: function(action, item) {
             contextMenu.close()
             PanelService.closeContextMenu(screen)
-            if (action === "doctor")
-                root._runBg("Doctor", root._bin + "/stoa-doctor")
-            else if (action === "snapshot")
-                root._runBg("Package snapshot", root._bin + "/stoa-pkg-snapshot")
-            else if (action === "log")
-                root._runOpen("xdg-open " + root._home + "/.config/stoa/doctor.log")
+            if      (action === "doctor")   root._runBg("Doctor", root._bin + "/stoa-doctor")
+            else if (action === "snapshot") root._runBg("Package snapshot", root._bin + "/stoa-pkg-snapshot")
+            else if (action === "log")      root._runOpen("xdg-open " + root._home + "/.config/stoa/doctor.log")
             else if (action === "settings" && pluginApi?.manifest)
                 BarService.openPluginSettings(screen, pluginApi.manifest)
         }
