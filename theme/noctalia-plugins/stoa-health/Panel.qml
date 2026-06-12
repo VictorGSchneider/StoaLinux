@@ -8,9 +8,10 @@
 // The Panel reads pluginSettings.actions, filters by tab+visible,
 // preserves the user's order, and dispatches by id.
 //
-// Every action runs through Quickshell.execDetached — never Process —
-// because Process objects are destroyed (and their children killed)
-// the moment the panel closes.
+// Every action runs through Quickshell.execDetached, dispatched BEFORE
+// closePanel() — closing the panel destroys the QML tree synchronously,
+// and any execDetached call after that point silently no-ops. Order
+// matters: spawn first, close second.
 
 import QtQuick
 import QtQuick.Layouts
@@ -26,16 +27,14 @@ Item {
     property var       pluginApi: null
     property ShellScreen screen
 
-    // Float top-center on screen (same placement as the Clipboard
-    // History panel) instead of anchoring to the bar widget.
-    readonly property bool panelAnchorHorizontalCenter: true
-    readonly property bool panelAnchorTop: true
-
     readonly property string _home: Quickshell.env("HOME") || ""
     readonly property string _bin:  _home + "/.local/bin"
 
-    readonly property string cfgIcon:     pluginApi?.pluginSettings?.icon ?? "heart"
-    readonly property string cfgTerminal: pluginApi?.pluginSettings?.terminal ?? "kitty"
+    readonly property string cfgIcon: pluginApi?.pluginSettings?.icon ?? "heart"
+    // "pkexec" → graphical polkit prompt once per action (default, safe).
+    // "sudo-n" → sudo -n, requires NOPASSWD sudoers rule for these commands.
+    readonly property string cfgPrivilege: pluginApi?.pluginSettings?.privilege ?? "pkexec"
+    readonly property string _sudo: cfgPrivilege === "sudo-n" ? "sudo -n " : "pkexec "
 
     // Manifest defaults reproduced here so the panel still works when
     // pluginSettings.actions is absent (first run, before any save).
@@ -113,32 +112,48 @@ Item {
     Component.onCompleted: statusProc.running = true
 
     // ── Helpers ──
-    function runInTerm(title, cmd) {
-        Quickshell.execDetached([root.cfgTerminal, "--title", title, "--hold", "sh", "-c",
-            'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
-        pluginApi?.closePanel(screen)
+    // All actions are wrapped in a single sh -c that:
+    //   1. fires a "Running" notification
+    //   2. runs the command silently
+    //   3. fires "Done" or "Failed" depending on exit code
+    // This runs detached so it survives the panel closing. The panel
+    // closes AFTER execDetached returns — if the order is reversed the
+    // QML tree gets destroyed mid-call and the spawn silently no-ops.
+    function _runBg(label, cmd) {
+        var script =
+            'export PATH="$HOME/.local/bin:$PATH"; ' +
+            'notify-send "Stoa Health" "Running: ' + label + '"; ' +
+            'if ' + cmd + '; then ' +
+            '  notify-send "Stoa Health" "Done: ' + label + '"; ' +
+            'else ' +
+            '  notify-send -u critical "Stoa Health" "Failed: ' + label + '"; ' +
+            'fi'
+        Quickshell.execDetached(["sh", "-c", script])
+        if (pluginApi) pluginApi.closePanel(screen)
     }
-    function runSilent(cmd) {
+    // Fire-and-forget without notifications (opening file managers etc.)
+    function _runOpen(cmd) {
         Quickshell.execDetached(["sh", "-c",
             'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
-        pluginApi?.closePanel(screen)
+        if (pluginApi) pluginApi.closePanel(screen)
     }
+
     function runAction(id) {
         switch (id) {
-            case "doctor":     return runInTerm("stoa-doctor", _bin + "/stoa-doctor")
-            case "log":        return runInTerm("stoa-doctor log", "cat " + _home + "/.config/stoa/doctor.log")
-            case "journal":    return runInTerm("journal", "journalctl -p 3..4 -b --no-pager | tail -200")
-            case "pkgsnap":    return runSilent(_bin + "/stoa-pkg-snapshot && notify-send 'Stoa Health' 'Package snapshot saved'")
-            case "backup":     return runInTerm("stoa-maintain backup", _bin + "/stoa-maintain --backup")
-            case "lspkg":      return runSilent("xdg-open " + _home + "/.config/stoa/pkg-snapshots")
-            case "lsbk":       return runSilent("xdg-open " + _home)
-            case "updAll":     return runInTerm("update-all", "sudo pacman -Syu && yay -Syu")
-            case "updSys":     return runInTerm("update",     "sudo pacman -Syu")
-            case "updAur":     return runInTerm("update-aur", "yay -Syu")
-            case "cleanDry":   return runInTerm("stoa-maintain (dry-run)", _bin + "/stoa-maintain --cleanup --dry-run")
-            case "cleanApply": return runInTerm("stoa-maintain", _bin + "/stoa-maintain --cleanup")
-            case "sched":      return runInTerm("stoa-maintain (schedule)", _bin + "/stoa-maintain --schedule")
-            case "fw":         return runInTerm("stoa-locksmith", _bin + "/stoa-locksmith")
+            case "doctor":     return _runBg("Doctor",          _bin + "/stoa-doctor")
+            case "log":        return _runOpen("xdg-open " + _home + "/.config/stoa/doctor.log")
+            case "journal":    return _runOpen("xdg-open " + _home + "/.config/stoa/doctor.log")
+            case "pkgsnap":    return _runBg("Package snapshot", _bin + "/stoa-pkg-snapshot")
+            case "backup":     return _runBg("Backup configs",   _bin + "/stoa-maintain --backup")
+            case "lspkg":      return _runOpen("xdg-open " + _home + "/.config/stoa/pkg-snapshots")
+            case "lsbk":       return _runOpen("xdg-open " + _home)
+            case "updAll":     return _runBg("Update all",      _sudo + "pacman -Syu --noconfirm && yay -Syu --noconfirm")
+            case "updSys":     return _runBg("Update system",   _sudo + "pacman -Syu --noconfirm")
+            case "updAur":     return _runBg("Update AUR",      "yay -Syu --noconfirm")
+            case "cleanDry":   return _runBg("Cleanup (dry-run)", _bin + "/stoa-maintain --cleanup --dry-run")
+            case "cleanApply": return _runBg("Cleanup",         _bin + "/stoa-maintain --cleanup")
+            case "sched":      return _runBg("Toggle schedule", _sudo + _bin + "/stoa-maintain --schedule")
+            case "fw":         return _runBg("Firewall",        _bin + "/stoa-locksmith")
         }
     }
 
@@ -271,9 +286,9 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        pluginApi?.closePanel(screen)
                         if (pluginApi?.manifest)
                             BarService.openPluginSettings(screen, pluginApi.manifest)
+                        if (pluginApi) pluginApi.closePanel(screen)
                     }
                 }
             }

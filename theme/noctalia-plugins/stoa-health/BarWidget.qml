@@ -30,7 +30,6 @@ Item {
 
     // ── User settings (Settings.qml / manifest defaults) ──
     readonly property string cfgIcon:     pluginApi?.pluginSettings?.icon ?? "heart"
-    readonly property string cfgTerminal: pluginApi?.pluginSettings?.terminal ?? "kitty"
     readonly property int    cfgPollMs:   (pluginApi?.pluginSettings?.pollSeconds ?? 30) * 1000
     readonly property bool   cfgBadge:    pluginApi?.pluginSettings?.showBadge ?? true
     readonly property bool   cfgPulse:    pluginApi?.pluginSettings?.pulse ?? true
@@ -81,12 +80,19 @@ Item {
         return "Stoa Health — " + parts.join("  ·  ")
     }
 
-    // ── Helpers ──
-    function runInTerm(title, cmd) {
-        Quickshell.execDetached([root.cfgTerminal, "--title", title, "--hold", "sh", "-c",
-            'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
+    // ── Helpers (all detached, all silent — no terminal opened) ──
+    function _runBg(label, cmd) {
+        var script =
+            'export PATH="$HOME/.local/bin:$PATH"; ' +
+            'notify-send "Stoa Health" "Running: ' + label + '"; ' +
+            'if ' + cmd + '; then ' +
+            '  notify-send "Stoa Health" "Done: ' + label + '"; ' +
+            'else ' +
+            '  notify-send -u critical "Stoa Health" "Failed: ' + label + '"; ' +
+            'fi'
+        Quickshell.execDetached(["sh", "-c", script])
     }
-    function runSilent(cmd) {
+    function _runOpen(cmd) {
         Quickshell.execDetached(["sh", "-c",
             'export PATH="$HOME/.local/bin:$PATH"; ' + cmd])
     }
@@ -165,11 +171,11 @@ Item {
             contextMenu.close()
             PanelService.closeContextMenu(screen)
             if (action === "doctor")
-                root.runInTerm("stoa-doctor", root._bin + "/stoa-doctor")
+                root._runBg("Doctor", root._bin + "/stoa-doctor")
             else if (action === "snapshot")
-                root.runSilent(root._bin + "/stoa-pkg-snapshot && notify-send 'Stoa Health' 'Package snapshot saved'")
+                root._runBg("Package snapshot", root._bin + "/stoa-pkg-snapshot")
             else if (action === "log")
-                root.runInTerm("stoa-doctor log", "cat " + root._home + "/.config/stoa/doctor.log")
+                root._runOpen("xdg-open " + root._home + "/.config/stoa/doctor.log")
             else if (action === "settings" && pluginApi?.manifest)
                 BarService.openPluginSettings(screen, pluginApi.manifest)
         }
