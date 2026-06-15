@@ -19,5 +19,6 @@
     "telemetry.telemetryLevel": "off",
     "codesnippetsai.defaultModel": "DeepSeek-R1 Free - OpenRouter",
     "http.systemCertificatesNode": true,
-    "git.autofetch": true
+    "git.autofetch": true,
+    "chat.mcp.gallery.enabled": true
 }
