@@ -390,6 +390,36 @@ MIME
     echo -e "  ${O}[+] mimeapps.list${R}"
 fi
 
+# Brave override — bypass libsecret/gnome-keyring so the browser never
+# prompts for the keyring password. The local override shadows the system
+# brave-browser.desktop in rofi, mimeapps, and xdg-open. Written every run
+# so a Brave package update can't silently reintroduce the prompt.
+BRAVE_DESKTOP="${MIME_DIR}/brave-browser.desktop"
+cat > "$BRAVE_DESKTOP" <<'BRAVE'
+[Desktop Entry]
+Version=1.0
+Name=Brave Web Browser
+GenericName=Web Browser
+Comment=Access the Internet
+Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland %U
+StartupNotify=true
+Terminal=false
+Icon=brave-browser
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=application/pdf;application/rdf+xml;application/rss+xml;application/xhtml+xml;application/xhtml_xml;application/xml;image/gif;image/jpeg;image/png;image/webp;text/html;text/xml;x-scheme-handler/http;x-scheme-handler/https;
+Actions=new-window;new-private-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland
+
+[Desktop Action new-private-window]
+Name=New Incognito Window
+Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland --incognito
+BRAVE
+echo -e "  ${O}[+] brave-browser.desktop (--password-store=basic)${R}"
+
 echo ""
 echo -e "${F}Shell configuration:${R}"
 echo ""
