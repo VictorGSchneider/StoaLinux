@@ -85,9 +85,9 @@
         },
         {
           "keys": "Super + B",
-          "desc": "exec brave --enable-features=UseOzonePlatform --ozone-platform=wayland",
+          "desc": "exec brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland",
           "_verb": "exec",
-          "_param": "brave --enable-features=UseOzonePlatform --ozone-platform=wayland",
+          "_param": "brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland",
           "_mods": "Super",
           "_mainKey": "B"
         },
@@ -455,8 +455,8 @@
     }
   ],
   "detectedCompositor": "hyprland",
-  "windowWidth": 900,
-  "windowHeight": 1200,
+  "windowWidth": 2000,
+  "windowHeight": 850,
   "autoHeight": true,
   "columnCount": 4,
   "modKeyVariable": "$mod",
@@ -468,7 +468,7 @@
   "mergeSequentialBinds": true,
   "showUndescribedBinds": true,
   "splitLargeWorkspaceCategory": true,
-  "workspaceSplitThreshold": 8,
+  "workspaceSplitThreshold": 12,
   "keyColorAlt": "#FF6B6B",
   "keyColorXF86": "#4ECDC4",
   "keyColorPrint": "#95E1D3",
@@ -488,6 +488,15 @@
   "keyTextNumeric": "",
   "keyTextMouse": "",
   "keyTextDefault": "",
+  "keyColorMod2": "",
+  "keyColorMod3": "",
+  "keyColorMod5": "",
+  "keyTextMod2": "",
+  "keyTextMod3": "",
+  "keyTextMod5": "",
+  "keyLabelMod2": "",
+  "keyLabelMod3": "",
+  "keyLabelMod5": "",
   "descriptionTextColor": "#E0E0E0",
   "bindOverrides": {}
 }
