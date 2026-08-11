@@ -37,7 +37,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 
 ## Palette
 
-The default palette is inspired by the ancient world — marble, bronze, parchment, stone. It can be changed entirely via `Super+I → Theme → Color Palette`, with **10 built-in presets** and a **custom color editor**.
+The default palette is inspired by the ancient world — marble, bronze, parchment, stone. It can be changed entirely via `Super+S → Theme → Color Palette`, with **10 built-in presets** and a **custom color editor**.
 
 <table>
   <tr>
@@ -105,16 +105,15 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
   <tr><td><code>Super+B</code></td><td>Browser (Brave)</td><td><code>Super+Shift+T</code></td><td>OCR (screen text)</td></tr>
   <tr><td><code>Super+C</code></td><td>Calculator (Qalculate)</td><td><code>Super+Shift+P</code></td><td>Advanced paste</td></tr>
   <tr><td><code>Super+Space</code></td><td>Launcher (Noctalia)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
-  <tr><td><code>Super+E</code></td><td>Files (lf)</td><td><code>Super+Escape</code></td><td>Lock screen</td></tr>
-  <tr><td><code>Super+Shift+E</code></td><td>Files (Thunar)</td><td><code>Super+Q</code></td><td>Close</td></tr>
+  <tr><td><code>Super+E</code></td><td>Files (Thunar)</td><td><code>Super+Escape</code></td><td>Lock screen</td></tr>
+  <tr><td><code>Super+Shift+E</code></td><td>Files (lf)</td><td><code>Super+Q</code></td><td>Close</td></tr>
   <tr><td><code>Super+N</code></td><td>Monitor (btop)</td><td><code>Super+F</code></td><td>Fullscreen</td></tr>
   <tr><td><code>Super+O</code></td><td>Notes (Obsidian)</td><td><code>Super+R</code></td><td>Resize (HJKL)</td></tr>
-  <tr><td><code>Super+M</code></td><td>Memento Mori</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
-  <tr><td><code>Super+I</code></td><td>Settings panel</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
-  <tr><td><code>Super+W</code></td><td>WinApps</td><td><code>Super+G</code></td><td>Dotfile Manager (DFM)</td></tr>
-  <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
-  <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print</code></td><td>Capture (screenshot/record)</td></tr>
-  <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td></td><td></td></tr>
+  <tr><td><code>Super+S</code></td><td>Settings panel</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
+  <tr><td><code>Super+W</code></td><td>WinApps</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
+  <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+G</code></td><td>Dotfile Manager (DFM)</td></tr>
+  <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
+  <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td><code>Print</code></td><td>Capture (screenshot/record)</td></tr>
 </table>
 
 > **Hyprland config is Lua.** Since Hyprland 0.55 the compositor reads
@@ -128,7 +127,7 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
 
 ## Settings Panel
 
-Everything is configured through `stoa-settings` (`Super+I`) — no external settings app needed.
+Everything is configured through `stoa-settings` (`Super+S`) — no external settings app needed.
 
 <table>
   <tr><th>Panel</th><th>Features</th></tr>
@@ -221,7 +220,7 @@ The Stoa theme is applied consistently across:
 
 ### Color Palette Manager
 
-Change the entire color scheme from `Super+I → Theme → Color Palette`:
+Change the entire color scheme from `Super+S → Theme → Color Palette`:
 
 - **Apply Preset** — pick from 10 palettes and apply with one click
 - **Edit Colors** — customize any of the 11 core colors individually via hex input
