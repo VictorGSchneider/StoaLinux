@@ -71,8 +71,17 @@ echo -e "${F}Creating symlinks...${R}"
 echo ""
 
 # ── Window managers ──
-_link "${STOA_DIR}/config/hypr/hyprland.conf"   "${CONFIG_DIR}/hypr/hyprland.conf"
+_link "${STOA_DIR}/config/hypr/hyprland.lua"    "${CONFIG_DIR}/hypr/hyprland.lua"
 _link "${STOA_DIR}/config/hypr/hyprlock.conf"   "${CONFIG_DIR}/hypr/hyprlock.conf"
+# Hyprland 0.55 replaced hyprlang with lua. Hyprland prefers hyprland.lua
+# when both exist, but a leftover hyprland.conf symlink pointing at a file
+# we no longer ship would just be a dead link — and on a pre-0.55 binary it
+# would silently keep serving the stale config. Drop ours; a real file the
+# user wrote themselves is left alone.
+if [ -L "${CONFIG_DIR}/hypr/hyprland.conf" ]; then
+    rm -f "${CONFIG_DIR}/hypr/hyprland.conf"
+    echo -e "  ${S}[~] Removed stale hyprland.conf symlink (migrated to hyprland.lua).${R}"
+fi
 _link "${STOA_DIR}/config/waybar/config"        "${CONFIG_DIR}/waybar/config"
 _link "${STOA_DIR}/config/waybar/style.css"     "${CONFIG_DIR}/waybar/style.css"
 _link "${STOA_DIR}/config/noctalia/colorschemes/Stoa" \

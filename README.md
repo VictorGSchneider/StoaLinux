@@ -37,7 +37,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 
 ## Palette
 
-The default palette is inspired by the ancient world — marble, bronze, parchment, stone. It can be changed entirely via `Super+I → Theme → Color Palette`, with **10 built-in presets** and a **custom color editor**.
+The default palette is inspired by the ancient world — marble, bronze, parchment, stone. It can be changed entirely via `Super+S → Theme → Color Palette`, with **10 built-in presets** and a **custom color editor**.
 
 <table>
   <tr>
@@ -105,21 +105,29 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
   <tr><td><code>Super+B</code></td><td>Browser (Brave)</td><td><code>Super+Shift+T</code></td><td>OCR (screen text)</td></tr>
   <tr><td><code>Super+C</code></td><td>Calculator (Qalculate)</td><td><code>Super+Shift+P</code></td><td>Advanced paste</td></tr>
   <tr><td><code>Super+Space</code></td><td>Launcher (Noctalia)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
-  <tr><td><code>Super+E</code></td><td>Files (lf)</td><td><code>Super+Escape</code></td><td>Lock screen</td></tr>
-  <tr><td><code>Super+Shift+E</code></td><td>Files (Thunar)</td><td><code>Super+Q</code></td><td>Close</td></tr>
+  <tr><td><code>Super+E</code></td><td>Files (Thunar)</td><td><code>Super+Escape</code></td><td>Lock screen</td></tr>
+  <tr><td><code>Super+Shift+E</code></td><td>Files (lf)</td><td><code>Super+Q</code></td><td>Close</td></tr>
   <tr><td><code>Super+N</code></td><td>Monitor (btop)</td><td><code>Super+F</code></td><td>Fullscreen</td></tr>
   <tr><td><code>Super+O</code></td><td>Notes (Obsidian)</td><td><code>Super+R</code></td><td>Resize (HJKL)</td></tr>
-  <tr><td><code>Super+M</code></td><td>Memento Mori</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
-  <tr><td><code>Super+I</code></td><td>Settings panel</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
-  <tr><td><code>Super+W</code></td><td>WinApps</td><td><code>Super+G</code></td><td>Dotfile Manager (DFM)</td></tr>
-  <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
-  <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Print</code></td><td>Capture (screenshot/record)</td></tr>
-  <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td></td><td></td></tr>
+  <tr><td><code>Super+S</code></td><td>Settings panel</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
+  <tr><td><code>Super+W</code></td><td>WinApps</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
+  <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+G</code></td><td>Dotfile Manager (DFM)</td></tr>
+  <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
+  <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td><code>Print</code></td><td>Capture (screenshot/record)</td></tr>
 </table>
+
+> **Hyprland config is Lua.** Since Hyprland 0.55 the compositor reads
+> `~/.config/hypr/hyprland.lua` and hyprlang (`hyprland.conf`) is deprecated
+> upstream. Stoa ships `config/hypr/hyprland.lua` — binds are `hl.bind()`,
+> settings go through `hl.config()`, window rules are `hl.window_rule()`
+> tables, and autostart hangs off `hl.on("hyprland.start", ...)`. **Hyprland
+> 0.55 or newer is required**; `stoa-doctor` warns if the installed version
+> is older. `install.sh` removes the old `hyprland.conf` symlink on upgrade.
+> See the [Hyprland Lua docs](https://wiki.hypr.land/Configuring/Start/).
 
 ## Settings Panel
 
-Everything is configured through `stoa-settings` (`Super+I`) — no external settings app needed.
+Everything is configured through `stoa-settings` (`Super+S`) — no external settings app needed.
 
 <table>
   <tr><th>Panel</th><th>Features</th></tr>
@@ -212,7 +220,7 @@ The Stoa theme is applied consistently across:
 
 ### Color Palette Manager
 
-Change the entire color scheme from `Super+I → Theme → Color Palette`:
+Change the entire color scheme from `Super+S → Theme → Color Palette`:
 
 - **Apply Preset** — pick from 10 palettes and apply with one click
 - **Edit Colors** — customize any of the 11 core colors individually via hex input
@@ -235,7 +243,7 @@ What it wires up:
 
 - **systemd autologin** on `tty1` via drop-in (`/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf`)
 - **`.zprofile` / `.bash_profile`** sourcing `shell/stoa-autostart-hyprland.sh` to `exec Hyprland` when the shell lands on `tty1`
-- **`exec-once = hyprlock`** as the first autostart entry in `hyprland.conf`, so the lock page renders before anything else
+- **`hl.exec_cmd("hyprlock")`** as the first `hyprland.start` autostart call in `hyprland.lua`, so the lock page renders before anything else
 - **`grace = 0`** in `hyprlock.conf` (a non-zero grace would let any keypress in the first N seconds bypass the password — fine for a normal lock, fatal for a greeter)
 
 `post-install.sh` offers to run it interactively at the end.
@@ -259,7 +267,7 @@ What it wires up:
 - **`/etc/pam.d/greetd`** — `pam_gnome_keyring.so` in both `auth` and `session` so the keyring destrava sozinho on every login
 - **`greetd.service`** enabled on boot
 - **Stoa Greeter teardown** — autologin drop-in and `.zprofile` / `.bash_profile` hooks are removed automatically (the two flows are mutually exclusive)
-- **`exec-once = hyprlock`** in `hyprland.conf` is commented out (greetd already authenticated; locking again would force a double password). `--disable` restores it.
+- **`hl.exec_cmd("hyprlock")`** in `hyprland.lua` is commented out (greetd already authenticated; locking again would force a double password). `--disable` restores it.
 
 Pick one or the other:
 

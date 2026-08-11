@@ -97,6 +97,18 @@ if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
 
             # Save version for scripts to check
             echo "$HYPR_VER" > "${STOA_DIR}/hyprland-version"
+
+            # ── Lua config floor ──
+            # Stoa ships config/hypr/hyprland.lua. Hyprland only reads it
+            # from 0.55 onward; older builds silently ignore it and fall
+            # back to their own defaults (or a stale hyprland.conf), which
+            # looks like "my whole desktop reverted" rather than an error.
+            _hypr_major=$(echo "$HYPR_VER" | grep -oE '[0-9]+\.[0-9]+' | head -1 | cut -d. -f1)
+            _hypr_minor=$(echo "$HYPR_VER" | grep -oE '[0-9]+\.[0-9]+' | head -1 | cut -d. -f2)
+            if [ -n "$_hypr_minor" ] \
+                && [ "${_hypr_major:-0}" -eq 0 ] && [ "$_hypr_minor" -lt 55 ]; then
+                _warn "Hyprland ${HYPR_VER} predates 0.55 — hyprland.lua is ignored. Upgrade Hyprland."
+            fi
         else
             _warn "Could not detect Hyprland version"
         fi

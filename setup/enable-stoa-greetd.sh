@@ -44,10 +44,15 @@ GREETD_CONF="/etc/greetd/config.toml"
 GREETD_PAM="/etc/pam.d/greetd"
 DROPIN_FILE="/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf"
 DROPIN_DIR="/etc/systemd/system/getty@tty1.service.d"
-HYPR_CONF="${HOME}/.config/hypr/hyprland.conf"
+HYPR_CONF="${HOME}/.config/hypr/hyprland.lua"
 PROFILE_MARK="# StoaLinux: autostart Hyprland on tty1"
 PAM_MARK="# StoaLinux: pam_gnome_keyring (added by enable-stoa-greetd.sh)"
-HYPR_MARK="# disabled by stoa-greetd"
+HYPR_MARK="-- disabled by stoa-greetd"
+# The autostart line as it appears inside the hl.on("hyprland.start", ...)
+# callback in config/hypr/hyprland.lua. Indentation is captured and
+# restored so the toggle round-trips to a byte-identical file.
+HYPR_LOCK_CALL='hl.exec_cmd("hyprlock")'
+HYPR_LOCK_LINE="${HYPR_LOCK_CALL} -- stoa-greetd toggles this line"
 
 _unseed_profile() {
     local rc="$1"
@@ -69,17 +74,17 @@ _disable_autologin() {
 
 _comment_hyprlock_exec_once() {
     [ -f "$HYPR_CONF" ] || return 0
-    if grep -qE "^exec-once = hyprlock\s*$" "$HYPR_CONF"; then
-        sed -i "s|^exec-once = hyprlock\s*$|# exec-once = hyprlock  ${HYPR_MARK}|" "$HYPR_CONF"
-        echo -e "  ${O}[✓] hyprland.conf: exec-once = hyprlock commented (greetd handles boot login).${R}"
+    if grep -qE '^[[:space:]]*hl\.exec_cmd\("hyprlock"\)' "$HYPR_CONF"; then
+        sed -i -E "s|^([[:space:]]*)hl\.exec_cmd\(\"hyprlock\"\).*\$|\1-- ${HYPR_LOCK_CALL} ${HYPR_MARK}|" "$HYPR_CONF"
+        echo -e "  ${O}[✓] hyprland.lua: hyprlock autostart commented (greetd handles boot login).${R}"
     fi
 }
 
 _uncomment_hyprlock_exec_once() {
     [ -f "$HYPR_CONF" ] || return 0
-    if grep -qE "^# exec-once = hyprlock\s+${HYPR_MARK}" "$HYPR_CONF"; then
-        sed -i "s|^# exec-once = hyprlock\s\+${HYPR_MARK}|exec-once = hyprlock|" "$HYPR_CONF"
-        echo -e "  ${O}[✓] hyprland.conf: exec-once = hyprlock restored.${R}"
+    if grep -qE '^[[:space:]]*-- hl\.exec_cmd\("hyprlock"\).*disabled by stoa-greetd' "$HYPR_CONF"; then
+        sed -i -E "s|^([[:space:]]*)-- hl\.exec_cmd\(\"hyprlock\"\).*disabled by stoa-greetd.*\$|\1${HYPR_LOCK_LINE}|" "$HYPR_CONF"
+        echo -e "  ${O}[✓] hyprland.lua: hyprlock autostart restored.${R}"
     fi
 }
 

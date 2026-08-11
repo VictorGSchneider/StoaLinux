@@ -17,7 +17,7 @@
 # ║  Modes:                                                      ║
 # ║    defaults — one wallpaper per theme, fixed seed (kept as   ║
 # ║               marble.png/parchment.png/columns.png/          ║
-# ║               memento.png; hyprland.conf hardcodes those).   ║
+# ║               memento.png; hyprland.lua hardcodes those).    ║
 # ║    quotes   — one wallpaper per theme per quote, seeded by   ║
 # ║               SHA1(quote). Idempotent.                       ║
 # ║                                                              ║
@@ -203,7 +203,7 @@ Quotes:    $QUOTES_FILE
 Commands:
   defaults          One wallpaper per theme, fixed seed (marble.png,
                     parchment.png, columns.png, memento.png).
-                    hyprland.conf hardcodes marble.png.
+                    hyprland.lua hardcodes marble.png.
   quotes [N]        Render one wallpaper per theme per quote, seeded
                     by SHA1(quote). Optional N caps how many quotes.
   regen [N]         clean + quotes.

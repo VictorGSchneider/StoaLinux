@@ -67,4 +67,4 @@ export VDPAU_DRIVER=radeonsi
 
 # Hybrid laptops (AMD/Intel iGPU + NVIDIA dGPU, muxless HDMI on dGPU):
 # Use the iGPU's VAAPI driver above, and let stoa-gpu-setup.sh add
-# AQ_DRM_DEVICES to hyprland.conf so HDMI lights up on the NVIDIA card.
+# AQ_DRM_DEVICES to hyprland.lua so HDMI lights up on the NVIDIA card.

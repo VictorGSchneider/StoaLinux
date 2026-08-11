@@ -1128,8 +1128,10 @@ _colors_apply() {
         done
     done
 
-    # Hyprland: uses rgb(RRGGBB) without '#'
-    local hypr="${HOME}/.config/hypr/hyprland.conf"
+    # Hyprland: uses rgb(RRGGBB) without '#'. The lua config keeps those
+    # literals spelled out in the `colors` table, so the same substitution
+    # works there unchanged.
+    local hypr="${HOME}/.config/hypr/hyprland.lua"
     if [ -f "$hypr" ]; then
         for pair in "${pairs[@]}"; do
             local from="${pair%%|*}" to="${pair##*|}"
@@ -6449,7 +6451,7 @@ _health_config_check() {
     lines+=("─── Config Files ───")
 
     local configs=(
-        "${HOME}/.config/hypr/hyprland.conf:Hyprland config"
+        "${HOME}/.config/hypr/hyprland.lua:Hyprland config"
         "${HOME}/.config/waybar/config:Waybar config"
         "${HOME}/.config/waybar/style.css:Waybar style"
         "${HOME}/.config/rofi/config.rasi:Rofi config"
