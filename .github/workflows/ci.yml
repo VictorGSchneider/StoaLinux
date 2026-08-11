@@ -10,13 +10,13 @@ on:
 
 jobs:
   lint:
-    name: lint (shell / json / python)
+    name: lint (shell / json / python / lua)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Install shellcheck + lua
+        run: sudo apt-get update && sudo apt-get install -y shellcheck lua5.4
 
       - name: List targets
         id: targets
@@ -41,12 +41,20 @@ jobs:
                   -not -path './scripts/vendor/*' \
               | sort
           )
+          mapfile -t LUA_FILES < <(
+              find . -type f -name '*.lua' \
+                  -not -path './.git/*' \
+                  -not -path './scripts/vendor/*' \
+              | sort
+          )
           printf 'sh files:   %d\n' "${#SH_FILES[@]}"
           printf 'json files: %d\n' "${#JSON_FILES[@]}"
           printf 'py files:   %d\n' "${#PY_FILES[@]}"
+          printf 'lua files:  %d\n' "${#LUA_FILES[@]}"
           printf '%s\n' "${SH_FILES[@]}"   > sh.list
           printf '%s\n' "${JSON_FILES[@]}" > json.list
           printf '%s\n' "${PY_FILES[@]}"   > py.list
+          printf '%s\n' "${LUA_FILES[@]}"  > lua.list
 
       - name: Shell syntax (bash -n)
         shell: bash
@@ -92,3 +100,20 @@ jobs:
           set -euo pipefail
           if [ ! -s py.list ]; then exit 0; fi
           xargs -a py.list python3 -m py_compile
+
+      # config/hypr/hyprland.lua is the Hyprland config (0.55+ dropped
+      # hyprlang for lua). A syntax error there means the compositor
+      # refuses to load the config at all, so gate it in CI.
+      - name: Lua syntax (luac -p)
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              if ! luac5.4 -p "$f"; then
+                  echo "::error file=$f::luac -p failed"
+                  status=1
+              fi
+          done < lua.list
+          exit $status

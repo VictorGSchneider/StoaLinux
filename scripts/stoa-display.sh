@@ -10,7 +10,7 @@
 #   2. extend-right — external placed to the right of the internal
 #   3. mirror       — external mirrors the internal panel
 #
-# Bound by hyprland.conf to XF86Display (Fn+F7 on Acer Nitro) and
+# Bound by hyprland.lua to XF86Display (Fn+F7 on Acer Nitro) and
 # Super+P (Win+P-style fallback for laptops whose Fn key is dead).
 
 set -euo pipefail

@@ -565,7 +565,7 @@ echo ""
 echo -e "  ${F}[5/5] Configuring environment variables (Hyprland + stoa-env)${R}"
 
 STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-HYPR_CONF="${STOA_DIR}/config/hypr/hyprland.conf"
+HYPR_CONF="${STOA_DIR}/config/hypr/hyprland.lua"
 ENV_FILE="${STOA_DIR}/shell/stoa-env.sh"
 
 # Helper: uncomment a `# export FOO=...` line in stoa-env.sh.
@@ -609,9 +609,13 @@ if $IS_NVIDIA; then
 
     # Hyprland: drop a stoa-managed env block (idempotent — wrapped
     # in a marker so we can rewrite it without dragging stale vars).
-    HYPR_MARKER_BEGIN="# >>> stoa-gpu-setup: env (auto-managed) >>>"
-    HYPR_MARKER_END="# <<< stoa-gpu-setup: env (auto-managed) <<<"
-    if grep -qF "$HYPR_MARKER_BEGIN" "$HYPR_CONF" 2>/dev/null; then
+    # The config is lua since Hyprland 0.55, so the markers are lua
+    # comments and each var is an hl.env() call.
+    HYPR_MARKER_BEGIN="-- >>> stoa-gpu-setup: env (auto-managed) >>>"
+    HYPR_MARKER_END="-- <<< stoa-gpu-setup: env (auto-managed) <<<"
+    # -e is required: the lua marker starts with "--", which grep would
+    # otherwise parse as the end-of-options delimiter and reject.
+    if grep -qF -e "$HYPR_MARKER_BEGIN" "$HYPR_CONF" 2>/dev/null; then
         # Strip the previous block before writing the new one.
         sed -i "/$HYPR_MARKER_BEGIN/,/$HYPR_MARKER_END/d" "$HYPR_CONF"
     fi
@@ -697,48 +701,48 @@ if $IS_NVIDIA; then
         echo ""
         echo "$HYPR_MARKER_BEGIN"
         if $IS_HYBRID; then
-            echo "# Hybrid laptop (${IGPU_VENDOR} iGPU + NVIDIA dGPU, muxless HDMI):"
-            echo "# List BOTH cards — NVIDIA first so the dGPU is the primary KMS"
-            echo "# device (HDMI on the dGPU port lights up), iGPU second so the"
-            echo "# laptop's eDP panel (wired to the iGPU) is also enumerated."
+            echo "-- Hybrid laptop (${IGPU_VENDOR} iGPU + NVIDIA dGPU, muxless HDMI):"
+            echo "-- List BOTH cards — NVIDIA first so the dGPU is the primary KMS"
+            echo "-- device (HDMI on the dGPU port lights up), iGPU second so the"
+            echo "-- laptop's eDP panel (wired to the iGPU) is also enumerated."
             if [ -n "$NV_CARD_PATH" ] && [ -n "$IGPU_CARD_PATH" ]; then
-                echo "env = AQ_DRM_DEVICES, ${NV_CARD_PATH}:${IGPU_CARD_PATH}"
-                echo "env = WLR_DRM_DEVICES, ${NV_CARD_PATH}:${IGPU_CARD_PATH}"
+                echo "hl.env(\"AQ_DRM_DEVICES\", \"${NV_CARD_PATH}:${IGPU_CARD_PATH}\")"
+                echo "hl.env(\"WLR_DRM_DEVICES\", \"${NV_CARD_PATH}:${IGPU_CARD_PATH}\")"
             elif [ -n "$NV_CARD_PATH" ]; then
                 # iGPU symlink missing — fall back to nvidia-only and warn.
                 # NOTE: this will leave the eDP panel dark on hybrid laptops.
-                echo "# WARNING: iGPU card path could not be resolved; using"
-                echo "# NVIDIA only. eDP panel will stay on TTY until the iGPU"
-                echo "# udev symlink (/dev/dri/igpu-card) is created."
-                echo "env = AQ_DRM_DEVICES, ${NV_CARD_PATH}"
-                echo "env = WLR_DRM_DEVICES, ${NV_CARD_PATH}"
+                echo "-- WARNING: iGPU card path could not be resolved; using"
+                echo "-- NVIDIA only. eDP panel will stay on TTY until the iGPU"
+                echo "-- udev symlink (/dev/dri/igpu-card) is created."
+                echo "hl.env(\"AQ_DRM_DEVICES\", \"${NV_CARD_PATH}\")"
+                echo "hl.env(\"WLR_DRM_DEVICES\", \"${NV_CARD_PATH}\")"
             else
-                echo "# (NVIDIA card could not be resolved automatically — set"
-                echo "#  AQ_DRM_DEVICES manually to /dev/dri/cardA:/dev/dri/cardB"
-                echo "#  where cardA is whose /sys/class/drm/cardA/device/vendor"
-                echo "#  is 0x10de and cardB is the iGPU (0x1002 AMD / 0x8086 Intel)."
-                echo "#  Do NOT use /dev/dri/by-path/... — it contains ':' which"
-                echo "#  Aquamarine mis-parses as a list separator.)"
+                echo "-- (NVIDIA card could not be resolved automatically — set"
+                echo "--  AQ_DRM_DEVICES manually to /dev/dri/cardA:/dev/dri/cardB"
+                echo "--  where cardA is whose /sys/class/drm/cardA/device/vendor"
+                echo "--  is 0x10de and cardB is the iGPU (0x1002 AMD / 0x8086 Intel)."
+                echo "--  Do NOT use /dev/dri/by-path/... — it contains ':' which"
+                echo "--  Aquamarine mis-parses as a list separator.)"
             fi
-            echo "env = __NV_PRIME_RENDER_OFFLOAD, 1"
-            echo "env = __VK_LAYER_NV_optimus, NVIDIA_only"
+            echo "hl.env(\"__NV_PRIME_RENDER_OFFLOAD\", \"1\")"
+            echo "hl.env(\"__VK_LAYER_NV_optimus\", \"NVIDIA_only\")"
             case "$IGPU_VENDOR" in
-                amd)   echo "env = LIBVA_DRIVER_NAME, radeonsi" ;;
-                intel) echo "env = LIBVA_DRIVER_NAME, iHD" ;;
+                amd)   echo "hl.env(\"LIBVA_DRIVER_NAME\", \"radeonsi\")" ;;
+                intel) echo "hl.env(\"LIBVA_DRIVER_NAME\", \"iHD\")" ;;
             esac
         else
-            echo "# Pure NVIDIA (Wayland):"
-            echo "env = LIBVA_DRIVER_NAME, nvidia"
-            echo "env = __GLX_VENDOR_LIBRARY_NAME, nvidia"
-            echo "env = GBM_BACKEND, nvidia-drm"
-            echo "env = NVD_BACKEND, direct"
+            echo "-- Pure NVIDIA (Wayland):"
+            echo "hl.env(\"LIBVA_DRIVER_NAME\", \"nvidia\")"
+            echo "hl.env(\"__GLX_VENDOR_LIBRARY_NAME\", \"nvidia\")"
+            echo "hl.env(\"GBM_BACKEND\", \"nvidia-drm\")"
+            echo "hl.env(\"NVD_BACKEND\", \"direct\")"
         fi
-        echo "env = WLR_NO_HARDWARE_CURSORS, 1"
-        echo "env = __GL_GSYNC_ALLOWED, 1"
-        echo "env = __GL_VRR_ALLOWED, 1"
+        echo "hl.env(\"WLR_NO_HARDWARE_CURSORS\", \"1\")"
+        echo "hl.env(\"__GL_GSYNC_ALLOWED\", \"1\")"
+        echo "hl.env(\"__GL_VRR_ALLOWED\", \"1\")"
         echo "$HYPR_MARKER_END"
     } >> "$HYPR_CONF"
-    echo -e "  ${O}[✓] hyprland.conf env block updated.${R}"
+    echo -e "  ${O}[✓] hyprland.lua env block updated.${R}"
     [ -n "$NV_CARD_PATH" ] && echo -e "  ${S}      NVIDIA DRM card: ${NV_CARD_PATH}${R}"
 
 elif [ "$GPU_VENDOR" = "amd" ]; then
@@ -795,7 +799,7 @@ if $IS_NVIDIA; then
     echo -e "  ${S}  /etc/modprobe.d/blacklist-nouveau.conf${R}"
     echo -e "  ${S}  bumblebee (deprecated) removed if present${R}"
     echo -e "  ${S}  nvidia-{suspend,resume,hibernate}.service enabled${R}"
-    echo -e "  ${S}  hyprland.conf — Wayland env vars${R}"
+    echo -e "  ${S}  hyprland.lua — Wayland env vars${R}"
     echo -e "  ${S}  stoa-env.sh — VAAPI/VDPAU env vars${R}"
     echo ""
     echo -e "  ${T}Reboot the system to apply changes.${R}"

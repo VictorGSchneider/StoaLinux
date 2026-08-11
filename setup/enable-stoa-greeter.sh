@@ -10,8 +10,8 @@
 # ║       shell without password (the password is asked next).   ║
 # ║    2. ~/.zprofile and ~/.bash_profile → exec Hyprland on     ║
 # ║       tty1 (sourced helper at shell/stoa-autostart-hyprland).║
-# ║    3. hyprland.conf already runs `exec-once = hyprlock` as   ║
-# ║       its first autostart entry, so the session locks before ║
+# ║    3. hyprland.lua already runs hyprlock as the first        ║
+# ║       hyprland.start autostart, so the session locks before  ║
 # ║       any other process renders.                             ║
 # ║                                                              ║
 # ║  Idempotent. Re-run safely. Pass --disable to undo.          ║
@@ -98,7 +98,7 @@ if [ "${1:-}" = "--disable" ]; then
     _unseed_profile "$HOME/.zprofile"
     _unseed_profile "$HOME/.bash_profile"
     echo ""
-    echo -e "  ${F}Note:${R} ${S}hyprlock is still wired as the first exec-once in hyprland.conf —${R}"
+    echo -e "  ${F}Note:${R} ${S}hyprlock is still the first autostart call in hyprland.lua —${R}"
     echo -e "        ${S}edit it manually if you no longer want the session to lock on start.${R}"
     echo ""
     exit 0

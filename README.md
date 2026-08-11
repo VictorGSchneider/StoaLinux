@@ -117,6 +117,15 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
   <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td></td><td></td></tr>
 </table>
 
+> **Hyprland config is Lua.** Since Hyprland 0.55 the compositor reads
+> `~/.config/hypr/hyprland.lua` and hyprlang (`hyprland.conf`) is deprecated
+> upstream. Stoa ships `config/hypr/hyprland.lua` — binds are `hl.bind()`,
+> settings go through `hl.config()`, window rules are `hl.window_rule()`
+> tables, and autostart hangs off `hl.on("hyprland.start", ...)`. **Hyprland
+> 0.55 or newer is required**; `stoa-doctor` warns if the installed version
+> is older. `install.sh` removes the old `hyprland.conf` symlink on upgrade.
+> See the [Hyprland Lua docs](https://wiki.hypr.land/Configuring/Start/).
+
 ## Settings Panel
 
 Everything is configured through `stoa-settings` (`Super+I`) — no external settings app needed.
@@ -235,7 +244,7 @@ What it wires up:
 
 - **systemd autologin** on `tty1` via drop-in (`/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf`)
 - **`.zprofile` / `.bash_profile`** sourcing `shell/stoa-autostart-hyprland.sh` to `exec Hyprland` when the shell lands on `tty1`
-- **`exec-once = hyprlock`** as the first autostart entry in `hyprland.conf`, so the lock page renders before anything else
+- **`hl.exec_cmd("hyprlock")`** as the first `hyprland.start` autostart call in `hyprland.lua`, so the lock page renders before anything else
 - **`grace = 0`** in `hyprlock.conf` (a non-zero grace would let any keypress in the first N seconds bypass the password — fine for a normal lock, fatal for a greeter)
 
 `post-install.sh` offers to run it interactively at the end.
@@ -259,7 +268,7 @@ What it wires up:
 - **`/etc/pam.d/greetd`** — `pam_gnome_keyring.so` in both `auth` and `session` so the keyring destrava sozinho on every login
 - **`greetd.service`** enabled on boot
 - **Stoa Greeter teardown** — autologin drop-in and `.zprofile` / `.bash_profile` hooks are removed automatically (the two flows are mutually exclusive)
-- **`exec-once = hyprlock`** in `hyprland.conf` is commented out (greetd already authenticated; locking again would force a double password). `--disable` restores it.
+- **`hl.exec_cmd("hyprlock")`** in `hyprland.lua` is commented out (greetd already authenticated; locking again would force a double password). `--disable` restores it.
 
 Pick one or the other:
 
