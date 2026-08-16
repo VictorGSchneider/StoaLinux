@@ -46,6 +46,7 @@ DROPIN_FILE="/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf"
 DROPIN_DIR="/etc/systemd/system/getty@tty1.service.d"
 HYPR_CONF="${HOME}/.config/hypr/hyprland.lua"
 PROFILE_MARK="# StoaLinux: autostart Hyprland on tty1"
+PROFILE_MARK_END="# StoaLinux: end autostart Hyprland block"
 PAM_MARK="# StoaLinux: pam_gnome_keyring (added by enable-stoa-greetd.sh)"
 HYPR_MARK="-- disabled by stoa-greetd"
 # The autostart line as it appears inside the hl.on("hyprland.start", ...)
@@ -54,13 +55,17 @@ HYPR_MARK="-- disabled by stoa-greetd"
 HYPR_LOCK_CALL='hl.exec_cmd("hyprlock")'
 HYPR_LOCK_LINE="${HYPR_LOCK_CALL} -- stoa-greetd toggles this line"
 
+# Must stay in sync with enable-stoa-greeter.sh's copy: the greeter seeds a
+# marker-delimited block, and deleting only "marker + 1 line" would leave a
+# dangling `fi` behind — a syntax error in the login shell's profile.
+# Handles the legacy two-line form too, for profiles seeded before that.
 _unseed_profile() {
     local rc="$1"
     [ -f "$rc" ] || return 0
-    if grep -q "stoa-autostart-hyprland" "$rc" 2>/dev/null; then
-        sed -i "/${PROFILE_MARK//\//\\/}/,+1d" "$rc"
-        echo -e "  ${O}[✓] $(basename "$rc") snippet removed.${R}"
-    fi
+    grep -q "stoa-autostart-hyprland" "$rc" 2>/dev/null || return 0
+    sed -i "\|^${PROFILE_MARK}\$|,\|^${PROFILE_MARK_END}\$|d" "$rc"
+    sed -i "\|^${PROFILE_MARK}\$|,+1d" "$rc"
+    echo -e "  ${O}[✓] $(basename "$rc") snippet removed.${R}"
 }
 
 _disable_autologin() {
@@ -75,7 +80,7 @@ _disable_autologin() {
 _comment_hyprlock_exec_once() {
     [ -f "$HYPR_CONF" ] || return 0
     if grep -qE '^[[:space:]]*hl\.exec_cmd\("hyprlock"\)' "$HYPR_CONF"; then
-        sed -i -E "s|^([[:space:]]*)hl\.exec_cmd\(\"hyprlock\"\).*\$|\1-- ${HYPR_LOCK_CALL} ${HYPR_MARK}|" "$HYPR_CONF"
+        sed -i --follow-symlinks -E "s|^([[:space:]]*)hl\.exec_cmd\(\"hyprlock\"\).*\$|\1-- ${HYPR_LOCK_CALL} ${HYPR_MARK}|" "$HYPR_CONF"
         echo -e "  ${O}[✓] hyprland.lua: hyprlock autostart commented (greetd handles boot login).${R}"
     fi
 }
@@ -83,7 +88,7 @@ _comment_hyprlock_exec_once() {
 _uncomment_hyprlock_exec_once() {
     [ -f "$HYPR_CONF" ] || return 0
     if grep -qE '^[[:space:]]*-- hl\.exec_cmd\("hyprlock"\).*disabled by stoa-greetd' "$HYPR_CONF"; then
-        sed -i -E "s|^([[:space:]]*)-- hl\.exec_cmd\(\"hyprlock\"\).*disabled by stoa-greetd.*\$|\1${HYPR_LOCK_LINE}|" "$HYPR_CONF"
+        sed -i --follow-symlinks -E "s|^([[:space:]]*)-- hl\.exec_cmd\(\"hyprlock\"\).*disabled by stoa-greetd.*\$|\1${HYPR_LOCK_LINE}|" "$HYPR_CONF"
         echo -e "  ${O}[✓] hyprland.lua: hyprlock autostart restored.${R}"
     fi
 }

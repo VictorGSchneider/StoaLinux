@@ -1124,7 +1124,7 @@ _colors_apply() {
         for pair in "${pairs[@]}"; do
             local from="${pair%%|*}" to="${pair##*|}"
             [ "$from" = "$to" ] && continue
-            sed -i "s/${from}/${to}/gi" "$f"
+            sed -i --follow-symlinks "s/${from}/${to}/gi" "$f"
         done
     done
 
@@ -1136,7 +1136,7 @@ _colors_apply() {
         for pair in "${pairs[@]}"; do
             local from="${pair%%|*}" to="${pair##*|}"
             [ "$from" = "$to" ] && continue
-            sed -i "s/rgb($(_hex "$from"))/rgb($(_hex "$to"))/gi" "$hypr"
+            sed -i --follow-symlinks "s/rgb($(_hex "$from"))/rgb($(_hex "$to"))/gi" "$hypr"
         done
     fi
 
@@ -1148,9 +1148,9 @@ _colors_apply() {
             [ "$from" = "$to" ] && continue
             local from_rgba=$(_hex2rgba "$from")
             local to_rgba=$(_hex2rgba "$to")
-            sed -i "s/${from_rgba}/${to_rgba}/g" "$hyprlock"
+            sed -i --follow-symlinks "s/${from_rgba}/${to_rgba}/g" "$hyprlock"
             # Also replace hex refs (e.g. in <span>)
-            sed -i "s/${from}/${to}/gi" "$hyprlock"
+            sed -i --follow-symlinks "s/${from}/${to}/gi" "$hyprlock"
         done
     fi
 
