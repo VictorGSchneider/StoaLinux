@@ -33,6 +33,7 @@ R='\033[0m'
 DROPIN_DIR="/etc/systemd/system/getty@tty1.service.d"
 DROPIN_FILE="${DROPIN_DIR}/stoa-autologin.conf"
 PROFILE_MARK="# StoaLinux: autostart Hyprland on tty1"
+PROFILE_MARK_END="# StoaLinux: end autostart Hyprland block"
 PROFILE_SRC="${STOA_DIR}/shell/stoa-autostart-hyprland.sh"
 
 _seed_profile() {
@@ -41,25 +42,41 @@ _seed_profile() {
         : > "$rc"
     fi
     if grep -q "stoa-autostart-hyprland" "$rc" 2>/dev/null; then
-        echo -e "  ${S}[~] $(basename "$rc") already wired.${R}"
-        return
+        if grep -qF -- "$PROFILE_MARK_END" "$rc" 2>/dev/null; then
+            echo -e "  ${S}[~] $(basename "$rc") already wired.${R}"
+            return
+        fi
+        # Legacy one-liner (`[ -f X ] && . X`). It fails *silently* when the
+        # script goes missing — the login shell just falls through to the
+        # prompt with no error, which reads as "Hyprland stopped starting"
+        # with nothing to go on. Replace it with the guarded block below.
+        _unseed_profile "$rc" quiet
+        echo -e "  ${S}[~] $(basename "$rc") had the legacy hook — upgrading.${R}"
     fi
     {
         echo ""
         echo "$PROFILE_MARK"
-        echo "[ -f \"${PROFILE_SRC}\" ] && . \"${PROFILE_SRC}\""
+        echo "if [ -f \"${PROFILE_SRC}\" ]; then"
+        echo "    . \"${PROFILE_SRC}\""
+        echo "else"
+        echo "    echo \"StoaLinux: ${PROFILE_SRC} is missing —\" >&2"
+        echo "    echo \"  Hyprland will not autostart on tty1. Run install.sh to restore it.\" >&2"
+        echo "fi"
+        echo "$PROFILE_MARK_END"
     } >> "$rc"
     echo -e "  ${O}[✓] $(basename "$rc") wired to start Hyprland on tty1.${R}"
 }
 
+# Removes both the marker-delimited block and the legacy two-line form, so
+# a profile seeded by an older release still unseeds cleanly. Pass "quiet"
+# as $2 to suppress the log line (used when re-seeding).
 _unseed_profile() {
-    local rc="$1"
+    local rc="$1" quiet="${2:-}"
     [ -f "$rc" ] || return 0
-    if grep -q "stoa-autostart-hyprland" "$rc" 2>/dev/null; then
-        # Strip the two-line block (marker + source line)
-        sed -i "/${PROFILE_MARK//\//\\/}/,+1d" "$rc"
-        echo -e "  ${O}[✓] $(basename "$rc") snippet removed.${R}"
-    fi
+    grep -q "stoa-autostart-hyprland" "$rc" 2>/dev/null || return 0
+    sed -i "\|^${PROFILE_MARK}\$|,\|^${PROFILE_MARK_END}\$|d" "$rc"
+    sed -i "\|^${PROFILE_MARK}\$|,+1d" "$rc"
+    [ "$quiet" = "quiet" ] || echo -e "  ${O}[✓] $(basename "$rc") snippet removed.${R}"
 }
 
 _enable_autologin() {
