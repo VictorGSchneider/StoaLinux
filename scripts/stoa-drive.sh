@@ -416,25 +416,44 @@ _run_sync() {
 
     local marker="${workdir}/.first-sync-done"
     local logfile="${workdir}/last.log"
+    local lockfile="${workdir}/.lock"
     local resync_flag=()
     [ ! -f "$marker" ] && resync_flag=(--resync)
 
-    if rclone bisync "$local_path" "$remote_path" \
-        --workdir "$workdir" \
-        --conflict-resolve "$_SYNC_CONFLICT" \
-        --conflict-loser num \
-        --create-empty-src-dirs \
-        --compare size,modtime \
-        --fast-list \
-        "${resync_flag[@]}" \
-        >"$logfile" 2>&1; then
-        touch "$marker"
-        [ "$quiet" = "0" ] && _notify "Synced: ${local_path}  ⇄  ${remote_path}"
-        return 0
-    else
-        [ "$quiet" = "0" ] && _notify "Sync failed for ${remote_path}. See ${logfile}"
-        return 1
-    fi
+    # Per-pair flock: if a previous run (usually the timer firing while a big
+    # resync is still ongoing) is still holding the lock, skip silently.
+    # Overlapping bisync invocations against the same workdir corrupt the
+    # listing state and force a manual --resync to recover.
+    local rc
+    (
+        flock -n 9 || exit 200
+        rclone bisync "$local_path" "$remote_path" \
+            --workdir "$workdir" \
+            --conflict-resolve "$_SYNC_CONFLICT" \
+            --conflict-loser num \
+            --create-empty-src-dirs \
+            --compare size,modtime \
+            --fast-list \
+            "${resync_flag[@]}" \
+            >"$logfile" 2>&1
+    ) 9>"$lockfile"
+    rc=$?
+
+    case "$rc" in
+        200)
+            [ "$quiet" = "0" ] && _notify "Sync busy: ${remote_path} — another run in progress"
+            return 0
+            ;;
+        0)
+            touch "$marker"
+            [ "$quiet" = "0" ] && _notify "Synced: ${local_path}  ⇄  ${remote_path}"
+            return 0
+            ;;
+        *)
+            [ "$quiet" = "0" ] && _notify "Sync failed for ${remote_path}. See ${logfile}"
+            return 1
+            ;;
+    esac
 }
 
 _run_all_syncs() {
