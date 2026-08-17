@@ -21,5 +21,6 @@
     "http.systemCertificatesNode": true,
     "git.autofetch": true,
     "chat.mcp.gallery.enabled": true,
-    "workbench.editor.empty.hint": "hidden"
+    "workbench.editor.empty.hint": "hidden",
+    "go.toolsManagement.autoUpdate": true
 }
