@@ -833,6 +833,7 @@
         "location": "top_right",
         "lowUrgencyDuration": 5,
         "monitors": [
+            "eDP-1"
         ],
         "normalUrgencyDuration": 10,
         "overlayLayer": true,

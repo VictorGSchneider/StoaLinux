@@ -149,9 +149,9 @@
         },
         {
           "keys": "Super + G",
-          "desc": "exec ~/.local/bin/dfm",
+          "desc": "exec dfm",
           "_verb": "exec",
-          "_param": "~/.local/bin/dfm",
+          "_param": "dfm",
           "_mods": "Super",
           "_mainKey": "G"
         },
