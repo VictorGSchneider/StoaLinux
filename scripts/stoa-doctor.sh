@@ -41,6 +41,24 @@ _check_optional() {
     fi
 }
 
+# Like _check_bin, but also accepts the binary at an explicit path.
+#
+# This script runs from the Hyprland session, whose PATH does not include
+# ~/.local/bin — which is exactly why every ~/.local/bin entry point in
+# config/hypr/hyprland.lua is invoked by absolute path, this script included.
+# A bare `command -v` therefore reports a perfectly healthy user-local
+# install as missing.
+_check_bin_at() {
+    local bin="$1"
+    local path="$2"
+    local desc="${3:-$1}"
+    if command -v "$bin" &>/dev/null || [ -x "$path" ]; then
+        _ok "$desc ($bin)"
+    else
+        _fail "$desc — '$bin' not found (looked on PATH and at ${path})"
+    fi
+}
+
 # ── Start ──
 {
     echo "════════════════════════════════════════"
@@ -175,7 +193,7 @@ _check_bin curl         "HTTP client (curl)"
 _check_bin tesseract    "OCR (tesseract)"
 
 # ── Dotfile Manager (Super+G) ──
-_check_bin dfm          "Dotfile Manager (dfm)"
+_check_bin_at dfm "${HOME}/.local/bin/dfm" "Dotfile Manager (dfm)"
 
 # ══════════════════════════════════════════
 #   Service checks
