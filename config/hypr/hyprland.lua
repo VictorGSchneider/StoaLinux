@@ -117,10 +117,14 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "stoa" }
 local mod = "SUPER"
 
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd("kitty"))
-hl.bind(mod .. " + Space", hl.dsp.exec_cmd("noctalia msg panel-toggle launcher"))
+-- The X11 keysym is `space`, lowercase — unlike Return/Escape/Tab/Print,
+-- which really are capitalised. Hyprland registers a bind spelled "Space"
+-- (it shows up in `hyprctl binds`) but never matches it at event time, so
+-- the bind is silently dead. Keep this lowercase.
+hl.bind(mod .. " + space", hl.dsp.exec_cmd("noctalia msg panel-toggle launcher"))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
-hl.bind(mod .. " + SHIFT + Space", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mod .. " + SHIFT + space", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + CTRL + E", hl.dsp.exit())
 hl.bind(mod .. " + CTRL + R", hl.dsp.exec_cmd("~/.local/bin/stoa-bar-toggle"))
 
