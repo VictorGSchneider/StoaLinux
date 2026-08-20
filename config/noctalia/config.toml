@@ -1,0 +1,202 @@
+#  ╔══════════════════════════════════════════════════════════════╗
+#  ║  STOA LINUX — Noctalia v5 shell config                       ║
+#  ║  "Know thyself." — inscribed at Delphi                       ║
+#  ╚══════════════════════════════════════════════════════════════╝
+#
+#  Noctalia reads every *.toml in ~/.config/noctalia/, merges them
+#  alphabetically, and hot-reloads on change. GUI edits land in
+#  ~/.local/state/noctalia/settings.toml and win over this file — so if a
+#  setting here seems ignored, check there first.
+#
+#  The v4 leftovers in this directory (settings.json, plugins.json,
+#  colorschemes/) are inert: v5 only reads *.toml and palettes/.
+
+[shell]
+font_family           = "sans-serif"
+time_format           = "{:%H:%M}"
+date_format           = "%A, %d/%m"
+polkit_agent          = true          # replaces hyprpolkitagent
+clipboard_enabled     = true          # replaces cliphist + stoa-clipboard
+clipboard_history_max_entries = 200
+offline_mode          = false
+telemetry_enabled     = false
+settings_show_advanced = true
+
+[shell.animation]
+enabled = true
+speed   = 1.0
+
+[shell.panel]
+transparency_mode        = "solid"
+borders                  = true
+shadow                   = true
+launcher_placement       = "floating"
+launcher_position        = "center"
+clipboard_placement      = "floating"
+clipboard_position       = "center"
+control_center_placement = "attached"
+
+[shell.launcher]
+categories    = true
+show_icons    = true
+sort_by_usage = true
+app_grid      = false
+
+[shell.launcher.providers.calculator]
+prefix = "calc"
+global = true
+
+[shell.launcher.providers.emoji]
+prefix = "emo"
+
+[shell.launcher.providers.session]
+prefix = "session"
+
+[shell.launcher.providers.wallpaper]
+prefix = "wall"
+
+[shell.launcher.providers.windows]
+prefix = "win"
+
+# ── Theme ─────────────────────────────────────────────────────────────
+# The Stoa palette carries over from the v4 colorscheme unchanged —
+# same mPrimary/mSurface/... key names, same terminal block.
+# See palettes/Stoa.json.
+
+[theme]
+mode           = "dark"
+source         = "custom"
+custom_palette = "Stoa"
+pure_black_dark = false
+
+# ── Wallpaper ─────────────────────────────────────────────────────────
+# Replaces swaybg. stoa-walls.sh still curates the collection; Noctalia
+# owns setting and rotating it.
+
+[wallpaper]
+enabled             = true
+fill_mode           = "crop"
+transition          = ["fade"]
+transition_duration = 1500
+directory           = "~/.config/stoa/wallpapers"
+
+[wallpaper.automation]
+enabled          = false
+interval_seconds = 1800
+order            = "random"
+recursive        = true
+
+# ── Notifications ─────────────────────────────────────────────────────
+# Replaces the standalone notification daemon.
+
+[notification]
+enable_daemon      = true
+show_app_name      = true
+show_actions       = true
+background_opacity = 0.97
+offset_x           = 20
+offset_y           = 8
+
+# ── OSD ───────────────────────────────────────────────────────────────
+# Replaces stoa-osd.sh (volume/brightness popups).
+
+[osd]
+position           = "top_center"
+orientation        = "horizontal"
+background_opacity = 0.97
+offset_y           = 8
+
+[osd.kinds]
+volume       = true
+brightness   = true
+wifi         = true
+bluetooth    = true
+caffeine     = true
+nightlight   = true
+dnd          = true
+privacy      = true
+
+# ── Lock screen ───────────────────────────────────────────────────────
+# Replaces hyprlock.
+
+[lockscreen]
+enabled         = true
+blurred_desktop = true
+blur_intensity  = 0.5
+tint_intensity  = 0.3
+
+# ── Idle ──────────────────────────────────────────────────────────────
+# Replaces stoa-screensaver.sh / hypridle.
+
+[idle.behavior.lock]
+enabled = true
+timeout = 600
+action  = "lock"
+
+[idle.behavior.screen-off]
+enabled = true
+timeout = 900
+action  = "screen_off"
+
+# ── System monitor ────────────────────────────────────────────────────
+
+[system.monitor]
+enabled = true
+
+# ── Bar ───────────────────────────────────────────────────────────────
+# Mirrors the previous waybar layout:
+#   left   workspaces (+ taskbar, which covers waybar's window title)
+#   center clock
+#   right  clipboard, sysmon, network, battery, volume, control centre
+#
+# waybar spent four modules on disk/cpu/memory/network; v5 folds all of
+# that into the single `sysmon` widget, driven by [system.monitor] above.
+
+[bar.main]
+position           = "top"
+thickness          = 34
+background_opacity = 1.0
+radius             = 12
+margin_ends        = 180
+margin_edge        = 10
+padding            = 14
+widget_spacing     = 6
+shadow             = true
+reserve_space      = true
+
+start  = ["launcher", "workspaces", "taskbar"]
+center = ["clock"]
+end    = ["media", "tray", "notifications", "clipboard", "sysmon", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
+
+# ── Control centre shortcuts ──────────────────────────────────────────
+
+[[control_center.shortcuts]]
+type = "wifi"
+
+[[control_center.shortcuts]]
+type = "bluetooth"
+
+[[control_center.shortcuts]]
+type = "nightlight"
+
+[[control_center.shortcuts]]
+type = "wallpaper"
+
+[[control_center.shortcuts]]
+type = "caffeine"
+
+[[control_center.shortcuts]]
+type = "session"
+
+# ── Hooks ─────────────────────────────────────────────────────────────
+# `started` fires once the shell is actually up. Hyprland used to run
+# stoa-doctor behind a `sleep 3`, guessing at how long the bar takes to
+# render so the health pills would not race their data producer. The hook
+# removes the guess: the doctor runs when there is a shell to report into.
+#
+# Deliberately NOT set: colors_changed. The Stoa palette is static — it
+# lives in theme/colors.sh and is applied to apps by a pacman hook at
+# install time, so there is no runtime palette change to react to.
+
+[hooks]
+started = "~/.local/bin/stoa-doctor"

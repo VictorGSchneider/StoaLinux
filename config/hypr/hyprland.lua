@@ -117,7 +117,7 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "stoa" }
 local mod = "SUPER"
 
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd("kitty"))
-hl.bind(mod .. " + Space", hl.dsp.exec_cmd("qs -c noctalia-shell ipc call launcher toggle"))
+hl.bind(mod .. " + Space", hl.dsp.exec_cmd("noctalia msg panel-toggle launcher"))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind(mod .. " + SHIFT + Space", hl.dsp.window.float({ action = "toggle" }))
@@ -148,7 +148,7 @@ hl.bind(mod .. " + G", hl.dsp.exec_cmd("~/.local/bin/dfm"))
 hl.bind(mod .. " + slash", hl.dsp.exec_cmd("~/.local/bin/stoa-keybinds-toggle"))
 
 -- ── Lock Screen ──
-hl.bind(mod .. " + Escape", hl.dsp.exec_cmd("hyprlock"))
+hl.bind(mod .. " + Escape", hl.dsp.exec_cmd("noctalia msg lock"))
 
 -- ── Navigation (vim) ──
 hl.bind(mod .. " + H", hl.dsp.focus({ direction = "l" }))
@@ -186,13 +186,13 @@ hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 -- ── Volume ──
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("~/.local/bin/stoa-osd volume-up"), { repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("~/.local/bin/stoa-osd volume-down"), { repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("~/.local/bin/stoa-osd volume-mute"))
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("noctalia msg volume-up"), { repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("noctalia msg volume-down"), { repeating = true })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("noctalia msg volume-mute"))
 
 -- ── Brightness ──
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("~/.local/bin/stoa-osd brightness-up"), { repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.local/bin/stoa-osd brightness-down"), { repeating = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("noctalia msg brightness-up"), { repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("noctalia msg brightness-down"), { repeating = true })
 
 -- ── Display toggle (laptop / extend / mirror) ──
 -- XF86Display = Fn+F7 on most Acer/ASUS laptops (when the EC routes it
@@ -209,9 +209,11 @@ hl.bind(mod .. " + P", hl.dsp.exec_cmd("~/.local/bin/stoa-display"))
 hl.bind("Print", hl.dsp.exec_cmd("~/.local/bin/stoa-capture"))
 
 -- ── Clipboard ──
-hl.bind(mod .. " + V", hl.dsp.exec_cmd("~/.local/bin/stoa-clipboard show"))
-hl.bind(mod .. " + SHIFT + V", hl.dsp.exec_cmd("~/.local/bin/stoa-clipboard pin"))
-hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd("~/.local/bin/stoa-clipboard clear"))
+hl.bind(mod .. " + V", hl.dsp.exec_cmd("noctalia msg panel-toggle clipboard"))
+-- Super+Shift+V (pin) is gone: it drove cliphist, which no longer runs.
+-- Noctalia v5 pins from inside the clipboard panel (Super+V) and exposes
+-- no pin IPC command, so there is nothing to bind here.
+hl.bind(mod .. " + SHIFT + B", hl.dsp.exec_cmd("noctalia msg clipboard-clear"))
 
 -- ── Stoatools ──
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd("~/.local/bin/stoa-ocr"))
@@ -287,32 +289,30 @@ hl.on("hyprland.start", function()
     -- start, which is harmless.
     hl.exec_cmd("hyprlock") -- stoa-greetd toggles this line
     hl.exec_cmd("~/.local/bin/stoa-bar")
-    hl.exec_cmd("swaybg -i ~/.config/stoa/wallpapers/marble.png -m fill")
-    -- Noctalia Shell owns notifications via org.freedesktop.Notifications.
+    -- Wallpaper is owned by Noctalia v5 ([wallpaper] in config.toml), which
+    -- also gives us rotation and transitions. swaybg is no longer started.
+    -- Noctalia likewise owns notifications via org.freedesktop.Notifications.
     -- Scripts call notify-send; toasts land in Noctalia's notification panel.
 
-    -- Phase 2 — data producers consumed by bar pills (drive mount status,
-    -- stoa-doctor log). Delay 3 s so the noctalia bar has rendered and its
-    -- pills' first poll either catches Phase 2's output, or — at worst —
-    -- the 5 s recurring re-poll inside BarWidget.qml does. Otherwise the
-    -- pills race the producers and stick on the "loading" state until the
-    -- next minute.
+    -- Phase 2 — data producers consumed by bar widgets (drive mount status).
+    -- The old `sleep 3` here was a race against the bar rendering. stoa-doctor
+    -- has moved to Noctalia's [hooks] started, which fires when the shell is
+    -- actually up — no guessing. stoa-drive keeps a short delay because it
+    -- waits on udisks, not on the bar.
     hl.exec_cmd("bash -c 'sleep 3; ~/.local/bin/stoa-drive mount-all'")
-    hl.exec_cmd("bash -c 'sleep 3; ~/.local/bin/stoa-doctor'")
 
     -- Phase 3 — background services not consumed by bar pills.
     -- hyprswitch daemon — backs the Alt+Tab visual window switcher.
     -- --show-title shows window titles; --workspaces-per-row groups the
     -- preview grid by workspace; --size-factor scales the thumbnails.
     hl.exec_cmd("hyprswitch init --show-title --workspaces-per-row 5 --size-factor 5.5")
-    -- Noctalia Shell owns notifications via org.freedesktop.Notifications; do
-    -- NOT also start dunst — two daemons would fight over the DBus name. The
+    -- Noctalia owns notifications via org.freedesktop.Notifications; do NOT
+    -- also start dunst — two daemons would fight over the DBus name. The
     -- dunstify binary still works, talking to whichever daemon is on the bus.
     -- hl.exec_cmd("dunst -config ~/.config/dunst/dunstrc")
-    hl.exec_cmd("wl-paste --watch cliphist store")
+    -- Clipboard history is owned by Noctalia v5 (shell.clipboard_enabled), so
+    -- the three cliphist watchers that used to live here are gone.
     hl.exec_cmd("~/.local/bin/stoa-quotes-sync tick")
-    hl.exec_cmd("wl-paste --type text --watch cliphist store")
-    hl.exec_cmd("wl-paste --type image --watch cliphist store")
 end)
 
 -- >>> stoa-gpu-setup: env (auto-managed) >>>
