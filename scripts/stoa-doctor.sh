@@ -207,15 +207,22 @@ else
 fi
 
 # Notification daemon — Noctalia owns org.freedesktop.Notifications on
-# the Hyprland/Wayland path. stoa-bar launches it as
-# `quickshell -c noctalia-shell` (or `qs -c noctalia-shell`); the AUR
-# noctalia-shell package also ships a launcher of the same name. Match
-# the cmdline substring "noctalia-shell" with pgrep -f so we catch all
-# three forms.
-if pgrep -f 'noctalia-shell' &>/dev/null; then
-    _ok "Noctalia Shell is running (notifications)"
+# the Hyprland/Wayland path.
+#
+# v5 is a single `noctalia` process. The legacy v4 pair runs as
+# `quickshell -c noctalia-shell` (or `qs -c noctalia-shell`), and the AUR
+# noctalia-shell package ships a launcher of the same name — matching the
+# cmdline substring with pgrep -f catches all three of those forms.
+# waybar is the last-resort fallback and does NOT provide notifications,
+# so it is reported separately rather than as an equivalent.
+if pgrep -x 'noctalia' &>/dev/null; then
+    _ok "Noctalia v5 is running (notifications)"
+elif pgrep -f 'noctalia-shell' &>/dev/null; then
+    _warn "Noctalia v4 (quickshell) is running — v5 migration pending"
+elif pgrep -x 'waybar' &>/dev/null; then
+    _warn "waybar fallback is running — no notification daemon"
 else
-    _warn "Noctalia Shell is not running — notifications won't show"
+    _warn "No Stoa shell is running — notifications won't show"
 fi
 
 # ══════════════════════════════════════════

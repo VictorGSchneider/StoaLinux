@@ -99,12 +99,26 @@ _link "${STOA_DIR}/theme/noctalia-plugins/stoa-health" \
 rm -f "${CONFIG_DIR}/noctalia/plugins/stoa-doctor-pill" \
       "${CONFIG_DIR}/noctalia/plugins/stoa-vitals"
 
-# Noctalia settings.json — opinionated Stoa seed (floating bar, Stoa
+# ── Noctalia v5 ──
+# v5 is configured from ~/.config/noctalia/*.toml (all merged, hot-reloaded)
+# plus palettes/<name>.json. Both are symlinked so a `git pull` propagates,
+# matching how every other Stoa config is wired.
+#
+# Note this is the same directory the v4 pair used. The two formats do not
+# collide: v5 reads only *.toml and palettes/, and ignores the v4 JSON files
+# below. That is what lets the legacy stack stay in place as a fallback.
+mkdir -p "${CONFIG_DIR}/noctalia/palettes"
+_link "${STOA_DIR}/config/noctalia/config.toml" \
+      "${CONFIG_DIR}/noctalia/config.toml"
+_link "${STOA_DIR}/config/noctalia/palettes/Stoa.json" \
+      "${CONFIG_DIR}/noctalia/palettes/Stoa.json"
+
+# ── Noctalia v4 (legacy) ──
+# settings.json — opinionated Stoa seed (floating bar, Stoa
 # color scheme, EB Garamond, layout incl. screen-toolkit/clipper/
 # keybind-cheatsheet plugin widgets). Copy-seed semantics like
 # stoa.conf: only place when absent so the user's tweaks survive
 # reinstalls. Wipe ~/.config/noctalia/settings.json to reset.
-mkdir -p "${CONFIG_DIR}/noctalia"
 if [ ! -f "${CONFIG_DIR}/noctalia/settings.json" ]; then
     cp "${STOA_DIR}/config/noctalia/settings.json" \
        "${CONFIG_DIR}/noctalia/settings.json"
