@@ -151,8 +151,16 @@ enabled = true
 #
 # waybar spent four modules on disk/cpu/memory/network; v5 folds all of
 # that into the single `sysmon` widget, driven by [system.monitor] above.
+#
+# The section MUST be [bar.default]. `default` is the name of the built-in
+# bar (BarConfig::name in config_types.h), and Noctalia only falls back to
+# a built-in bar when no [bar.*] is defined at all — it does not merge a
+# differently named section into it. Calling this [bar.main] created a
+# SECOND bar alongside the built-in one, so the shell drew two stacked
+# bars: the one customised through the Settings GUI (which writes
+# [bar.default] into ~/.local/state/noctalia/settings.toml) plus this one.
 
-[bar.main]
+[bar.default]
 position           = "top"
 thickness          = 34
 background_opacity = 1.0
