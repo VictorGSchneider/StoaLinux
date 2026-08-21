@@ -41,6 +41,29 @@ _cp_json() {
     cp "$src" "$dst"
 }
 
+# Same guard for TOML (Noctalia v5). tomllib needs python 3.11+; when the
+# import fails the helper exits 0 so the copy still happens, matching the
+# "jq missing -> skip validation" behaviour above. A genuine parse error
+# raises, so a corrupt file is skipped rather than committed.
+_cp_toml() {
+    local src="$1" dst="$2"
+    if command -v python3 >/dev/null 2>&1; then
+        if ! python3 -c '
+import sys
+try:
+    import tomllib
+except ImportError:
+    sys.exit(0)
+with open(sys.argv[1], "rb") as fh:
+    tomllib.load(fh)
+' "$src" 2>/dev/null; then
+            echo "stoa-sync: SKIPPING invalid TOML: $src" >&2
+            return 0
+        fi
+    fi
+    cp "$src" "$dst"
+}
+
 git pull --autostash
 
 # ── Noctalia (curated) ──
@@ -76,6 +99,29 @@ if [ -d "$NOCTALIA" ]; then
             _cp_json "$src" "$dst"
         done
     fi
+fi
+
+# ── Noctalia v5 GUI state (snapshot only) ──
+# v5 writes GUI-managed overrides to ~/.local/state/noctalia/settings.toml,
+# outside the curated ~/.config/noctalia paths handled above. Mirror it so a
+# bar tweak made through the Settings GUI is at least versioned.
+#
+# This is a SNAPSHOT, not a source. install.sh deliberately does not link it
+# back, for two reasons:
+#
+#   * it carries machine-bound values — monitor connector names in
+#     [bar.<name>.monitor.*] and per-output overrides — which are wrong on
+#     any other machine;
+#   * it is the layer that WINS over config/noctalia/config.toml, so
+#     restoring it elsewhere would silently shadow the repo config and make
+#     edits there look like they do nothing.
+#
+# To make a GUI tweak permanent, move it into config/noctalia/config.toml.
+NOCTALIA_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia"
+if [ -f "$NOCTALIA_STATE/settings.toml" ] && [ ! -L "$NOCTALIA_STATE/settings.toml" ]; then
+    state_dst="$STOA_DIR/dotfiles/.local/state/noctalia/settings.toml"
+    mkdir -p "$(dirname "$state_dst")"
+    _cp_toml "$NOCTALIA_STATE/settings.toml" "$state_dst"
 fi
 
 # ── User-defined paths (~/.config/stoa/sync.list) ──
