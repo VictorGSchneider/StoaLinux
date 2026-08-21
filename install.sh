@@ -106,50 +106,16 @@ if [ -L "${CONFIG_DIR}/hypr/hyprland.conf" ]; then
     rm -f "${CONFIG_DIR}/hypr/hyprland.conf"
     echo -e "  ${S}[~] Removed stale hyprland.conf symlink (migrated to hyprland.lua).${R}"
 fi
-_link "${STOA_DIR}/config/waybar/config"        "${CONFIG_DIR}/waybar/config"
-_link "${STOA_DIR}/config/waybar/style.css"     "${CONFIG_DIR}/waybar/style.css"
-_link "${STOA_DIR}/config/noctalia/colorschemes/Stoa" \
-      "${CONFIG_DIR}/noctalia/colorschemes/Stoa"
-_link "${STOA_DIR}/config/noctalia/plugins.json" \
-      "${CONFIG_DIR}/noctalia/plugins.json"
-_link "${STOA_DIR}/theme/noctalia-plugins/stoa-memento" \
-      "${CONFIG_DIR}/noctalia/plugins/stoa-memento"
-_link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive-pill" \
-      "${CONFIG_DIR}/noctalia/plugins/stoa-drive-pill"
-_link "${STOA_DIR}/theme/noctalia-plugins/stoa-health" \
-      "${CONFIG_DIR}/noctalia/plugins/stoa-health"
-# stoa-health replaces the old doctor-pill and vitals plugins — drop
-# their stale symlinks so the plugin manager doesn't try to load them
-rm -f "${CONFIG_DIR}/noctalia/plugins/stoa-doctor-pill" \
-      "${CONFIG_DIR}/noctalia/plugins/stoa-vitals"
-
 # ── Noctalia v5 ──
 # v5 is configured from ~/.config/noctalia/*.toml (all merged, hot-reloaded)
 # plus palettes/<name>.json. Both are symlinked so a `git pull` propagates,
 # matching how every other Stoa config is wired.
-#
-# Note this is the same directory the v4 pair used. The two formats do not
-# collide: v5 reads only *.toml and palettes/, and ignores the v4 JSON files
-# below. That is what lets the legacy stack stay in place as a fallback.
 mkdir -p "${CONFIG_DIR}/noctalia/palettes"
 _link "${STOA_DIR}/config/noctalia/config.toml" \
       "${CONFIG_DIR}/noctalia/config.toml"
 _link "${STOA_DIR}/config/noctalia/palettes/Stoa.json" \
       "${CONFIG_DIR}/noctalia/palettes/Stoa.json"
 
-# ── Noctalia v4 (legacy) ──
-# settings.json — opinionated Stoa seed (floating bar, Stoa
-# color scheme, EB Garamond, layout incl. screen-toolkit/clipper/
-# keybind-cheatsheet plugin widgets). Copy-seed semantics like
-# stoa.conf: only place when absent so the user's tweaks survive
-# reinstalls. Wipe ~/.config/noctalia/settings.json to reset.
-if [ ! -f "${CONFIG_DIR}/noctalia/settings.json" ]; then
-    cp "${STOA_DIR}/config/noctalia/settings.json" \
-       "${CONFIG_DIR}/noctalia/settings.json"
-    echo -e "  ${O}[+] ${CONFIG_DIR}/noctalia/settings.json${R}"
-else
-    echo -e "  ${S}[~] noctalia/settings.json already exists (preserved)${R}"
-fi
 _link "${STOA_DIR}/config/i3/config"            "${CONFIG_DIR}/i3/config"
 _link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
 _link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"

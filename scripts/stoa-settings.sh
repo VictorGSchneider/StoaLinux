@@ -904,10 +904,13 @@ menu_wallpaper() {
 _apply_wallpaper() {
     local path="$1"
     if [ -n "$WAYLAND_DISPLAY" ]; then
-        pkill swaybg 2>/dev/null
-        swaybg -i "$path" -m fill &
-        disown
+        # Noctalia owns the wallpaper layer on Wayland. Starting swaybg here
+        # would stack a second surface over it. `wallpaper-set` with a single
+        # token applies to every output (parseWallpaperSetTokens), and it
+        # persists, so the choice survives a restart.
+        noctalia msg wallpaper-set "$path" >/dev/null 2>&1
     else
+        # X11 / i3 session — no Noctalia there.
         feh --bg-fill "$path" 2>/dev/null
     fi
     _notify "Wallpaper: $(basename "$path")"
@@ -1112,7 +1115,6 @@ _colors_apply() {
     # Files to update
     local -a files=(
         "${HOME}/.config/rofi/config.rasi"
-        "${HOME}/.config/waybar/style.css"
         "${HOME}/.config/kitty/kitty.conf"
         "${HOME}/.config/eww/eww.scss"
         "${HOME}/.config/gtk-3.0/gtk.css"
@@ -2562,7 +2564,7 @@ window_next|  Next window|hyprctl dispatch cyclenext|i3-msg focus right
 window_prev|  Prev window|hyprctl dispatch cyclenext prev|i3-msg focus left
 window_minimize|  Minimize|hyprctl dispatch movetospecialworkspace minimize|i3-msg move scratchpad
 overview|  Overview / App switcher|rofi -show window -config ~/.config/rofi/config.rasi|rofi -show window -config ~/.config/rofi/config.rasi
-launcher|  App launcher|qs -c noctalia-shell ipc call launcher toggle|rofi -show drun -config ~/.config/rofi/config.rasi
+launcher|  App launcher|noctalia msg panel-toggle launcher|rofi -show drun -config ~/.config/rofi/config.rasi
 volume_up|  Volume up|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0
 volume_down|  Volume down|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
 volume_mute|  Toggle mute|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
@@ -6247,7 +6249,7 @@ _health_services() {
     lines+=("")
     lines+=("─── Stoa Processes ───")
 
-    local stoa_procs=("noctalia-shell" "waybar" "swaybg" "eww" "gammastep" "hyprpolkitagent")
+    local stoa_procs=("noctalia" "eww" "gammastep")
     for proc in "${stoa_procs[@]}"; do
         if pgrep -x "$proc" &>/dev/null; then
             lines+=("  ● running    $proc")
@@ -6452,10 +6454,8 @@ _health_config_check() {
 
     local configs=(
         "${HOME}/.config/hypr/hyprland.lua:Hyprland config"
-        "${HOME}/.config/waybar/config:Waybar config"
-        "${HOME}/.config/waybar/style.css:Waybar style"
         "${HOME}/.config/rofi/config.rasi:Rofi config"
-        "${HOME}/.config/noctalia/settings.json:Noctalia settings"
+        "${HOME}/.config/noctalia/config.toml:Noctalia config"
         "${HOME}/.config/kitty/kitty.conf:Kitty config"
         "${HOME}/.config/eww/eww.yuck:EWW widgets"
         "${HOME}/.config/eww/eww.scss:EWW styles"

@@ -1,9 +1,11 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Keybinds Bar                                  ║
-# ║  Waybar custom modules:                                      ║
-# ║    bar  → compact apps line in the top center                ║
-# ║    info → keyboard icon + full keybinds tooltip on the right ║
+# ║  STOA LINUX — Keybinds cheatsheet                           ║
+# ║    text → the cheatsheet as plain text (used by Super+/)     ║
+# ║    bar  → compact apps line     ┐ legacy waybar custom       ║
+# ║    info → JSON with tooltip     ┘ modules, kept for the i3   ║
+# ║                                   session and any external   ║
+# ║                                   bar that still wants them  ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
@@ -46,7 +48,7 @@ read -r -d '' TOOLTIP <<'EOF'
   Super+Shift+1–0      Move window to workspace 1–10
 
 ▸ Apps
-  Super+Space          Rofi (launcher)
+  Super+Space          Launcher (Noctalia)
   Super+A              App Store
   Super+B              Brave
   Super+C              Calculator
@@ -60,19 +62,19 @@ read -r -d '' TOOLTIP <<'EOF'
   Super+W              WinApps
 
 ▸ Clipboard
-  Super+V              Show history
-  Super+Shift+V        Pin item
+  Super+V              Clipboard history
   Super+Shift+B        Clear
 
 ▸ Tools
   Super+Shift+T        OCR
   Super+Shift+P        Advanced paste
   Super+Shift+S        Predict toggle
-  Print                Screenshot / recording
+  Print                Screenshot (region)
+  Shift+Print          Screenshot / recording (advanced)
 
-▸ Bar
-  Super+/              Toggle keybinds bar
-  Click ⌨ icon         Toggle keybinds bar
+▸ Shell
+  Super+/              This cheatsheet
+  Super+Ctrl+R         Restart the bar
 
 ╚═══════════════════════════════════════╝
 EOF
@@ -110,8 +112,14 @@ case "$MODE" in
         fi
         emit "⌨" "$TOOLTIP" "$class"
         ;;
+    text)
+        # Plain text, for rofi/notify consumers. Noctalia v5 has no
+        # cheatsheet widget, so Super+/ renders this through rofi instead
+        # of the waybar module that used to carry it.
+        printf '%s\n' "$TOOLTIP"
+        ;;
     *)
-        echo "usage: $0 {bar|info}" >&2
+        echo "usage: $0 {text|bar|info}" >&2
         exit 2
         ;;
 esac
