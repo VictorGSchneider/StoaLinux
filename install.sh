@@ -33,14 +33,38 @@ _link() {
         return 0
     fi
 
-    if [ -e "$dst" ] || [ -L "$dst" ]; then
-        local backup="${dst}.bak.$(date +%s)"
-        echo -e "  ${S}[~] Backup: ${dst} → ${backup}${R}"
-        mv "$dst" "$backup"
+    mkdir -p "$(dirname "$dst")"
+
+    # Files and symlinks are replaced atomically: back up with `cp` (which
+    # leaves the original in place), build the new symlink beside the
+    # destination, then rename over it. rename(2) is atomic, so a config
+    # watcher never observes a missing file.
+    #
+    # The previous `mv` + `ln` order left a window where the destination did
+    # not exist. Hyprland watches ~/.config/hypr/hyprland.lua and reloads on
+    # change, so running install.sh from a live session reliably raised
+    #     cannot open /home/<user>/.config/hypr/hyprland.lua
+    # even though the link that followed was perfectly good.
+    if [ ! -d "$dst" ] || [ -L "$dst" ]; then
+        if [ -e "$dst" ] || [ -L "$dst" ]; then
+            local backup="${dst}.bak.$(date +%s)"
+            echo -e "  ${S}[~] Backup: ${dst} → ${backup}${R}"
+            cp -a "$dst" "$backup"
+        fi
+        local tmp
+        tmp="$(mktemp -u "${dst}.stoa-XXXXXX")"
+        ln -s "$src" "$tmp"
+        mv -T "$tmp" "$dst"
+        echo -e "  ${O}[+] ${dst}${R}"
+        return 0
     fi
 
-    mkdir -p "$(dirname "$dst")"
-    ln -sf "$src" "$dst"
+    # A real directory cannot be atomically swapped for a symlink, so it
+    # keeps the move-then-link path. No live-watched config is a directory.
+    local backup="${dst}.bak.$(date +%s)"
+    echo -e "  ${S}[~] Backup: ${dst} → ${backup}${R}"
+    mv "$dst" "$backup"
+    ln -s "$src" "$dst"
     echo -e "  ${O}[+] ${dst}${R}"
 }
 
