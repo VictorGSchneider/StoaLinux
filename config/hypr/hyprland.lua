@@ -338,3 +338,6 @@ hl.env("WLR_NO_HARDWARE_CURSORS", "1")
 hl.env("__GL_GSYNC_ALLOWED", "1")
 hl.env("__GL_VRR_ALLOWED", "1")
 -- <<< stoa-gpu-setup: env (auto-managed) <<<
+
+-- For Noctalia Color templates
+require("noctalia").apply_theme()

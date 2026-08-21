@@ -309,3 +309,5 @@ calendar:selected {
 separator {
     background-color: @stoa_stone;
 }
+
+@import url("noctalia.css");
