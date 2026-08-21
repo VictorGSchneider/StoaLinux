@@ -206,7 +206,12 @@ hl.bind(mod .. " + P", hl.dsp.exec_cmd("~/.local/bin/stoa-display"))
 -- OSD module fires on lock-state changes — no WM-level binding needed.
 
 -- ── Capture (screenshot + recording) ──
-hl.bind("Print", hl.dsp.exec_cmd("~/.local/bin/stoa-capture"))
+-- Print goes to Noctalia's own region-capture overlay — the same action the
+-- bar's screenshot widget fires on left click.
+-- Shift+Print keeps stoa-capture, which Noctalia does not replace: it also
+-- does screen recording, timed delays and whole-window mode.
+hl.bind("Print", hl.dsp.exec_cmd("noctalia msg screenshot-region"))
+hl.bind("SHIFT + Print", hl.dsp.exec_cmd("~/.local/bin/stoa-capture"))
 
 -- ── Clipboard ──
 hl.bind(mod .. " + V", hl.dsp.exec_cmd("noctalia msg panel-toggle clipboard"))
