@@ -24,7 +24,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 
 - **Arch Linux** with automated installation (from live ISO or existing Arch)
 - **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
-- **Noctalia Shell** (QML on Quickshell) as the bar + quick-settings + notifications, themed via the bundled **Stoa color scheme**; **waybar** stays as an optional fallback via `STOA_BAR` in `stoa.conf`
+- **Noctalia v5** as the bar + launcher + control centre + notifications + OSD + clipboard history + wallpaper + lock screen, themed via the bundled **Stoa palette** (`config/noctalia/palettes/Stoa.json`)
 - **25-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
 - **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
 - **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird, VS Code, Neovim

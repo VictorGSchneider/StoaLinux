@@ -18,7 +18,6 @@
 set -e
 
 STOA_DIR="${STOA_DIR:-$HOME/StoaLinux}"
-NOCTALIA="${XDG_CONFIG_HOME:-$HOME/.config}/noctalia"
 SYNC_LIST="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/sync.list"
 
 if [ ! -d "$STOA_DIR/.git" ]; then
@@ -28,20 +27,8 @@ fi
 
 cd "$STOA_DIR"
 
-# Guard: validate JSON before copying to avoid committing corrupt files.
-# jq is required by stoa-doctor; if somehow missing, skip validation.
-_cp_json() {
-    local src="$1" dst="$2"
-    if command -v jq >/dev/null 2>&1; then
-        if ! jq empty "$src" 2>/dev/null; then
-            echo "stoa-sync: SKIPPING invalid JSON: $src" >&2
-            return 0
-        fi
-    fi
-    cp "$src" "$dst"
-}
-
-# Same guard for TOML (Noctalia v5). tomllib needs python 3.11+; when the
+# Guard: validate TOML before copying to avoid committing corrupt files.
+# (Noctalia v5.) tomllib needs python 3.11+; when the
 # import fails the helper exits 0 so the copy still happens, matching the
 # "jq missing -> skip validation" behaviour above. A genuine parse error
 # raises, so a corrupt file is skipped rather than committed.
@@ -65,41 +52,6 @@ with open(sys.argv[1], "rb") as fh:
 }
 
 git pull --autostash
-
-# ── Noctalia (curated) ──
-if [ -d "$NOCTALIA" ]; then
-    for f in settings.json colors.json; do
-        if [ -f "$NOCTALIA/$f" ]; then
-            _cp_json "$NOCTALIA/$f" "$STOA_DIR/config/noctalia/$f"
-        fi
-    done
-
-    if [ -d "$NOCTALIA/plugins" ]; then
-        for pd in "$NOCTALIA/plugins"/*/; do
-            [ -d "$pd" ] || continue
-            name=$(basename "$pd")
-            src="$pd/settings.json"
-            [ -f "$src" ] || continue
-            dst="$STOA_DIR/config/noctalia/plugins/$name/settings.json"
-            mkdir -p "$(dirname "$dst")"
-            _cp_json "$src" "$dst"
-        done
-    fi
-
-    if [ -d "$NOCTALIA/colorschemes" ]; then
-        for cs in "$NOCTALIA/colorschemes"/*/; do
-            target="${cs%/}"
-            [ -d "$target" ] || continue
-            [ -L "$target" ] && continue
-            name=$(basename "$target")
-            src="$target/$name.json"
-            [ -f "$src" ] || continue
-            dst="$STOA_DIR/config/noctalia/colorschemes/$name/$name.json"
-            mkdir -p "$(dirname "$dst")"
-            _cp_json "$src" "$dst"
-        done
-    fi
-fi
 
 # ── Noctalia v5 GUI state (snapshot only) ──
 # v5 writes GUI-managed overrides to ~/.local/state/noctalia/settings.toml,

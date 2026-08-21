@@ -74,7 +74,7 @@ _check_bin rofi         "Settings panel (rofi)"
 _check_bin notify-send  "Notifications (libnotify)"
 _check_bin jq           "JSON parser (jq)"
 _check_bin eww          "Widgets (eww)"
-_check_bin waybar       "Status bar (waybar)"
+_check_bin noctalia     "Shell (Noctalia)"
 
 # ── Display / WM ──
 if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
@@ -82,16 +82,18 @@ if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
     _check_bin grim         "Screenshot (grim)"
     _check_bin slurp        "Region select (slurp)"
     _check_bin wf-recorder  "Screen recording (wf-recorder)"
-    _check_bin swaybg       "Wallpaper (swaybg)"
     _check_bin wl-paste     "Clipboard (wl-clipboard)"
-    _check_bin cliphist     "Clipboard history (cliphist)"
     _check_optional satty   "Screenshot editor (satty)"
-    if [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ] \
+    # Noctalia v5 ships its own polkit agent (shell.polkit_agent in
+    # config.toml), so a standalone agent is no longer required — only
+    # accepted as an alternative when the shell is not the one running.
+    if command -v noctalia &>/dev/null \
+        || [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ] \
         || command -v hyprpolkitagent &>/dev/null \
         || command -v lxpolkit &>/dev/null; then
         echo "[OK] Polkit agent present" >> "$LOG"
     else
-        echo "[WARN] No polkit authentication agent found (polkit-gnome / hyprpolkitagent / lxpolkit)" >> "$LOG"
+        echo "[WARN] No polkit authentication agent found" >> "$LOG"
     fi
 
     # ── Hyprland lua config installed? ──
@@ -208,21 +210,10 @@ fi
 
 # Notification daemon — Noctalia owns org.freedesktop.Notifications on
 # the Hyprland/Wayland path.
-#
-# v5 is a single `noctalia` process. The legacy v4 pair runs as
-# `quickshell -c noctalia-shell` (or `qs -c noctalia-shell`), and the AUR
-# noctalia-shell package ships a launcher of the same name — matching the
-# cmdline substring with pgrep -f catches all three of those forms.
-# waybar is the last-resort fallback and does NOT provide notifications,
-# so it is reported separately rather than as an equivalent.
 if pgrep -x 'noctalia' &>/dev/null; then
-    _ok "Noctalia v5 is running (notifications)"
-elif pgrep -f 'noctalia-shell' &>/dev/null; then
-    _warn "Noctalia v4 (quickshell) is running — v5 migration pending"
-elif pgrep -x 'waybar' &>/dev/null; then
-    _warn "waybar fallback is running — no notification daemon"
+    _ok "Noctalia is running (notifications)"
 else
-    _warn "No Stoa shell is running — notifications won't show"
+    _warn "Noctalia is not running — notifications won't show"
 fi
 
 # ══════════════════════════════════════════
