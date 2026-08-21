@@ -1,16 +1,18 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Enable Stoa Greetd (tuigreet + PAM keyring)   ║
+# ║  STOA LINUX — Enable Stoa Greetd (PAM keyring)              ║
 # ║  "The form is the function."                                 ║
 # ║                                                              ║
 # ║  Replaces the hyprlock-as-greeter flow with a real PAM       ║
-# ║  login via greetd + tuigreet, themed in the Stoa palette.    ║
+# ║  login via greetd. Greeter is picked automatically:          ║
+# ║    noctalia-greeter → matches the Noctalia v5 shell          ║
+# ║    tuigreet         → TUI fallback, Stoa bronze theme        ║
+# ║  Force one with --greeter=noctalia | --greeter=tuigreet.     ║
 # ║  Side effect: pam_gnome_keyring runs inside the PAM session, ║
 # ║  so the keyring (browser passwords, etc.) destrava sozinho.  ║
 # ║                                                              ║
 # ║  Wires:                                                      ║
-# ║    1. /etc/greetd/config.toml — tuigreet bronze, exec        ║
-# ║       Hyprland on successful auth                            ║
+# ║    1. /etc/greetd/config.toml — greeter + Hyprland session   ║
 # ║    2. /etc/pam.d/greetd — pam_gnome_keyring auth + session   ║
 # ║    3. greetd.service enabled                                 ║
 # ║    4. Stoa autologin drop-in removed (if present)            ║
@@ -93,33 +95,88 @@ _uncomment_hyprlock_exec_once() {
     fi
 }
 
+# Which greeter to wire. Empty = auto-detect, preferring noctalia-greeter
+# so the login screen matches the Noctalia v5 shell. Set by --greeter=.
+GREETER="${GREETER:-}"
+
+_detect_greeter() {
+    if [ -n "$GREETER" ]; then
+        echo "$GREETER"
+        return 0
+    fi
+    if command -v noctalia-greeter-session >/dev/null 2>&1; then
+        echo noctalia
+    else
+        echo tuigreet
+    fi
+}
+
 _install_pkgs() {
+    local greeter="$1"
     local need=()
-    command -v greetd   >/dev/null 2>&1 || need+=(greetd)
-    command -v tuigreet >/dev/null 2>&1 || need+=(greetd-tuigreet)
+    command -v greetd >/dev/null 2>&1 || need+=(greetd)
     # gnome-keyring is the package; pam_gnome_keyring.so ships with it
     [ -f /usr/lib/security/pam_gnome_keyring.so ] || need+=(gnome-keyring libsecret)
     if [ ${#need[@]} -gt 0 ]; then
         echo -e "  ${F}Installing: ${need[*]}${R}"
         sudo pacman -S --needed --noconfirm "${need[@]}"
     fi
+
+    if [ "$greeter" = "tuigreet" ]; then
+        command -v tuigreet >/dev/null 2>&1 || \
+            sudo pacman -S --needed --noconfirm greetd-tuigreet
+        return 0
+    fi
+
+    # noctalia-greeter lives in the AUR, so pacman cannot reach it.
+    if command -v noctalia-greeter-session >/dev/null 2>&1; then
+        return 0
+    fi
+    local aur=""
+    command -v yay  >/dev/null 2>&1 && aur=yay
+    [ -z "$aur" ] && command -v paru >/dev/null 2>&1 && aur=paru
+    if [ -n "$aur" ]; then
+        echo -e "  ${F}Installing noctalia-greeter via ${aur}...${R}"
+        "$aur" -S --needed --noconfirm noctalia-greeter
+    else
+        echo -e "  ${T}[!] noctalia-greeter not installed and no AUR helper (yay/paru) found.${R}"
+        echo -e "  ${S}    Install it, or run with --greeter=tuigreet.${R}"
+        exit 1
+    fi
 }
 
 _write_greetd_conf() {
-    local theme="border=${BRONZE};text=${MARBLE};prompt=${BRONZE};time=${GOLD};container=${BG};greet=${MARBLE};input=${MARBLE};action=${GOLD};button=${BRONZE}"
+    local greeter="$1"
+    local command
+
+    if [ "$greeter" = "noctalia" ]; then
+        # noctalia-greeter-session starts the bundled wlroots compositor and
+        # runs the greeter UI inside it. Flags for the greeter itself go
+        # after `--`; --session takes the desktop-entry Name (not the
+        # .desktop filename), which for Hyprland is "Hyprland".
+        # `noctalia-greeter sessions` lists the valid names.
+        local bin
+        bin="$(command -v noctalia-greeter-session)"
+        command="${bin} -- --session Hyprland"
+    else
+        local theme="border=${BRONZE};text=${MARBLE};prompt=${BRONZE};time=${GOLD};container=${BG};greet=${MARBLE};input=${MARBLE};action=${GOLD};button=${BRONZE}"
+        command="tuigreet --time --remember --remember-session --asterisks --greeting 'Memento Mori.' --cmd Hyprland --theme '${theme}'"
+    fi
+
     sudo mkdir -p "$(dirname "$GREETD_CONF")"
     sudo tee "$GREETD_CONF" >/dev/null <<EOF
 # Managed by StoaLinux — setup/enable-stoa-greetd.sh
+# Greeter: ${greeter}
 # Reverting to autologin: run setup/enable-stoa-greetd.sh --disable
 
 [terminal]
 vt = 1
 
 [default_session]
-command = "tuigreet --time --remember --remember-session --asterisks --greeting 'Memento Mori.' --cmd Hyprland --theme '${theme}'"
+command = "${command}"
 user = "greeter"
 EOF
-    echo -e "  ${O}[✓] ${GREETD_CONF}${R}"
+    echo -e "  ${O}[✓] ${GREETD_CONF} (greeter: ${greeter})${R}"
 }
 
 _write_greetd_pam() {
@@ -163,7 +220,20 @@ _unwrite_greetd_pam() {
     fi
 }
 
-if [ "${1:-}" = "--disable" ]; then
+DISABLE=0
+for arg in "$@"; do
+    case "$arg" in
+        --disable) DISABLE=1 ;;
+        --greeter=noctalia|--greeter=tuigreet) GREETER="${arg#--greeter=}" ;;
+        --greeter=*)
+            echo -e "  ${T}[!] Unknown greeter: ${arg#--greeter=} (use noctalia or tuigreet)${R}" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Scanned rather than checked as $1: --greeter= may legitimately come first.
+if [ "$DISABLE" -eq 1 ]; then
     echo ""
     echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
     echo -e "  ${B}║     Disabling Stoa Greetd                           ║${R}"
@@ -185,7 +255,7 @@ fi
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     Enabling Stoa Greetd                            ║${R}"
-echo -e "  ${B}║     greetd → tuigreet (bronze) → PAM → Hyprland      ║${R}"
+echo -e "  ${B}║     greetd → greeter → PAM → Hyprland                ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
@@ -194,7 +264,9 @@ if ! command -v Hyprland >/dev/null 2>&1; then
     exit 1
 fi
 
-_install_pkgs
+GREETER_CHOICE="$(_detect_greeter)"
+echo -e "  ${F}Greeter:${R} ${GREETER_CHOICE}"
+_install_pkgs "$GREETER_CHOICE"
 
 # Tear down the hyprlock-as-greeter wiring if it's currently active —
 # the two flows are mutually exclusive (both fight over tty1).
@@ -202,7 +274,7 @@ _disable_autologin
 _unseed_profile "$HOME/.zprofile"
 _unseed_profile "$HOME/.bash_profile"
 
-_write_greetd_conf
+_write_greetd_conf "$GREETER_CHOICE"
 _write_greetd_pam
 _comment_hyprlock_exec_once
 
@@ -211,7 +283,7 @@ echo -e "  ${O}[✓] greetd.service enabled.${R}"
 
 echo ""
 echo -e "  ${F}Done. On next boot:${R}"
-echo -e "    ${S}1. greetd renders tuigreet in Stoa bronze on tty1${R}"
+echo -e "    ${S}1. greetd renders ${GREETER_CHOICE} on tty1${R}"
 echo -e "    ${S}2. you type your password — PAM authenticates the session${R}"
 echo -e "    ${S}3. pam_gnome_keyring unlocks the keyring with that password${R}"
 echo -e "    ${S}4. Hyprland starts; browsers stop asking for the keyring${R}"
