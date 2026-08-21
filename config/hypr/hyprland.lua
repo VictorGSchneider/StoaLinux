@@ -296,7 +296,7 @@ hl.on("hyprland.start", function()
     -- (see setup/enable-stoa-greeter.sh) this turns hyprlock into the boot
     -- login screen. Outside that flow it just locks immediately on session
     -- start, which is harmless.
-    hl.exec_cmd("hyprlock") -- stoa-greetd toggles this line
+    -- hl.exec_cmd("hyprlock") -- disabled by stoa-greetd
     hl.exec_cmd("~/.local/bin/stoa-bar")
     -- Wallpaper is owned by Noctalia v5 ([wallpaper] in config.toml), which
     -- also gives us rotation and transitions. swaybg is no longer started.

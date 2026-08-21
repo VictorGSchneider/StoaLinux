@@ -5,21 +5,30 @@ ui_scale = 1.2000000104308128
 
 [bar.default]
 capsule = true
+center = [ "launcher", "workspaces", "clock" ]
 contact_shadow = true
+end = [ "tray", "clipboard", "network", "bluetooth", "volume", "brightness", "battery", "session" ]
 font_family = "EB Garamond Medium"
 layer = "overlay"
 radius = 80
 scale = 1.1500000096857548
+start = [ "sysmon", "notifications", "media" ]
 thickness = 40
 widget_spacing = 8
+
+    [bar.default.dead_zone.actions]
+    scroll_down = "volume-down"
+    scroll_up = "volume-up"
 
 [calendar]
 enabled = true
 
 [control_center]
-width = 750
+sidebar_section = "none"
+width = 600
 
     [control_center.calendar]
+    event_time_format = "%H:%M:%S"
     show_week_numbers = true
 
 [desktop_widgets]
@@ -180,6 +189,7 @@ enabled = true
 button_borders = false
 card_borders = false
 corner_radius_scale = 2.0
+external_ip_enabled = true
 font_family = "EB Garamond"
 lang = "en"
 password_style = "random"
@@ -208,9 +218,9 @@ telemetry_enabled = true
     [shell.panel]
     borders = false
     floating_layer = "top"
+    launcher_placement = "attached"
     list_item_background = true
     open_near_click_control_center = true
-    open_near_click_launcher = true
     open_near_click_wallpaper = true
     session_placement = "floating"
     session_position = "center"
@@ -242,10 +252,28 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-memento.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-memento.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-memento.png"
+
+[widget.clipboard]
+anchor = true
+
+[widget.clock]
+format = "{:%H:%M:%S}"
+
+[widget.control-center]
+glyph = "settings-2"
+
+[widget.media]
+art_size = 19
+hide_when_no_media = true
+title_scroll = "always"
+
+[widget.workspaces]
+hide_when_empty = true
+labels_only_when_occupied = true
