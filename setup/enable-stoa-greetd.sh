@@ -179,6 +179,37 @@ EOF
     echo -e "  ${O}[✓] ${GREETD_CONF} (greeter: ${greeter})${R}"
 }
 
+# Push the shell's look to the greeter. Noctalia v5 owns this: Sync copies
+# wallpaper, palette, theme mode, font and monitor layout into
+# /var/lib/noctalia-greeter, escalating through pkexec/run0.
+#
+# shell.greeter_sync.auto_sync in config/noctalia/config.toml keeps it
+# current afterwards; this is only the first push, since auto-sync fires on
+# change and a fresh install has not changed anything yet.
+#
+# Deliberately NOT writing a greeter.toml with an [appearance.palette]:
+# upstream documents that a declarative greeter.toml is never overwritten by
+# Sync and wins over it, so pinning colours there would freeze the login
+# screen and silently ignore every later palette change.
+_sync_greeter_appearance() {
+    if ! command -v noctalia >/dev/null 2>&1; then
+        return 0
+    fi
+    if ! pgrep -x noctalia >/dev/null 2>&1; then
+        echo -e "  ${S}[~] Noctalia is not running — skipping the first greeter sync.${R}"
+        echo -e "  ${S}    Run once from your session: ${F}noctalia msg greeter-sync${R}"
+        return 0
+    fi
+    echo -e "  ${F}Syncing the Stoa look to the greeter (may prompt via polkit)...${R}"
+    if noctalia msg greeter-sync >/dev/null 2>&1; then
+        echo -e "  ${O}[✓] Greeter appearance synced from the shell.${R}"
+    else
+        echo -e "  ${S}[~] Sync did not complete. Retry from your session with:${R}"
+        echo -e "  ${S}    ${F}noctalia msg greeter-sync${R}"
+        echo -e "  ${S}    or Settings → Security → Noctalia Greeter → Sync Now.${R}"
+    fi
+}
+
 _write_greetd_pam() {
     # Only inject if our marker isn't already present.
     if sudo grep -q "${PAM_MARK}" "$GREETD_PAM" 2>/dev/null; then
@@ -275,6 +306,9 @@ _unseed_profile "$HOME/.zprofile"
 _unseed_profile "$HOME/.bash_profile"
 
 _write_greetd_conf "$GREETER_CHOICE"
+if [ "$GREETER_CHOICE" = "noctalia" ]; then
+    _sync_greeter_appearance
+fi
 _write_greetd_pam
 _comment_hyprlock_exec_once
 

@@ -36,6 +36,22 @@ clipboard_placement      = "floating"
 clipboard_position       = "center"
 control_center_placement = "attached"
 
+# Push wallpaper, palette, theme mode, font and monitor layout to the
+# Noctalia greeter whenever they change, so the login screen and the
+# session stay visually identical without a second copy of the palette.
+#
+# Deliberately NOT writing an [appearance.palette] into the greeter's own
+# greeter.toml: upstream documents that a declarative greeter.toml is never
+# overwritten by Sync and WINS over it, so pinning colours there would
+# permanently shadow this and freeze the login screen on whatever the
+# palette happened to be that day.
+#
+# Sync escalates through pkexec/run0 to write /var/lib/noctalia-greeter;
+# shell.polkit_agent above provides the prompt.
+
+[shell.greeter_sync]
+auto_sync = true
+
 [shell.launcher]
 categories    = true
 show_icons    = true
