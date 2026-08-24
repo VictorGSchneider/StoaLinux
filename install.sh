@@ -116,6 +116,14 @@ _link "${STOA_DIR}/config/noctalia/config.toml" \
 _link "${STOA_DIR}/config/noctalia/palettes/Stoa.json" \
       "${CONFIG_DIR}/noctalia/palettes/Stoa.json"
 
+# Local (unpublished) v5 plugins. Noctalia scans $XDG_DATA_HOME/noctalia/
+# plugins for directories holding a plugin.toml; symlinking keeps them
+# tracked in the repo the way every other Stoa config is.
+NOCTALIA_PLUGINS="${XDG_DATA_HOME:-$HOME/.local/share}/noctalia/plugins"
+mkdir -p "$NOCTALIA_PLUGINS"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive" \
+      "${NOCTALIA_PLUGINS}/stoa-drive"
+
 _link "${STOA_DIR}/config/i3/config"            "${CONFIG_DIR}/i3/config"
 _link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
 _link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"

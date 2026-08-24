@@ -42,7 +42,7 @@ jobs:
               | sort
           )
           mapfile -t LUA_FILES < <(
-              find . -type f -name '*.lua' \
+              find . -type f \( -name '*.lua' -o -name '*.luau' \) \
                   -not -path './.git/*' \
                   -not -path './scripts/vendor/*' \
               | sort
@@ -104,6 +104,11 @@ jobs:
       # config/hypr/hyprland.lua is the Hyprland config (0.55+ dropped
       # hyprlang for lua). A syntax error there means the compositor
       # refuses to load the config at all, so gate it in CI.
+      #
+      # *.luau (Noctalia v5 plugins) is checked by the same step. Luau is a
+      # superset of Lua 5.1, so luac5.4 only parses plugins written in the
+      # common subset — which is why they avoid type annotations and
+      # if-expressions. It catches ordinary syntax errors, not Luau types.
       - name: Lua syntax (luac -p)
         shell: bash
         run: |
