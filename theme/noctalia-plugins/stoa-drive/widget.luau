@@ -30,8 +30,17 @@ local state = {
     loaded = false,
 }
 
+-- getConfig reads THIS plugin's own [[setting]] entries from plugin.toml
+-- (context->settings, keyed by the `key` field). getSetting is a
+-- different function entirely: it reads a dotted path out of the shell's
+-- own ~/.config/noctalia/config.toml (host->api().configSnapshot()), and
+-- "poll_seconds"/"show_badge" are not keys there, so it always returned
+-- nil — silently, since a miss only logs a warning, not an error. The
+-- plugin still worked (both getters had a same-type fallback), but the
+-- two declared settings were dead: nothing the user set in Settings ever
+-- reached this script.
 local function pollSeconds()
-    local configured = noctalia.getSetting("poll_seconds")
+    local configured = noctalia.getConfig("poll_seconds")
     if type(configured) == "number" and configured >= 5 then
         return configured
     end
@@ -39,7 +48,7 @@ local function pollSeconds()
 end
 
 local function showBadge()
-    local configured = noctalia.getSetting("show_badge")
+    local configured = noctalia.getConfig("show_badge")
     if type(configured) == "boolean" then
         return configured
     end
