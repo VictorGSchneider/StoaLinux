@@ -156,16 +156,32 @@ function update()
     refresh()
 end
 
--- Primary activation. Note the name: the plugin docs show `onClick`, but
--- the runtime only ever looks up `onActivate` (script_runtime.cpp) — an
--- onClick function would simply never be called.
---
--- v5 has no per-button callbacks for a bar widget the way the v4 QML one
--- had onRightClicked. Middle/right gestures are bound declaratively
--- instead, via [widget.<name>.actions] in config.toml, so the context
--- menu the old widget drew (Mount All / Unmount All / Open ~/Drive /
--- Settings) is not reproduced here — stoa-drive itself offers all four.
-function onActivate()
+-- Per-button click callbacks. PluginWidget::create() (plugin_widget.cpp)
+-- dispatches BTN_LEFT/BTN_RIGHT/BTN_MIDDLE to exactly these three global
+-- names — onClick/onRightClick/onMiddleClick — for a [[widget]] (bar
+-- widget) entry. `onActivate` is a *different* entry kind's callback
+-- (plugin_launcher_provider.cpp, for launcher search results); it is
+-- never invoked for a bar widget. That earlier mix-up is why clicking
+-- did nothing: the runtime looked for onClick, found no such global, and
+-- silently skipped the call — no error, nothing in the log, just no
+-- click. Confirmed by reading plugin_widget.cpp's InputArea::setOnClick
+-- handler directly rather than trusting the docs a second time.
+function onClick()
     -- stoa-drive is the rofi TUI; it owns mount/unmount/open/settings.
     noctalia.runAsync("$HOME/.local/bin/stoa-drive")
+end
+
+function onMiddleClick()
+    noctalia.runAsync("$HOME/.local/bin/stoa-drive mount-all", function(result)
+        if result.exitCode == 0 then
+            noctalia.notify("Stoa Drive", "Mounted all remotes")
+        else
+            noctalia.notifyError("Stoa Drive", "Could not mount all remotes")
+        end
+        refresh()
+    end)
+end
+
+function onRightClick()
+    noctalia.runAsync("xdg-open $HOME/Drive")
 end
