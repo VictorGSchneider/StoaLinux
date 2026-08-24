@@ -252,13 +252,13 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-e6b78e5f-marble.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-e6b78e5f-marble.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-e6b78e5f-marble.png"
 
 [widget.clipboard]
 anchor = true
