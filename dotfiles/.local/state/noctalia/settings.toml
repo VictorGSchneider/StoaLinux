@@ -7,7 +7,7 @@ ui_scale = 1.2000000104308128
 capsule = true
 center = [ "launcher", "workspaces", "clock" ]
 contact_shadow = true
-end = [ "tray", "clipboard", "network", "bluetooth", "volume", "brightness", "battery", "session" ]
+end = [ "tray", "clipboard", "Stoa-drive", "network", "bluetooth", "volume", "brightness", "battery", "session" ]
 font_family = "EB Garamond Medium"
 layer = "overlay"
 radius = 80
@@ -58,6 +58,13 @@ reserve_space = false
 shadow = false
 show_dots = true
 smart_auto_hide = true
+
+[hooks]
+logging_out = "~/.local/bin/stoa-doctor"
+rebooting = "~/.local/bin/stoa-doctor"
+session_locked = "~/.local/bin/stoa-doctor"
+session_unlocked = "~/.local/bin/stoa-doctor"
+shutting_down = "~/.local/bin/stoa-doctor"
 
 [location]
 auto_locate = true
@@ -185,6 +192,12 @@ widget_order = [
 [nightlight]
 enabled = true
 
+[plugin_settings."stoa/drive"]
+poll_seconds = 15
+
+[plugins]
+enabled = [ "stoa/drive" ]
+
 [shell]
 button_borders = false
 card_borders = false
@@ -252,13 +265,16 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-columns.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-columns.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-columns.png"
+
+[widget.Stoa-drive]
+type = "stoa/drive:pill"
 
 [widget.clipboard]
 anchor = true
@@ -273,6 +289,10 @@ glyph = "settings-2"
 art_size = 19
 hide_when_no_media = true
 title_scroll = "always"
+
+[widget.tray]
+detached_panel = true
+drawer_item_size = 20.0
 
 [widget.workspaces]
 hide_when_empty = true
