@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "poll_seconds": {
+      "label": "Refresh interval (seconds)",
+      "description": "How often to re-read rclone mount state. Each poll runs stoa-drive-status, which walks the VFS cache directory."
+    },
+    "show_badge": {
+      "label": "Show mounted count",
+      "description": "Display \"mounted/total\" next to the icon while any remote is unmounted."
+    }
+  }
+}
