@@ -47,6 +47,8 @@ GREETD_PAM="/etc/pam.d/greetd"
 DROPIN_FILE="/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf"
 DROPIN_DIR="/etc/systemd/system/getty@tty1.service.d"
 HYPR_CONF="${HOME}/.config/hypr/hyprland.lua"
+KEYRING_DEFAULT_FILE="${HOME}/.local/share/keyrings/default"
+NOCTALIA_CLIPBOARD_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/clipboard"
 PROFILE_MARK="# StoaLinux: autostart Hyprland on tty1"
 PROFILE_MARK_END="# StoaLinux: end autostart Hyprland block"
 PAM_MARK="# StoaLinux: pam_gnome_keyring (added by enable-stoa-greetd.sh)"
@@ -210,6 +212,46 @@ _sync_greeter_appearance() {
     fi
 }
 
+# pam_gnome_keyring only ever unlocks the keyring literally named "login" —
+# it has no idea what the Secret Service's current default collection is.
+# If something else (e.g. a leftover "Default_keyring" from an older
+# gnome-keyring bootstrap, or a keyring created by hand before this script
+# ever ran) is set as the default, PAM auto-unlocks "login" successfully on
+# every boot while every app asking the Secret Service for "the default
+# collection" — Noctalia's encrypted clipboard pins included — still finds
+# it locked. No visible error anywhere: writes just silently never land.
+#
+# Only touches the file when it already exists and disagrees with "login" —
+# a brand-new account with no keyrings yet gets "login" as the default the
+# first time pam_gnome_keyring creates one, with nothing to correct here.
+_fix_keyring_default() {
+    [ -f "$KEYRING_DEFAULT_FILE" ] || return 0
+
+    local current
+    current="$(cat "$KEYRING_DEFAULT_FILE" 2>/dev/null)"
+    [ "$current" = "login" ] && return 0
+
+    cp "$KEYRING_DEFAULT_FILE" "${KEYRING_DEFAULT_FILE}.bak"
+    printf '%s' "login" > "$KEYRING_DEFAULT_FILE"
+    echo -e "  ${O}[✓] Default keyring: '${current}' -> 'login' (the one pam_gnome_keyring actually unlocks).${R}"
+
+    # Any encrypted Noctalia clipboard history on disk was sealed with a
+    # storage key stored under the OLD default collection — now
+    # unreachable, since that collection is no longer what "default" means.
+    # Noctalia's storage_key_provider refuses to mint a replacement key
+    # while it sees encrypted data it can't decrypt (a corruption guard),
+    # so persistence stays permanently broken until that stale state is
+    # out of the way. Moved aside rather than deleted; whatever was pinned
+    # under the old broken default was never actually persisted anyway
+    # (the collection was locked the whole time), so there is nothing
+    # recoverable in it — this is just being cautious with someone else's
+    # files rather than assuming that.
+    if [ -d "$NOCTALIA_CLIPBOARD_STATE" ]; then
+        mv "$NOCTALIA_CLIPBOARD_STATE" "${NOCTALIA_CLIPBOARD_STATE}.bak-$(date +%s)"
+        echo -e "  ${O}[✓] Cleared orphaned encrypted clipboard state so Noctalia can mint a fresh key.${R}"
+    fi
+}
+
 _write_greetd_pam() {
     # Only inject if our marker isn't already present.
     if sudo grep -q "${PAM_MARK}" "$GREETD_PAM" 2>/dev/null; then
@@ -310,6 +352,7 @@ if [ "$GREETER_CHOICE" = "noctalia" ]; then
     _sync_greeter_appearance
 fi
 _write_greetd_pam
+_fix_keyring_default
 _comment_hyprlock_exec_once
 
 sudo systemctl enable --now greetd.service
