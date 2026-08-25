@@ -58,6 +58,13 @@ _rofi_confirm() {
     [[ "$choice" == *"Yes"* ]]
 }
 
+# Minimal JSON string escape — only " and \ can appear in the values we
+# print (drive names are pre-sanitized to [a-zA-Z0-9_-]; paths are the
+# only field that could carry a quote).
+_json_escape() {
+    printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
 # ── rclone check ──
 
 _check_rclone() {
@@ -208,38 +215,23 @@ _unmount_all() {
 }
 
 # ── Add a new account ──
+# _create_account is the non-interactive core (used by the native bar
+# panel's Add Account form as well as the rofi flow below): given a
+# provider type (empty = manual `rclone config`) and a name, sanitize,
+# check for a collision, and hand off to `rclone config` in a terminal —
+# OAuth needs a real browser-driven interactive flow, so this is the one
+# step that cannot move into a declarative panel.
 
-_add_account() {
-    local providers
-    providers=$(_rofi_select "  Provider" \
-        "  Google Drive" \
-        "  OneDrive" \
-        "  Dropbox" \
-        "  S3 (AWS, Minio, etc)" \
-        "  Other (manual)")
-    [ -z "$providers" ] && return
+_create_account() {
+    local provider_type="$1"
+    local name="$2"
 
-    local provider_type=""
-    case "$providers" in
-        *Google*)  provider_type="drive" ;;
-        *OneDrive*) provider_type="onedrive" ;;
-        *Dropbox*) provider_type="dropbox" ;;
-        *S3*)      provider_type="s3" ;;
-        *Other*)   provider_type="" ;;
-    esac
-
-    local name
-    name=$(_rofi_input "  Account name (e.g. personal, work)")
-    [ -z "$name" ] && return
-
-    # Sanitize name
     name=$(echo "$name" | tr ' ' '-' | tr -cd 'a-zA-Z0-9_-')
-    [ -z "$name" ] && { _notify "Invalid name"; return; }
+    [ -z "$name" ] && { _notify "Invalid name"; return 1; }
 
-    # Check if already exists
     if rclone listremotes 2>/dev/null | grep -q "^${name}:$"; then
         _notify "Account '${name}' already exists"
-        return
+        return 1
     fi
 
     _notify "Opening browser for authentication..."
@@ -274,7 +266,42 @@ _add_account() {
     fi
 }
 
+_add_account() {
+    local providers
+    providers=$(_rofi_select "  Provider" \
+        "  Google Drive" \
+        "  OneDrive" \
+        "  Dropbox" \
+        "  S3 (AWS, Minio, etc)" \
+        "  Other (manual)")
+    [ -z "$providers" ] && return
+
+    local provider_type=""
+    case "$providers" in
+        *Google*)  provider_type="drive" ;;
+        *OneDrive*) provider_type="onedrive" ;;
+        *Dropbox*) provider_type="dropbox" ;;
+        *S3*)      provider_type="s3" ;;
+        *Other*)   provider_type="" ;;
+    esac
+
+    local name
+    name=$(_rofi_input "  Account name (e.g. personal, work)")
+    [ -z "$name" ] && return
+
+    _create_account "$provider_type" "$name"
+}
+
 # ── Remove an account ──
+# _delete_account is the non-interactive core; confirmation is the
+# caller's job (a rofi prompt below, or a two-click confirm in the panel).
+
+_delete_account() {
+    local remote="$1"
+    _is_mounted "$remote" && _unmount_remote "$remote"
+    rclone config delete "$remote" 2>/dev/null
+    _notify "Removed: ${remote}"
+}
 
 _remove_account() {
     local remotes
@@ -295,12 +322,7 @@ _remove_account() {
     remote=$(echo "$choice" | sed 's/^  //')
 
     _rofi_confirm "Remove '${remote}'?" || return
-
-    # Unmount first
-    _is_mounted "$remote" && _unmount_remote "$remote"
-
-    rclone config delete "$remote" 2>/dev/null
-    _notify "Removed: ${remote}"
+    _delete_account "$remote"
 }
 
 # ── Status ──
@@ -477,6 +499,28 @@ _run_all_syncs() {
     fi
 }
 
+# _register_sync_pair is the non-interactive core (used by the panel and
+# the rofi flow below). Takes the raw remote:path and local path exactly
+# as typed — tilde expansion and trimming happen here so both callers get
+# it for free.
+_register_sync_pair() {
+    local remote_path="$1"
+    local lpath="$2"
+    lpath="${lpath/#\~/$HOME}"
+
+    local entry="${remote_path}"$'\t'"${lpath}"
+    mkdir -p "$(dirname "$SYNC_LIST")"
+    touch "$SYNC_LIST"
+
+    if grep -qF "$entry" "$SYNC_LIST" 2>/dev/null; then
+        _notify "Pair already exists"
+        return 1
+    fi
+
+    echo "$entry" >> "$SYNC_LIST"
+    _notify "Added: ${remote_path}  ⇄  ${lpath}"
+}
+
 _add_sync_pair() {
     local remotes
     remotes=$(_list_remotes)
@@ -502,23 +546,27 @@ _add_sync_pair() {
     local lpath
     lpath=$(_rofi_input "  Local path (e.g. ~/Obsidian)")
     [ -z "$lpath" ] && return
-    lpath="${lpath/#\~/$HOME}"
 
-    local entry="${remote}:${rpath}"$'\t'"${lpath}"
-    mkdir -p "$(dirname "$SYNC_LIST")"
-    touch "$SYNC_LIST"
-
-    if grep -qF "$entry" "$SYNC_LIST" 2>/dev/null; then
-        _notify "Pair already exists"
-        return
-    fi
-
-    echo "$entry" >> "$SYNC_LIST"
-    _notify "Added: ${remote}:${rpath}  ⇄  ${lpath}"
+    _register_sync_pair "${remote}:${rpath}" "$lpath" || return
 
     if _rofi_confirm "Run first sync now? (Will --resync)"; then
-        _run_sync "${remote}:${rpath}" "$lpath"
+        _run_sync "${remote}:${rpath}" "${lpath/#\~/$HOME}"
     fi
+}
+
+# _unregister_sync_pair is the non-interactive core. Sync state (the
+# bisync workdir) is kept on removal — same default the rofi flow below
+# already had — so a pair re-added later with the same remote+local
+# doesn't force a --resync.
+_unregister_sync_pair() {
+    local rp="$1"
+    local lp="$2"
+
+    local tmp
+    tmp=$(mktemp)
+    grep -vxF "${rp}"$'\t'"${lp}" "$SYNC_LIST" > "$tmp" || true
+    mv "$tmp" "$SYNC_LIST"
+    _notify "Removed pair"
 }
 
 _remove_sync_pair() {
@@ -543,15 +591,10 @@ _remove_sync_pair() {
 
     _rofi_confirm "Remove pair '${rp}  ⇄  ${lp}'?" || return
 
-    local tmp
-    tmp=$(mktemp)
-    grep -vxF "${rp}"$'\t'"${lp}" "$SYNC_LIST" > "$tmp" || true
-    mv "$tmp" "$SYNC_LIST"
-
     if _rofi_confirm "Also delete sync state for this pair?"; then
         rm -rf "$(_pair_workdir "$rp" "$lp")"
     fi
-    _notify "Removed pair"
+    _unregister_sync_pair "$rp" "$lp"
 }
 
 _auto_sync_enabled() {
@@ -598,6 +641,31 @@ _enable_auto_sync() {
 _disable_auto_sync() {
     systemctl --user disable --now "${SYNC_UNIT}.timer" 2>/dev/null
     _notify "Auto-sync disabled"
+}
+
+# JSON status for the panel's Sync view — same fields _sync_status prints
+# as text, machine-readable.
+_sync_status_json() {
+    local pairs
+    pairs=$(_list_sync_pairs)
+
+    local auto="false"
+    _auto_sync_enabled && auto="true"
+
+    printf '{"autoSync":%s,"interval":"%s","pairs":[' "$auto" "$(_json_escape "$_SYNC_INTERVAL")"
+    local first=1
+    while IFS=$'\t' read -r rp lp; do
+        [ -z "$rp" ] && continue
+        local wd state
+        wd=$(_pair_workdir "$rp" "$lp")
+        state="pending"
+        [ -f "${wd}/.first-sync-done" ] && state="ready"
+        [ "$first" -eq 1 ] || printf ','
+        first=0
+        printf '{"remotePath":"%s","localPath":"%s","state":"%s"}' \
+            "$(_json_escape "$rp")" "$(_json_escape "$lp")" "$state"
+    done <<< "$pairs"
+    printf ']}\n'
 }
 
 _sync_status() {
@@ -784,6 +852,28 @@ case "${1:-}" in
     sync-all-quiet)   _check_rclone && _run_all_syncs quiet ;;
     sync-enable)      _enable_auto_sync ;;
     sync-disable)     _disable_auto_sync ;;
+    add-sync-pair)
+        _check_rclone || exit 1
+        [ -z "$2" ] || [ -z "$3" ] && { echo "Usage: stoa-drive add-sync-pair <remote:path> <local-path>"; exit 1; }
+        _register_sync_pair "$2" "$3"
+        ;;
+    remove-sync-pair)
+        [ -z "$2" ] || [ -z "$3" ] && { echo "Usage: stoa-drive remove-sync-pair <remote:path> <local-path>"; exit 1; }
+        _unregister_sync_pair "$2" "$3"
+        ;;
+    add-account)
+        _check_rclone || exit 1
+        [ -z "$3" ] && { echo "Usage: stoa-drive add-account <provider-type|-> <name>"; exit 1; }
+        provider="$2"
+        [ "$provider" = "-" ] && provider=""
+        _create_account "$provider" "$3"
+        ;;
+    remove-account)
+        _check_rclone || exit 1
+        [ -z "$2" ] && { echo "Usage: stoa-drive remove-account <name>"; exit 1; }
+        _delete_account "$2"
+        ;;
+    sync-status-json) _check_rclone && _sync_status_json ;;
     sync-status)
         _check_rclone || exit 1
         if _auto_sync_enabled; then echo "Auto-sync: ON (every ${_SYNC_INTERVAL})"
@@ -819,7 +909,9 @@ case "${1:-}" in
     *)
         echo "Usage: stoa-drive [mount-all|unmount-all|mount <name>|unmount <name>"
         echo "                   |prewarm [<name>]|sync <remote:path> <local>|sync-all"
-        echo "                   |sync-enable|sync-disable|sync-status|status]"
+        echo "                   |sync-enable|sync-disable|sync-status|sync-status-json"
+        echo "                   |add-sync-pair <remote:path> <local>|remove-sync-pair <remote:path> <local>"
+        echo "                   |add-account <provider-type|-> <name>|remove-account <name>|status]"
         exit 1
         ;;
 esac

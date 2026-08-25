@@ -167,8 +167,11 @@ end
 -- click. Confirmed by reading plugin_widget.cpp's InputArea::setOnClick
 -- handler directly rather than trusting the docs a second time.
 function onClick()
-    -- stoa-drive is the rofi TUI; it owns mount/unmount/open/settings.
-    noctalia.runAsync("$HOME/.local/bin/stoa-drive")
+    -- Opens the native panel (panel.luau, entry id "manage") attached
+    -- below this widget — mount/unmount/open/accounts/sync all live there
+    -- now. noctalia.togglePanel addresses panels the same way the bar's
+    -- widget list does: "<plugin-id>:<entry-id>".
+    noctalia.togglePanel("stoa/drive:manage")
 end
 
 function onMiddleClick()
