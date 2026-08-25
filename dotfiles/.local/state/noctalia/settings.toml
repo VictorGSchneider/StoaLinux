@@ -1,4 +1,4 @@
-config_version = 12
+config_version = 13
 
 [accessibility]
 ui_scale = 1.2000000104308128
@@ -17,7 +17,7 @@ margin_ends = 20
 padding = 15
 radius = 80
 scale = 1.1500000096857548
-start = [ "group:g4", "media" ]
+start = [ "group:g4" ]
 thickness = 40
 widget_spacing = 8
 
@@ -53,7 +53,7 @@ widget_spacing = 8
     enabled = true
     fill = "on_primary"
     id = "g4"
-    members = [ "sysmon", "widget" ]
+    members = [ "pill", "sysmon", "widget" ]
     opacity = 0.89999997615814209
     padding = 10.0
     widget_spacing = 15
@@ -129,6 +129,8 @@ widget_order = [
     cx = 920.0
     cy = 884.0
     output = "eDP-1"
+    placement_height = 1080.0
+    placement_width = 1920.0
     rotation = 0.0
     type = "login_box"
 
@@ -154,6 +156,8 @@ widget_order = [
     cx = 764.0
     cy = 556.0
     output = "eDP-1"
+    placement_height = 1080.0
+    placement_width = 1920.0
     rotation = 0.0
     type = "calendar"
 
@@ -169,6 +173,8 @@ widget_order = [
     cx = 764.0
     cy = 292.0
     output = "eDP-1"
+    placement_height = 1080.0
+    placement_width = 1920.0
     rotation = 0.0
     type = "clock"
 
@@ -189,6 +195,8 @@ widget_order = [
     cx = 1152.0
     cy = 292.0
     output = "eDP-1"
+    placement_height = 1080.0
+    placement_width = 1920.0
     rotation = 0.0
     type = "fancy_audio_visualizer"
 
@@ -216,6 +224,8 @@ widget_order = [
     cx = 1156.0
     cy = 556.0
     output = "eDP-1"
+    placement_height = 1080.0
+    placement_width = 1920.0
     rotation = 0.0
     type = "weather"
 
@@ -239,10 +249,11 @@ search-engine-url = "https://search.brave.com/search?q="
 selected-ocr-lang = "eng, pt-br"
 
 [plugin_settings."stoa/drive"]
+manage_open_near_click = true
 poll_seconds = 15
 
 [plugins]
-enabled = [ "stoa/drive", "alexander/screen-toolkit" ]
+enabled = [ "stoa/drive", "alexander/screen-toolkit", "stoa/health" ]
 
 [shell]
 button_borders = false
@@ -311,13 +322,13 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-memento.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-memento.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-memento.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
 
 [widget.Stoa-drive]
 type = "stoa/drive:pill"
@@ -335,6 +346,9 @@ glyph = "settings-2"
 art_size = 19
 hide_when_no_media = true
 title_scroll = "always"
+
+[widget.pill]
+type = "stoa/health:pill"
 
 [widget.tray]
 detached_panel = true
