@@ -190,9 +190,10 @@ reserve_space      = true
 
 start  = ["launcher", "workspaces", "taskbar"]
 center = ["clock"]
-# `stoa/drive:pill` is the local plugin in theme/noctalia-plugins/stoa-drive
-# (plugin widgets are addressed as <plugin-id>:<entry-id>).
-end    = ["media", "tray", "notifications", "clipboard", "stoa/drive:pill", "sysmon", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
+# `stoa/drive:pill` and `stoa/health:pill` are the local plugins in
+# theme/noctalia-plugins/{stoa-drive,stoa-health} (plugin widgets are
+# addressed as <plugin-id>:<entry-id>).
+end    = ["media", "tray", "notifications", "clipboard", "stoa/drive:pill", "stoa/health:pill", "sysmon", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
 
 # ── Control centre shortcuts ──────────────────────────────────────────
 
