@@ -4,21 +4,59 @@ config_version = 12
 ui_scale = 1.2000000104308128
 
 [bar.default]
+background_opacity = 0.0
 capsule = true
-center = [ "launcher", "workspaces", "clock" ]
+capsule_fill = "on_primary"
+center = [ "group:g3" ]
 contact_shadow = true
-end = [ "tray", "clipboard", "Stoa-drive", "network", "bluetooth", "volume", "brightness", "battery", "session" ]
+end = [ "tray", "clipboard", "Stoa-drive", "group:g2" ]
 font_family = "EB Garamond Medium"
 layer = "overlay"
+margin_edge = 5
+margin_ends = 20
+padding = 15
 radius = 80
 scale = 1.1500000096857548
-start = [ "sysmon", "notifications", "media" ]
+start = [ "group:g4", "media" ]
 thickness = 40
 widget_spacing = 8
 
     [bar.default.dead_zone.actions]
     scroll_down = "volume-down"
     scroll_up = "volume-up"
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "on_primary"
+    id = "g2"
+    members = [ "network", "bluetooth", "volume", "brightness", "battery", "session" ]
+    opacity = 0.89999997615814209
+    padding = 10.0
+    widget_spacing = 15
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "on_primary"
+    id = "g3"
+    members = [ "launcher", "clock", "notifications", "workspaces" ]
+    opacity = 0.89999997615814209
+    padding = 12.0
+    widget_spacing = 20
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "on_primary"
+    id = "g4"
+    members = [ "sysmon", "widget" ]
+    opacity = 0.89999997615814209
+    padding = 10.0
+    widget_spacing = 15
 
 [calendar]
 enabled = true
@@ -192,11 +230,19 @@ widget_order = [
 [nightlight]
 enabled = true
 
+[plugin_settings."alexander/screen-toolkit"]
+hide-cursor = false
+panel-legacy_position = "top_center"
+panel_position = "top_center"
+result_placement = "attached"
+search-engine-url = "https://search.brave.com/search?q="
+selected-ocr-lang = "eng, pt-br"
+
 [plugin_settings."stoa/drive"]
 poll_seconds = 15
 
 [plugins]
-enabled = [ "stoa/drive" ]
+enabled = [ "stoa/drive", "alexander/screen-toolkit" ]
 
 [shell]
 button_borders = false
@@ -265,13 +311,13 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-memento.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-memento.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-memento.png"
 
 [widget.Stoa-drive]
 type = "stoa/drive:pill"
@@ -293,6 +339,9 @@ title_scroll = "always"
 [widget.tray]
 detached_panel = true
 drawer_item_size = 20.0
+
+[widget.widget]
+type = "alexander/screen-toolkit:widget"
 
 [widget.workspaces]
 hide_when_empty = true
