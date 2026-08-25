@@ -1,6 +1,7 @@
 #  ╔══════════════════════════════════════════════════════════════╗
 #  ║  STOA LINUX — Drive pill (Noctalia v5 plugin)                ║
-#  ║  rclone remote mount state in the bar.                        ║
+#  ║  rclone remote mount state in the bar, managed from a native  ║
+#  ║  panel — no rofi in the loop.                                  ║
 #  ╚══════════════════════════════════════════════════════════════╝
 #
 #  Port of the v4 QML plugin that lived at theme/noctalia-plugins/
@@ -8,23 +9,44 @@
 #  points (Main.qml / BarWidget.qml / Panel.qml) have no equivalent, so
 #  the widget was rewritten rather than translated.
 #
-#  The data source is unchanged: scripts/stoa-drive-status still emits the
-#  same JSON, so the shell side did not have to move.
+#  Business logic (mount/unmount, bisync, account create/delete) stays in
+#  scripts/stoa-drive.sh — panel.luau is a thin declarative front end that
+#  reads its JSON status endpoints and dispatches to its non-interactive
+#  CLI subcommands (add-account/remove-account/add-sync-pair/...). The one
+#  step that still shells out to a terminal is creating a new rclone
+#  remote: OAuth needs a real browser-driven interactive flow that a
+#  layer-shell panel can't host.
 
 id          = "stoa/drive"
 name        = "Stoa Drive"
-version     = "1.0.0"
+version     = "1.1.0"
 author      = "stoa"
 description = "rclone remote mount state, with cache usage in the tooltip"
 
-# Oldest plugin API level this needs. Noctalia v5 accepts 3..28, and
-# nothing here uses anything past the level-3 surface: runAsync,
-# json.decode, getSetting, setUpdateInterval and barWidget.*.
-plugin_api = 3
+# Oldest plugin API level this needs. Noctalia v5 accepts 3..28. Level 3
+# covers everything the bar widget uses (runAsync, json.decode, getConfig,
+# setUpdateInterval, barWidget.*), but panel.luau's declarative tree hands
+# inline Lua closures as onClick/onChange prop values, not string handler
+# names — src/scripting/plugin_api.h names that kUiCallbackClosurePluginApi
+# Version = 9, so 9 is the honest floor for this plugin as a whole (a
+# single plugin_api value covers every entry). The reader doesn't actually
+# gate on this today, so closures work regardless of what's declared here
+# — this is about not lying to an older Noctalia that predates the
+# feature, not a workaround for a check that exists.
+plugin_api = 9
 
 [[widget]]
 id    = "pill"
 entry = "widget.luau"
+
+# Attached: opens anchored below the bar icon that toggled it, like the
+# v4 QML Panel did — not a floating window.
+[[panel]]
+id                       = "manage"
+entry                    = "panel.luau"
+placement                = "attached"
+width                    = 340
+height                   = 460
 
 # Settings are an ARRAY of tables named `setting` (singular), each with an
 # explicit `key` — not [settings.<name>] sub-tables. `label_key` is
