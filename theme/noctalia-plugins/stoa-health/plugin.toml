@@ -1,0 +1,58 @@
+#  ╔══════════════════════════════════════════════════════════════╗
+#  ║  STOA LINUX — Health pill (Noctalia v5 plugin)                ║
+#  ║  Doctor + sensors + updates, aggregated into one bar icon.     ║
+#  ╚══════════════════════════════════════════════════════════════╝
+#
+#  Port of the v4 QML plugin that lived at theme/noctalia-plugins/
+#  stoa-health. The v4 widget opened an in-shell Panel.qml with three tabs
+#  (Vitals / Snapshots / Maintenance) built from a user-configurable action
+#  list. v5 plugins do have a declarative panel entry kind, but replicating
+#  a whole tabbed settings-driven UI in the Luau UI-tree DSL untested is a
+#  lot of surface to get wrong on a first port with no way to render it
+#  locally. Rather than risk that, the tab content moved to
+#  scripts/stoa-health.sh, a rofi menu in the same spirit as the existing
+#  stoa-drive.sh — the bar widget just shows severity and opens it.
+#
+#  The data source is unchanged: scripts/stoa-vitals-status still emits the
+#  same JSON, so the shell side did not have to move.
+
+id          = "stoa/health"
+name        = "Stoa Health"
+version     = "1.0.0"
+author      = "stoa"
+description = "Doctor, sensors and pending updates — one icon, coloured by severity"
+
+# Oldest plugin API level this needs. Nothing here uses anything past the
+# level-3 surface: runAsync, json.decode, getConfig, setUpdateInterval and
+# barWidget.*.
+plugin_api = 3
+
+[[widget]]
+id    = "pill"
+entry = "widget.luau"
+
+# Settings are an ARRAY of tables named `setting` (singular), each with an
+# explicit `key` — not [settings.<name>] sub-tables. `label_key` is
+# mandatory and is a translation key resolved against translations/en.json.
+[[setting]]
+key       = "icon"
+type      = "glyph"
+default   = "heart"
+label_key = "settings.icon.label"
+description_key = "settings.icon.description"
+
+[[setting]]
+key       = "poll_seconds"
+type      = "int"
+default   = 30
+min       = 5
+max       = 600
+label_key = "settings.poll_seconds.label"
+description_key = "settings.poll_seconds.description"
+
+[[setting]]
+key       = "show_badge"
+type      = "bool"
+default   = true
+label_key = "settings.show_badge.label"
+description_key = "settings.show_badge.description"

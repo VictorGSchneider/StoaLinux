@@ -1,0 +1,16 @@
+{
+  "settings": {
+    "icon": {
+      "label": "Icon",
+      "description": "Glyph shown in the bar. Colour still follows severity regardless of which icon is picked."
+    },
+    "poll_seconds": {
+      "label": "Refresh interval (seconds)",
+      "description": "How often to re-read system health. Each poll runs stoa-vitals-status (doctor log, sensors, disk, pending updates)."
+    },
+    "show_badge": {
+      "label": "Show issue count",
+      "description": "Display the number of open issues next to the icon while any are outstanding."
+    }
+  }
+}
