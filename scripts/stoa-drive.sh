@@ -420,6 +420,23 @@ _list_sync_pairs() {
     done < "$SYNC_LIST"
 }
 
+_workdir_has_listings() {
+    # bisync stores per-run state as <sanitized-path1>..<sanitized-path2>.path{1,2}.lst.
+    # If those files are gone, bisync will refuse to run and demand --resync,
+    # regardless of what the "first sync done" marker says.
+    local workdir="$1"
+    shopt -s nullglob
+    local -a lst=("$workdir"/*.path1.lst)
+    shopt -u nullglob
+    [ ${#lst[@]} -gt 0 ]
+}
+
+_bisync_wants_resync() {
+    # rclone bisync's specific "you must --resync" bailout, so we don't
+    # confuse it with real errors (network, quota, permission).
+    grep -q "Must run --resync to recover" "$1" 2>/dev/null
+}
+
 _run_sync() {
     local remote_path="$1"
     local local_path="$2"
@@ -439,6 +456,14 @@ _run_sync() {
     local marker="${workdir}/.first-sync-done"
     local logfile="${workdir}/last.log"
     local lockfile="${workdir}/.lock"
+
+    # Pre-run heal: if marker says "initialized" but the listings that bisync
+    # actually reconciles against are missing (crashed run, manual delete,
+    # cache eviction), the marker is stale — clear it so we --resync below.
+    if [ -f "$marker" ] && ! _workdir_has_listings "$workdir"; then
+        rm -f "$marker"
+    fi
+
     local resync_flag=()
     [ ! -f "$marker" ] && resync_flag=(--resync)
 
@@ -460,6 +485,28 @@ _run_sync() {
             >"$logfile" 2>&1
     ) 9>"$lockfile"
     rc=$?
+
+    # Post-run heal: if bisync failed asking for --resync and we didn't already
+    # pass it, retry once with --resync so a corruption that happened mid-run
+    # (crash between the pre-run check and the bisync call) still self-heals.
+    if [ "$rc" -ne 0 ] && [ "$rc" -ne 200 ] \
+        && [ ${#resync_flag[@]} -eq 0 ] \
+        && _bisync_wants_resync "$logfile"; then
+        rm -f "$marker"
+        (
+            flock -n 9 || exit 200
+            rclone bisync "$local_path" "$remote_path" \
+                --workdir "$workdir" \
+                --conflict-resolve "$_SYNC_CONFLICT" \
+                --conflict-loser num \
+                --create-empty-src-dirs \
+                --compare size,modtime \
+                --fast-list \
+                --resync \
+                >"$logfile" 2>&1
+        ) 9>"$lockfile"
+        rc=$?
+    fi
 
     case "$rc" in
         200)
