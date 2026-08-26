@@ -371,6 +371,39 @@ else
     echo -e "  ${S}[!] Could not install polkit rules (need sudo)${R}"
 fi
 
+# ── Polkit PAM service ──
+# On some Arch installs — confirmed live on a real machine, not
+# theoretical — the polkit package does not ship /etc/pam.d/polkit-1 at
+# all (pacman -Qkk polkit agrees nothing is missing from its own
+# manifest: it genuinely never lists that file, so reinstalling the
+# package changes nothing). Without a service file, PAM routes every
+# polkit authentication through /etc/pam.d/other, which on a stock Arch
+# install is `pam_deny.so` across the board — a deliberate deny-
+# everything fallback for services with no config of their own. Trying to
+# interactively authenticate against a stack that is unconditional denial
+# has no real conversation to have, so libpam reports it as a conversation
+# failure regardless of the password typed — indistinguishable from a
+# broken prompt, not a wrong password.
+#
+# A real file (not a symlink into this repo, unlike the wheel rules
+# above) for the same reason /etc/pam.d/greetd is a real file: PAM
+# resolution happens too early/broadly to depend on a symlink resolving
+# into a user's home directory, which is one more thing that can be
+# unavailable at exactly the moment authentication needs it. Only created
+# when missing — an existing file (a future Arch update shipping one, or
+# a deliberate local customization) is left alone.
+POLKIT_PAM="/etc/pam.d/polkit-1"
+if [ ! -f "$POLKIT_PAM" ]; then
+    sudo tee "$POLKIT_PAM" >/dev/null <<'EOF'
+#%PAM-1.0
+auth        include      system-auth
+account     include      system-auth
+password    include      system-auth
+session     include      system-auth
+EOF
+    echo -e "  ${O}[+] ${POLKIT_PAM} created (was missing — polkit auth was silently falling back to deny-all)${R}"
+fi
+
 # ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"
 mkdir -p "$MIME_DIR"
