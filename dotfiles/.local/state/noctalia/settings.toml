@@ -272,6 +272,21 @@ telemetry_enabled = true
     [shell.launcher]
     app_grid = true
     compact = true
+    pinned = [
+        "enpass",
+        "onlyoffice-desktopeditors",
+        "eu.betterbird.Betterbird",
+        "com.stremio.Stremio",
+        "steam",
+        "org.godotengine.Godot",
+        "code",
+        "LinuxToys",
+        "obsidian",
+        "qalculate-gtk",
+        "brave-browser",
+        "org.inkscape.Inkscape",
+        "kitty"
+    ]
 
         [shell.launcher.providers.emoji]
         global = true
@@ -322,13 +337,13 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
 
 [widget.Stoa-drive]
 type = "stoa/drive:pill"
