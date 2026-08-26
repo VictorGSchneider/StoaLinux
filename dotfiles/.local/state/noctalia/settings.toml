@@ -322,13 +322,13 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-parchment.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-parchment.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-a08d2637-parchment.png"
 
 [widget.Stoa-drive]
 type = "stoa/drive:pill"
