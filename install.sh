@@ -470,6 +470,12 @@ fi
 # prompts for the keyring password. The local override shadows the system
 # brave-browser.desktop in rofi, mimeapps, and xdg-open. Written every run
 # so a Brave package update can't silently reintroduce the prompt.
+#
+# Icon=brave-desktop, NOT brave-browser: brave-bin installs its PNGs as
+# /usr/share/icons/hicolor/<size>/apps/brave-desktop.png and its own desktop
+# entry points at that name. Because this override shadows the packaged entry,
+# the wrong name here is the only thing the launcher ever sees — which is why
+# Brave rendered the generic placeholder tile in Noctalia.
 BRAVE_DESKTOP="${MIME_DIR}/brave-browser.desktop"
 cat > "$BRAVE_DESKTOP" <<'BRAVE'
 [Desktop Entry]
@@ -480,7 +486,7 @@ Comment=Access the Internet
 Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland %U
 StartupNotify=true
 Terminal=false
-Icon=brave-browser
+Icon=brave-desktop
 Type=Application
 Categories=Network;WebBrowser;
 MimeType=application/pdf;application/rdf+xml;application/rss+xml;application/xhtml+xml;application/xhtml_xml;application/xml;image/gif;image/jpeg;image/png;image/webp;text/html;text/xml;x-scheme-handler/http;x-scheme-handler/https;

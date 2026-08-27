@@ -33,6 +33,17 @@ export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 
+# ── Quickshell / Noctalia icon theme ──
+# QT_QPA_PLATFORMTHEME above is a Qt5-only plugin name, so Qt6 apps —
+# Quickshell, and with it Noctalia — get no platform theme and fall back to
+# the "hicolor" icon theme. That leaves every desktop entry pointing at a
+# generic freedesktop icon name without a match, drawing the placeholder tile
+# in the launcher. QS_ICON_THEME is Quickshell's own override and takes
+# precedence, so mirror the GTK icon theme into it.
+QS_ICON_THEME=$(sed -n 's/^gtk-icon-theme-name[[:space:]]*=[[:space:]]*//p' \
+    "${XDG_CONFIG_HOME}/gtk-3.0/settings.ini" 2>/dev/null | head -1)
+export QS_ICON_THEME="${QS_ICON_THEME:-Colloid-dark}"
+
 # ── Cursor ──
 export XCURSOR_THEME="Colloid-cursors"
 export XCURSOR_SIZE=24

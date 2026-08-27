@@ -966,6 +966,16 @@ _theme_icons() {
 
     command -v gsettings &>/dev/null && gsettings set org.gnome.desktop.interface icon-theme "$choice" 2>/dev/null
 
+    # Noctalia reads QS_ICON_THEME once, at launch (stoa-bar derives it from
+    # the GTK setting just written above), so the shell keeps drawing the old
+    # theme until it is restarted. Bounce it so the launcher, dock and taskbar
+    # follow the picker instead of waiting for the next login.
+    if pgrep -x noctalia &>/dev/null; then
+        killall noctalia 2>/dev/null
+        setsid "${HOME}/.local/bin/stoa-bar" &>/dev/null &
+        disown 2>/dev/null
+    fi
+
     _notify "Icons: $choice"
 }
 

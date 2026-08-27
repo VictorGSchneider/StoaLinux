@@ -20,6 +20,10 @@ hl.monitor({
 hl.env("XCURSOR_SIZE", "24")
 hl.env("XCURSOR_THEME", "Colloid-cursors")
 hl.env("QT_QPA_PLATFORM", "wayland")
+-- qt5ct is a Qt5-only platform theme plugin: Qt6 apps (Quickshell, and so
+-- Noctalia) never load it and end up on "hicolor" for icons. Noctalia's icon
+-- theme is therefore pinned separately via QS_ICON_THEME in scripts/stoa-bar.sh,
+-- which mirrors gtk-3.0/settings.ini so it follows `stoa-settings`.
 hl.env("QT_QPA_PLATFORMTHEME", "qt5ct")
 hl.env("QT_STYLE_OVERRIDE", "Fusion")
 hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
