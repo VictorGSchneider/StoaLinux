@@ -77,6 +77,16 @@ class DfmWindow(Adw.ApplicationWindow):
 
         self._toast_overlay = Adw.ToastOverlay()
         self.content_stack = Gtk.Stack()
+        # Gtk.Stack defaults both *homogeneous properties to True, sizing
+        # itself to the LARGEST child among ALL named children — not just
+        # the one currently visible. _scan_and_populate() below adds every
+        # dotfile's config page to this same stack up front (not lazily),
+        # so whichever page has the widest/tallest minimum size silently
+        # dictates the window's size on every other page too, including
+        # ones with nothing unusual in them. Disabling homogeneous sizing
+        # makes the stack (and the window) track only the visible child.
+        self.content_stack.set_hhomogeneous(False)
+        self.content_stack.set_vhomogeneous(False)
         self.content_stack.set_transition_type(
             Gtk.StackTransitionType.CROSSFADE
         )
