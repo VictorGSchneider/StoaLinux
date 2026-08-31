@@ -273,6 +273,23 @@ hl.window_rule({
     center = true,
 })
 
+-- ── DFM (Dotfile Manager) ──
+-- GTK4/libadwaita, no size/position preference of its own beyond
+-- set_default_size(1000, 700) — a hint the tiling layout ignores. Without
+-- a float rule it gets stretched to fill the whole workspace, which is
+-- how a utility settings window ends up looking like this: a narrow,
+-- correctly Adw.Clamp-constrained content column with a huge dead strip
+-- of empty window down its right side, rather than actually being too
+-- wide. app_id is com.github.dfm (dfm/main.py), matching the size DFM
+-- itself asks for.
+hl.window_rule({
+    name   = "dfm-float",
+    match  = { class = "^(com.github.dfm)$" },
+    float  = true,
+    size   = { 1000, 700 },
+    center = true,
+})
+
 -- ── Steam ──
 hl.window_rule({
     name  = "steam-friends-float",
