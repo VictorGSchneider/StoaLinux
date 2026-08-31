@@ -286,7 +286,8 @@ telemetry_enabled = true
         "brave-browser",
         "org.inkscape.Inkscape",
         "kitty",
-        "com.anthropic.Claude"
+        "com.anthropic.Claude",
+        "dfm"
     ]
 
         [shell.launcher.providers.emoji]
@@ -338,13 +339,13 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-e6b78e5f-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-e6b78e5f-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-e6b78e5f-columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-43fd1832-parchment.png"
 
 [widget.Stoa-drive]
 type = "stoa/drive:pill"
