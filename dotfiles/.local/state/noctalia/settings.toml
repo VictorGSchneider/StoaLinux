@@ -9,7 +9,7 @@ capsule = true
 capsule_fill = "on_primary"
 center = [ "group:g3" ]
 contact_shadow = true
-end = [ "tray", "clipboard", "Stoa-drive", "group:g2" ]
+end = [ "tray", "clipboard", "Stoa-drive", "group:g2", "keybinds" ]
 font_family = "EB Garamond Medium"
 layer = "overlay"
 margin_edge = 5
@@ -248,12 +248,16 @@ result_placement = "attached"
 search-engine-url = "https://search.brave.com/search?q="
 selected-ocr-lang = "eng, pt-br"
 
+[plugin_settings."kenn/keybind-cheatsheet"]
+cheatsheet_placement = "attached"
+columns = 2
+
 [plugin_settings."stoa/drive"]
 manage_open_near_click = true
 poll_seconds = 15
 
 [plugins]
-enabled = [ "stoa/drive", "alexander/screen-toolkit", "stoa/health" ]
+enabled = [ "stoa/drive", "alexander/screen-toolkit", "stoa/health", "kenn/keybind-cheatsheet" ]
 
 [shell]
 button_borders = false
@@ -358,6 +362,9 @@ format = "{:%H:%M:%S}"
 
 [widget.control-center]
 glyph = "settings-2"
+
+[widget.keybinds]
+type = "kenn/keybind-cheatsheet:keybinds"
 
 [widget.media]
 art_size = 19
