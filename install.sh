@@ -282,7 +282,6 @@ _link "${STOA_DIR}/scripts/stoa-paste.sh"           "${HOME}/.local/bin/stoa-pas
 _link "${STOA_DIR}/scripts/stoa-ocr.sh"             "${HOME}/.local/bin/stoa-ocr"
 _link "${STOA_DIR}/scripts/stoa-rename.sh"          "${HOME}/.local/bin/stoa-rename"
 _link "${STOA_DIR}/scripts/stoa-archive.sh"         "${HOME}/.local/bin/stoa-archive"
-_link "${STOA_DIR}/scripts/stoa-thunar.sh"          "${HOME}/.local/bin/stoa-thunar"
 _link "${STOA_DIR}/scripts/stoa-face-setup.sh"      "${HOME}/.local/bin/stoa-face"
 _link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
 _link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"

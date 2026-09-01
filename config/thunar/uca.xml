@@ -7,13 +7,15 @@
 -->
 <actions>
 
+<!-- ── Stoatools (grouped under one native flyout submenu, no rofi) ── -->
+
 <action>
-	<icon>applications-utilities</icon>
-	<name>Stoatools</name>
-	<submenu></submenu>
-	<unique-id>stoatools-menu</unique-id>
-	<command>~/.local/bin/stoa-thunar %F</command>
-	<description>Open Stoatools menu (resize, rename, OCR, locksmith, archive)</description>
+	<icon>document-edit</icon>
+	<name>Rename…</name>
+	<submenu>Stoatools</submenu>
+	<unique-id>stoa-rename-menu</unique-id>
+	<command>~/.local/bin/stoa-rename %F</command>
+	<description>Batch rename with regex</description>
 	<range></range>
 	<patterns>*</patterns>
 	<directories/>
@@ -22,6 +24,76 @@
 	<other-files/>
 	<text-files/>
 	<video-files/>
+</action>
+
+<action>
+	<icon>system-lock-screen</icon>
+	<name>Locksmith</name>
+	<submenu>Stoatools</submenu>
+	<unique-id>stoa-locksmith-menu</unique-id>
+	<command>~/.local/bin/stoa-locksmith %F</command>
+	<description>See what's locking these files/folders</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+
+<action>
+	<icon>package-x-generic</icon>
+	<name>Compress…</name>
+	<submenu>Stoatools</submenu>
+	<unique-id>stoa-archive-compress-menu</unique-id>
+	<command>~/.local/bin/stoa-archive %F</command>
+	<description>Compress selection into zip/tar.gz/tar.xz/7z</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+
+<action>
+	<icon>archive-extract</icon>
+	<name>Extract Archive</name>
+	<submenu>Stoatools</submenu>
+	<unique-id>stoa-archive-extract-menu</unique-id>
+	<command>~/.local/bin/stoa-archive %F</command>
+	<description>Extract these archive(s)</description>
+	<range></range>
+	<patterns>*.zip;*.tar;*.tar.gz;*.tgz;*.tar.bz2;*.tbz2;*.tbz;*.tar.xz;*.txz;*.7z;*.rar</patterns>
+	<other-files/>
+</action>
+
+<action>
+	<icon>image-x-generic</icon>
+	<name>Resize Image…</name>
+	<submenu>Stoatools</submenu>
+	<unique-id>stoa-resize-menu</unique-id>
+	<command>~/.local/bin/stoa-resize %F</command>
+	<description>Batch resize images with presets</description>
+	<range></range>
+	<patterns>*</patterns>
+	<image-files/>
+</action>
+
+<action>
+	<icon>accessories-text-editor</icon>
+	<name>Extract Text (OCR)</name>
+	<submenu>Stoatools</submenu>
+	<unique-id>stoa-ocr-menu</unique-id>
+	<command>~/.local/bin/stoa-ocr %f</command>
+	<description>Extract text from image (OCR)</description>
+	<range>1</range>
+	<patterns>*</patterns>
+	<image-files/>
 </action>
 
 <action>
