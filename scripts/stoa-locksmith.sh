@@ -2,7 +2,7 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — File Locksmith                                ║
 # ║  Find (and unlock) whatever is holding a file or folder      ║
-# ║  Requires: lsof, rofi, getent, coreutils                    ║
+# ║  Requires: lsof, yad, getent, coreutils                     ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Modeled after PowerToys' File Locksmith: point it at one or more
@@ -12,13 +12,20 @@
 #
 # Usage:
 #   stoa-locksmith /path/to/file /path/to/dir ...  — scan directly
-#   stoa-locksmith                                  — prompt for a path via rofi
-
-ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
+#   stoa-locksmith                                  — prompt for a path via yad
 
 _notify() {
     notify-send -t "${2:-3000}" "Locksmith" "$1"
 }
+
+# yad convention: an EVEN --button response code dumps the widget's
+# value to stdout before exiting; an ODD code just exits with it.
+YAD_CANCEL=1
+YAD_VIEW=2
+YAD_END=4
+YAD_FORCE=6
+
+SEP=$'\x1f'
 
 # Emits deduped "PID\tCOMMAND\tUID\tNAME" rows for every handle open
 # under the given files/dirs. Returns 1 if nothing is locked.
@@ -59,19 +66,19 @@ _scan() {
     rm -f "$raw"
 }
 
-_end_pid() {
-    local pid="$1" signal="$2" label="$3"
-    if kill "$signal" "$pid" 2>/dev/null; then
-        _notify "$label sent to PID $pid" 2000
-    else
-        _notify "Failed to end PID $pid (try with sudo)" 2000
-    fi
+_end_pids() {
+    local signal="$1" label="$2"; shift 2
+    local count=0
+    for pid in "$@"; do
+        kill "$signal" "$pid" 2>/dev/null && count=$((count + 1))
+    done
+    _notify "$label sent to $count process(es)" 2000
 }
 
 paths=("$@")
 
 if [ ${#paths[@]} -eq 0 ]; then
-    input=$(rofi "${ROFI_ARGS[@]}" -p "File or folder path")
+    input=$(yad --entry --title="Locksmith" --text="File or folder path" --width=400)
     [ -z "$input" ] && exit 0
     paths=("$input")
 fi
@@ -90,17 +97,15 @@ if [ -z "$parsed" ]; then
     exit 0
 fi
 
-rows=()
-pids=()
+entries=()
 while IFS=$'\t' read -r pid cmd uid name; do
     [ -z "$pid" ] && continue
     user=$(getent passwd "$uid" 2>/dev/null | cut -d: -f1)
     [ -z "$user" ] && user="$uid"
-    rows+=("$(printf 'PID %-8s %-18s %-10s %s' "$pid" "$cmd" "$user" "$name")")
-    pids+=("$pid")
+    entries+=("${pid}${SEP}${cmd}${SEP}${user}${SEP}${name}")
 done <<< "$parsed"
 
-if [ ${#rows[@]} -eq 0 ]; then
+if [ ${#entries[@]} -eq 0 ]; then
     _notify "Nothing is locking the selected path(s)"
     exit 0
 fi
@@ -110,44 +115,61 @@ if [ ${#paths[@]} -eq 1 ]; then
 else
     title="Locking ${#paths[@]} selected items"
 fi
-end="  End all listed tasks"
 
-menu=$(printf '%s\n' "${rows[@]}")
-menu+=$'\n'"$end"
+# Pre-check the row when there's only one result, so it can be acted
+# on with a single button click and no extra checkbox tick.
+default_check=FALSE
+[ ${#entries[@]} -eq 1 ] && default_check=TRUE
 
-choice=$(printf '%s\n' "$menu" | rofi "${ROFI_ARGS[@]}" -p "$title")
-[ -z "$choice" ] && exit 0
+rows=()
+for entry in "${entries[@]}"; do
+    IFS="$SEP" read -r pid cmd user name <<< "$entry"
+    rows+=("$default_check" "$pid" "$cmd" "$user" "$name")
+done
 
-if [ "$choice" = "$end" ]; then
-    confirm=$(printf "Yes, end all\nCancel" | rofi "${ROFI_ARGS[@]}" -p "End ${#pids[@]} process handle(s)?")
-    [[ "$confirm" != Yes* ]] && exit 0
+output=$(yad --list --checklist --title="Locksmith" --text="$title" \
+    --column="Sel":CHK --column="PID":NUM --column="Command" --column="User" --column="File" \
+    --separator="$SEP" \
+    "${rows[@]}" \
+    --width=760 --height=320 \
+    --button="Cancel:$YAD_CANCEL" \
+    --button="View Details:$YAD_VIEW" \
+    --button="End Task(s):$YAD_END" \
+    --button="Force End:$YAD_FORCE")
+rc=$?
 
-    declare -A killed
-    count=0
-    for pid in "${pids[@]}"; do
-        [ -n "${killed[$pid]}" ] && continue
-        killed[$pid]=1
-        kill "$pid" 2>/dev/null && count=$((count + 1))
-    done
-    _notify "SIGTERM sent to $count process(es)" 2000
+[ "$rc" -eq "$YAD_CANCEL" ] && exit 0
+
+pids=()
+while IFS="$SEP" read -r _ pid _ _ _; do
+    [ -n "$pid" ] && pids+=("$pid")
+done <<< "$output"
+
+if [ ${#pids[@]} -eq 0 ]; then
+    _notify "No process selected"
     exit 0
 fi
 
-pid=$(echo "$choice" | awk '{print $2}')
-[ -z "$pid" ] && exit 0
+mapfile -t pids < <(printf '%s\n' "${pids[@]}" | sort -un)
 
-action=$(printf "View details (ps)\nEnd task (SIGTERM)\nForce end task (SIGKILL)\nCancel" | \
-    rofi "${ROFI_ARGS[@]}" -p "PID $pid")
-
-case "$action" in
-    "View details"*)
-        details=$(ps -p "$pid" -o pid,ppid,user,%cpu,%mem,stat,start,command --no-headers 2>/dev/null)
-        echo "$details" | rofi "${ROFI_ARGS[@]}" -p "Details PID $pid"
+case "$rc" in
+    "$YAD_VIEW")
+        details=$(ps -p "$(IFS=,; echo "${pids[*]}")" \
+            -o pid,ppid,user,%cpu,%mem,stat,start,command --no-headers 2>/dev/null)
+        yad --text-info --title="Process details" --fontname="monospace 10" \
+            --width=700 --height=200 --button="Close:1" <<< "$details"
         ;;
-    "End task"*)
-        _end_pid "$pid" "-TERM" "SIGTERM"
-        ;;
-    "Force end task"*)
-        _end_pid "$pid" "-KILL" "SIGKILL"
+    "$YAD_END"|"$YAD_FORCE")
+        if [ ${#pids[@]} -gt 1 ]; then
+            yad --question --title="Locksmith" \
+                --text="End ${#pids[@]} process(es)?" \
+                --button="Cancel:1" --button="Yes, end all:0"
+            [ $? -ne 0 ] && exit 0
+        fi
+        if [ "$rc" -eq "$YAD_FORCE" ]; then
+            _end_pids "-KILL" "SIGKILL" "${pids[@]}"
+        else
+            _end_pids "-TERM" "SIGTERM" "${pids[@]}"
+        fi
         ;;
 esac

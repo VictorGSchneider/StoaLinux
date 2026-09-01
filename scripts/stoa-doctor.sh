@@ -174,6 +174,7 @@ _check_optional bluetoothctl "Bluetooth (bluetoothctl)"
 
 # ── File manager ──
 _check_bin thunar       "File manager (Thunar)"
+_check_bin yad          "Stoatools dialogs (yad)"
 
 # ── Terminal ──
 _terminal_found=""
