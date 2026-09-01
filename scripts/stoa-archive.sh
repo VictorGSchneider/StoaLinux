@@ -10,7 +10,8 @@
 #   stoa-archive file1 [file2 ...]   — compress selection, or
 #                                       extract if all are archives
 #
-# Called by stoa-thunar.sh with the current Thunar selection.
+# Called directly from Thunar's "Stoatools" custom-action submenu
+# (see config/thunar/uca.xml) with the current Thunar selection.
 
 ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
