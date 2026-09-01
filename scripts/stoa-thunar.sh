@@ -28,7 +28,7 @@ fi
 # Build menu based on file types
 menu=""
 menu+="  Rename — batch rename with regex\n"
-menu+="  Locksmith — find who is using this file\n"
+menu+="  Locksmith — see what's locking this\n"
 
 if $is_image; then
     menu+="  Resize — resize images with presets\n"
@@ -43,7 +43,7 @@ case "$choice" in
         ~/.local/bin/stoa-rename "${files[@]}"
         ;;
     *Locksmith*)
-        ~/.local/bin/stoa-locksmith "$first"
+        ~/.local/bin/stoa-locksmith "${files[@]}"
         ;;
     *Resize*)
         ~/.local/bin/stoa-resize "${files[@]}"
