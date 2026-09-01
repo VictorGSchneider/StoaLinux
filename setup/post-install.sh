@@ -84,7 +84,7 @@ GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 # Screenshot + Recording — Wayland + Xorg
 SCREENSHOT_PKGS="grim slurp maim wf-recorder slop"
 
-# Stoatools (OCR, paste, resize, rename, locksmith)
+# Stoatools (OCR, paste, resize, rename, locksmith, archive)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words"
 
 # Touchpad gestures + mouse DPI/polling + RGB
@@ -457,6 +457,7 @@ echo -e "  ${S}  stoa-paste        — Paste with advanced formatting${R}"
 echo -e "  ${S}  stoa-resize       — Batch resize images${R}"
 echo -e "  ${S}  stoa-rename       — Rename files with regex${R}"
 echo -e "  ${S}  stoa-locksmith    — See who is locking a file${R}"
+echo -e "  ${S}  stoa-archive      — Compress selection / extract archives${R}"
 echo ""
 echo -e "  ${O}\"The path of the wise is prepared.\" — Seneca${R}"
 echo ""
