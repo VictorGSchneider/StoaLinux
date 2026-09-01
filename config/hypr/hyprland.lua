@@ -136,10 +136,17 @@ hl.bind(mod .. " + CTRL + R", hl.dsp.exec_cmd("~/.local/bin/stoa-bar-toggle"))
 -- Hold Alt and tap Tab to cycle through every window across all workspaces;
 -- release Alt to focus. Alt+Shift+Tab cycles backwards. The daemon is
 -- started in the Autostart section below.
+--
+-- hyprswitch 5.0.0 (the Hyprland-Lua-era release) requires --mod-key in
+-- SCREAMING_SNAKE_CASE ("ALT", not "alt") and dropped `-r`/`--reverse` from
+-- `gui` in favour of a separate `dispatch -r` call — the old
+-- `gui --mod-key alt ... -r` invocation is rejected outright with
+-- "Unable to parse CLI Arguments". See the migration guide:
+-- https://github.com/egnrse/hyprswitch/wiki/Migration-to-5.0.0
 hl.bind("ALT + Tab", hl.dsp.exec_cmd(
-    "hyprswitch gui --mod-key alt --key tab --max-switch-offset 9 --hide-active-window-border"))
+    "hyprswitch gui --mod-key ALT --key Tab --close mod-key-release --max-switch-offset 9 --hide-active-window-border && hyprswitch dispatch"))
 hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd(
-    "hyprswitch gui --mod-key alt --key tab --max-switch-offset 9 --hide-active-window-border -r"))
+    "hyprswitch gui --mod-key ALT --key Tab --close mod-key-release --max-switch-offset 9 --hide-active-window-border && hyprswitch dispatch -r"))
 
 -- ── Apps ──
 hl.bind(mod .. " + A", hl.dsp.exec_cmd("~/.local/bin/stoa-store"))
