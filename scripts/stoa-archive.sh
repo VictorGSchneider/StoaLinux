@@ -2,7 +2,7 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Stoatools Archive                              ║
 # ║  Compress files/folders or extract archives                  ║
-# ║  Requires: zip, unzip, tar, rofi                             ║
+# ║  Requires: zip, unzip, tar, yad                              ║
 # ║  Optional: p7zip (7z format), unrar (.rar extraction)         ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
@@ -12,8 +12,6 @@
 #
 # Called directly from Thunar's "Stoatools" custom-action submenu
 # (see config/thunar/uca.xml) with the current Thunar selection.
-
-ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
 _notify() {
     notify-send -t "${2:-3000}" "Archive" "$1"
@@ -101,14 +99,19 @@ _extract_one() {
 
 _extract_menu() {
     local paths=("$@")
-    local action
-    action=$(printf "Extract Here\nExtract to…\nCancel" | rofi "${ROFI_ARGS[@]}" -p "${#paths[@]} archive(s)")
-    [ -z "$action" ] && exit 0
-    [ "$action" = "Cancel" ] && exit 0
+    local form action destbase
+    form=$(yad --form --title="Archive" --text="Extract ${#paths[@]} archive(s)" \
+        --field="Action":CB "Extract Here!Extract to the folder below" \
+        --field="Destination folder (only used for 'Extract to')":TEXT "$(dirname "${paths[0]}")" \
+        --width=480 \
+        --button="Cancel:1" --button="Extract:0")
+    [ $? -ne 0 ] && exit 0
 
-    local destbase=""
-    if [ "$action" = "Extract to…" ]; then
-        destbase=$(rofi "${ROFI_ARGS[@]}" -p "Destination folder" <<< "$(dirname "${paths[0]}")")
+    IFS='|' read -r action destbase _ <<< "$form"
+
+    if [ "$action" = "Extract Here" ]; then
+        destbase=""
+    else
         [ -z "$destbase" ] && exit 0
         mkdir -p "$destbase" || { _notify "Could not create $destbase"; exit 1; }
     fi
@@ -135,15 +138,10 @@ _extract_menu() {
 
 _compress_menu() {
     local paths=("$@")
-    local fmt_options="zip\ntar.gz\ntar.xz"
-    command -v 7z &>/dev/null && fmt_options+="\n7z"
-    fmt_options+="\nCancel"
+    local fmt_options="zip!tar.gz!tar.xz"
+    command -v 7z &>/dev/null && fmt_options+="!7z"
 
-    local fmt
-    fmt=$(printf '%b' "$fmt_options" | rofi "${ROFI_ARGS[@]}" -p "Compress ${#paths[@]} item(s) as")
-    [ -z "$fmt" ] || [ "$fmt" = "Cancel" ] && exit 0
-
-    local outdir default_name name
+    local outdir default_name
     outdir=$(dirname "${paths[0]}")
     if [ ${#paths[@]} -eq 1 ]; then
         default_name=$(basename "${paths[0]}")
@@ -153,7 +151,15 @@ _compress_menu() {
     fi
     [ -z "$default_name" ] && default_name="Archive"
 
-    name=$(rofi "${ROFI_ARGS[@]}" -p "Archive name (no extension)" <<< "$default_name")
+    local form fmt name
+    form=$(yad --form --title="Archive" --text="Compress ${#paths[@]} item(s)" \
+        --field="Format":CB "$fmt_options" \
+        --field="Archive name (no extension)":TEXT "$default_name" \
+        --width=420 \
+        --button="Cancel:1" --button="Compress:0")
+    [ $? -ne 0 ] && exit 0
+
+    IFS='|' read -r fmt name _ <<< "$form"
     [ -z "$name" ] && exit 0
 
     local outfile

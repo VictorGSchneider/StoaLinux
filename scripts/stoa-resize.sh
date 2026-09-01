@@ -2,33 +2,14 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Image Resizer                                 ║
 # ║  Resize multiple images at once                              ║
-# ║  Requires: imagemagick, rofi                                ║
+# ║  Requires: imagemagick, yad                                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Usage:
 #   stoa-resize img1.png img2.jpg ...   — resize with menu
 #   stoa-resize *.png                   — glob works too
 
-ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
-
 # Require ImageMagick 7 (`magick`). Legacy `convert` differs in resize syntax.
-if ! command -v magick &>/dev/null; then
-    notify-send -t 5000 "Image Resizer" "ImageMagick 7 (magick) not found.\nInstall: sudo pacman -S imagemagick"
-    echo "stoa-resize: 'magick' not found. Install: sudo pacman -S imagemagick" >&2
-    exit 1
-fi
-
-PRESETS=(
-    "25%   — Thumbnail"
-    "50%   — Half"
-    "75%   — Three quarters"
-    "1920x1080 — Full HD"
-    "1280x720  — HD"
-    "800x600   — Small"
-    "640x480   — Web"
-    "Custom..."
-)
-
 if ! command -v magick &>/dev/null; then
     echo "stoa-resize: ImageMagick 7 (magick) not found in PATH"
     notify-send -t 3000 "Image Resizer" "ImageMagick 7 (magick) not installed"
@@ -54,21 +35,25 @@ if [ ${#images[@]} -eq 0 ]; then
     exit 1
 fi
 
-# Size menu
-choice=$(printf '%s\n' "${PRESETS[@]}" | rofi "${ROFI_ARGS[@]}" -p "Resize ${#images[@]} image(s)")
-[ -z "$choice" ] && exit 0
+PRESETS="25%   — Thumbnail!50%   — Half!75%   — Three quarters!1920x1080 — Full HD!1280x720  — HD!800x600   — Small!640x480   — Web!Custom (use field below)"
+DESTINATIONS="Overwrite originals!Save as copy (_resized)!Save to resized/ folder"
 
-# Extract dimension
-if [[ "$choice" == "Custom..."* ]]; then
-    size=$(rofi "${ROFI_ARGS[@]}" -p "Size (e.g. 800x600 or 50%)")
-    [ -z "$size" ] && exit 0
+form=$(yad --form --title="Image Resizer" --text="Resize ${#images[@]} image(s)" \
+    --field="Preset":CB "$PRESETS" \
+    --field="Custom size (e.g. 800x600 or 50%)":TEXT "" \
+    --field="Destination":CB "$DESTINATIONS" \
+    --width=420 \
+    --button="Cancel:1" --button="Resize:0")
+[ $? -ne 0 ] && exit 0
+
+IFS='|' read -r preset custom dest _ <<< "$form"
+
+if [ -n "$custom" ]; then
+    size="$custom"
 else
-    size=$(echo "$choice" | awk '{print $1}')
+    size=$(echo "$preset" | awk '{print $1}')
 fi
-
-# Destination menu
-dest=$(printf "Overwrite originals\nSave as copy (_resized)\nSave to resized/ folder" | \
-    rofi "${ROFI_ARGS[@]}" -p "Destination")
+[ -z "$size" ] && exit 0
 [ -z "$dest" ] && exit 0
 
 count=0

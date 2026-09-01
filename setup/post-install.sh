@@ -85,7 +85,7 @@ GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 SCREENSHOT_PKGS="grim slurp maim wf-recorder slop"
 
 # Stoatools (OCR, paste, resize, rename, locksmith, archive)
-STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words"
+STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words yad"
 
 # Touchpad gestures + mouse DPI/polling + RGB
 # GESTURE_PKGS="libinput-gestures"

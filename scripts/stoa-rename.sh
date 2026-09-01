@@ -2,15 +2,13 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Stoatools Rename                               ║
 # ║  Batch rename files with regex and preview                   ║
-# ║  Requires: rofi                                              ║
+# ║  Requires: yad                                               ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Usage:
 #   stoa-rename *.jpg               — rename with interactive menu
 #   stoa-rename -f "old" -r "new" *.jpg  — direct without menu
 #   stoa-rename -f "\.jpeg$" -r ".jpg" -R ~/Photos  — recursive
-
-ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
 _usage() {
     cat <<EOF
@@ -72,20 +70,25 @@ if [ ${#files[@]} -eq 0 ]; then
     exit 1
 fi
 
-# Interactive menu if -f was not passed
+# Interactive form if -f was not passed
 if [ -z "$FIND_PATTERN" ]; then
-    FIND_PATTERN=$(rofi "${ROFI_ARGS[@]}" -p "Find (regex)")
-    [ -z "$FIND_PATTERN" ] && exit 0
+    form=$(yad --form --title="Stoatools Rename" --text="Rename ${#files[@]} file(s)" \
+        --field="Find (regex)":TEXT "" \
+        --field="Replace with":TEXT "" \
+        --field="Case insensitive":CHK FALSE \
+        --field="Replace all occurrences (global)":CHK FALSE \
+        --field="Dry run (preview only)":CHK FALSE \
+        --width=420 \
+        --button="Cancel:1" --button="Continue:0")
+    [ $? -ne 0 ] && exit 0
 
-    REPLACE_STR=$(rofi "${ROFI_ARGS[@]}" -p "Replace with")
+    IFS='|' read -r FIND_PATTERN REPLACE_STR case_chk global_chk dryrun_chk _ <<< "$form"
+    [ -z "$FIND_PATTERN" ] && exit 0
     # REPLACE_STR can be empty (delete match)
 
-    opts=$(printf "Apply rename\nCase insensitive\nReplace all (global)\nDry run (preview only)" | \
-        rofi "${ROFI_ARGS[@]}" -p "Options" -multi-select)
-
-    [[ "$opts" == *"Case insensitive"* ]] && CASE_FLAG="I"
-    [[ "$opts" == *"all"* ]] && GLOBAL_FLAG="g"
-    [[ "$opts" == *"Dry run"* ]] && DRY_RUN=true
+    [ "$case_chk" = "TRUE" ] && CASE_FLAG="I"
+    [ "$global_chk" = "TRUE" ] && GLOBAL_FLAG="g"
+    [ "$dryrun_chk" = "TRUE" ] && DRY_RUN=true
 fi
 
 # Build sed flags
@@ -120,15 +123,19 @@ if $DRY_RUN; then
     echo "$preview"
     echo "---"
     echo "$changes file(s) would be renamed (dry run)"
-    notify-send -t 5000 "Stoatools Rename" "Dry run: $changes file(s)\n(see terminal)"
+    yad --text-info --title="Stoatools Rename (dry run)" \
+        --text="$changes file(s) would be renamed:" \
+        --width=600 --height=350 --button="Close:1" <<< "$preview"
     exit 0
 fi
 
-# Confirmation via rofi
-confirm=$(printf "Rename %d file(s)\nCancel" "$changes" | \
-    rofi "${ROFI_ARGS[@]}" -p "Preview" -mesg "$(echo "$preview" | head -20)")
+# Confirmation
+yad --text-info --title="Stoatools Rename" \
+    --text="$changes file(s) will be renamed:" \
+    --width=600 --height=350 \
+    --button="Cancel:1" --button="Rename $changes file(s):0" <<< "$preview"
 
-if [[ "$confirm" != "Rename"* ]]; then
+if [ $? -ne 0 ]; then
     exit 0
 fi
 
