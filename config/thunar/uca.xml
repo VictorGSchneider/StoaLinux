@@ -13,7 +13,7 @@
 	<submenu></submenu>
 	<unique-id>stoatools-menu</unique-id>
 	<command>~/.local/bin/stoa-thunar %F</command>
-	<description>Open Stoatools menu (resize, rename, OCR, locksmith)</description>
+	<description>Open Stoatools menu (resize, rename, OCR, locksmith, archive)</description>
 	<range></range>
 	<patterns>*</patterns>
 	<directories/>
