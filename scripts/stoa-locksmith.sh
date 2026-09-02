@@ -18,6 +18,12 @@ _notify() {
     notify-send -t "${2:-3000}" "Locksmith" "$1"
 }
 
+if ! command -v yad &>/dev/null; then
+    echo "stoa-locksmith: 'yad' not found in PATH" >&2
+    _notify "yad not installed.\nInstall: sudo pacman -S yad" 5000
+    exit 1
+fi
+
 # yad convention: an EVEN --button response code dumps the widget's
 # value to stdout before exiting; an ODD code just exits with it.
 YAD_CANCEL=1
