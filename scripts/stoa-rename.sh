@@ -52,6 +52,12 @@ while getopts "f:r:R:ignh" opt; do
 done
 shift $((OPTIND - 1))
 
+if ! command -v yad &>/dev/null; then
+    echo "stoa-rename: 'yad' not found in PATH" >&2
+    notify-send -t 5000 "Stoatools Rename" "yad not installed.\nInstall: sudo pacman -S yad"
+    exit 1
+fi
+
 # Collect files
 files=()
 if [ -n "$RECURSIVE_DIR" ]; then

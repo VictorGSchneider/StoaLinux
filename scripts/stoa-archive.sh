@@ -17,6 +17,12 @@ _notify() {
     notify-send -t "${2:-3000}" "Archive" "$1"
 }
 
+if ! command -v yad &>/dev/null; then
+    echo "stoa-archive: 'yad' not found in PATH" >&2
+    _notify "yad not installed.\nInstall: sudo pacman -S yad" 5000
+    exit 1
+fi
+
 _is_archive() {
     case "${1,,}" in
         *.zip|*.tar|*.tar.gz|*.tgz|*.tar.bz2|*.tbz2|*.tbz|*.tar.xz|*.txz|*.7z|*.rar)

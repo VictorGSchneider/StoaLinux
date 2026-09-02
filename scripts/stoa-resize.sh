@@ -16,6 +16,12 @@ if ! command -v magick &>/dev/null; then
     exit 1
 fi
 
+if ! command -v yad &>/dev/null; then
+    echo "stoa-resize: 'yad' not found in PATH" >&2
+    notify-send -t 5000 "Image Resizer" "yad not installed.\nInstall: sudo pacman -S yad"
+    exit 1
+fi
+
 if [ $# -eq 0 ]; then
     echo "Usage: stoa-resize image1 [image2 ...]"
     notify-send -t 3000 "Image Resizer" "Usage: stoa-resize image1 [image2 ...]"
