@@ -7,7 +7,7 @@
 # ║                                                              ║
 # ║  Each listed path is mirrored into the repo at               ║
 # ║  dotfiles/<path-relative-to-$HOME>. Already-symlinked files  ║
-# ║  (kitty, hyprland, rofi, eww, waybar, etc.) are caught by    ║
+# ║  (kitty, hyprland, eww, waybar, etc.) are caught by          ║
 # ║  `git add -A` automatically — don't add them here.           ║
 # ║                                                              ║
 # ║  Uncomment what you want versioned. Heads up: some of these  ║
