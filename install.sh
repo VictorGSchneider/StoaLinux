@@ -472,7 +472,8 @@ fi
 
 # Brave override — bypass libsecret/gnome-keyring so the browser never
 # prompts for the keyring password. The local override shadows the system
-# brave-browser.desktop in rofi, mimeapps, and xdg-open. Written every run
+# brave-browser.desktop in the Noctalia launcher, mimeapps, and xdg-open.
+# Written every run
 # so a Brave package update can't silently reintroduce the prompt.
 #
 # Icon=brave-desktop, NOT brave-browser: brave-bin installs its PNGs as
