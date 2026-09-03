@@ -3,7 +3,7 @@
 
 _debtap_setup() {
     command -v debtap &>/dev/null && return 0
-    local choice; choice=$(_rofi_list "debtap not installed" "  Install debtap (AUR)" "  Back")
+    local choice; choice=$(_yad_select "debtap not installed" "  Install debtap (AUR)" "  Back")
     [[ "$choice" == *Install* ]] || return 1
     if ! _has_aur; then
         _notify "AUR helper needed to install debtap. Install yay or paru first."
@@ -16,7 +16,7 @@ _debtap_setup() {
 }
 
 _install_deb() {
-    local path; path=$(_rofi_input "  Path to .deb file")
+    local path; path=$(_yad_input "  Path to .deb file")
     [ -z "$path" ] && return
     path="${path/#\~/$HOME}"
     [ -f "$path" ]         || { _notify "File not found: $path"; return; }
@@ -33,7 +33,7 @@ _install_rpm() {
         _notify "rpmextract not found. Installing..."
         _run_in_term "sudo pacman -S --needed rpmextract"
     }
-    local path; path=$(_rofi_input "  Path to .rpm file")
+    local path; path=$(_yad_input "  Path to .rpm file")
     [ -z "$path" ] && return
     path="${path/#\~/$HOME}"
     [ -f "$path" ]         || { _notify "File not found: $path"; return; }
@@ -48,7 +48,7 @@ _install_rpm() {
 menu_deb_rpm() {
     _debtap_setup || return
     while true; do
-        local choice; choice=$(_rofi_list "  DEB / RPM" \
+        local choice; choice=$(_yad_select "  DEB / RPM" \
             "  Install .deb package" \
             "  Install .rpm package" \
             "  Update debtap database" \

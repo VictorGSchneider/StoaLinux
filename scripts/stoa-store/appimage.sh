@@ -9,7 +9,7 @@ _appimage_list() {
 _appimage_run() {
     local apps; apps=$(_appimage_list)
     [ -z "$apps" ] && { _notify "No AppImages in ~/Applications"; return; }
-    local choice; choice=$(echo "$apps" | _rofi "  Run AppImage")
+    local choice; choice=$(echo "$apps" | _yad_list "  Run AppImage")
     [ -z "$choice" ] && return
     chmod +x "${APPIMAGE_DIR}/${choice}" 2>/dev/null
     "${APPIMAGE_DIR}/${choice}" & disown
@@ -35,7 +35,7 @@ EOF
 }
 
 _appimage_add_file() {
-    local path; path=$(_rofi_input "  Path to .AppImage file")
+    local path; path=$(_yad_input "  Path to .AppImage file")
     [ -z "$path" ] && return
     path="${path/#\~/$HOME}"
     [ -f "$path" ] || { _notify "File not found: $path"; return; }
@@ -46,15 +46,15 @@ _appimage_add_file() {
     cp "$path" "${APPIMAGE_DIR}/${basename}"
     chmod +x "${APPIMAGE_DIR}/${basename}"
     _notify "Added: $basename"
-    _confirm "Create desktop shortcut for $basename?" && _appimage_create_desktop "$basename"
+    _yad_confirm "Create desktop shortcut for $basename?" && _appimage_create_desktop "$basename"
 }
 
 _appimage_remove() {
     local apps; apps=$(_appimage_list)
     [ -z "$apps" ] && { _notify "No AppImages in ~/Applications"; return; }
-    local choice; choice=$(echo "$apps" | _rofi "  Remove AppImage")
+    local choice; choice=$(echo "$apps" | _yad_list "  Remove AppImage")
     [ -z "$choice" ] && return
-    _confirm "Remove $choice?" || return
+    _yad_confirm "Remove $choice?" || return
     rm -f "${APPIMAGE_DIR}/${choice}"
     local name="${choice%.AppImage}"
     rm -f "${HOME}/.local/share/applications/appimage-${name}.desktop" 2>/dev/null
@@ -65,7 +65,7 @@ menu_appimage() {
     while true; do
         mkdir -p "$APPIMAGE_DIR"
         local count; count=$(_appimage_list | wc -l)
-        local choice; choice=$(_rofi_list "  AppImage ($count apps)" \
+        local choice; choice=$(_yad_select "  AppImage ($count apps)" \
             "  Run AppImage" \
             "  Add from file" \
             "  Create desktop shortcut" \
@@ -79,7 +79,7 @@ menu_appimage() {
             *"desktop shortcut"*)
                 local apps; apps=$(_appimage_list)
                 [ -z "$apps" ] && { _notify "No AppImages"; continue; }
-                local sel; sel=$(echo "$apps" | _rofi "  Create shortcut for")
+                local sel; sel=$(echo "$apps" | _yad_list "  Create shortcut for")
                 [ -n "$sel" ] && _appimage_create_desktop "$sel" ;;
             *Remove*)        _appimage_remove ;;
             *Open*)          thunar "$APPIMAGE_DIR" & disown ;;

@@ -8,7 +8,7 @@ _update_all() {
     command -v flatpak &>/dev/null && summary+=" + Flatpak"
     command -v snap    &>/dev/null && summary+=" + Snap"
     _damx_installed && summary+=" + DAMX"
-    _confirm "Update all: ${summary}?" || return
+    _yad_confirm "Update all: ${summary}?" || return
 
     local script
     [ "$h" = "pacman" ] \
@@ -40,7 +40,7 @@ _update() {
     command -v snap    &>/dev/null && items+=("  Update Snap packages")
     _damx_installed           && items+=("  Update DAMX (Acer)")
 
-    local action; action=$(_rofi_list "  Update" "${items[@]}")
+    local action; action=$(_yad_select "  Update" "${items[@]}")
     [ -z "$action" ] && return
 
     case "$action" in
@@ -56,10 +56,10 @@ _update() {
                 _notify "System is up to date"
             else
                 local c; c=$(echo "$updates" | wc -l)
-                echo "$updates" | _rofi "  $c updates available"
+                echo "$updates" | _yad_list "  $c updates available"
             fi ;;
         *mirrors*)
-            _confirm "Update mirrorlist with reflector?" || return
+            _yad_confirm "Update mirrorlist with reflector?" || return
             _run_in_term "sudo reflector --latest 10 --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syy"
             _notify "Mirrors updated" ;;
         *Flatpak*) _run_in_term "flatpak update";   _notify "Flatpak apps updated" ;;
@@ -76,7 +76,7 @@ _cleanup() {
     )
     command -v flatpak &>/dev/null && items+=("  Clean unused Flatpak runtimes")
 
-    local action; action=$(_rofi_list "  Cleanup" "${items[@]}")
+    local action; action=$(_yad_select "  Cleanup" "${items[@]}")
     [ -z "$action" ] && return
 
     case "$action" in
@@ -84,15 +84,15 @@ _cleanup() {
             local orphans; orphans=$(pacman -Qdtq 2>/dev/null)
             [ -z "$orphans" ] && { _notify "No orphans"; return; }
             local c; c=$(echo "$orphans" | wc -l)
-            echo "$orphans" | _rofi "  $c orphans (read-only)"
-            _confirm "Remove $c orphans?" \
+            echo "$orphans" | _yad_list "  $c orphans (read-only)"
+            _yad_confirm "Remove $c orphans?" \
                 && _run_in_term "sudo pacman -Rns \$(pacman -Qdtq)" \
                 && _notify "Orphans removed" ;;
         *"Clean package"*)
-            _confirm "Clean old cached packages? (keep last 3)" || return
+            _yad_confirm "Clean old cached packages? (keep last 3)" || return
             _run_in_term "sudo paccache -r"; _notify "Cache cleaned" ;;
         *"Clean all"*)
-            _confirm "Remove ALL cached packages?" || return
+            _yad_confirm "Remove ALL cached packages?" || return
             _run_in_term "sudo pacman -Scc"; _notify "All cache cleaned" ;;
         *Flatpak*)
             _run_in_term "flatpak uninstall --unused"
@@ -133,14 +133,14 @@ _stats() {
     [ -d "$APPIMAGE_DIR" ] && ai=$(find "$APPIMAGE_DIR" -maxdepth 1 -name "*.AppImage" 2>/dev/null | wc -l)
     lines+=("AppImages:            $ai")
 
-    printf '%s\n' "${lines[@]}" | _rofi "  System info"
+    printf '%s\n' "${lines[@]}" | _yad_list "  System info"
 }
 
 _setup_hook() {
     local hook="/etc/pacman.d/hooks/stoa-theme.hook"
     local script="/usr/local/bin/stoa-theme-enforce"
     [ -f "$hook" ] && { _notify "Auto-theme hook already active"; return; }
-    _confirm "Install auto-theme pacman hook? (sudo)" || return
+    _yad_confirm "Install auto-theme pacman hook? (sudo)" || return
 
     local stoa_dir; stoa_dir="$(dirname "$(readlink -f "$0")")/.."
     if [ -f "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" ]; then
@@ -183,7 +183,7 @@ HOOK
 
 _install_aur_helper() {
     if _has_aur; then _notify "AUR helper already available: $(_helper)"; return; fi
-    local choice; choice=$(_rofi_list "  Install AUR helper" \
+    local choice; choice=$(_yad_select "  Install AUR helper" \
         "yay   — Go-based, most popular" \
         "paru  — Rust-based, fast")
     [ -z "$choice" ] && return

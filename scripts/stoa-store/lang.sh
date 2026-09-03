@@ -25,46 +25,46 @@ _lang_detect_available() {
 _lang_pip() {
     while true; do
         local count; count=$(pip list 2>/dev/null | tail -n +3 | wc -l)
-        local choice; choice=$(_rofi_list "  Python pip ($count pkgs)" \
+        local choice; choice=$(_yad_select "  Python pip ($count pkgs)" \
             "  Search PyPI" "  Installed packages" "  Outdated packages" \
             "  Install package" "  Uninstall package" "  Package info" \
             "  Show dependencies" "  Back")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
         case "$choice" in
             *Search*)
-                local q; q=$(_rofi_input "  Search PyPI"); [ -z "$q" ] && continue
+                local q; q=$(_yad_input "  Search PyPI"); [ -z "$q" ] && continue
                 _notify "Searching PyPI..."
                 local r; r=$(pip index versions "$q" 2>/dev/null || pip search "$q" 2>/dev/null \
                     || echo "Use: pip install $q (PyPI search API may be disabled)")
-                echo "$r" | _rofi "  PyPI: $q" ;;
+                echo "$r" | _yad_list "  PyPI: $q" ;;
             *"Installed packages"*)
                 local pkgs; pkgs=$(pip list 2>/dev/null)
                 [ -z "$pkgs" ] && { _notify "No pip packages"; continue; }
-                local sel; sel=$(echo "$pkgs" | _rofi "  pip list")
+                local sel; sel=$(echo "$pkgs" | _yad_list "  pip list")
                 [ -z "$sel" ] && continue
-                pip show "$(echo "$sel" | awk '{print $1}')" 2>/dev/null | _rofi "  pip" ;;
+                pip show "$(echo "$sel" | awk '{print $1}')" 2>/dev/null | _yad_list "  pip" ;;
             *Outdated*)
                 _notify "Checking outdated..."
                 local out; out=$(pip list --outdated 2>/dev/null)
                 [ -z "$out" ] && { _notify "All up to date"; continue; }
-                local sel; sel=$(echo "$out" | _rofi "  pip outdated")
+                local sel; sel=$(echo "$out" | _yad_list "  pip outdated")
                 [ -z "$sel" ] && continue
                 local name; name=$(echo "$sel" | awk '{print $1}')
-                _confirm "Upgrade $name?" && _run_in_term "pip install --upgrade $name" ;;
+                _yad_confirm "Upgrade $name?" && _run_in_term "pip install --upgrade $name" ;;
             *"Install package"*)
-                local pkg; pkg=$(_rofi_input "  pip install")
+                local pkg; pkg=$(_yad_input "  pip install")
                 [ -n "$pkg" ] && _run_in_term "pip install $pkg" ;;
             *Uninstall*)
                 local pkgs; pkgs=$(pip list --format=columns 2>/dev/null | tail -n +3)
-                local sel; sel=$(echo "$pkgs" | _rofi "  pip uninstall")
+                local sel; sel=$(echo "$pkgs" | _yad_list "  pip uninstall")
                 [ -z "$sel" ] && continue
                 local name; name=$(echo "$sel" | awk '{print $1}')
-                _confirm "Uninstall $name?" && _run_in_term "pip uninstall $name" ;;
+                _yad_confirm "Uninstall $name?" && _run_in_term "pip uninstall $name" ;;
             *"Package info"*)
-                local pkg; pkg=$(_rofi_input "  pip show (package name)")
-                [ -n "$pkg" ] && pip show "$pkg" 2>/dev/null | _rofi "  pip: $pkg" ;;
+                local pkg; pkg=$(_yad_input "  pip show (package name)")
+                [ -n "$pkg" ] && pip show "$pkg" 2>/dev/null | _yad_list "  pip: $pkg" ;;
             *dependencies*)
-                local pkg; pkg=$(_rofi_input "  Show deps for")
+                local pkg; pkg=$(_yad_input "  Show deps for")
                 [ -z "$pkg" ] && continue
                 local info; info=$(pip show "$pkg" 2>/dev/null)
                 local deps  rdeps
@@ -72,29 +72,29 @@ _lang_pip() {
                 rdeps=$(echo "$info" | grep "^Required-by:" | sed 's/Required-by: //')
                 printf '%s\n' "── $pkg depends on ──" "${deps:-  (none)}" "" \
                               "── Required by ──"     "${rdeps:-  (none)}" \
-                    | _rofi "  pip deps: $pkg" ;;
+                    | _yad_list "  pip deps: $pkg" ;;
         esac
     done
 }
 
 _lang_pipx() {
     while true; do
-        local choice; choice=$(_rofi_list "  Python pipx" \
+        local choice; choice=$(_yad_select "  Python pipx" \
             "  Install app" "  Installed apps" "  Upgrade all" "  Uninstall app" "  Back")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
         case "$choice" in
             *"Install app"*)
-                local pkg; pkg=$(_rofi_input "  pipx install")
+                local pkg; pkg=$(_yad_input "  pipx install")
                 [ -n "$pkg" ] && _run_in_term "pipx install $pkg" ;;
             *Installed*)
                 local apps; apps=$(pipx list --short 2>/dev/null)
-                echo "${apps:-No apps installed}" | _rofi "  pipx apps" ;;
+                echo "${apps:-No apps installed}" | _yad_list "  pipx apps" ;;
             *Upgrade*)   _run_in_term "pipx upgrade-all"; _notify "pipx apps upgraded" ;;
             *Uninstall*)
                 local apps; apps=$(pipx list --short 2>/dev/null | awk '{print $1}')
                 [ -z "$apps" ] && { _notify "No pipx apps"; continue; }
-                local sel; sel=$(echo "$apps" | _rofi "  pipx uninstall")
-                [ -n "$sel" ] && _confirm "Uninstall $sel?" && _run_in_term "pipx uninstall $sel" ;;
+                local sel; sel=$(echo "$apps" | _yad_list "  pipx uninstall")
+                [ -n "$sel" ] && _yad_confirm "Uninstall $sel?" && _run_in_term "pipx uninstall $sel" ;;
         esac
     done
 }
@@ -102,36 +102,36 @@ _lang_pipx() {
 _lang_npm() {
     while true; do
         local count; count=$(npm list -g --depth=0 2>/dev/null | tail -n +2 | wc -l)
-        local choice; choice=$(_rofi_list "  npm ($count global pkgs)" \
+        local choice; choice=$(_yad_select "  npm ($count global pkgs)" \
             "  Search npm" "  Global packages" "  Outdated (global)" \
             "  Install global" "  Uninstall global" "  Package info" \
             "  Show dependencies" "  Back")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
         case "$choice" in
             *Search*)
-                local q; q=$(_rofi_input "  Search npm"); [ -z "$q" ] && continue
+                local q; q=$(_yad_input "  Search npm"); [ -z "$q" ] && continue
                 _notify "Searching npm..."
-                npm search "$q" 2>/dev/null | head -30 | _rofi "  npm: $q" ;;
+                npm search "$q" 2>/dev/null | head -30 | _yad_list "  npm: $q" ;;
             *"Global packages"*)
-                npm list -g --depth=0 2>/dev/null | _rofi "  npm global" ;;
+                npm list -g --depth=0 2>/dev/null | _yad_list "  npm global" ;;
             *Outdated*)
                 _notify "Checking..."
                 local out; out=$(npm outdated -g 2>/dev/null)
-                echo "${out:-All up to date}" | _rofi "  npm outdated" ;;
+                echo "${out:-All up to date}" | _yad_list "  npm outdated" ;;
             *"Install global"*)
-                local pkg; pkg=$(_rofi_input "  npm install -g")
+                local pkg; pkg=$(_yad_input "  npm install -g")
                 [ -n "$pkg" ] && _run_in_term "npm install -g $pkg" ;;
             *Uninstall*)
                 local pkgs; pkgs=$(npm list -g --depth=0 --parseable 2>/dev/null | tail -n +2 | xargs -I{} basename {})
                 [ -z "$pkgs" ] && { _notify "No global packages"; continue; }
-                local sel; sel=$(echo "$pkgs" | _rofi "  npm uninstall -g")
-                [ -n "$sel" ] && _confirm "Uninstall $sel?" && _run_in_term "npm uninstall -g $sel" ;;
+                local sel; sel=$(echo "$pkgs" | _yad_list "  npm uninstall -g")
+                [ -n "$sel" ] && _yad_confirm "Uninstall $sel?" && _run_in_term "npm uninstall -g $sel" ;;
             *"Package info"*)
-                local pkg; pkg=$(_rofi_input "  npm info")
-                [ -n "$pkg" ] && npm info "$pkg" 2>/dev/null | head -40 | _rofi "  npm: $pkg" ;;
+                local pkg; pkg=$(_yad_input "  npm info")
+                [ -n "$pkg" ] && npm info "$pkg" 2>/dev/null | head -40 | _yad_list "  npm: $pkg" ;;
             *dependencies*)
-                local pkg; pkg=$(_rofi_input "  Show deps for")
-                [ -n "$pkg" ] && npm info "$pkg" dependencies 2>/dev/null | _rofi "  npm deps: $pkg" ;;
+                local pkg; pkg=$(_yad_input "  Show deps for")
+                [ -n "$pkg" ] && npm info "$pkg" dependencies 2>/dev/null | _yad_list "  npm deps: $pkg" ;;
         esac
     done
 }
@@ -140,27 +140,27 @@ _lang_cargo() {
     while true; do
         local count=0
         [ -d "$HOME/.cargo/bin" ] && count=$(ls "$HOME/.cargo/bin" 2>/dev/null | wc -l)
-        local choice; choice=$(_rofi_list "  Rust cargo ($count bins)" \
+        local choice; choice=$(_yad_select "  Rust cargo ($count bins)" \
             "  Search crates.io" "  Installed binaries" "  Install crate" \
             "  Uninstall crate" "  Crate info" "  Back")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
         case "$choice" in
             *Search*)
-                local q; q=$(_rofi_input "  Search crates.io"); [ -z "$q" ] && continue
+                local q; q=$(_yad_input "  Search crates.io"); [ -z "$q" ] && continue
                 _notify "Searching crates.io..."
-                cargo search "$q" 2>/dev/null | head -30 | _rofi "  crates: $q" ;;
-            *Installed*)  cargo install --list 2>/dev/null | _rofi "  cargo installed" ;;
+                cargo search "$q" 2>/dev/null | head -30 | _yad_list "  crates: $q" ;;
+            *Installed*)  cargo install --list 2>/dev/null | _yad_list "  cargo installed" ;;
             *"Install crate"*)
-                local pkg; pkg=$(_rofi_input "  cargo install")
+                local pkg; pkg=$(_yad_input "  cargo install")
                 [ -n "$pkg" ] && _run_in_term "cargo install $pkg" ;;
             *Uninstall*)
                 local bins; bins=$(cargo install --list 2>/dev/null | grep -v '^ ' | sed 's/ .*//')
                 [ -z "$bins" ] && { _notify "No installed crates"; continue; }
-                local sel; sel=$(echo "$bins" | _rofi "  cargo uninstall")
-                [ -n "$sel" ] && _confirm "Uninstall $sel?" && _run_in_term "cargo uninstall $sel" ;;
+                local sel; sel=$(echo "$bins" | _yad_list "  cargo uninstall")
+                [ -n "$sel" ] && _yad_confirm "Uninstall $sel?" && _run_in_term "cargo uninstall $sel" ;;
             *info*)
-                local pkg; pkg=$(_rofi_input "  Crate name")
-                [ -n "$pkg" ] && cargo search "$pkg" 2>/dev/null | head -5 | _rofi "  $pkg" ;;
+                local pkg; pkg=$(_yad_input "  Crate name")
+                [ -n "$pkg" ] && cargo search "$pkg" 2>/dev/null | head -5 | _yad_list "  $pkg" ;;
         esac
     done
 }
@@ -168,32 +168,32 @@ _lang_cargo() {
 _lang_gem() {
     while true; do
         local count; count=$(gem list --no-versions 2>/dev/null | wc -l)
-        local choice; choice=$(_rofi_list "  Ruby gem ($count gems)" \
+        local choice; choice=$(_yad_select "  Ruby gem ($count gems)" \
             "  Search RubyGems" "  Installed gems" "  Outdated gems" \
             "  Install gem" "  Uninstall gem" "  Gem info" \
             "  Gem dependencies" "  Clean old versions" "  Back")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
         case "$choice" in
             *Search*)
-                local q; q=$(_rofi_input "  Search RubyGems"); [ -z "$q" ] && continue
+                local q; q=$(_yad_input "  Search RubyGems"); [ -z "$q" ] && continue
                 _notify "Searching..."
-                gem search "$q" 2>/dev/null | head -40 | _rofi "  gems: $q" ;;
-            *Installed*) gem list 2>/dev/null | _rofi "  gem list" ;;
-            *Outdated*)  _notify "Checking..."; gem outdated 2>/dev/null | _rofi "  gem outdated" ;;
+                gem search "$q" 2>/dev/null | head -40 | _yad_list "  gems: $q" ;;
+            *Installed*) gem list 2>/dev/null | _yad_list "  gem list" ;;
+            *Outdated*)  _notify "Checking..."; gem outdated 2>/dev/null | _yad_list "  gem outdated" ;;
             *"Install gem"*)
-                local pkg; pkg=$(_rofi_input "  gem install")
+                local pkg; pkg=$(_yad_input "  gem install")
                 [ -n "$pkg" ] && _run_in_term "gem install $pkg" ;;
             *Uninstall*)
                 local gems; gems=$(gem list --no-versions 2>/dev/null)
-                local sel; sel=$(echo "$gems" | _rofi "  gem uninstall")
-                [ -n "$sel" ] && _confirm "Uninstall $sel?" && _run_in_term "gem uninstall $sel" ;;
+                local sel; sel=$(echo "$gems" | _yad_list "  gem uninstall")
+                [ -n "$sel" ] && _yad_confirm "Uninstall $sel?" && _run_in_term "gem uninstall $sel" ;;
             *"Gem info"*)
-                local pkg; pkg=$(_rofi_input "  gem info")
-                [ -n "$pkg" ] && gem info "$pkg" 2>/dev/null | _rofi "  gem: $pkg" ;;
+                local pkg; pkg=$(_yad_input "  gem info")
+                [ -n "$pkg" ] && gem info "$pkg" 2>/dev/null | _yad_list "  gem: $pkg" ;;
             *dependencies*)
-                local pkg; pkg=$(_rofi_input "  gem dependency")
-                [ -n "$pkg" ] && gem dependency "$pkg" 2>/dev/null | _rofi "  gem deps: $pkg" ;;
-            *Clean*) _confirm "Clean old gem versions?" && _run_in_term "gem cleanup" ;;
+                local pkg; pkg=$(_yad_input "  gem dependency")
+                [ -n "$pkg" ] && gem dependency "$pkg" 2>/dev/null | _yad_list "  gem deps: $pkg" ;;
+            *Clean*) _yad_confirm "Clean old gem versions?" && _run_in_term "gem cleanup" ;;
         esac
     done
 }
@@ -202,19 +202,19 @@ _lang_go() {
     while true; do
         local count=0
         [ -d "$(go env GOPATH 2>/dev/null)/bin" ] && count=$(ls "$(go env GOPATH)/bin" 2>/dev/null | wc -l)
-        local choice; choice=$(_rofi_list "  Go ($count bins)" \
+        local choice; choice=$(_yad_select "  Go ($count bins)" \
             "  Installed binaries" "  Install module" "  Module info" "  Back")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
         case "$choice" in
             *Installed*)
                 local gobin; gobin=$(go env GOPATH 2>/dev/null)/bin
-                [ -d "$gobin" ] && ls "$gobin" 2>/dev/null | _rofi "  go binaries" \
+                [ -d "$gobin" ] && ls "$gobin" 2>/dev/null | _yad_list "  go binaries" \
                                 || _notify "No Go binaries" ;;
             *"Install module"*)
-                local pkg; pkg=$(_rofi_input "  go install (full path@version)")
+                local pkg; pkg=$(_yad_input "  go install (full path@version)")
                 [ -n "$pkg" ] && _run_in_term "go install $pkg" ;;
             *info*)
-                local pkg; pkg=$(_rofi_input "  Module path")
+                local pkg; pkg=$(_yad_input "  Module path")
                 [ -n "$pkg" ] && _run_in_term "go doc $pkg 2>&1 | head -50; echo; echo 'Press Enter...'; read" ;;
         esac
     done
@@ -222,24 +222,24 @@ _lang_go() {
 
 _lang_dotnet() {
     while true; do
-        local choice; choice=$(_rofi_list "  .NET / NuGet" \
+        local choice; choice=$(_yad_select "  .NET / NuGet" \
             "  Search NuGet" "  Global tools" "  Install global tool" \
             "  Uninstall global tool" "  Installed SDKs" "  Back")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
         case "$choice" in
             *Search*)
-                local q; q=$(_rofi_input "  Search NuGet"); [ -z "$q" ] && continue
+                local q; q=$(_yad_input "  Search NuGet"); [ -z "$q" ] && continue
                 _notify "Searching..."
-                dotnet tool search "$q" 2>/dev/null | head -30 | _rofi "  nuget: $q" ;;
-            *"Global tools"*) dotnet tool list -g 2>/dev/null | _rofi "  dotnet global tools" ;;
+                dotnet tool search "$q" 2>/dev/null | head -30 | _yad_list "  nuget: $q" ;;
+            *"Global tools"*) dotnet tool list -g 2>/dev/null | _yad_list "  dotnet global tools" ;;
             *"Install global"*)
-                local pkg; pkg=$(_rofi_input "  dotnet tool install -g")
+                local pkg; pkg=$(_yad_input "  dotnet tool install -g")
                 [ -n "$pkg" ] && _run_in_term "dotnet tool install -g $pkg" ;;
             *Uninstall*)
                 local tools; tools=$(dotnet tool list -g 2>/dev/null | tail -n +3 | awk '{print $1}')
-                local sel; sel=$(echo "$tools" | _rofi "  dotnet uninstall")
-                [ -n "$sel" ] && _confirm "Uninstall $sel?" && _run_in_term "dotnet tool uninstall -g $sel" ;;
-            *SDKs*) dotnet --list-sdks 2>/dev/null | _rofi "  .NET SDKs" ;;
+                local sel; sel=$(echo "$tools" | _yad_list "  dotnet uninstall")
+                [ -n "$sel" ] && _yad_confirm "Uninstall $sel?" && _run_in_term "dotnet tool uninstall -g $sel" ;;
+            *SDKs*) dotnet --list-sdks 2>/dev/null | _yad_list "  .NET SDKs" ;;
         esac
     done
 }
@@ -250,7 +250,7 @@ menu_lang_packages() {
         [ -z "$available" ] && { _notify "No language runtimes detected"; return; }
 
         local choice; choice=$(printf '%s\n─────────────────────\n  Back\n' "$available" \
-            | "${ROFI[@]}" -p "  Language packages")
+            | _yad_list "  Language packages")
         [ -z "$choice" ] || [[ "$choice" == *Back* ]] && return
 
         case "$choice" in
@@ -279,7 +279,7 @@ menu_developer() {
         for t in pip pipx npm yarn pnpm cargo gem go composer dotnet luarocks cpan ghcup julia R; do
             command -v "$t" &>/dev/null && ((rt++))
         done
-        local choice; choice=$(_rofi_list "  Developer tools" \
+        local choice; choice=$(_yad_select "  Developer tools" \
             "  Language packages ($rt runtimes)" \
             "  Base development packages" \
             "─────────────────────" \
@@ -310,7 +310,7 @@ _menu_base_dev() {
         dev_items+=("  $tool${status}")
     done
 
-    local sel; sel=$(_rofi_list "  Dev packages" "${dev_items[@]}" "  Back")
+    local sel; sel=$(_yad_select "  Dev packages" "${dev_items[@]}" "  Back")
     [ -z "$sel" ] || [[ "$sel" == *Back* ]] && return
     local name; name=$(echo "$sel" | awk '{print $1}')
 
@@ -321,9 +321,9 @@ _menu_base_dev() {
             local st=""; _is_installed "$p" && st="  [installed]"
             lines+=("${p}${st}")
         done <<< "$pkgs"
-        local pick; pick=$(printf '%s\n' "${lines[@]}" | _rofi "  $name")
-        [ -n "$pick" ] && _pkg_detail "$(echo "$pick" | awk '{print $1}')"
+        local pick; pick=$(printf '%s\n' "${lines[@]}" | _yad_list "  $name")
+        [ -n "$pick" ] && _pkg_quick_info "$(echo "$pick" | awk '{print $1}')"
     else
-        _pkg_detail "$name"
+        _pkg_quick_info "$name"
     fi
 }

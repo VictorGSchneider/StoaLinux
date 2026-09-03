@@ -55,10 +55,10 @@ _damx_run_remote_setup() {
 
 _install_damx() {
     if _damx_installed; then
-        _confirm "DAMX already installed. Reinstall / update?" || return
+        _yad_confirm "DAMX already installed. Reinstall / update?" || return
         _damx_run_remote_setup 4
     else
-        _confirm "Install Div Acer Manager Max (DAMX)? Requires sudo." || return
+        _yad_confirm "Install Div Acer Manager Max (DAMX)? Requires sudo." || return
         _damx_run_remote_setup 1
     fi
     if systemctl is-active --quiet "$DAMX_SERVICE" 2>/dev/null; then
@@ -73,7 +73,7 @@ _update_damx() {
         _notify "DAMX not installed"
         return
     fi
-    _confirm "Update DAMX to the latest release? (reinstall, sudo)" || return
+    _yad_confirm "Update DAMX to the latest release? (reinstall, sudo)" || return
     _damx_run_remote_setup 4
     _notify "DAMX updated"
 }
@@ -83,14 +83,14 @@ _uninstall_damx() {
         _notify "DAMX not installed"
         return
     fi
-    _confirm "Uninstall DAMX (removes daemon and GUI)?" || return
+    _yad_confirm "Uninstall DAMX (removes daemon and GUI)?" || return
     _damx_run_remote_setup 3
     _notify "DAMX uninstalled"
 }
 
 _status_damx() {
     if ! _damx_installed; then
-        echo "DAMX is not installed." | _rofi "  DAMX status"
+        echo "DAMX is not installed." | _yad_list "  DAMX status"
         return
     fi
     local lines=(
@@ -111,14 +111,14 @@ _status_damx() {
     [ -x "$DAMX_INSTALL_DIR/gui/DivAcerManagerMax" ] \
         && lines+=("GUI binary:    present") \
         || lines+=("GUI binary:    missing")
-    printf '%s\n' "${lines[@]}" | _rofi "  DAMX status"
+    printf '%s\n' "${lines[@]}" | _yad_list "  DAMX status"
 }
 
 _install_damfc() {
     # DAM-FC ships release tarballs with a SetupDrivers.sh installer. We
     # download the latest release asset and hand it to a terminal for the
     # user to pick menu option 1.
-    _confirm "Install DAM Fan Controls (DAM-FC)? Requires sudo." || return
+    _yad_confirm "Install DAM Fan Controls (DAM-FC)? Requires sudo." || return
     if ! command -v curl &>/dev/null; then
         _notify "curl required for DAM-FC install"
         return 1
@@ -161,7 +161,7 @@ menu_acer() {
     )
 
     local choice
-    choice=$(_rofi_list "  Acer apps" "${items[@]}")
+    choice=$(_yad_select "  Acer apps" "${items[@]}")
     [ -z "$choice" ] && return
 
     case "$choice" in
