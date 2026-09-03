@@ -337,19 +337,19 @@ wallpaper_scheme = "soft"
 
     [theme.templates]
     builtin_ids = [ "btop", "gtk3", "hyprland", "kitty", "qt" ]
-    community_ids = [ "darktable", "gimp", "inkscape", "obsidian", "vscode", "steam", "fastfetch", "zathura", "hyprtoolkit" ]
+    community_ids = [ "darktable", "gimp", "inkscape", "obsidian", "vscode", "steam", "rofi", "fastfetch", "zathura", "hyprtoolkit" ]
 
 [wallpaper.automation]
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-memento.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-memento.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-memento.png"
 
 [widget.Stoa-drive]
 type = "stoa/drive:pill"
