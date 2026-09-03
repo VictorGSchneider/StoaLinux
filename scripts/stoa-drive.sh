@@ -7,7 +7,6 @@
 # ║  Dropbox, S3, etc). Streams on-demand — no full download.   ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-ROFI=(rofi -dmenu -config ~/.config/rofi/config.rasi)
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 DRIVE_DIR="${HOME}/Drive"
 SYNC_LIST="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/drive-sync.list"
@@ -40,22 +39,30 @@ _SYNC_CONFLICT="${STOA_SYNC_CONFLICT:-newer}"
 
 _notify() { notify-send -t 2500 "Stoa Drive" "$1" 2>/dev/null; }
 
-_rofi_select() {
+_yad_select() {
     local prompt="$1"
     shift
-    printf '%s\n' "$@" | "${ROFI[@]}" -p "$prompt"
+    printf '%s\n' "$@" \
+        | yad --list --title="$prompt" --column="Option" --no-headers \
+              --width=420 --height=420 --separator=''
 }
 
-_rofi_input() {
+_yad_input() {
     local prompt="$1"
-    echo "" | "${ROFI[@]}" -p "$prompt"
+    yad --entry --title="$prompt" --width=380
 }
 
-_rofi_confirm() {
+_yad_confirm() {
     local msg="$1"
-    local choice
-    choice=$(_rofi_select "$msg" "  Yes" "  No")
-    [[ "$choice" == *"Yes"* ]]
+    yad --question --title="Stoa Drive" --text="$msg"
+}
+
+_yad_info() {
+    local prompt="$1"
+    shift
+    printf '%s\n' "$@" \
+        | yad --text-info --title="$prompt" --fontname="monospace 11" \
+              --width=480 --height=360 --button="Close:0"
 }
 
 # Minimal JSON string escape — only " and \ can appear in the values we
@@ -216,7 +223,7 @@ _unmount_all() {
 
 # ── Add a new account ──
 # _create_account is the non-interactive core (used by the native bar
-# panel's Add Account form as well as the rofi flow below): given a
+# panel's Add Account form as well as the yad flow below): given a
 # provider type (empty = manual `rclone config`) and a name, sanitize,
 # check for a collision, and hand off to `rclone config` in a terminal —
 # OAuth needs a real browser-driven interactive flow, so this is the one
@@ -268,7 +275,7 @@ _create_account() {
 
 _add_account() {
     local providers
-    providers=$(_rofi_select "  Provider" \
+    providers=$(_yad_select "  Provider" \
         "  Google Drive" \
         "  OneDrive" \
         "  Dropbox" \
@@ -286,7 +293,7 @@ _add_account() {
     esac
 
     local name
-    name=$(_rofi_input "  Account name (e.g. personal, work)")
+    name=$(_yad_input "  Account name (e.g. personal, work)")
     [ -z "$name" ] && return
 
     _create_account "$provider_type" "$name"
@@ -294,7 +301,7 @@ _add_account() {
 
 # ── Remove an account ──
 # _delete_account is the non-interactive core; confirmation is the
-# caller's job (a rofi prompt below, or a two-click confirm in the panel).
+# caller's job (a yad prompt below, or a two-click confirm in the panel).
 
 _delete_account() {
     local remote="$1"
@@ -315,13 +322,13 @@ _remove_account() {
     items+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Remove account" "${items[@]}")
+    choice=$(_yad_select "  Remove account" "${items[@]}")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
     local remote
     remote=$(echo "$choice" | sed 's/^  //')
 
-    _rofi_confirm "Remove '${remote}'?" || return
+    _yad_confirm "Remove '${remote}'?" || return
     _delete_account "$remote"
 }
 
@@ -332,7 +339,7 @@ _show_status() {
     remotes=$(_list_remotes)
 
     if [ -z "$remotes" ]; then
-        echo "No accounts configured" | "${ROFI[@]}" -p "  Drive Status"
+        _yad_info "Drive Status" "No accounts configured"
         return
     fi
 
@@ -348,7 +355,7 @@ _show_status() {
         fi
     done <<< "$remotes"
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Drive Status"
+    _yad_info "Drive Status" "${lines[@]}"
 }
 
 # ── Open in Thunar ──
@@ -375,7 +382,7 @@ _open_in_thunar() {
     mounted+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Open in Thunar" "${mounted[@]}")
+    choice=$(_yad_select "  Open in Thunar" "${mounted[@]}")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
     if [[ "$choice" == *"Open ~/Drive"* ]]; then
@@ -547,7 +554,7 @@ _run_all_syncs() {
 }
 
 # _register_sync_pair is the non-interactive core (used by the panel and
-# the rofi flow below). Takes the raw remote:path and local path exactly
+# the yad flow below). Takes the raw remote:path and local path exactly
 # as typed — tilde expansion and trimming happen here so both callers get
 # it for free.
 _register_sync_pair() {
@@ -580,29 +587,29 @@ _add_sync_pair() {
     items+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Remote" "${items[@]}")
+    choice=$(_yad_select "  Remote" "${items[@]}")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
     local remote
     remote=$(echo "$choice" | sed 's/^  //')
 
     local rpath
-    rpath=$(_rofi_input "  Remote path (e.g. Obsidian)")
+    rpath=$(_yad_input "  Remote path (e.g. Obsidian)")
     [ -z "$rpath" ] && return
     rpath="${rpath#/}"; rpath="${rpath%/}"
 
     local lpath
-    lpath=$(_rofi_input "  Local path (e.g. ~/Obsidian)")
+    lpath=$(_yad_input "  Local path (e.g. ~/Obsidian)")
     [ -z "$lpath" ] && return
 
     _register_sync_pair "${remote}:${rpath}" "$lpath" || return
 
-    if _rofi_confirm "Run first sync now? (Will --resync)"; then
+    if _yad_confirm "Run first sync now? (Will --resync)"; then
         _run_sync "${remote}:${rpath}" "${lpath/#\~/$HOME}"
     fi
 }
 
 # _unregister_sync_pair is the non-interactive core. Sync state (the
-# bisync workdir) is kept on removal — same default the rofi flow below
+# bisync workdir) is kept on removal — same default the yad flow below
 # already had — so a pair re-added later with the same remote+local
 # doesn't force a --resync.
 _unregister_sync_pair() {
@@ -629,16 +636,16 @@ _remove_sync_pair() {
     items+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Remove sync pair" "${items[@]}")
+    choice=$(_yad_select "  Remove sync pair" "${items[@]}")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
     local clean="${choice#  }"
     local rp="${clean%%  ⇄  *}"
     local lp="${clean##*  ⇄  }"
 
-    _rofi_confirm "Remove pair '${rp}  ⇄  ${lp}'?" || return
+    _yad_confirm "Remove pair '${rp}  ⇄  ${lp}'?" || return
 
-    if _rofi_confirm "Also delete sync state for this pair?"; then
+    if _yad_confirm "Also delete sync state for this pair?"; then
         rm -rf "$(_pair_workdir "$rp" "$lp")"
     fi
     _unregister_sync_pair "$rp" "$lp"
@@ -743,7 +750,7 @@ _sync_status() {
         done <<< "$pairs"
     fi
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Sync Status"
+    _yad_info "Sync Status" "${lines[@]}"
 }
 
 _sync_menu() {
@@ -755,7 +762,7 @@ _sync_menu() {
         pair_count=$(_list_sync_pairs | grep -c .)
 
         local choice
-        choice=$(_rofi_select "  Folder Sync (${pair_count} pair(s), auto: ${auto})" \
+        choice=$(_yad_select "  Folder Sync (${pair_count} pair(s), auto: ${auto})" \
             "  Sync now (all)" \
             "  Add pair" \
             "  Remove pair" \
@@ -799,7 +806,7 @@ menu_drive() {
         [ "$count" -eq 0 ] && status_str="no accounts"
 
         local choice
-        choice=$(_rofi_select "  Cloud Drive (${status_str})" \
+        choice=$(_yad_select "  Cloud Drive (${status_str})" \
             "  Mount all" \
             "  Unmount all" \
             "  Mount / Unmount" \
@@ -844,7 +851,7 @@ _mount_unmount_menu() {
         items+=("  Back")
 
         local choice
-        choice=$(_rofi_select "  Mount / Unmount" "${items[@]}")
+        choice=$(_yad_select "  Mount / Unmount" "${items[@]}")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         local remote

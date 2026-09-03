@@ -8,7 +8,6 @@
 # ║  show inline. Data comes from stoa-vitals-status.             ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-ROFI=(rofi -dmenu -config ~/.config/rofi/config.rasi)
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 DOCTOR_LOG="${STOA_DIR}/doctor.log"
@@ -27,10 +26,12 @@ _sudo() { [ "$_PRIVILEGE" = "sudo-n" ] && echo "sudo -n " || echo "pkexec "; }
 
 _notify() { notify-send -t 2500 "Stoa Health" "$1" 2>/dev/null; }
 
-_rofi_select() {
+_yad_select() {
     local prompt="$1"
     shift
-    printf '%s\n' "$@" | "${ROFI[@]}" -p "$prompt"
+    printf '%s\n' "$@" \
+        | yad --list --title="$prompt" --column="Option" --no-headers \
+              --width=460 --height=420 --separator=''
 }
 
 # Runs a command in the background with Running/Done/Failed notifications,
@@ -109,7 +110,7 @@ _vitals_menu() {
     lines+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Vitals" "${lines[@]}")
+    choice=$(_yad_select "  Vitals" "${lines[@]}")
     case "$choice" in
         *"Run Doctor"*) _run_bg "Doctor" "${BIN}/stoa-doctor" ;;
         *"Open Log"*)   xdg-open "$DOCTOR_LOG" & disown ;;
@@ -125,7 +126,7 @@ _snapshots_menu() {
     backups=$(_jq_or '.backups' "$json" "0")
 
     local choice
-    choice=$(_rofi_select "  Snapshots (${snapshots} packages · ${backups} configs)" \
+    choice=$(_yad_select "  Snapshots (${snapshots} packages · ${backups} configs)" \
         "  Snapshot packages now" \
         "  Backup configs now" \
         "  Browse snapshots" \
@@ -150,7 +151,7 @@ _maintenance_menu() {
     [ "$scheduled" = "true" ] && sched_str="enabled"
 
     local choice
-    choice=$(_rofi_select "  Maintenance (${updates} updates pending · auto-cleanup ${sched_str})" \
+    choice=$(_yad_select "  Maintenance (${updates} updates pending · auto-cleanup ${sched_str})" \
         "  Update all (pacman + AUR)" \
         "  Update system (pacman)" \
         "  Update AUR (yay)" \
@@ -175,7 +176,7 @@ _maintenance_menu() {
 menu_health() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Stoa Health ($(_summary_line))" \
+        choice=$(_yad_select "  Stoa Health ($(_summary_line))" \
             "  Vitals" \
             "  Snapshots" \
             "  Maintenance" \

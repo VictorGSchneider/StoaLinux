@@ -3,8 +3,10 @@
 # ║  STOA LINUX — App Store                                     ║
 # ║  "Wealth is the slave of a wise man." — Seneca               ║
 # ║                                                              ║
-# ║  Rofi-driven package manager: Pacman + AUR + Flatpak + Snap  ║
-# ║  + AppImage + DEB/RPM + per-language PMs.                    ║
+# ║  Pacman + AUR + Flatpak + Snap + AppImage search/install is  ║
+# ║  bauh's job (a standalone GUI package manager); this store   ║
+# ║  covers what bauh doesn't: DEB/RPM conversion, per-language  ║
+# ║  PMs, Acer apps, and dev/system tooling — via yad dialogs.   ║
 # ║  Auto-applies the Stoa theme after every install.            ║
 # ║                                                              ║
 # ║  Modules live in scripts/stoa-store/ — this file is only     ║
@@ -82,7 +84,7 @@ main() {
         )
 
         local choice
-        choice=$(_rofi_list "  Stoa Store (${sources})" "${items[@]}")
+        choice=$(_yad_select "  Stoa Store (${sources})" "${items[@]}")
         [ -z "$choice" ] && exit 0
 
         case "$choice" in

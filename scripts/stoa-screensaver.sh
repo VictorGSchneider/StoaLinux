@@ -298,29 +298,16 @@ enable_idle() {
     # Kill any existing swayidle for screensaver
     pkill -f "swayidle.*stoa-screensaver" 2>/dev/null
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        swayidle -w \
-            timeout "$timeout" "stoa-screensaver start" \
-            resume "stoa-screensaver stop" &
-        disown
-        _ss_save "ENABLED" "true"
-        echo "  Screensaver enabled (${timeout}s idle timeout)"
-    else
-        # Xorg: use xautolock
-        if command -v xautolock &>/dev/null; then
-            xautolock -time "$((timeout / 60))" -locker "stoa-screensaver start" &
-            disown
-            _ss_save "ENABLED" "true"
-            echo "  Screensaver enabled (${timeout}s idle timeout)"
-        else
-            echo "  xautolock not installed for Xorg screensaver"
-        fi
-    fi
+    swayidle -w \
+        timeout "$timeout" "stoa-screensaver start" \
+        resume "stoa-screensaver stop" &
+    disown
+    _ss_save "ENABLED" "true"
+    echo "  Screensaver enabled (${timeout}s idle timeout)"
 }
 
 disable_idle() {
     pkill -f "swayidle.*stoa-screensaver" 2>/dev/null
-    pkill -f "xautolock.*stoa-screensaver" 2>/dev/null
     _ss_save "ENABLED" "false"
     echo "  Screensaver disabled"
 }

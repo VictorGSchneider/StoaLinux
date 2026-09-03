@@ -2,34 +2,21 @@
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Advanced Paste                                ║
 # ║  Paste clipboard content in different formats                ║
-# ║  Requires: wl-clipboard, rofi, jq (optional)                ║
+# ║  Requires: wl-clipboard, yad, jq (optional)                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Usage:
 #   stoa-paste          — menu with format options
 #   stoa-paste plain    — paste as plain text (no formatting)
 
-ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
-
-# Detect session type
-_is_wayland() { [ -n "${WAYLAND_DISPLAY:-}" ]; }
-
 _get_clipboard() {
-    if _is_wayland; then
-        wl-paste 2>/dev/null
-    else
-        xclip -selection clipboard -o 2>/dev/null
-    fi
+    wl-paste 2>/dev/null
 }
 
 _set_clipboard() {
     # Pipe the content via stdin so text starting with `-` is not parsed
-    # as a flag by wl-copy / xclip.
-    if _is_wayland; then
-        printf '%s' "$1" | wl-copy
-    else
-        printf '%s' "$1" | xclip -selection clipboard
-    fi
+    # as a flag by wl-copy.
+    printf '%s' "$1" | wl-copy
 }
 
 _type_text() {
@@ -145,7 +132,9 @@ _menu() {
     )
 
     local choice
-    choice=$(printf '%s\n' "${options[@]}" | rofi "${ROFI_ARGS[@]}" -p "Paste as")
+    choice=$(printf '%s\n' "${options[@]}" \
+        | yad --list --title="Paste as" --column="Option" --no-headers \
+              --width=340 --height=360 --separator='')
     [ -z "$choice" ] && exit 0
 
     case "$choice" in

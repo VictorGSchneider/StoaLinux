@@ -18,7 +18,6 @@ set -o pipefail
 SCREENSHOT_DIR="${HOME}/Pictures/screenshots"
 RECORD_DIR="${HOME}/Videos/recordings"
 PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/stoa-record.pid"
-SESSION="${XDG_SESSION_TYPE:-x11}"
 
 mkdir -p "$SCREENSHOT_DIR" "$RECORD_DIR"
 
@@ -43,19 +42,15 @@ _stop_recording() {
 }
 
 _get_window_geom() {
-    if [ "$SESSION" = "wayland" ]; then
-        local json
-        json=$(hyprctl activewindow -j 2>/dev/null)
-        if [ -n "$json" ]; then
-            local x y w h
-            x=$(echo "$json" | jq -r '.at[0]')
-            y=$(echo "$json" | jq -r '.at[1]')
-            w=$(echo "$json" | jq -r '.size[0]')
-            h=$(echo "$json" | jq -r '.size[1]')
-            echo "${x},${y} ${w}x${h}"
-        fi
-    else
-        xdotool getactivewindow 2>/dev/null
+    local json
+    json=$(hyprctl activewindow -j 2>/dev/null)
+    if [ -n "$json" ]; then
+        local x y w h
+        x=$(echo "$json" | jq -r '.at[0]')
+        y=$(echo "$json" | jq -r '.at[1]')
+        w=$(echo "$json" | jq -r '.size[0]')
+        h=$(echo "$json" | jq -r '.size[1]')
+        echo "${x},${y} ${w}x${h}"
     fi
 }
 
@@ -65,49 +60,38 @@ _screenshot() {
     local filename="${SCREENSHOT_DIR}/screenshot-$(date +%Y%m%d-%H%M%S).png"
 
     echo "DEBUG: _screenshot called with mode=$mode delay=$delay" >> /tmp/stoa-capture-debug.log
-    echo "DEBUG: SESSION=$SESSION" >> /tmp/stoa-capture-debug.log
     echo "DEBUG: filename=$filename" >> /tmp/stoa-capture-debug.log
 
     [ "$delay" -gt 0 ] 2>/dev/null && sleep "$delay"
 
-    if [ "$SESSION" = "wayland" ]; then
-        echo "DEBUG: Using Wayland path" >> /tmp/stoa-capture-debug.log
-        if ! command -v grim &>/dev/null; then
-            _notify "grim not installed — cannot take screenshot" "critical"
-            echo "DEBUG: grim missing" >> /tmp/stoa-capture-debug.log
-            return 1
-        fi
-        case "$mode" in
-            selection)
-                local geom
-                geom=$(slurp 2>/dev/null) || return 0
+    if ! command -v grim &>/dev/null; then
+        _notify "grim not installed — cannot take screenshot" "critical"
+        echo "DEBUG: grim missing" >> /tmp/stoa-capture-debug.log
+        return 1
+    fi
+    case "$mode" in
+        selection)
+            local geom
+            geom=$(slurp 2>/dev/null) || return 0
+            echo "DEBUG: Running grim -g $geom $filename" >> /tmp/stoa-capture-debug.log
+            grim -g "$geom" "$filename" >> /tmp/stoa-capture-debug.log 2>&1
+            ;;
+        window)
+            local geom
+            geom=$(_get_window_geom)
+            if [ -n "$geom" ]; then
                 echo "DEBUG: Running grim -g $geom $filename" >> /tmp/stoa-capture-debug.log
                 grim -g "$geom" "$filename" >> /tmp/stoa-capture-debug.log 2>&1
-                ;;
-            window)
-                local geom
-                geom=$(_get_window_geom)
-                if [ -n "$geom" ]; then
-                    echo "DEBUG: Running grim -g $geom $filename" >> /tmp/stoa-capture-debug.log
-                    grim -g "$geom" "$filename" >> /tmp/stoa-capture-debug.log 2>&1
-                else
-                    echo "DEBUG: Running grim $filename" >> /tmp/stoa-capture-debug.log
-                    grim "$filename" >> /tmp/stoa-capture-debug.log 2>&1
-                fi
-                ;;
-            screen)
+            else
                 echo "DEBUG: Running grim $filename" >> /tmp/stoa-capture-debug.log
                 grim "$filename" >> /tmp/stoa-capture-debug.log 2>&1
-                ;;
-        esac
-    else
-        echo "DEBUG: Using X11 path" >> /tmp/stoa-capture-debug.log
-        case "$mode" in
-            selection) maim -s "$filename" ;;
-            window)    maim -i "$(_get_window_geom)" "$filename" ;;
-            screen)    maim "$filename" ;;
-        esac
-    fi
+            fi
+            ;;
+        screen)
+            echo "DEBUG: Running grim $filename" >> /tmp/stoa-capture-debug.log
+            grim "$filename" >> /tmp/stoa-capture-debug.log 2>&1
+            ;;
+    esac
 
     echo "DEBUG: File exists? $([ -f "$filename" ] && echo yes || echo no)" >> /tmp/stoa-capture-debug.log
     if [ -f "$filename" ]; then
@@ -122,79 +106,32 @@ _record() {
     local filename="${RECORD_DIR}/recording-$(date +%Y%m%d-%H%M%S).mp4"
     local rec_pid
 
-    if [ "$SESSION" = "wayland" ]; then
-        if ! command -v wf-recorder &>/dev/null; then
-            _notify "wf-recorder not found" "critical"
-            return 1
-        fi
-        case "$mode" in
-            selection)
-                local geom
-                geom=$(slurp 2>/dev/null) || return 0
-                wf-recorder -g "$geom" -f "$filename" --audio &
-                rec_pid=$!
-                ;;
-            window)
-                local geom
-                geom=$(_get_window_geom)
-                if [ -n "$geom" ]; then
-                    wf-recorder -g "$geom" -f "$filename" --audio &
-                else
-                    wf-recorder -f "$filename" --audio &
-                fi
-                rec_pid=$!
-                ;;
-            screen)
-                wf-recorder -f "$filename" --audio &
-                rec_pid=$!
-                ;;
-        esac
-    else
-        if ! command -v ffmpeg &>/dev/null; then
-            _notify "ffmpeg not found" "critical"
-            return 1
-        fi
-        case "$mode" in
-            selection)
-                local geom
-                geom=$(slop -f "%w %h %x %y" 2>/dev/null) || return 0
-                local sw sh sx sy
-                read -r sw sh sx sy <<< "$geom"
-                ffmpeg -y -f x11grab -video_size "${sw}x${sh}" -i "${DISPLAY}+${sx},${sy}" \
-                       -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
-                       -c:a aac "$filename" &
-                rec_pid=$!
-                ;;
-            window)
-                local wid wgeom wx wy ww wh
-                wid=$(xdotool getactivewindow 2>/dev/null)
-                if [ -n "$wid" ]; then
-                    wgeom=$(xdotool getwindowgeometry --shell "$wid" 2>/dev/null)
-                    eval "$wgeom"
-                    ffmpeg -y -f x11grab -video_size "${WIDTH}x${HEIGHT}" -i "${DISPLAY}+${X},${Y}" \
-                           -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
-                           -c:a aac "$filename" &
-                else
-                    local resolution
-                    resolution=$(xdpyinfo 2>/dev/null | grep dimensions | awk '{print $2}')
-                    resolution="${resolution:-1920x1080}"
-                    ffmpeg -y -f x11grab -video_size "$resolution" -i "${DISPLAY}+0,0" \
-                           -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
-                           -c:a aac "$filename" &
-                fi
-                rec_pid=$!
-                ;;
-            screen)
-                local resolution
-                resolution=$(xdpyinfo 2>/dev/null | grep dimensions | awk '{print $2}')
-                resolution="${resolution:-1920x1080}"
-                ffmpeg -y -f x11grab -video_size "$resolution" -i "${DISPLAY}+0,0" \
-                       -f pulse -i default -c:v libx264 -preset ultrafast -crf 23 \
-                       -c:a aac "$filename" &
-                rec_pid=$!
-                ;;
-        esac
+    if ! command -v wf-recorder &>/dev/null; then
+        _notify "wf-recorder not found" "critical"
+        return 1
     fi
+    case "$mode" in
+        selection)
+            local geom
+            geom=$(slurp 2>/dev/null) || return 0
+            wf-recorder -g "$geom" -f "$filename" --audio &
+            rec_pid=$!
+            ;;
+        window)
+            local geom
+            geom=$(_get_window_geom)
+            if [ -n "$geom" ]; then
+                wf-recorder -g "$geom" -f "$filename" --audio &
+            else
+                wf-recorder -f "$filename" --audio &
+            fi
+            rec_pid=$!
+            ;;
+        screen)
+            wf-recorder -f "$filename" --audio &
+            rec_pid=$!
+            ;;
+    esac
 
     if [ -n "${rec_pid:-}" ]; then
         echo "$rec_pid" > "$PIDFILE"

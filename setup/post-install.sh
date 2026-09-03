@@ -26,7 +26,7 @@ R='\033[0m'
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     STOA LINUX — Post-Install                        ║${R}"
-echo -e "  ${B}║     Hyprland (Wayland) + i3 (Xorg) fallback          ║${R}"
+echo -e "  ${B}║     Hyprland (Wayland) — Wayland only                ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
@@ -49,12 +49,14 @@ echo ""
 # Hyprland (Wayland — primary)
 WAYLAND_PKGS="hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk"
 
-# i3 (Xorg — fallback)
-XORG_PKGS="i3-wm i3status xorg-server xorg-xinit xorg-xrandr picom xclip xdotool polkit-gnome"
-
-# Launcher, notifications (libnotify ships notify-send; noctalia is the
+# Notifications (libnotify ships notify-send; noctalia is the
 # notification daemon on the Hyprland/Wayland path).
-UI_PKGS="rofi libnotify"
+UI_PKGS="libnotify"
+
+# Standalone GUI apps that replace what used to be custom rofi menus in
+# stoa-settings/stoa-store (display layout, audio device/mixer, network
+# profiles/VPN, bluetooth pairing, disk management, GTK theming).
+SETTINGS_APP_PKGS="wdisplays pwvucontrol nm-connection-editor blueman gnome-disk-utility"
 
 # Browser + Notes (AUR)
 BROWSER_PKGS="brave-bin"
@@ -73,7 +75,7 @@ EMAIL_PKGS="betterbird-bin"
 VPN_PKGS="protonvpn-cli"
 
 # Terminal, editor, wallpapers
-APP_PKGS="kitty neovim feh imagemagick"
+APP_PKGS="kitty neovim imagemagick"
 
 # Stoic apps (minimalist)
 STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar-archive-plugin thunar-media-tags-plugin thunar-shares-plugin thunar-vcs-plugin tumbler ffmpegthumbnailer gvfs gvfs-mtp catfish qalculate-gtk calibre"
@@ -81,8 +83,8 @@ STOA_APPS="zathura zathura-pdf-mupdf mpv imv lf btop thunar thunar-volman thunar
 # Gaming — "Even a wise man needs rest." — Seneca
 GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 
-# Screenshot + Recording — Wayland + Xorg
-SCREENSHOT_PKGS="grim slurp maim wf-recorder slop"
+# Screenshot + Recording — Wayland
+SCREENSHOT_PKGS="grim slurp wf-recorder"
 
 # Stoatools (OCR, paste, resize, rename, locksmith, archive)
 STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words yad"
@@ -157,11 +159,11 @@ DEV_PKGS="github-cli gnupg"
 # as a fallback (and is already pulled in by `base`, but listed here for intent).
 SHELL_PKGS="zsh bash git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $XORG_PKGS $UI_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS $SHELL_PKGS_QS"
+ALL_PKGS="$WAYLAND_PKGS $UI_PKGS $SETTINGS_APP_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS $SHELL_PKGS_QS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
-echo -e "  ${S}Xorg:       ${XORG_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
+echo -e "  ${S}Settings:   ${SETTINGS_APP_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
 echo -e "  ${S}IDE:        ${IDE_PKGS} (AUR)${R}"
@@ -239,16 +241,10 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${S}    To login: protonvpn-cli login <username>${R}"
         echo -e "  ${S}    Or use: Super+I → VPN${R}"
     fi
+    _install_aur bauh                   "Bauh (package manager GUI)" bauh
+    _install_aur nwg-look               "nwg-look (GTK theme editor)" nwg-look
 
     # ── AUR packages with custom already-installed checks ──
-
-    # i3lock-color needs the -color variant specifically
-    if ! command -v i3lock &>/dev/null || ! i3lock --version 2>&1 | grep -q "color"; then
-        _install_aur i3lock-color "i3lock-color"
-    else
-        echo ""
-        echo -e "  ${S}[~] i3lock-color already installed.${R}"
-    fi
 
     # EB Garamond — font, no binary to probe
     if ! fc-list | grep -qi "EB Garamond" 2>/dev/null; then
@@ -394,15 +390,6 @@ case "$SHELL_CHOICE" in
         ;;
 esac
 
-# ── .xinitrc (Xorg fallback) ──
-echo ""
-if [ ! -f "$HOME/.xinitrc" ]; then
-    echo "exec i3" > "$HOME/.xinitrc"
-    echo -e "  ${O}[✓] .xinitrc created (exec i3 — Xorg fallback).${R}"
-else
-    echo -e "  ${S}[~] .xinitrc already exists.${R}"
-fi
-
 # ── Stoa Greeter (autologin → Hyprland → hyprlock) ──
 echo ""
 echo -e "  ${F}Stoa Greeter — boot straight into hyprlock as the login screen?${R}"
@@ -423,7 +410,6 @@ echo -e "  ${B}╚════════════════════�
 echo ""
 echo -e "  ${F}To start:${R}"
 echo -e "  ${B}  Hyprland (Wayland):   Hyprland${R}"
-echo -e "  ${B}  i3 (Xorg fallback):   startx${R}"
 echo ""
 echo -e "  ${F}Stoa commands:${R}"
 echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"

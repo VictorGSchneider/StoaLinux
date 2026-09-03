@@ -1,7 +1,7 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  STOA LINUX — Clipboard Manager                              ║
-# ║  wl-clipboard + cliphist + rofi with pinned favorites        ║
+# ║  wl-clipboard + cliphist + yad with pinned favorites         ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Usage:
@@ -11,29 +11,21 @@
 
 PINS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/stoa"
 PINS_FILE="${PINS_DIR}/clipboard-pins"
-ROFI_ARGS=(-dmenu -config ~/.config/rofi/config.rasi)
 
 mkdir -p "$PINS_DIR"
 touch "$PINS_FILE"
 
-# Detect session type
-_is_wayland() { [ -n "${WAYLAND_DISPLAY:-}" ]; }
-
 _copy() {
-    if _is_wayland; then
-        wl-copy
-    else
-        xclip -selection clipboard
-    fi
+    wl-copy
+}
+
+_yad_pick() {
+    local prompt="$1"
+    yad --list --title="$prompt" --column="Option" --no-headers \
+        --width=500 --height=480 --separator=''
 }
 
 _show() {
-    # cliphist is Wayland-only
-    if ! _is_wayland; then
-        notify-send -t 3000 "Clipboard" "Clipboard history requires Wayland (cliphist)"
-        return 1
-    fi
-
     # Build list: pinned on top, then normal history
     local pinned=""
     local history
@@ -47,7 +39,7 @@ _show() {
     history=$(cliphist list)
 
     local choice
-    choice=$(printf '%s%s' "$pinned" "$history" | rofi "${ROFI_ARGS[@]}" -p "📋 Clipboard")
+    choice=$(printf '%s%s' "$pinned" "$history" | _yad_pick "📋 Clipboard")
 
     [ -z "$choice" ] && exit 0
 
@@ -72,7 +64,7 @@ _pin() {
     fi
 
     local choice
-    choice=$(printf '%s%s' "$pinned_display" "$history" | rofi "${ROFI_ARGS[@]}" -p "📌 Pin/Unpin")
+    choice=$(printf '%s%s' "$pinned_display" "$history" | _yad_pick "📌 Pin/Unpin")
 
     [ -z "$choice" ] && exit 0
 

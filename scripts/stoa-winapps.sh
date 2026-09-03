@@ -4,10 +4,9 @@
 # ║  "We suffer more in imagination than in reality." — Seneca  ║
 # ║                                                              ║
 # ║  Run Windows applications seamlessly on Linux via            ║
-# ║  KVM/QEMU + FreeRDP. Separate rofi menu.                    ║
+# ║  KVM/QEMU + FreeRDP. Separate yad menu.                     ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-ROFI=(rofi -dmenu -config ~/.config/rofi/config.rasi)
 WINAPPS_DIR="${HOME}/.config/winapps"
 WINAPPS_CONF="${WINAPPS_DIR}/winapps.conf"
 WINAPPS_APPS_DIR="${WINAPPS_DIR}/apps"
@@ -17,22 +16,27 @@ VM_NAME="StoaWindows"
 
 _notify() { notify-send -t 2500 "Stoa WinApps" "$1" 2>/dev/null; }
 
-_rofi_select() {
+_yad_select() {
     local prompt="$1"
     shift
-    printf '%s\n' "$@" | "${ROFI[@]}" -p "$prompt"
+    printf '%s\n' "$@" \
+        | yad --list --title="$prompt" --column="Option" --no-headers \
+              --width=460 --height=420 --separator=''
 }
 
-_rofi_input() {
+_yad_input() {
     local prompt="$1"
-    echo "" | "${ROFI[@]}" -p "$prompt"
+    local hide="${2:-}"
+    if [ "$hide" = "hide" ]; then
+        yad --entry --title="$prompt" --width=380 --hide-text
+    else
+        yad --entry --title="$prompt" --width=380
+    fi
 }
 
-_rofi_confirm() {
+_yad_confirm() {
     local msg="$1"
-    local choice
-    choice=$(_rofi_select "$msg" "  Yes" "  No")
-    [[ "$choice" == *"Yes"* ]]
+    yad --question --title="Stoa WinApps" --text="$msg"
 }
 
 _check_deps() {
@@ -87,7 +91,7 @@ _vm_panel() {
         _vm_running && status="Running"
 
         local choice
-        choice=$(_rofi_select "  VM (${status})" \
+        choice=$(_yad_select "  VM (${status})" \
             "  Start VM" \
             "  Stop VM" \
             "  Restart VM" \
@@ -118,7 +122,7 @@ _vm_panel() {
                 ;;
             *"Stop VM"*)
                 if _vm_running; then
-                    if _rofi_confirm "Shutdown ${VM_NAME}?"; then
+                    if _yad_confirm "Shutdown ${VM_NAME}?"; then
                         virsh shutdown "$VM_NAME" 2>/dev/null
                         _notify "Shutting down ${VM_NAME}..."
                     fi
@@ -156,7 +160,7 @@ _vm_panel() {
                     state=$(echo "$info" | awk '/^State:/ {$1=""; print $0}' | xargs)
                     mem=$(echo "$info" | awk '/^Max memory:/ {printf "%.0f GB", $3/1048576}')
                     cpu=$(echo "$info" | awk '/^CPU\(s\):/ {print $2}')
-                    _rofi_select "  VM Info" \
+                    _yad_select "  VM Info" \
                         "  State: ${state}" \
                         "  Memory: ${mem}" \
                         "  CPUs: ${cpu}" \
@@ -187,7 +191,7 @@ _rdp_connect() {
     local app="$1"
 
     if ! _vm_running; then
-        if _rofi_confirm "VM is off. Start it?"; then
+        if _yad_confirm "VM is off. Start it?"; then
             virsh start "$VM_NAME" 2>/dev/null
             _notify "Starting VM... please wait."
             sleep 10
@@ -272,7 +276,7 @@ _launch_app() {
     entries+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Windows Apps" "${entries[@]}")
+    choice=$(_yad_select "  Windows Apps" "${entries[@]}")
 
     case "$choice" in
         *"Full Desktop"*)
@@ -294,11 +298,11 @@ _launch_app() {
 
 _add_custom_app() {
     local name
-    name=$(_rofi_input "  App name")
+    name=$(_yad_input "  App name")
     [ -z "$name" ] && return
 
     local path
-    path=$(_rofi_input "  EXE path (e.g. C:\\Program Files\\App\\app.exe)")
+    path=$(_yad_input "  EXE path (e.g. C:\\Program Files\\App\\app.exe)")
     [ -z "$path" ] && return
 
     mkdir -p "$WINAPPS_APPS_DIR"
@@ -330,7 +334,7 @@ _remove_custom_app() {
     entries+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Remove app" "${entries[@]}")
+    choice=$(_yad_select "  Remove app" "${entries[@]}")
 
     case "$choice" in
         *"Back"*|"") return ;;
@@ -340,7 +344,7 @@ _remove_custom_app() {
                 if [ "$entry" = "$choice" ]; then
                     local app_name
                     app_name=$(grep '^NAME=' "${files[$i]}" 2>/dev/null | cut -d= -f2- | tr -d '"')
-                    if _rofi_confirm "Remove ${app_name}?"; then
+                    if _yad_confirm "Remove ${app_name}?"; then
                         rm -f "${files[$i]}"
                         _notify "Removed: ${app_name}"
                     fi
@@ -359,7 +363,7 @@ _remove_custom_app() {
 _config_panel() {
     while true; do
         local choice
-        choice=$(_rofi_select "  WinApps Config" \
+        choice=$(_yad_select "  WinApps Config" \
             "  RDP User: ${RDP_USER}" \
             "  RDP Password: ••••" \
             "  RDP IP: ${RDP_IP}" \
@@ -373,31 +377,31 @@ _config_panel() {
         case "$choice" in
             *"RDP User"*)
                 local val
-                val=$(_rofi_input "  Username")
+                val=$(_yad_input "  Username")
                 [ -n "$val" ] && sed -i "s|^RDP_USER=.*|RDP_USER=\"${val}\"|" "$WINAPPS_CONF"
                 RDP_USER="$val"
                 ;;
             *"RDP Password"*)
                 local val
-                val=$(_rofi_input "  Password")
+                val=$(_yad_input "  Password" hide)
                 [ -n "$val" ] && sed -i "s|^RDP_PASS=.*|RDP_PASS=\"${val}\"|" "$WINAPPS_CONF"
                 RDP_PASS="$val"
                 ;;
             *"RDP IP"*)
                 local val
-                val=$(_rofi_input "  IP Address")
+                val=$(_yad_input "  IP Address")
                 [ -n "$val" ] && sed -i "s|^RDP_IP=.*|RDP_IP=\"${val}\"|" "$WINAPPS_CONF"
                 RDP_IP="$val"
                 ;;
             *"RDP Port"*)
                 local val
-                val=$(_rofi_input "  Port")
+                val=$(_yad_input "  Port")
                 [ -n "$val" ] && sed -i "s|^RDP_PORT=.*|RDP_PORT=\"${val}\"|" "$WINAPPS_CONF"
                 RDP_PORT="$val"
                 ;;
             *"VM Name"*)
                 local val
-                val=$(_rofi_input "  VM Name")
+                val=$(_yad_input "  VM Name")
                 [ -n "$val" ] && sed -i "s|^VM_NAME=.*|VM_NAME=\"${val}\"|" "$WINAPPS_CONF"
                 VM_NAME="$val"
                 ;;
@@ -446,7 +450,7 @@ _services_panel() {
         virsh net-info default 2>/dev/null | grep -q "Active:.*yes" && default_net="active"
 
         local choice
-        choice=$(_rofi_select "  Services" \
+        choice=$(_yad_select "  Services" \
             "  libvirtd: ${libvirtd_status}" \
             "  Default network: ${default_net}" \
             "  Enable libvirtd on boot" \
@@ -500,7 +504,7 @@ main() {
         _vm_running && vm_status="Running"
 
         local choice
-        choice=$(_rofi_select "  WinApps [VM: ${vm_status}]" \
+        choice=$(_yad_select "  WinApps [VM: ${vm_status}]" \
             "  Launch Windows App" \
             "  Full Desktop (RDP)" \
             "  Add Custom App" \

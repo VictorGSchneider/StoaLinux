@@ -1,17 +1,43 @@
 #!/bin/bash
-# Stoa Store — core helpers, rofi wrappers, theme reapplication.
+# Stoa Store — core helpers, yad wrappers, theme reapplication.
 
-ROFI=(rofi -dmenu -i -config "${HOME}/.config/rofi/config.rasi")
 APPIMAGE_DIR="${HOME}/Applications"
 
-_notify()    { notify-send -t 2500 "Stoa Store" "$1" 2>/dev/null; }
-_rofi()      { "${ROFI[@]}" -p "$1"; }
-_rofi_list() { local p="$1"; shift; printf '%s\n' "$@" | "${ROFI[@]}" -p "$p"; }
-_rofi_input(){ echo "" | "${ROFI[@]}" -p "$1"; }
+_notify() { notify-send -t 2500 "Stoa Store" "$1" 2>/dev/null; }
 
-_confirm() {
-    local r; r=$(_rofi_list "$1" "  Yes" "  No")
-    [[ "$r" == *Yes* ]]
+# Selection list built from function arguments (each arg = one row).
+_yad_select() {
+    local prompt="$1"
+    shift
+    printf '%s\n' "$@" \
+        | yad --list --title="$prompt" --column="Option" --no-headers \
+              --width=520 --height=440 --separator=''
+}
+
+# Selection list built from stdin (one row per line) — replaces the old
+# `command | _yad_list "prompt"` idiom used throughout the store modules.
+_yad_list() {
+    local prompt="$1"
+    yad --list --title="$prompt" --column="Option" --no-headers \
+        --width=560 --height=460 --separator=''
+}
+
+_yad_input() {
+    local prompt="$1"
+    yad --entry --title="$prompt" --width=380
+}
+
+_yad_confirm() {
+    local msg="$1"
+    yad --question --title="Stoa Store" --text="$msg"
+}
+
+# Read-only scrollable text viewer for long, non-actionable output
+# (package info dumps, changelogs, status reports).
+_yad_info() {
+    local prompt="$1"
+    yad --text-info --title="$prompt" --fontname="monospace 11" \
+        --width=560 --height=420 --button="Close:0"
 }
 
 _helper() {
@@ -21,6 +47,34 @@ _helper() {
 }
 _has_aur()       { [[ "$(_helper)" != "pacman" ]]; }
 _is_installed()  { pacman -Qi "$1" &>/dev/null; }
+
+# Quick read-only pacman info for a single package. Used by the modules
+# that still need to show a package's status inline (e.g. the developer
+# base-packages checklist) without pulling back in a full search/install
+# UI — that job now belongs to bauh (see pacman.sh).
+_pkg_quick_info() {
+    local pkg="$1"
+    if _is_installed "$pkg"; then
+        pacman -Qi "$pkg" 2>/dev/null | _yad_info "  $pkg"
+    else
+        { pacman -Si "$pkg" 2>/dev/null
+          echo
+          echo "Not installed — use the Package Manager (bauh) to install it."
+        } | _yad_info "  $pkg"
+    fi
+}
+
+# Pacman + AUR + Flatpak + Snap + AppImage are all managed through bauh, a
+# unified package-manager GUI (added as a dependency in setup/*-install.sh).
+# Search, install, removal and updates for those sources go through it
+# instead of the custom rofi menus this store used to carry.
+_open_bauh() {
+    if ! command -v bauh &>/dev/null; then
+        _notify "bauh not found — install it (AUR: bauh) to manage packages"
+        return 1
+    fi
+    bauh & disown
+}
 
 _run_in_term() {
     local term="${TERMINAL:-}"
@@ -51,6 +105,6 @@ _apply_stoa_theme() {
         gsettings set org.gnome.desktop.interface font-name    "${f:-EB Garamond 11}"  2>/dev/null
         gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"           2>/dev/null
     fi
-    [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null && \
+    command -v hyprctl &>/dev/null && \
         hyprctl setcursor "${c:-Colloid-cursors}" 24 &>/dev/null
 }

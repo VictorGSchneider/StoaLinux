@@ -217,7 +217,6 @@ cmd_setup() {
     _setup_pam "sudo"
     _setup_pam "login"
     _setup_pam "hyprlock"
-    _setup_pam "i3lock"
     _setup_pam "system-auth"
     echo ""
 

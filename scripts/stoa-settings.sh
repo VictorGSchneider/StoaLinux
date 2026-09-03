@@ -3,11 +3,10 @@
 # ║  STOA LINUX — Settings                                     ║
 # ║  "Order is the first law of heaven." — Marcus Aurelius       ║
 # ║                                                              ║
-# ║  All-in-one settings panel via rofi.                         ║
-# ║  No external settings app needed.                            ║
+# ║  All-in-one settings panel — native dialogs (yad) plus        ║
+# ║  standalone GUI apps for categories that already have one.   ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-ROFI=(rofi -dmenu -config ~/.config/rofi/config.rasi)
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 WALLDIR="${HOME}/.config/stoa/wallpapers"
@@ -47,22 +46,37 @@ _hyprctl_get() {
     esac
 }
 
-_rofi_select() {
+_yad_select() {
     local prompt="$1"
     shift
-    printf '%s\n' "$@" | "${ROFI[@]}" -p "$prompt"
+    printf '%s\n' "$@" \
+        | yad --list --title="$prompt" --column="Option" --no-headers \
+              --width=480 --height=440 --separator=''
 }
 
-_rofi_input() {
+_yad_input() {
     local prompt="$1"
-    echo "" | "${ROFI[@]}" -p "$prompt"
+    yad --entry --title="$prompt" --width=380
 }
 
-_rofi_confirm() {
+_yad_confirm() {
     local msg="$1"
-    local choice
-    choice=$(_rofi_select "$msg" "  Yes" "  No")
-    [[ "$choice" == *"Yes"* ]]
+    yad --question --title="Stoa Settings" --text="$msg"
+}
+
+_yad_info() {
+    local prompt="$1"
+    shift
+    printf '%s\n' "$@" \
+        | yad --text-info --title="$prompt" --fontname="monospace 11" \
+              --width=520 --height=440 --button="Close:0"
+}
+
+# Drop-in for the old rofi `"${ROFI[@]}" -p "<title>"` pattern: reads a
+# list from stdin (one option per line) and returns the picked line.
+_yad_pipe() {
+    yad --list --title="$1" --column="Option" --no-headers \
+        --width=480 --height=440 --separator=''
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -77,7 +91,7 @@ _display_brightness() {
     pct=$((current * 100 / max))
 
     local choice
-    choice=$(_rofi_select "  Brightness (${pct}%)" \
+    choice=$(_yad_select "  Brightness (${pct}%)" \
         "  100%" "  75%" "  50%" "  25%" "  10%" \
         "  + Increase 5%" "  − Decrease 5%")
     [ -z "$choice" ] && return
@@ -95,252 +109,30 @@ _display_brightness() {
     _notify "Brightness: ${pct}%"
 }
 
-_display_resolution() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        # Hyprland: list available modes
-        local monitor
-        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
-        [ -z "$monitor" ] && { _notify "No monitor detected"; return; }
-
-        local modes
-        modes=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].availableModes[]' 2>/dev/null)
-        [ -z "$modes" ] && { _notify "Could not read modes"; return; }
-
-        local current
-        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0] | "\(.width)x\(.height)@\(.refreshRate)Hz"' 2>/dev/null)
-
-        local choice
-        choice=$(echo "$modes" | "${ROFI[@]}" -p "  Resolution (${current})")
-        [ -z "$choice" ] && return
-
-        local res rate
-        res=$(echo "$choice" | cut -d@ -f1)
-        rate=$(echo "$choice" | cut -d@ -f2 | tr -d 'Hz')
-        hyprctl keyword monitor "$monitor, ${res}@${rate}, auto, 1" &>/dev/null
-        _notify "Resolution: ${choice}"
-    else
-        # Xorg: xrandr
-        local output
-        output=$(xrandr 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
-        [ -z "$output" ] && { _notify "No display detected"; return; }
-
-        local modes
-        modes=$(xrandr 2>/dev/null | grep -A 20 "^${output}" | grep -oP '^\s+\K\d+x\d+' | sort -u)
-
-        local choice
-        choice=$(echo "$modes" | "${ROFI[@]}" -p "  Resolution")
-        [ -z "$choice" ] && return
-
-        xrandr --output "$output" --mode "$choice"
-        _notify "Resolution: ${choice}"
+# Resolution, scale, rotation and multi-monitor layout are all handled by
+# wdisplays — a standalone GTK GUI for wlr-output-management that covers
+# everything the old rofi menu reimplemented over hyprctl/xrandr, with a
+# visual drag-and-drop layout editor xrandr-based text menus never had.
+_display_layout() {
+    if ! command -v wdisplays &>/dev/null; then
+        _notify "wdisplays not installed — cannot configure display layout"
+        return
     fi
-}
-
-_display_scale() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        local monitor
-        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
-        local current
-        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].scale' 2>/dev/null)
-
-        local choice
-        choice=$(_rofi_select "  Scale (${current}x)" \
-            "1.0" "1.25" "1.5" "1.75" "2.0")
-        [ -z "$choice" ] && return
-
-        hyprctl keyword monitor "$monitor, preferred, auto, $choice" &>/dev/null
-        _notify "Scale: ${choice}x"
-    else
-        _notify "Scaling only available on Wayland (Hyprland)"
-    fi
-}
-
-_display_rotation() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        local monitor
-        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
-        local current
-        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].transform' 2>/dev/null)
-
-        local label="Normal"
-        case "$current" in
-            1) label="90°" ;; 2) label="180°" ;; 3) label="270°" ;;
-        esac
-
-        local choice
-        choice=$(_rofi_select "  Rotation ($label)" \
-            "  Normal (0°)" \
-            "  90° (portrait)" \
-            "  180° (inverted)" \
-            "  270° (portrait inverted)" \
-            "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        local transform
-        case "$choice" in
-            *Normal*)  transform=0 ;;
-            *90*)      transform=1 ;;
-            *180*)     transform=2 ;;
-            *270*)     transform=3 ;;
-        esac
-
-        hyprctl keyword monitor "$monitor, preferred, auto, 1, transform, $transform" &>/dev/null
-        _notify "Rotation: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
-    else
-        local output
-        output=$(xrandr 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
-        [ -z "$output" ] && { _notify "No display detected"; return; }
-
-        local choice
-        choice=$(_rofi_select "  Rotation" \
-            "  Normal" "  Left (90°)" "  Inverted (180°)" "  Right (270°)" "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        case "$choice" in
-            *Normal*)   xrandr --output "$output" --rotate normal ;;
-            *Left*)     xrandr --output "$output" --rotate left ;;
-            *Inverted*) xrandr --output "$output" --rotate inverted ;;
-            *Right*)    xrandr --output "$output" --rotate right ;;
-        esac
-        _notify "Rotation applied"
-    fi
-}
-
-_display_multi_monitor() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        local monitors
-        monitors=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name' 2>/dev/null)
-        local count
-        count=$(echo "$monitors" | wc -l)
-
-        if [ "$count" -lt 2 ]; then
-            _notify "Only one monitor detected"
-            return
-        fi
-
-        local primary secondary
-        primary=$(echo "$monitors" | head -1)
-        secondary=$(echo "$monitors" | tail -1)
-
-        local choice
-        choice=$(_rofi_select "  Multi-Monitor ($primary + $secondary)" \
-            "  Extend right" \
-            "  Extend left" \
-            "  Extend above" \
-            "  Extend below" \
-            "  Mirror (same on both)" \
-            "  Primary only ($primary)" \
-            "  Secondary only ($secondary)" \
-            "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        local pri_res
-        pri_res=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0] | "\(.width)x\(.height)"' 2>/dev/null)
-        local pri_w pri_h
-        pri_w=$(echo "$pri_res" | cut -dx -f1)
-        pri_h=$(echo "$pri_res" | cut -dx -f2)
-
-        case "$choice" in
-            *"Extend right"*)
-                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$secondary, preferred, ${pri_w}x0, 1" &>/dev/null
-                _notify "Extended right"
-                ;;
-            *"Extend left"*)
-                local sec_w
-                sec_w=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].width' 2>/dev/null)
-                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$primary, preferred, ${sec_w}x0, 1" &>/dev/null
-                _notify "Extended left"
-                ;;
-            *"Extend above"*)
-                local sec_h
-                sec_h=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].height' 2>/dev/null)
-                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$primary, preferred, 0x${sec_h}, 1" &>/dev/null
-                _notify "Extended above"
-                ;;
-            *"Extend below"*)
-                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$secondary, preferred, 0x${pri_h}, 1" &>/dev/null
-                _notify "Extended below"
-                ;;
-            *Mirror*)
-                hyprctl keyword monitor "$secondary, preferred, auto, 1, mirror, $primary" &>/dev/null
-                _notify "Mirroring: $secondary → $primary"
-                ;;
-            *"Primary only"*)
-                hyprctl keyword monitor "$secondary, disable" &>/dev/null
-                _notify "Using $primary only"
-                ;;
-            *"Secondary only"*)
-                hyprctl keyword monitor "$primary, disable" &>/dev/null
-                _notify "Using $secondary only"
-                ;;
-        esac
-    else
-        local outputs
-        outputs=$(xrandr 2>/dev/null | grep " connected" | awk '{print $1}')
-        local count
-        count=$(echo "$outputs" | wc -l)
-
-        if [ "$count" -lt 2 ]; then
-            _notify "Only one monitor detected"
-            return
-        fi
-
-        local primary secondary
-        primary=$(echo "$outputs" | head -1)
-        secondary=$(echo "$outputs" | tail -1)
-
-        local choice
-        choice=$(_rofi_select "  Multi-Monitor" \
-            "  Extend right" \
-            "  Mirror" \
-            "  Primary only ($primary)" \
-            "  Secondary only ($secondary)" \
-            "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        case "$choice" in
-            *"Extend right"*)
-                xrandr --output "$secondary" --auto --right-of "$primary" 2>/dev/null
-                _notify "Extended right"
-                ;;
-            *Mirror*)
-                xrandr --output "$secondary" --auto --same-as "$primary" 2>/dev/null
-                _notify "Mirroring"
-                ;;
-            *"Primary only"*)
-                xrandr --output "$secondary" --off 2>/dev/null
-                _notify "Using $primary only"
-                ;;
-            *"Secondary only"*)
-                xrandr --output "$primary" --off --output "$secondary" --auto 2>/dev/null
-                _notify "Using $secondary only"
-                ;;
-        esac
-    fi
+    wdisplays & disown
 }
 
 menu_display() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Display" \
+        choice=$(_yad_select "  Display" \
             "  Brightness" \
-            "  Resolution" \
-            "  Scale" \
-            "  Rotation" \
-            "  Multi-Monitor" \
+            "  Layout (resolution, rotation, position, scale)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *Brightness*)      _display_brightness ;;
-            *Resolution*)      _display_resolution ;;
-            *Scale*)           _display_scale ;;
-            *Rotation*)        _display_rotation ;;
-            *"Multi-Monitor"*) _display_multi_monitor ;;
+            *Brightness*) _display_brightness ;;
+            *Layout*)     _display_layout ;;
         esac
     done
 }
@@ -359,7 +151,7 @@ _audio_volume() {
     [ "$muted" -eq 1 ] && status="Muted"
 
     local choice
-    choice=$(_rofi_select "  Volume (${status})" \
+    choice=$(_yad_select "  Volume (${status})" \
         "  100%" "  75%" "  50%" "  25%" \
         "  + Increase 5%" "  − Decrease 5%" \
         "  Toggle mute")
@@ -385,7 +177,7 @@ _audio_output() {
     [ -z "$sinks" ] && { _notify "No audio outputs found"; return; }
 
     local choice
-    choice=$(echo "$sinks" | "${ROFI[@]}" -p "  Output device")
+    choice=$(echo "$sinks" | _yad_pipe "  Output device")
     [ -z "$choice" ] && return
 
     local sink_id
@@ -399,7 +191,7 @@ _audio_input() {
     [ -z "$sources" ] && { _notify "No audio inputs found"; return; }
 
     local choice
-    choice=$(echo "$sources" | "${ROFI[@]}" -p "  Input device")
+    choice=$(echo "$sources" | _yad_pipe "  Input device")
     [ -z "$choice" ] && return
 
     local source_id
@@ -410,10 +202,11 @@ _audio_input() {
 menu_audio() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Audio" \
+        choice=$(_yad_select "  Audio" \
             "  Volume" \
             "  Output device" \
             "  Input device" \
+            "  Mixer (pwvucontrol)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -421,6 +214,13 @@ menu_audio() {
             *Volume*)  _audio_volume ;;
             *Output*)  _audio_output ;;
             *Input*)   _audio_input ;;
+            *Mixer*)
+                if command -v pwvucontrol &>/dev/null; then
+                    pwvucontrol & disown
+                else
+                    _notify "pwvucontrol not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -450,7 +250,7 @@ _wifi_connect() {
     [ -z "$networks" ] && { _notify "No Wi-Fi networks found"; return; }
 
     local choice
-    choice=$(echo "$networks" | "${ROFI[@]}" -p "  Wi-Fi")
+    choice=$(echo "$networks" | _yad_pipe "  Wi-Fi")
     [ -z "$choice" ] && return
 
     local ssid
@@ -464,7 +264,7 @@ _wifi_connect() {
 
     # Need password
     local pass
-    pass=$(_rofi_input "  Password for $ssid")
+    pass=$(_yad_input "  Password for $ssid")
     [ -z "$pass" ] && return
 
     nmcli device wifi connect "$ssid" password "$pass" 2>/dev/null \
@@ -487,10 +287,10 @@ _wifi_forget() {
     [ -z "$saved" ] && { _notify "No saved networks"; return; }
 
     local choice
-    choice=$(echo "$saved" | "${ROFI[@]}" -p "  Forget network")
+    choice=$(echo "$saved" | _yad_pipe "  Forget network")
     [ -z "$choice" ] && return
 
-    _rofi_confirm "Forget $choice?" && nmcli con delete "$choice" 2>/dev/null && _notify "Forgot $choice"
+    _yad_confirm "Forget $choice?" && nmcli con delete "$choice" 2>/dev/null && _notify "Forgot $choice"
 }
 
 _wifi_toggle() {
@@ -629,7 +429,7 @@ _wifi_saved() {
     fi
 
     local choice
-    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Saved Networks")
+    choice=$(printf '%s\n' "${lines[@]}" | _yad_pipe "  Saved Networks")
     [ -z "$choice" ] && return
 
     # Extract network name
@@ -637,7 +437,7 @@ _wifi_saved() {
     net_name=$(echo "$choice" | sed 's/^  //;s/^  //;s/  (.*//')
 
     local action
-    action=$(_rofi_select "  $net_name" \
+    action=$(_yad_select "  $net_name" \
         "  Connect" \
         "  Forget" \
         "  Back")
@@ -650,7 +450,7 @@ _wifi_saved() {
                 || _notify "Failed to connect to $net_name"
             ;;
         *Forget*)
-            _rofi_confirm "Forget $net_name?" && \
+            _yad_confirm "Forget $net_name?" && \
                 nmcli con delete "$net_name" 2>/dev/null && \
                 _notify "Forgot $net_name"
             ;;
@@ -665,23 +465,31 @@ menu_network() {
         wifi_state=$(nmcli radio wifi 2>/dev/null)
 
         local choice
-        choice=$(_rofi_select "  Network ($status)" \
+        choice=$(_yad_select "  Network ($status)" \
             "  Network info" \
             "  Connect to Wi-Fi" \
             "  Saved networks" \
             "  Disconnect" \
             "  Forget network" \
             "  Toggle Wi-Fi ($wifi_state)" \
+            "  Advanced (nm-connection-editor)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *info*)       _net_info | "${ROFI[@]}" -p "  Network Info" ;;
+            *info*)       _net_info | _yad_pipe "  Network Info" ;;
             *Connect*)    _wifi_connect ;;
             *Saved*)      _wifi_saved ;;
             *Disconnect*) _wifi_disconnect ;;
             *Forget*)     _wifi_forget ;;
             *Toggle*)     _wifi_toggle ;;
+            *Advanced*)
+                if command -v nm-connection-editor &>/dev/null; then
+                    nm-connection-editor & disown
+                else
+                    _notify "nm-connection-editor not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -710,7 +518,7 @@ _bt_scan_connect() {
     [ -z "$devices" ] && { _notify "No devices found"; return; }
 
     local choice
-    choice=$(echo "$devices" | "${ROFI[@]}" -p "  Bluetooth")
+    choice=$(echo "$devices" | _yad_pipe "  Bluetooth")
     [ -z "$choice" ] && return
 
     local mac
@@ -731,7 +539,7 @@ _bt_disconnect() {
     [ -z "$connected" ] && { _notify "No connected devices"; return; }
 
     local choice
-    choice=$(echo "$connected" | "${ROFI[@]}" -p "  Disconnect")
+    choice=$(echo "$connected" | _yad_pipe "  Disconnect")
     [ -z "$choice" ] && return
 
     local mac
@@ -779,7 +587,7 @@ _bt_saved() {
     fi
 
     local choice
-    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Saved Devices")
+    choice=$(printf '%s\n' "${lines[@]}" | _yad_pipe "  Saved Devices")
     [ -z "$choice" ] && return
 
     local dev_name
@@ -794,12 +602,12 @@ _bt_saved() {
 
     local action
     if $is_connected; then
-        action=$(_rofi_select "  $dev_name" \
+        action=$(_yad_select "  $dev_name" \
             "  Disconnect" \
             "  Forget" \
             "  Back")
     else
-        action=$(_rofi_select "  $dev_name" \
+        action=$(_yad_select "  $dev_name" \
             "  Connect" \
             "  Forget" \
             "  Back")
@@ -818,7 +626,7 @@ _bt_saved() {
             _notify "Disconnected from $dev_name"
             ;;
         *Forget*)
-            _rofi_confirm "Forget $dev_name?" && {
+            _yad_confirm "Forget $dev_name?" && {
                 bluetoothctl untrust "$dev_mac" 2>/dev/null
                 bluetoothctl remove "$dev_mac" 2>/dev/null
                 _notify "Forgot $dev_name"
@@ -838,11 +646,12 @@ menu_bluetooth() {
         status=$(_bt_status)
 
         local choice
-        choice=$(_rofi_select "  Bluetooth ($status)" \
+        choice=$(_yad_select "  Bluetooth ($status)" \
             "  Scan and connect" \
             "  Saved devices" \
             "  Disconnect device" \
             "  Toggle Bluetooth ($status)" \
+            "  Advanced (blueman-manager)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -851,6 +660,13 @@ menu_bluetooth() {
             *Saved*)      _bt_saved ;;
             *Disconnect*) _bt_disconnect ;;
             *Toggle*)     _bt_toggle ;;
+            *Advanced*)
+                if command -v blueman-manager &>/dev/null; then
+                    blueman-manager & disown
+                else
+                    _notify "blueman not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -876,7 +692,7 @@ menu_wallpaper() {
         items+=("  Back")
 
         local choice
-        choice=$(_rofi_select "  Wallpaper" "${items[@]}")
+        choice=$(_yad_select "  Wallpaper" "${items[@]}")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
@@ -887,7 +703,7 @@ menu_wallpaper() {
                 ;;
             *custom*)
                 local path
-                path=$(_rofi_input "  Path to wallpaper")
+                path=$(_yad_input "  Path to wallpaper")
                 [ -z "$path" ] && continue
                 [ ! -f "$path" ] && { _notify "File not found: $path"; continue; }
                 _apply_wallpaper "$path"
@@ -903,16 +719,12 @@ menu_wallpaper() {
 
 _apply_wallpaper() {
     local path="$1"
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        # Noctalia owns the wallpaper layer on Wayland. Starting swaybg here
-        # would stack a second surface over it. `wallpaper-set` with a single
-        # token applies to every output (parseWallpaperSetTokens), and it
-        # persists, so the choice survives a restart.
-        noctalia msg wallpaper-set "$path" >/dev/null 2>&1
-    else
-        # X11 / i3 session — no Noctalia there.
-        feh --bg-fill "$path" 2>/dev/null
-    fi
+    # Noctalia owns the wallpaper layer. Starting a second compositor-level
+    # wallpaper tool here would stack a second surface over it.
+    # `wallpaper-set` with a single token applies to every output
+    # (parseWallpaperSetTokens), and it persists, so the choice survives a
+    # restart.
+    noctalia msg wallpaper-set "$path" >/dev/null 2>&1
     _notify "Wallpaper: $(basename "$path")"
 }
 
@@ -926,7 +738,7 @@ _theme_gtk() {
     [ -z "$themes" ] && { _notify "No GTK themes found"; return; }
 
     local choice
-    choice=$(echo "$themes" | "${ROFI[@]}" -p "  GTK Theme")
+    choice=$(echo "$themes" | _yad_pipe "  GTK Theme")
     [ -z "$choice" ] && return
 
     # Update GTK 3.0
@@ -955,7 +767,7 @@ _theme_icons() {
     [ -z "$icons" ] && { _notify "No icon themes found"; return; }
 
     local choice
-    choice=$(echo "$icons" | "${ROFI[@]}" -p "  Icon Theme")
+    choice=$(echo "$icons" | _yad_pipe "  Icon Theme")
     [ -z "$choice" ] && return
 
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
@@ -985,22 +797,20 @@ _theme_cursor() {
     [ -z "$cursors" ] && { _notify "No cursor themes found"; return; }
 
     local choice
-    choice=$(echo "$cursors" | "${ROFI[@]}" -p "  Cursor Theme")
+    choice=$(echo "$cursors" | _yad_pipe "  Cursor Theme")
     [ -z "$choice" ] && return
 
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
     [ -f "$gtk3" ] && _deref "$gtk3" && sed -i "s/^gtk-cursor-theme-name\s*=.*/gtk-cursor-theme-name = ${choice}/" "$gtk3"
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
-        hyprctl setcursor "$choice" 24 &>/dev/null
-    fi
+    command -v hyprctl &>/dev/null && hyprctl setcursor "$choice" 24 &>/dev/null
 
     _notify "Cursor: $choice"
 }
 
 _theme_font_size() {
     local choice
-    choice=$(_rofi_select "  Font Size" \
+    choice=$(_yad_select "  Font Size" \
         "9" "10" "11" "12" "13" "14" "16")
     [ -z "$choice" ] && return
 
@@ -1124,7 +934,6 @@ _colors_apply() {
 
     # Files to update
     local -a files=(
-        "${HOME}/.config/rofi/config.rasi"
         "${HOME}/.config/kitty/kitty.conf"
         "${HOME}/.config/eww/eww.scss"
         "${HOME}/.config/gtk-3.0/gtk.css"
@@ -1166,16 +975,6 @@ _colors_apply() {
         done
     fi
 
-    # i3: uses #RRGGBB directly
-    local i3conf="${HOME}/.config/i3/config"
-    if [ -f "$i3conf" ]; then
-        for pair in "${pairs[@]}"; do
-            local from="${pair%%|*}" to="${pair##*|}"
-            [ "$from" = "$to" ] && continue
-            sed -i "s/${from}/${to}/gi" "$i3conf"
-        done
-    fi
-
     # colors.sh (central reference)
     local colorssh="${STOA_DIR_RESOLVED}/theme/colors.sh"
     if [ -f "$colorssh" ]; then
@@ -1191,9 +990,7 @@ _colors_apply() {
                  "$accent" "$accent2" "$green" "$red" "$blue" "$grey"
 
     # Reload live components
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
-        hyprctl reload &>/dev/null
-    fi
+    command -v hyprctl &>/dev/null && hyprctl reload &>/dev/null
     pkill -USR1 kitty 2>/dev/null
     disown 2>/dev/null
 }
@@ -1206,7 +1003,7 @@ _theme_color_preset() {
     entries+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  Color Preset" "${entries[@]}")
+    choice=$(_yad_select "  Color Preset" "${entries[@]}")
     [[ -z "$choice" || "$choice" == *"Back"* ]] && return
 
     local selected_name="${choice#*  }"
@@ -1216,7 +1013,7 @@ _theme_color_preset() {
 
     IFS='|' read -r bd bg bl fg fd ac ac2 gr rd bu gy _ <<< "$line"
 
-    if _rofi_confirm "Apply '${selected_name}'?"; then
+    if _yad_confirm "Apply '${selected_name}'?"; then
         _colors_apply "$bd" "$bg" "$bl" "$fg" "$fd" "$ac" "$ac2" "$gr" "$rd" "$bu" "$gy"
         _notify "Palette: ${selected_name}\nRestart apps to see full changes."
     fi
@@ -1227,7 +1024,7 @@ _theme_color_edit() {
 
     while true; do
         local choice
-        choice=$(_rofi_select "  Edit Colors" \
+        choice=$(_yad_select "  Edit Colors" \
             "  Background dark: ${C_BG_DARK}" \
             "  Background: ${C_BG}" \
             "  Background light: ${C_BG_LIGHT}" \
@@ -1245,54 +1042,54 @@ _theme_color_edit() {
 
         case "$choice" in
             *"Apply changes"*)
-                if _rofi_confirm "Apply custom palette?"; then
+                if _yad_confirm "Apply custom palette?"; then
                     _colors_apply "$C_BG_DARK" "$C_BG" "$C_BG_LIGHT" "$C_FG" "$C_FG_DIM" \
                                   "$C_ACCENT" "$C_ACCENT2" "$C_GREEN" "$C_RED" "$C_BLUE" "$C_GREY"
                     _notify "Custom palette applied.\nRestart apps to see full changes."
                 fi
                 ;;
             *"Background dark"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #1a1714)")
+                local val; val=$(_yad_input "  Hex color (e.g. #1a1714)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_DARK="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Background light"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #2d2921)")
+                local val; val=$(_yad_input "  Hex color (e.g. #2d2921)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_LIGHT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Background:"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #211e19)")
+                local val; val=$(_yad_input "  Hex color (e.g. #211e19)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Foreground dim"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #a89f91)")
+                local val; val=$(_yad_input "  Hex color (e.g. #a89f91)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG_DIM="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Foreground:"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #d4cfc4)")
+                local val; val=$(_yad_input "  Hex color (e.g. #d4cfc4)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Accent (bronze)"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #c49a5c)")
+                local val; val=$(_yad_input "  Hex color (e.g. #c49a5c)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Accent 2 (gold)"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #d4a84b)")
+                local val; val=$(_yad_input "  Hex color (e.g. #d4a84b)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT2="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Green (olive)"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #8a9a6c)")
+                local val; val=$(_yad_input "  Hex color (e.g. #8a9a6c)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREEN="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Red (terracotta)"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #b36b5a)")
+                local val; val=$(_yad_input "  Hex color (e.g. #b36b5a)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_RED="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Blue (azure)"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #5a7a8a)")
+                local val; val=$(_yad_input "  Hex color (e.g. #5a7a8a)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BLUE="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
             *"Grey (stone)"*)
-                local val; val=$(_rofi_input "  Hex color (e.g. #6e6a62)")
+                local val; val=$(_yad_input "  Hex color (e.g. #6e6a62)")
                 [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREY="$val" || [ -n "$val" ] && _notify "Invalid hex color"
                 ;;
         esac
@@ -1301,7 +1098,7 @@ _theme_color_edit() {
 
 _theme_color_current() {
     _colors_load
-    _rofi_select "  Current Palette" \
+    _yad_select "  Current Palette" \
         "  bg dark:     ${C_BG_DARK}" \
         "  bg:          ${C_BG}" \
         "  bg light:    ${C_BG_LIGHT}" \
@@ -1319,7 +1116,7 @@ _theme_color_current() {
 menu_colors() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Color Palette" \
+        choice=$(_yad_select "  Color Palette" \
             "  Apply Preset" \
             "  Edit Colors" \
             "  View Current Palette" \
@@ -1332,7 +1129,7 @@ menu_colors() {
             *"Edit Colors"*)        _theme_color_edit ;;
             *"View Current"*)       _theme_color_current ;;
             *"Reset to Stoic"*)
-                if _rofi_confirm "Reset to Stoic palette?"; then
+                if _yad_confirm "Reset to Stoic palette?"; then
                     _colors_apply "#1a1714" "#211e19" "#2d2921" "#d4cfc4" "#a89f91" \
                                   "#c49a5c" "#d4a84b" "#8a9a6c" "#b36b5a" "#5a7a8a" "#6e6a62"
                     _notify "Palette reset to Stoic.\nRestart apps to see full changes."
@@ -1345,12 +1142,13 @@ menu_colors() {
 menu_theme() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Theme" \
+        choice=$(_yad_select "  Theme" \
             "  Color Palette" \
             "  GTK Theme" \
             "  Icon Theme" \
             "  Cursor Theme" \
             "  Font Size" \
+            "  Advanced (nwg-look)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -1360,6 +1158,13 @@ menu_theme() {
             *Icon*)   _theme_icons ;;
             *Cursor*) _theme_cursor ;;
             *Font*)   _theme_font_size ;;
+            *Advanced*)
+                if command -v nwg-look &>/dev/null; then
+                    nwg-look & disown
+                else
+                    _notify "nwg-look not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -1371,7 +1176,7 @@ menu_theme() {
 menu_lockscreen() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Lock Screen" \
+        choice=$(_yad_select "  Lock Screen" \
             "  Lock now" \
             "  Face recognition setup" \
             "  Face recognition status" \
@@ -1380,16 +1185,8 @@ menu_lockscreen() {
 
         case "$choice" in
             *"Lock now"*)
-                if [ -n "$WAYLAND_DISPLAY" ]; then
-                    hyprlock &
-                else
-                    i3lock-color --blur 5 --ring-color=c49a5c --inside-color=211e19cc \
-                        --line-uses-inside --keyhl-color=8a9a6c --bshl-color=b36b5a \
-                        --separator-color=6e6a62 --time-color=c49a5c --date-color=d4cfc4aa \
-                        --verif-color=8a9a6c --wrong-color=b36b5a --clock \
-                        --time-str="%H:%M" --date-str="%A, %d %B" \
-                        --time-font="JetBrains Mono" --date-font="JetBrains Mono" &
-                fi
+                hyprlock &
+                disown
                 ;;
             *"setup"*)
                 kitty -e sudo stoa-face setup &
@@ -1409,7 +1206,7 @@ menu_lockscreen() {
                 else
                     status_text="howdy: not installed\nRun: sudo stoa-face setup"
                 fi
-                echo -e "$status_text" | "${ROFI[@]}" -p "  Face Recognition"
+                echo -e "$status_text" | _yad_pipe "  Face Recognition"
                 ;;
         esac
     done
@@ -1445,7 +1242,7 @@ _vpn_connect_fastest() {
 
 _vpn_connect_country() {
     local countries
-    countries=$(_rofi_select "  Country" \
+    countries=$(_yad_select "  Country" \
         "US  United States" \
         "BR  Brazil" \
         "JP  Japan" \
@@ -1496,7 +1293,7 @@ _vpn_reconnect() {
 
 _vpn_killswitch() {
     local choice
-    choice=$(_rofi_select "  Kill Switch" \
+    choice=$(_yad_select "  Kill Switch" \
         "  Enable (block traffic if VPN drops)" \
         "  Disable" \
         "  Back")
@@ -1525,7 +1322,7 @@ menu_vpn() {
         status=$(_vpn_status)
 
         local choice
-        choice=$(_rofi_select "  VPN ($status)" \
+        choice=$(_yad_select "  VPN ($status)" \
             "  Quick connect (fastest)" \
             "  Connect by country" \
             "  Connect P2P" \
@@ -1548,7 +1345,7 @@ menu_vpn() {
             *Status*)
                 local details
                 details=$(protonvpn-cli s 2>/dev/null)
-                echo "$details" | "${ROFI[@]}" -p "  VPN Status"
+                echo "$details" | _yad_pipe "  VPN Status"
                 ;;
         esac
     done
@@ -1612,13 +1409,13 @@ _fw_toggle_port() {
 
     if grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null; then
         # Currently allowed → block it
-        if _rofi_confirm "Block port ${port}/${proto}?"; then
+        if _yad_confirm "Block port ${port}/${proto}?"; then
             stoa-firewall deny "$port" "$proto" 2>/dev/null
             _notify "Port ${port}/${proto} blocked"
         fi
     else
         # Currently blocked → allow it
-        if _rofi_confirm "Allow port ${port}/${proto}?"; then
+        if _yad_confirm "Allow port ${port}/${proto}?"; then
             stoa-firewall allow "$port" "$proto" 2>/dev/null
             _notify "Port ${port}/${proto} allowed"
         fi
@@ -1636,7 +1433,7 @@ menu_firewall() {
         status=$(_fw_status)
 
         local choice
-        choice=$(_rofi_select "  Firewall ($status)" \
+        choice=$(_yad_select "  Firewall ($status)" \
             "  View ports" \
             "  Allow a port" \
             "  Block a port" \
@@ -1649,15 +1446,15 @@ menu_firewall() {
         case "$choice" in
             *"View ports"*)
                 local port_choice
-                port_choice=$(_fw_ports_list | "${ROFI[@]}" -p "  Ports (tap to toggle)")
+                port_choice=$(_fw_ports_list | _yad_pipe "  Ports (tap to toggle)")
                 [ -n "$port_choice" ] && _fw_toggle_port "$port_choice"
                 ;;
             *"Allow a port"*)
                 local port_input
-                port_input=$(_rofi_input "  Port to allow (e.g. 8080)")
+                port_input=$(_yad_input "  Port to allow (e.g. 8080)")
                 [ -z "$port_input" ] && continue
                 local proto_choice
-                proto_choice=$(_rofi_select "  Protocol" "tcp" "udp")
+                proto_choice=$(_yad_select "  Protocol" "tcp" "udp")
                 [ -z "$proto_choice" ] && continue
                 stoa-firewall allow "$port_input" "$proto_choice" 2>/dev/null
                 _notify "Port ${port_input}/${proto_choice} allowed"
@@ -1668,7 +1465,7 @@ menu_firewall() {
                     continue
                 fi
                 local block_choice
-                block_choice=$(cat "$WHITELIST" | "${ROFI[@]}" -p "  Remove from whitelist")
+                block_choice=$(cat "$WHITELIST" | _yad_pipe "  Remove from whitelist")
                 [ -z "$block_choice" ] && continue
                 local bport bproto
                 bport=$(echo "$block_choice" | cut -d/ -f1)
@@ -1681,7 +1478,7 @@ menu_firewall() {
                 disown
                 ;;
             *"Disable"*)
-                _rofi_confirm "Disable firewall? All ports will be open." && {
+                _yad_confirm "Disable firewall? All ports will be open." && {
                     kitty -e sudo stoa-firewall disable &
                     disown
                 }
@@ -2062,7 +1859,7 @@ _hw_input() {
     done < <(grep "^N:" /proc/bus/input/devices 2>/dev/null)
 
     # Touchpad settings (libinput)
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+    if command -v hyprctl &>/dev/null; then
         local tap nat_scroll speed
         tap=$(_hyprctl_get input:touchpad:tap int)
         nat_scroll=$(_hyprctl_get input:touchpad:natural_scroll int)
@@ -2078,7 +1875,7 @@ _hw_input() {
 
     # Keyboard layout
     local layout
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+    if command -v hyprctl &>/dev/null; then
         layout=$(_hyprctl_get input:kb_layout str)
     else
         layout=$(setxkbmap -query 2>/dev/null | grep "layout:" | awk '{print $2}')
@@ -2095,7 +1892,7 @@ _hw_input() {
 menu_hardware() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Hardware" \
+        choice=$(_yad_select "  Hardware" \
             "  All devices" \
             "  CPU" \
             "  GPU" \
@@ -2125,19 +1922,19 @@ menu_hardware() {
                     _hw_input; echo ""
                     _hw_usb; echo ""
                     _hw_sensors
-                } | "${ROFI[@]}" -p "  Hardware"
+                } | _yad_pipe "  Hardware"
                 ;;
-            *CPU*)              _hw_cpu | "${ROFI[@]}" -p "  CPU" ;;
-            *GPU*)              _hw_gpu | "${ROFI[@]}" -p "  GPU" ;;
-            *Memory*)           _hw_memory | "${ROFI[@]}" -p "  Memory" ;;
-            *Disks*)            _hw_disks | "${ROFI[@]}" -p "  Disks" ;;
-            *Battery*)          _hw_battery | "${ROFI[@]}" -p "  Battery" ;;
-            *USB*)              _hw_usb | "${ROFI[@]}" -p "  USB" ;;
-            *"Network adapt"*)  _hw_network | "${ROFI[@]}" -p "  Network Adapters" ;;
-            *Audio*)            _hw_audio | "${ROFI[@]}" -p "  Audio" ;;
-            *Camera*)           _hw_camera | "${ROFI[@]}" -p "  Camera" ;;
-            *Input*)            _hw_input | "${ROFI[@]}" -p "  Input Devices" ;;
-            *Sensors*)          _hw_sensors | "${ROFI[@]}" -p "  Sensors" ;;
+            *CPU*)              _hw_cpu | _yad_pipe "  CPU" ;;
+            *GPU*)              _hw_gpu | _yad_pipe "  GPU" ;;
+            *Memory*)           _hw_memory | _yad_pipe "  Memory" ;;
+            *Disks*)            _hw_disks | _yad_pipe "  Disks" ;;
+            *Battery*)          _hw_battery | _yad_pipe "  Battery" ;;
+            *USB*)              _hw_usb | _yad_pipe "  USB" ;;
+            *"Network adapt"*)  _hw_network | _yad_pipe "  Network Adapters" ;;
+            *Audio*)            _hw_audio | _yad_pipe "  Audio" ;;
+            *Camera*)           _hw_camera | _yad_pipe "  Camera" ;;
+            *Input*)            _hw_input | _yad_pipe "  Input Devices" ;;
+            *Sensors*)          _hw_sensors | _yad_pipe "  Sensors" ;;
         esac
     done
 }
@@ -2172,26 +1969,13 @@ _input_apply_hypr() {
     hyprctl keyword "$key" "$val" &>/dev/null
 }
 
-# ── Apply to Xorg via xinput ──
-_xinput_set() {
-    local prop="$1" val="$2"
-    while IFS= read -r id; do
-        [ -z "$id" ] && continue
-        xinput set-prop "$id" "$prop" $val 2>/dev/null
-    done < <(xinput list --id-only 2>/dev/null)
-}
-
 # ── Sensitivity / Speed ──
 _mouse_sensitivity() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:sensitivity float)
-    else
-        current=$(_input_get "sensitivity" "0")
-    fi
+    current=$(_hyprctl_get input:sensitivity float)
 
     local choice
-    choice=$(_rofi_select "  Sensitivity ($current)" \
+    choice=$(_yad_select "  Sensitivity ($current)" \
         "-1.0  (very slow)" \
         "-0.75" \
         "-0.5  (slow)" \
@@ -2206,12 +1990,7 @@ _mouse_sensitivity() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:sensitivity" "$val"
-    else
-        # xinput: map -1..1 to 0.25..4.0 (accel speed)
-        _xinput_set "libinput Accel Speed" "$val"
-    fi
+    _input_apply_hypr "input:sensitivity" "$val"
     _input_save "sensitivity" "$val"
     _notify "Sensitivity: $val"
 }
@@ -2219,15 +1998,11 @@ _mouse_sensitivity() {
 # ── Acceleration Profile ──
 _mouse_accel_profile() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:accel_profile str)
-        [ -z "$current" ] && current="(default)"
-    else
-        current=$(_input_get "accel_profile" "adaptive")
-    fi
+    current=$(_hyprctl_get input:accel_profile str)
+    [ -z "$current" ] && current="(default)"
 
     local choice
-    choice=$(_rofi_select "  Accel Profile ($current)" \
+    choice=$(_yad_select "  Accel Profile ($current)" \
         "adaptive  (accelerates with speed)" \
         "flat  (constant speed, no accel)" \
         "custom")
@@ -2236,14 +2011,7 @@ _mouse_accel_profile() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:accel_profile" "$val"
-    else
-        case "$val" in
-            adaptive) _xinput_set "libinput Accel Profile Enabled" "1 0" ;;
-            flat)     _xinput_set "libinput Accel Profile Enabled" "0 1" ;;
-        esac
-    fi
+    _input_apply_hypr "input:accel_profile" "$val"
     _input_save "accel_profile" "$val"
     _notify "Accel profile: $val"
 }
@@ -2251,15 +2019,11 @@ _mouse_accel_profile() {
 # ── Scroll Direction ──
 _mouse_natural_scroll() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:natural_scroll int)
-    else
-        current=$(_input_get "natural_scroll" "0")
-    fi
+    current=$(_hyprctl_get input:natural_scroll int)
     [ "$current" = "1" ] || [ "$current" = "true" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  Natural Scroll ($label)" \
+    choice=$(_yad_select "  Natural Scroll ($label)" \
         "  Enable (scroll follows content)" \
         "  Disable (traditional)")
     [ -z "$choice" ] && return
@@ -2267,11 +2031,7 @@ _mouse_natural_scroll() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:natural_scroll" "$val"
-    else
-        _xinput_set "libinput Natural Scrolling Enabled" "$val"
-    fi
+    _input_apply_hypr "input:natural_scroll" "$val"
     _input_save "natural_scroll" "$val"
     [ "$val" = "1" ] && _notify "Natural scroll: on" || _notify "Natural scroll: off"
 }
@@ -2283,7 +2043,7 @@ _mouse_scroll_factor() {
     [ -z "$current" ] && current="1.0"
 
     local choice
-    choice=$(_rofi_select "  Scroll Speed ($current)" \
+    choice=$(_yad_select "  Scroll Speed ($current)" \
         "0.5  (slow)" \
         "0.75" \
         "1.0  (default)" \
@@ -2295,9 +2055,7 @@ _mouse_scroll_factor() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:scroll_factor" "$val"
-    fi
+    _input_apply_hypr "input:scroll_factor" "$val"
     _input_save "scroll_factor" "$val"
     _notify "Scroll speed: $val"
 }
@@ -2305,15 +2063,11 @@ _mouse_scroll_factor() {
 # ── Left-handed Mode ──
 _mouse_left_handed() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:left_handed int)
-    else
-        current=$(_input_get "left_handed" "0")
-    fi
+    current=$(_hyprctl_get input:left_handed int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  Left-handed ($label)" \
+    choice=$(_yad_select "  Left-handed ($label)" \
         "  Enable (swap left/right buttons)" \
         "  Disable (right-handed)")
     [ -z "$choice" ] && return
@@ -2321,11 +2075,7 @@ _mouse_left_handed() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:left_handed" "$val"
-    else
-        _xinput_set "libinput Left Handed Enabled" "$val"
-    fi
+    _input_apply_hypr "input:left_handed" "$val"
     _input_save "left_handed" "$val"
     [ "$val" = "1" ] && _notify "Left-handed: on" || _notify "Left-handed: off"
 }
@@ -2337,7 +2087,7 @@ _mouse_follow() {
     [ -z "$current" ] && current="1"
 
     local choice
-    choice=$(_rofi_select "  Focus follows mouse ($current)" \
+    choice=$(_yad_select "  Focus follows mouse ($current)" \
         "0  (click to focus)" \
         "1  (focus on hover, click to raise)" \
         "2  (focus on hover, no raise)" \
@@ -2355,15 +2105,11 @@ _mouse_follow() {
 # ── Touchpad: Tap to Click ──
 _tp_tap() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:tap-to-click int)
-    else
-        current=$(_input_get "tap_to_click" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:tap-to-click int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  Tap to Click ($label)" \
+    choice=$(_yad_select "  Tap to Click ($label)" \
         "  Enable" \
         "  Disable")
     [ -z "$choice" ] && return
@@ -2371,11 +2117,7 @@ _tp_tap() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:tap-to-click" "$val"
-    else
-        _xinput_set "libinput Tapping Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:tap-to-click" "$val"
     _input_save "tap_to_click" "$val"
     [ "$val" = "1" ] && _notify "Tap to click: on" || _notify "Tap to click: off"
 }
@@ -2383,15 +2125,11 @@ _tp_tap() {
 # ── Touchpad: Natural Scroll ──
 _tp_natural_scroll() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:natural_scroll int)
-    else
-        current=$(_input_get "tp_natural_scroll" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:natural_scroll int)
     [ "$current" = "1" ] || [ "$current" = "true" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  TP Natural Scroll ($label)" \
+    choice=$(_yad_select "  TP Natural Scroll ($label)" \
         "  Enable (scroll follows content)" \
         "  Disable (traditional)")
     [ -z "$choice" ] && return
@@ -2399,11 +2137,7 @@ _tp_natural_scroll() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:natural_scroll" "$val"
-    else
-        _xinput_set "libinput Natural Scrolling Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:natural_scroll" "$val"
     _input_save "tp_natural_scroll" "$val"
     [ "$val" = "1" ] && _notify "TP natural scroll: on" || _notify "TP natural scroll: off"
 }
@@ -2411,15 +2145,11 @@ _tp_natural_scroll() {
 # ── Touchpad: Disable While Typing ──
 _tp_dwt() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:disable_while_typing int)
-    else
-        current=$(_input_get "dwt" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:disable_while_typing int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  Disable while typing ($label)" \
+    choice=$(_yad_select "  Disable while typing ($label)" \
         "  Enable (prevents accidental touches)" \
         "  Disable")
     [ -z "$choice" ] && return
@@ -2427,11 +2157,7 @@ _tp_dwt() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:disable_while_typing" "$val"
-    else
-        _xinput_set "libinput Disable While Typing Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:disable_while_typing" "$val"
     _input_save "dwt" "$val"
     [ "$val" = "1" ] && _notify "Disable while typing: on" || _notify "Disable while typing: off"
 }
@@ -2439,15 +2165,11 @@ _tp_dwt() {
 # ── Touchpad: Scroll Method ──
 _tp_scroll_method() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:scroll_method str)
-        [ -z "$current" ] && current="2fg"
-    else
-        current=$(_input_get "tp_scroll_method" "2fg")
-    fi
+    current=$(_hyprctl_get input:touchpad:scroll_method str)
+    [ -z "$current" ] && current="2fg"
 
     local choice
-    choice=$(_rofi_select "  Scroll Method ($current)" \
+    choice=$(_yad_select "  Scroll Method ($current)" \
         "2fg  (two-finger scroll)" \
         "edge  (edge scroll)" \
         "on_button_down  (button + drag)" \
@@ -2457,16 +2179,7 @@ _tp_scroll_method() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:scroll_method" "$val"
-    else
-        case "$val" in
-            2fg)            _xinput_set "libinput Scroll Method Enabled" "1 0 0" ;;
-            edge)           _xinput_set "libinput Scroll Method Enabled" "0 1 0" ;;
-            on_button_down) _xinput_set "libinput Scroll Method Enabled" "0 0 1" ;;
-            no_scroll)      _xinput_set "libinput Scroll Method Enabled" "0 0 0" ;;
-        esac
-    fi
+    _input_apply_hypr "input:touchpad:scroll_method" "$val"
     _input_save "tp_scroll_method" "$val"
     _notify "Scroll method: $val"
 }
@@ -2474,15 +2187,11 @@ _tp_scroll_method() {
 # ── Touchpad: Click Method ──
 _tp_click_method() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:clickfinger_behavior int)
-        [ "$current" = "1" ] && current="clickfinger" || current="button_areas"
-    else
-        current=$(_input_get "tp_click_method" "button_areas")
-    fi
+    current=$(_hyprctl_get input:touchpad:clickfinger_behavior int)
+    [ "$current" = "1" ] && current="clickfinger" || current="button_areas"
 
     local choice
-    choice=$(_rofi_select "  Click Method ($current)" \
+    choice=$(_yad_select "  Click Method ($current)" \
         "button_areas  (bottom left/right = L/R click)" \
         "clickfinger  (1 finger=L, 2=R, 3=M)")
     [ -z "$choice" ] && return
@@ -2490,15 +2199,8 @@ _tp_click_method() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        [ "$val" = "clickfinger" ] && _input_apply_hypr "input:touchpad:clickfinger_behavior" "1" \
-            || _input_apply_hypr "input:touchpad:clickfinger_behavior" "0"
-    else
-        case "$val" in
-            button_areas) _xinput_set "libinput Click Method Enabled" "1 0" ;;
-            clickfinger)  _xinput_set "libinput Click Method Enabled" "0 1" ;;
-        esac
-    fi
+    [ "$val" = "clickfinger" ] && _input_apply_hypr "input:touchpad:clickfinger_behavior" "1" \
+        || _input_apply_hypr "input:touchpad:clickfinger_behavior" "0"
     _input_save "tp_click_method" "$val"
     _notify "Click method: $val"
 }
@@ -2506,15 +2208,11 @@ _tp_click_method() {
 # ── Touchpad: Drag ──
 _tp_drag() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:tap-and-drag int)
-    else
-        current=$(_input_get "tap_and_drag" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:tap-and-drag int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  Tap and Drag ($label)" \
+    choice=$(_yad_select "  Tap and Drag ($label)" \
         "  Enable (tap+hold to drag)" \
         "  Disable")
     [ -z "$choice" ] && return
@@ -2522,11 +2220,7 @@ _tp_drag() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:tap-and-drag" "$val"
-    else
-        _xinput_set "libinput Tapping Drag Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:tap-and-drag" "$val"
     _input_save "tap_and_drag" "$val"
     [ "$val" = "1" ] && _notify "Tap and drag: on" || _notify "Tap and drag: off"
 }
@@ -2557,34 +2251,34 @@ _GESTURE_DEFAULTS=(
     "overview"          "window_close"      "window_prev"       "window_next"
 )
 
-# Action catalog: id|label|wayland_cmd|xorg_cmd
+# Action catalog: id|label|cmd
 _gesture_actions() {
     cat <<'ACTIONS'
-disabled|  Disabled||
-workspace_next|  Workspace next|hyprctl dispatch workspace e+1|i3-msg workspace next
-workspace_prev|  Workspace prev|hyprctl dispatch workspace e-1|i3-msg workspace prev
-window_close|  Close window|hyprctl dispatch killactive|i3-msg kill
-window_fullscreen|  Toggle fullscreen|hyprctl dispatch fullscreen|i3-msg fullscreen toggle
-window_float|  Toggle floating|hyprctl dispatch togglefloating|i3-msg floating toggle
-window_move_left|  Move window left|hyprctl dispatch movewindow l|i3-msg move left
-window_move_right|  Move window right|hyprctl dispatch movewindow r|i3-msg move right
-window_move_up|  Move window up|hyprctl dispatch movewindow u|i3-msg move up
-window_move_down|  Move window down|hyprctl dispatch movewindow d|i3-msg move down
-window_next|  Next window|hyprctl dispatch cyclenext|i3-msg focus right
-window_prev|  Prev window|hyprctl dispatch cyclenext prev|i3-msg focus left
-window_minimize|  Minimize|hyprctl dispatch movetospecialworkspace minimize|i3-msg move scratchpad
-overview|  Overview / App switcher|rofi -show window -config ~/.config/rofi/config.rasi|rofi -show window -config ~/.config/rofi/config.rasi
-launcher|  App launcher|noctalia msg panel-toggle launcher|rofi -show drun -config ~/.config/rofi/config.rasi
-volume_up|  Volume up|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0
-volume_down|  Volume down|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-volume_mute|  Toggle mute|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-brightness_up|  Brightness up|brightnessctl set +5% -q|brightnessctl set +5% -q
-brightness_down|  Brightness down|brightnessctl set 5%- -q|brightnessctl set 5%- -q
-screenshot|  Screenshot|grim -g "$(slurp)" ~/Pictures/screenshots/$(date +%Y%m%d_%H%M%S).png|maim -s ~/Pictures/screenshots/$(date +%Y%m%d_%H%M%S).png
-play_pause|  Play / Pause|playerctl play-pause|playerctl play-pause
-next_track|  Next track|playerctl next|playerctl next
-prev_track|  Previous track|playerctl previous|playerctl previous
-settings|  Stoa Settings|stoa-settings|stoa-settings
+disabled|  Disabled|
+workspace_next|  Workspace next|hyprctl dispatch workspace e+1
+workspace_prev|  Workspace prev|hyprctl dispatch workspace e-1
+window_close|  Close window|hyprctl dispatch killactive
+window_fullscreen|  Toggle fullscreen|hyprctl dispatch fullscreen
+window_float|  Toggle floating|hyprctl dispatch togglefloating
+window_move_left|  Move window left|hyprctl dispatch movewindow l
+window_move_right|  Move window right|hyprctl dispatch movewindow r
+window_move_up|  Move window up|hyprctl dispatch movewindow u
+window_move_down|  Move window down|hyprctl dispatch movewindow d
+window_next|  Next window|hyprctl dispatch cyclenext
+window_prev|  Prev window|hyprctl dispatch cyclenext prev
+window_minimize|  Minimize|hyprctl dispatch movetospecialworkspace minimize
+overview|  Overview / App switcher|hyprswitch gui --mod-key ALT --key Tab --close mod-key-release --max-switch-offset 9 --hide-active-window-border && hyprswitch dispatch
+launcher|  App launcher|noctalia msg panel-toggle launcher
+volume_up|  Volume up|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0
+volume_down|  Volume down|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+volume_mute|  Toggle mute|wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+brightness_up|  Brightness up|brightnessctl set +5% -q
+brightness_down|  Brightness down|brightnessctl set 5%- -q
+screenshot|  Screenshot|grim -g "$(slurp)" ~/Pictures/screenshots/$(date +%Y%m%d_%H%M%S).png
+play_pause|  Play / Pause|playerctl play-pause
+next_track|  Next track|playerctl next
+prev_track|  Previous track|playerctl previous
+settings|  Stoa Settings|stoa-settings
 ACTIONS
 }
 
@@ -2618,7 +2312,7 @@ _gesture_set() {
 # Get the label for an action id
 _gesture_action_label() {
     local action_id="$1"
-    _gesture_actions | while IFS='|' read -r id label _wcmd _xcmd; do
+    _gesture_actions | while IFS='|' read -r id label _cmd; do
         [ "$id" = "$action_id" ] && echo "$label" && return
     done
 }
@@ -2626,13 +2320,9 @@ _gesture_action_label() {
 # Get command for an action id
 _gesture_action_cmd() {
     local action_id="$1"
-    _gesture_actions | while IFS='|' read -r id _label wcmd xcmd; do
+    _gesture_actions | while IFS='|' read -r id _label cmd; do
         if [ "$id" = "$action_id" ]; then
-            if [ -n "$WAYLAND_DISPLAY" ]; then
-                echo "$wcmd"
-            else
-                echo "$xcmd"
-            fi
+            echo "$cmd"
             return
         fi
     done
@@ -2645,7 +2335,7 @@ _gesture_pick_action() {
     current_label=$(_gesture_action_label "$current_id")
 
     local items=()
-    while IFS='|' read -r id label _wcmd _xcmd; do
+    while IFS='|' read -r id label _cmd; do
         if [ "$id" = "$current_id" ]; then
             items+=("${label} ◄")
         else
@@ -2654,14 +2344,14 @@ _gesture_pick_action() {
     done < <(_gesture_actions)
 
     local choice
-    choice=$(printf '%s\n' "${items[@]}" | "${ROFI[@]}" -p "  $gesture_label")
+    choice=$(printf '%s\n' "${items[@]}" | _yad_pipe "  $gesture_label")
     [ -z "$choice" ] && return 1
 
     # Remove current marker
     choice=$(echo "$choice" | sed 's/ ◄$//')
 
     # Find the action id
-    while IFS='|' read -r id label _wcmd _xcmd; do
+    while IFS='|' read -r id label _cmd; do
         if [ "$label" = "$choice" ]; then
             echo "$id"
             return 0
@@ -2751,7 +2441,7 @@ _menu_gestures() {
         items+=("  Back")
 
         local choice
-        choice=$(printf '%s\n' "${items[@]}" | "${ROFI[@]}" -p "  Gestures")
+        choice=$(printf '%s\n' "${items[@]}" | _yad_pipe "  Gestures")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         if [[ "$choice" == *"Apply"* ]]; then
@@ -2761,7 +2451,7 @@ _menu_gestures() {
         fi
 
         if [[ "$choice" == *"Reset"* ]]; then
-            _rofi_confirm "Reset all gestures to defaults?" && {
+            _yad_confirm "Reset all gestures to defaults?" && {
                 rm -f "$GESTURE_CONF"
                 _gestures_apply
                 _notify "Gestures reset to defaults"
@@ -2782,7 +2472,7 @@ _menu_gestures() {
 menu_mouse() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Mouse & Touchpad" \
+        choice=$(_yad_select "  Mouse & Touchpad" \
             "  Mouse" \
             "  Touchpad" \
             "  Back")
@@ -2824,7 +2514,7 @@ _mouse_dpi() {
     [ -z "$current" ] && current="?"
 
     local choice
-    choice=$(_rofi_select "  DPI ($current)" \
+    choice=$(_yad_select "  DPI ($current)" \
         "  400  (low — precision/sniping)" \
         "  800  (default for many mice)" \
         "  1200" \
@@ -2839,7 +2529,7 @@ _mouse_dpi() {
 
     local val
     if [[ "$choice" == *"Custom"* ]]; then
-        val=$(_rofi_input "  DPI value (100–25600)")
+        val=$(_yad_input "  DPI value (100–25600)")
         [ -z "$val" ] && return
         # Validate numeric
         if ! [[ "$val" =~ ^[0-9]+$ ]] || [ "$val" -lt 100 ] || [ "$val" -gt 25600 ]; then
@@ -2876,7 +2566,7 @@ _mouse_polling_rate() {
     [ -z "$current" ] && current="?"
 
     local choice
-    choice=$(_rofi_select "  Polling Rate (${current}Hz)" \
+    choice=$(_yad_select "  Polling Rate (${current}Hz)" \
         "  125 Hz  (8ms — low)" \
         "  250 Hz  (4ms)" \
         "  500 Hz  (2ms — balanced)" \
@@ -2912,7 +2602,7 @@ _mouse_dpi_profiles() {
     profiles=$(ratbagctl "$device" dpi get 2>/dev/null)
 
     local choice
-    choice=$(_rofi_select "  DPI Profiles" \
+    choice=$(_yad_select "  DPI Profiles" \
         "  View current profiles" \
         "  Gaming preset (400 / 800 / 1600)" \
         "  Productivity preset (800 / 1200 / 2400)" \
@@ -2924,7 +2614,7 @@ _mouse_dpi_profiles() {
         *"View"*)
             local info
             info=$(ratbagctl "$device" dpi get 2>/dev/null)
-            echo "$info" | "${ROFI[@]}" -p "  Current DPI" >/dev/null
+            echo "$info" | _yad_pipe "  Current DPI" >/dev/null
             ;;
         *Gaming*)
             ratbagctl "$device" dpi set 400 0 2>/dev/null
@@ -2988,13 +2678,13 @@ _mouse_info() {
     info+="  Sensitivity: $sens\n"
     info+="  Accel profile: $accel\n"
 
-    echo -e "$info" | "${ROFI[@]}" -p "  Mouse Info" >/dev/null
+    echo -e "$info" | _yad_pipe "  Mouse Info" >/dev/null
 }
 
 _menu_mouse_sub() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Mouse" \
+        choice=$(_yad_select "  Mouse" \
             "  Sensitivity" \
             "  Accel profile" \
             "  Natural scroll" \
@@ -3026,7 +2716,7 @@ _menu_mouse_sub() {
 _menu_touchpad_sub() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Touchpad" \
+        choice=$(_yad_select "  Touchpad" \
             "  Gestures" \
             "  Tap to click" \
             "  Natural scroll" \
@@ -3104,7 +2794,7 @@ _nightlight_temperature() {
     current=$(_nightlight_get "TEMPERATURE" "4500")
 
     local choice
-    choice=$(_rofi_select "  Temperature (${current}K)" \
+    choice=$(_yad_select "  Temperature (${current}K)" \
         "  6500K (daylight)" \
         "  5500K (warm white)" \
         "  5000K (soft)" \
@@ -3136,7 +2826,7 @@ _nightlight_schedule() {
     mode=$(_nightlight_get "SCHEDULE" "manual")
 
     local choice
-    choice=$(_rofi_select "  Schedule ($mode)" \
+    choice=$(_yad_select "  Schedule ($mode)" \
         "  Manual (toggle on/off)" \
         "  Sunset to sunrise (auto)" \
         "  Custom hours" \
@@ -3161,10 +2851,10 @@ _nightlight_schedule() {
             ;;
         *Custom*)
             local start
-            start=$(_rofi_input "  Start hour (e.g. 20:00)")
+            start=$(_yad_input "  Start hour (e.g. 20:00)")
             [ -z "$start" ] && return
             local end
-            end=$(_rofi_input "  End hour (e.g. 06:00)")
+            end=$(_yad_input "  End hour (e.g. 06:00)")
             [ -z "$end" ] && return
             _nightlight_save "SCHEDULE" "custom"
             _nightlight_save "CUSTOM_START" "$start"
@@ -3187,7 +2877,7 @@ menu_nightlight() {
         temp=$(_nightlight_get "TEMPERATURE" "4500")
 
         local choice
-        choice=$(_rofi_select "  Night Light ($status)" \
+        choice=$(_yad_select "  Night Light ($status)" \
             "  Toggle night light ($status)" \
             "  Temperature (${temp}K)" \
             "  Schedule" \
@@ -3219,7 +2909,7 @@ _power_set_profile() {
     local current
     current=$(_power_current_profile)
 
-    choice=$(_rofi_select "  Profile ($current)" \
+    choice=$(_yad_select "  Profile ($current)" \
         "  Performance" \
         "  Balanced" \
         "  Power saver" \
@@ -3243,7 +2933,7 @@ _power_set_profile() {
 
 _power_idle_timeout() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         current=$(_hyprctl_get misc:dpms_timeout int)
         [ -z "$current" ] || [ "$current" = "0" ] && current="off"
         [ "$current" != "off" ] && current="${current}s"
@@ -3252,7 +2942,7 @@ _power_idle_timeout() {
     fi
 
     local choice
-    choice=$(_rofi_select "  Screen off after ($current)" \
+    choice=$(_yad_select "  Screen off after ($current)" \
         "  1 minute" \
         "  2 minutes" \
         "  5 minutes" \
@@ -3274,7 +2964,7 @@ _power_idle_timeout() {
         *Never*)        seconds=0 ;;
     esac
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword misc:dpms_timeout "$seconds" &>/dev/null
         [ "$seconds" -eq 0 ] && _notify "Screen off: never" || _notify "Screen off: $((seconds / 60)) min"
     else
@@ -3295,7 +2985,7 @@ _power_auto_suspend() {
     idle_delay=$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 2>/dev/null || echo "")
 
     local choice
-    choice=$(_rofi_select "  Auto Suspend" \
+    choice=$(_yad_select "  Auto Suspend" \
         "  Suspend after 15 min" \
         "  Suspend after 30 min" \
         "  Suspend after 1 hour" \
@@ -3350,7 +3040,7 @@ _power_battery_info() {
         [ -f "$ac/online" ] && [ "$(cat "$ac/online" 2>/dev/null)" = "1" ] && ac_status="Plugged in"
     done
 
-    _rofi_select "  Battery Info" \
+    _yad_select "  Battery Info" \
         "  Status: $status" \
         "  Charge: ${capacity}%" \
         "  Health: $health" \
@@ -3365,7 +3055,7 @@ menu_power_mgmt() {
         profile=$(_power_current_profile)
 
         local choice
-        choice=$(_rofi_select "  Power Management" \
+        choice=$(_yad_select "  Power Management" \
             "  Power profile ($profile)" \
             "  Fan & Performance" \
             "  Screen off timeout" \
@@ -3541,7 +3231,7 @@ _fan_status() {
         [ -n "$nbfc_status" ] && info+="\nNBFC Status:\n$nbfc_status\n"
     fi
 
-    echo -e "$info" | "${ROFI[@]}" -p "  Fan & Performance Status" >/dev/null
+    echo -e "$info" | _yad_pipe "  Fan & Performance Status" >/dev/null
 }
 
 # ── Fan Mode (Acer WMI / Predator module) ──
@@ -3567,7 +3257,7 @@ _fan_mode_acer_wmi() {
     esac
 
     local choice
-    choice=$(_rofi_select "  Fan Mode ($current_label)" \
+    choice=$(_yad_select "  Fan Mode ($current_label)" \
         "  Auto (system-controlled)" \
         "  Turbo (max performance)" \
         "  Silent (quiet, reduced speed)" \
@@ -3614,7 +3304,7 @@ _fan_speed_manual() {
     local pct=$((current * 100 / 255))
 
     local choice
-    choice=$(_rofi_select "  Fan Speed (${pct}%)" \
+    choice=$(_yad_select "  Fan Speed (${pct}%)" \
         "  Auto (system-controlled)" \
         "  30% (quiet)" \
         "  50% (balanced)" \
@@ -3635,7 +3325,7 @@ _fan_speed_manual() {
 
     local val_pct
     if [[ "$choice" == *"Custom"* ]]; then
-        val_pct=$(_rofi_input "  Fan speed % (20–100)")
+        val_pct=$(_yad_input "  Fan speed % (20–100)")
         [ -z "$val_pct" ] && return
         if ! [[ "$val_pct" =~ ^[0-9]+$ ]] || [ "$val_pct" -lt 20 ] || [ "$val_pct" -gt 100 ]; then
             _notify "Invalid: $val_pct (must be 20–100)"
@@ -3666,7 +3356,7 @@ _fan_nbfc_set_speed() {
     command -v nbfc_service &>/dev/null && nbfc_cmd="nbfc_service"
 
     local choice
-    choice=$(_rofi_select "  NBFC Fan Speed" \
+    choice=$(_yad_select "  NBFC Fan Speed" \
         "  Auto (recommended)" \
         "  25% (quiet)" \
         "  50% (balanced)" \
@@ -3684,7 +3374,7 @@ _fan_nbfc_set_speed() {
 
     local val
     if [[ "$choice" == *"Custom"* ]]; then
-        val=$(_rofi_input "  Fan speed % (0–100)")
+        val=$(_yad_input "  Fan speed % (0–100)")
         [ -z "$val" ] && return
     else
         val=$(echo "$choice" | grep -oP '\d+')
@@ -3707,7 +3397,7 @@ _fan_nbfc_config() {
     fi
 
     local choice
-    choice=$(echo "$configs" | "${ROFI[@]}" -p "  NBFC Config (select your laptop)")
+    choice=$(echo "$configs" | _yad_pipe "  NBFC Config (select your laptop)")
     [ -z "$choice" ] && return
 
     sudo $nbfc_cmd config -s "$choice" 2>/dev/null
@@ -3739,7 +3429,7 @@ _fan_div_acer_stoa_theme() {
     fi
 
     local choice
-    choice=$(_rofi_select "  DAMX Stoa Theme" \
+    choice=$(_yad_select "  DAMX Stoa Theme" \
         "  Apply Stoa theme" \
         "  Restore original theme" \
         "  Back")
@@ -3772,7 +3462,7 @@ _fan_perf_profile() {
     [ -n "$current_pp" ] && label="$current_pp / $current_gov"
 
     local choice
-    choice=$(_rofi_select "  Performance Profile ($label)" \
+    choice=$(_yad_select "  Performance Profile ($label)" \
         "  Eco (power-saver + powersave)" \
         "  Silent (power-saver + powersave)" \
         "  Balanced (balanced + schedutil)" \
@@ -3858,7 +3548,7 @@ _fan_kb_backlight_timeout() {
     current=$(cat "$timeout_file" 2>/dev/null)
 
     local choice
-    choice=$(_rofi_select "  KB Backlight Timeout (${current}s)" \
+    choice=$(_yad_select "  KB Backlight Timeout (${current}s)" \
         "  0 (always on)" \
         "  15 seconds" \
         "  30 seconds" \
@@ -3892,7 +3582,7 @@ _fan_boot_sound() {
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  Boot Sound ($label)" \
+    choice=$(_yad_select "  Boot Sound ($label)" \
         "  Enable" \
         "  Disable" \
         "  Back")
@@ -3921,7 +3611,7 @@ _fan_lcd_override() {
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
-    choice=$(_rofi_select "  LCD Override ($label)" \
+    choice=$(_yad_select "  LCD Override ($label)" \
         "  Enable" \
         "  Disable" \
         "  Back")
@@ -3954,7 +3644,7 @@ _fan_gpu_mode() {
     esac
 
     local choice
-    choice=$(_rofi_select "  GPU Mode ($label)" \
+    choice=$(_yad_select "  GPU Mode ($label)" \
         "  Integrated (power-saving)" \
         "  Dedicated (performance)" \
         "  Back")
@@ -3998,7 +3688,7 @@ _fan_setup_help() {
 
     info+="After installing, restart this panel to detect the backend.\n"
 
-    echo -e "$info" | "${ROFI[@]}" -p "  Setup Help" >/dev/null
+    echo -e "$info" | _yad_pipe "  Setup Help" >/dev/null
 }
 
 # ── Main Fan & Performance menu ──
@@ -4048,7 +3738,7 @@ _menu_fan_perf() {
         items+=("  Back")
 
         local choice
-        choice=$(printf '%s\n' "${items[@]}" | "${ROFI[@]}" -p "  Fan & Performance ($backend)")
+        choice=$(printf '%s\n' "${items[@]}" | _yad_pipe "  Fan & Performance ($backend)")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
@@ -4074,7 +3764,7 @@ _menu_fan_perf() {
 # ══════════════════════════════════════════════════════════════
 
 _kb_current_layout() {
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         _hyprctl_get input:kb_layout str
     else
         setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}'
@@ -4086,7 +3776,7 @@ _kb_layout() {
     current=$(_kb_current_layout)
 
     local choice
-    choice=$(_rofi_select "  Layout ($current)" \
+    choice=$(_yad_select "  Layout ($current)" \
         "  us (English US)" \
         "  br (Portuguese BR)" \
         "  gb (English UK)" \
@@ -4106,7 +3796,7 @@ _kb_layout() {
 
     local layout
     if [[ "$choice" == *"Custom"* ]]; then
-        layout=$(_rofi_input "  Layout code (e.g. latam)")
+        layout=$(_yad_input "  Layout code (e.g. latam)")
         [ -z "$layout" ] && return
     else
         layout=$(echo "$choice" | grep -oP '^\s*\S+\s+\K\S+' | tr -d '()')
@@ -4114,7 +3804,7 @@ _kb_layout() {
         layout=$(echo "$choice" | awk '{print $2}')
     fi
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword input:kb_layout "$layout" &>/dev/null
         _notify "Keyboard layout: $layout"
     else
@@ -4125,7 +3815,7 @@ _kb_layout() {
 
 _kb_repeat_rate() {
     local current_rate current_delay
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         current_rate=$(_hyprctl_get input:repeat_rate int)
         current_delay=$(_hyprctl_get input:repeat_delay int)
     else
@@ -4134,7 +3824,7 @@ _kb_repeat_rate() {
     fi
 
     local choice
-    choice=$(_rofi_select "  Repeat (rate:${current_rate} delay:${current_delay}ms)" \
+    choice=$(_yad_select "  Repeat (rate:${current_rate} delay:${current_delay}ms)" \
         "  Slow (rate 15, delay 600ms)" \
         "  Normal (rate 25, delay 400ms)" \
         "  Fast (rate 40, delay 300ms)" \
@@ -4150,7 +3840,7 @@ _kb_repeat_rate() {
         *"Very fast"*) rate=50; delay=200 ;;
     esac
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword input:repeat_rate "$rate" &>/dev/null
         hyprctl keyword input:repeat_delay "$delay" &>/dev/null
     else
@@ -4161,7 +3851,7 @@ _kb_repeat_rate() {
 
 _kb_capslock_behavior() {
     local choice
-    choice=$(_rofi_select "  Caps Lock behavior" \
+    choice=$(_yad_select "  Caps Lock behavior" \
         "  Default (Caps Lock)" \
         "  Escape (vim-friendly)" \
         "  Ctrl (Emacs-friendly)" \
@@ -4179,7 +3869,7 @@ _kb_capslock_behavior() {
         *Disabled*)   opt="caps:none" ;;
     esac
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword input:kb_options "$opt" &>/dev/null
         _notify "Caps Lock: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
     else
@@ -4196,7 +3886,7 @@ _kb_capslock_behavior() {
 
 _kb_numlock() {
     local choice
-    choice=$(_rofi_select "  NumLock on boot" \
+    choice=$(_yad_select "  NumLock on boot" \
         "  On" \
         "  Off" \
         "  Back")
@@ -4204,7 +3894,7 @@ _kb_numlock() {
 
     case "$choice" in
         *On*)
-            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+            if command -v hyprctl &>/dev/null; then
                 hyprctl keyword input:numlock_by_default true &>/dev/null
             else
                 numlockx on 2>/dev/null
@@ -4212,7 +3902,7 @@ _kb_numlock() {
             _notify "NumLock on boot: on"
             ;;
         *Off*)
-            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+            if command -v hyprctl &>/dev/null; then
                 hyprctl keyword input:numlock_by_default false &>/dev/null
             else
                 numlockx off 2>/dev/null
@@ -4259,7 +3949,7 @@ _kb_rgb_color() {
 
     # Stoa palette colors + common RGB options
     local choice
-    choice=$(_rofi_select "  RGB Color" \
+    choice=$(_yad_select "  RGB Color" \
         "  Bronze (Stoa)       #c49a5c" \
         "  Gold (Stoa)         #d4a84b" \
         "  Olive (Stoa)        #8a9a6c" \
@@ -4282,7 +3972,7 @@ _kb_rgb_color() {
 
     local color
     if [[ "$choice" == *"Custom"* ]]; then
-        color=$(_rofi_input "  Hex color (e.g. ff6600)")
+        color=$(_yad_input "  Hex color (e.g. ff6600)")
         [ -z "$color" ] && return
         # Strip # if provided
         color="${color#\#}"
@@ -4320,7 +4010,7 @@ _kb_rgb_mode() {
     current=$(_input_get "rgb_mode" "Static")
 
     local choice
-    choice=$(_rofi_select "  RGB Mode ($current)" \
+    choice=$(_yad_select "  RGB Mode ($current)" \
         "  Static" \
         "  Breathing" \
         "  Color Cycle" \
@@ -4343,7 +4033,7 @@ _kb_rgb_brightness() {
     fi
 
     local choice
-    choice=$(_rofi_select "  RGB Brightness" \
+    choice=$(_yad_select "  RGB Brightness" \
         "  100% (full)" \
         "  75%" \
         "  50%" \
@@ -4400,7 +4090,7 @@ _kb_rgb_stoa_theme() {
 _kb_rgb_info() {
     if ! _rgb_available; then
         local info="OpenRGB not installed.\n\nInstall:\n  sudo pacman -S openrgb\n\nStart the background service:\n  sudo systemctl enable --now openrgb\n\nSupported devices:\n  Most RGB keyboards, mice, RAM, GPUs, motherboards,\n  LED strips, and peripherals from Corsair, Razer,\n  Logitech, SteelSeries, ASUS, MSI, etc."
-        echo -e "$info" | "${ROFI[@]}" -p "  RGB Info" >/dev/null
+        echo -e "$info" | _yad_pipe "  RGB Info" >/dev/null
         return
     fi
 
@@ -4422,13 +4112,13 @@ _kb_rgb_info() {
     info+="  Color: #$saved_color\n"
     info+="  Mode: $saved_mode\n"
 
-    echo -e "$info" | "${ROFI[@]}" -p "  RGB Info" >/dev/null
+    echo -e "$info" | _yad_pipe "  RGB Info" >/dev/null
 }
 
 _menu_rgb() {
     while true; do
         local choice
-        choice=$(_rofi_select "  RGB Control" \
+        choice=$(_yad_select "  RGB Control" \
             "  Color" \
             "  Mode (effect)" \
             "  Brightness" \
@@ -4455,7 +4145,7 @@ menu_keyboard() {
         layout=$(_kb_current_layout)
 
         local choice
-        choice=$(_rofi_select "  Keyboard" \
+        choice=$(_yad_select "  Keyboard" \
             "  Layout ($layout)" \
             "  Repeat rate & delay" \
             "  Caps Lock behavior" \
@@ -4506,14 +4196,14 @@ _print_list() {
     done <<< "$printers"
 
     local choice
-    choice=$(_rofi_select "  Printers" "${items[@]}" "  Back")
+    choice=$(_yad_select "  Printers" "${items[@]}" "  Back")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
     local selected
     selected=$(echo "$choice" | awk '{print $2}')
 
     local action
-    action=$(_rofi_select "  $selected" \
+    action=$(_yad_select "  $selected" \
         "  Set as default" \
         "  Print test page" \
         "  Enable" \
@@ -4540,7 +4230,7 @@ _print_list() {
             _notify "Printer disabled: $selected"
             ;;
         *Remove*)
-            _rofi_confirm "Remove $selected?" && {
+            _yad_confirm "Remove $selected?" && {
                 lpadmin -x "$selected" 2>/dev/null
                 _notify "Printer removed: $selected"
             }
@@ -4560,7 +4250,7 @@ _print_add() {
 
 _print_toggle_cups() {
     if systemctl is-active cups.service &>/dev/null; then
-        _rofi_confirm "Stop CUPS service?" && {
+        _yad_confirm "Stop CUPS service?" && {
             sudo systemctl stop cups.service 2>/dev/null
             _notify "CUPS service stopped"
         }
@@ -4579,13 +4269,13 @@ _print_queue() {
     fi
 
     local choice
-    choice=$(echo "$jobs" | "${ROFI[@]}" -p "  Print queue")
+    choice=$(echo "$jobs" | _yad_pipe "  Print queue")
     [ -z "$choice" ] && return
 
     local job_id
     job_id=$(echo "$choice" | awk '{print $1}')
 
-    _rofi_confirm "Cancel job $job_id?" && {
+    _yad_confirm "Cancel job $job_id?" && {
         cancel "$job_id" 2>/dev/null
         _notify "Job cancelled: $job_id"
     }
@@ -4605,7 +4295,7 @@ _scanner_list() {
         return
     fi
 
-    echo "$scanners" | "${ROFI[@]}" -p "  Scanners" >/dev/null
+    echo "$scanners" | _yad_pipe "  Scanners" >/dev/null
 }
 
 menu_printers() {
@@ -4619,7 +4309,7 @@ menu_printers() {
         cups_status=$(_print_cups_status)
 
         local choice
-        choice=$(_rofi_select "  Printers & Scanners" \
+        choice=$(_yad_select "  Printers & Scanners" \
             "  CUPS service ($cups_status)" \
             "  List printers" \
             "  Add printer" \
@@ -4648,7 +4338,7 @@ _dt_set_timezone() {
 
     # Common timezones first, then option to search all
     local choice
-    choice=$(_rofi_select "  Timezone ($current)" \
+    choice=$(_yad_select "  Timezone ($current)" \
         "  America/Sao_Paulo" \
         "  America/New_York" \
         "  America/Chicago" \
@@ -4679,15 +4369,15 @@ _dt_set_timezone() {
     local tz
     if [[ "$choice" == *"Search"* ]]; then
         local query
-        query=$(_rofi_input "  Search timezone (e.g. Tokyo)")
+        query=$(_yad_input "  Search timezone (e.g. Tokyo)")
         [ -z "$query" ] && return
-        tz=$(timedatectl list-timezones 2>/dev/null | grep -i "$query" | "${ROFI[@]}" -p "  Results")
+        tz=$(timedatectl list-timezones 2>/dev/null | grep -i "$query" | _yad_pipe "  Results")
         [ -z "$tz" ] && return
     else
         tz=$(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')
     fi
 
-    _rofi_confirm "Set timezone to $tz?" && {
+    _yad_confirm "Set timezone to $tz?" && {
         sudo timedatectl set-timezone "$tz" 2>/dev/null
         _notify "Timezone: $tz"
     }
@@ -4698,7 +4388,7 @@ _dt_toggle_ntp() {
     ntp_status=$(timedatectl show --property=NTP --value 2>/dev/null)
 
     if [ "$ntp_status" = "yes" ]; then
-        _rofi_confirm "Disable auto time sync (NTP)?" && {
+        _yad_confirm "Disable auto time sync (NTP)?" && {
             sudo timedatectl set-ntp false 2>/dev/null
             _notify "NTP: disabled"
         }
@@ -4717,14 +4407,14 @@ _dt_set_manual_time() {
     fi
 
     local date_input
-    date_input=$(_rofi_input "  Date (YYYY-MM-DD)")
+    date_input=$(_yad_input "  Date (YYYY-MM-DD)")
     [ -z "$date_input" ] && return
 
     local time_input
-    time_input=$(_rofi_input "  Time (HH:MM:SS)")
+    time_input=$(_yad_input "  Time (HH:MM:SS)")
     [ -z "$time_input" ] && return
 
-    _rofi_confirm "Set to ${date_input} ${time_input}?" && {
+    _yad_confirm "Set to ${date_input} ${time_input}?" && {
         sudo timedatectl set-time "${date_input} ${time_input}" 2>/dev/null
         _notify "Time set: ${date_input} ${time_input}"
     }
@@ -4735,7 +4425,7 @@ _dt_24h_toggle() {
     current=$(gsettings get org.gnome.desktop.interface clock-format 2>/dev/null || echo "'24h'")
 
     local choice
-    choice=$(_rofi_select "  Clock format" \
+    choice=$(_yad_select "  Clock format" \
         "  24-hour (14:30)" \
         "  12-hour (2:30 PM)" \
         "  Back")
@@ -4758,7 +4448,7 @@ _dt_language() {
     current=$(locale 2>/dev/null | grep "^LANG=" | cut -d= -f2)
 
     local choice
-    choice=$(_rofi_select "  Language ($current)" \
+    choice=$(_yad_select "  Language ($current)" \
         "  en_US.UTF-8 (English US)" \
         "  pt_BR.UTF-8 (Portuguese BR)" \
         "  pt_PT.UTF-8 (Portuguese PT)" \
@@ -4777,7 +4467,7 @@ _dt_language() {
     local locale_val
     locale_val=$(echo "$choice" | awk '{print $2}')
 
-    _rofi_confirm "Set language to ${locale_val}? (requires logout)" && {
+    _yad_confirm "Set language to ${locale_val}? (requires logout)" && {
         # Enable the locale if not already
         sudo sed -i "s/^#\(${locale_val}\)/\1/" /etc/locale.gen 2>/dev/null
         sudo locale-gen &>/dev/null
@@ -4799,7 +4489,7 @@ menu_datetime() {
         now=$(date '+%Y-%m-%d %H:%M')
 
         local choice
-        choice=$(_rofi_select "  Date & Time ($now)" \
+        choice=$(_yad_select "  Date & Time ($now)" \
             "  Timezone ($tz)" \
             "  Auto sync / NTP ($ntp)" \
             "  Set time manually" \
@@ -4827,7 +4517,7 @@ _a11y_cursor_size() {
     current=$(gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null || echo "24")
 
     local choice
-    choice=$(_rofi_select "  Cursor size (${current}px)" \
+    choice=$(_yad_select "  Cursor size (${current}px)" \
         "  24 (default)" \
         "  32 (large)" \
         "  48 (extra large)" \
@@ -4840,7 +4530,7 @@ _a11y_cursor_size() {
     size=$(echo "$choice" | grep -oP '\d+' | head -1)
 
     gsettings set org.gnome.desktop.interface cursor-size "$size" 2>/dev/null
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword env "XCURSOR_SIZE,$size" &>/dev/null
     fi
     _notify "Cursor size: ${size}px"
@@ -4851,7 +4541,7 @@ _a11y_text_scaling() {
     current=$(gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null || echo "1.0")
 
     local choice
-    choice=$(_rofi_select "  Text scale (${current}x)" \
+    choice=$(_yad_select "  Text scale (${current}x)" \
         "  1.0 (default)" \
         "  1.25 (125%)" \
         "  1.5 (150%)" \
@@ -4869,21 +4559,21 @@ _a11y_text_scaling() {
 
 _a11y_animations() {
     local current="on"
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         local enabled
         enabled=$(_hyprctl_get animations:enabled int)
         [ "$enabled" = "0" ] && current="off"
     fi
 
     local choice
-    choice=$(_rofi_select "  Animations ($current)" \
+    choice=$(_yad_select "  Animations ($current)" \
         "  Enable animations" \
         "  Disable animations" \
         "  Reduce motion (slower)" \
         "  Back")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         case "$choice" in
             *Enable*)
                 hyprctl keyword animations:enabled true &>/dev/null
@@ -4917,7 +4607,7 @@ _a11y_animations() {
 }
 
 _a11y_gaps() {
-    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+    if ! command -v hyprctl &>/dev/null; then
         _notify "Gaps only available on Hyprland"
         return
     fi
@@ -4927,7 +4617,7 @@ _a11y_gaps() {
     current_out=$(_hyprctl_get general:gaps_out custom)
 
     local choice
-    choice=$(_rofi_select "  Gaps (in:${current_in} out:${current_out})" \
+    choice=$(_yad_select "  Gaps (in:${current_in} out:${current_out})" \
         "  None (0/0)" \
         "  Minimal (1/2)" \
         "  Default (3/6)" \
@@ -4951,7 +4641,7 @@ _a11y_gaps() {
 }
 
 _a11y_opacity() {
-    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+    if ! command -v hyprctl &>/dev/null; then
         _notify "Opacity only available on Hyprland"
         return
     fi
@@ -4960,7 +4650,7 @@ _a11y_opacity() {
     current=$(_hyprctl_get decoration:inactive_opacity float)
 
     local choice
-    choice=$(_rofi_select "  Inactive window opacity (${current})" \
+    choice=$(_yad_select "  Inactive window opacity (${current})" \
         "  100% (opaque)" \
         "  95%" \
         "  90% (default)" \
@@ -4985,7 +4675,7 @@ _a11y_opacity() {
 }
 
 _a11y_border_size() {
-    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+    if ! command -v hyprctl &>/dev/null; then
         _notify "Border size only available on Hyprland"
         return
     fi
@@ -4994,7 +4684,7 @@ _a11y_border_size() {
     current=$(_hyprctl_get general:border_size int)
 
     local choice
-    choice=$(_rofi_select "  Border width (${current}px)" \
+    choice=$(_yad_select "  Border width (${current}px)" \
         "  0 (none)" \
         "  1 (thin)" \
         "  2 (default)" \
@@ -5013,7 +4703,7 @@ _a11y_border_size() {
 menu_accessibility() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Accessibility" \
+        choice=$(_yad_select "  Accessibility" \
             "  Cursor size" \
             "  Text scaling" \
             "  Animations" \
@@ -5092,7 +4782,7 @@ _eq_presets() {
     presets+=("  Back")
 
     local choice
-    choice=$(_rofi_select "  EQ Preset" "${presets[@]}")
+    choice=$(_yad_select "  EQ Preset" "${presets[@]}")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
     # Ensure EasyEffects is running
@@ -5188,7 +4878,7 @@ menu_equalizer() {
         status=$(_eq_running)
 
         local choice
-        choice=$(_rofi_select "  Equalizer ($status)" \
+        choice=$(_yad_select "  Equalizer ($status)" \
             "  Toggle equalizer ($status)" \
             "  Presets" \
             "  Open EasyEffects" \
@@ -5240,7 +4930,7 @@ _ss_set_timeout() {
     current=$(_ss_current_timeout)
 
     local choice
-    choice=$(_rofi_select "  Idle timeout (${current} min)" \
+    choice=$(_yad_select "  Idle timeout (${current} min)" \
         "  1 minute" \
         "  2 minutes" \
         "  5 minutes" \
@@ -5293,7 +4983,7 @@ menu_screensaver() {
         timeout=$(_ss_current_timeout)
 
         local choice
-        choice=$(_rofi_select "  Screensaver ($status)" \
+        choice=$(_yad_select "  Screensaver ($status)" \
             "  Toggle ($status)" \
             "  Idle timeout (${timeout} min)" \
             "  Generate animation" \
@@ -5321,7 +5011,7 @@ menu_stoa() {
         local kb_state="${STOA_SHOW_KEYBINDS:-true}"
 
         local choice
-        choice=$(_rofi_select "  Stoa Config" \
+        choice=$(_yad_select "  Stoa Config" \
             "  Keybinds in bar ($kb_state)" \
             "  Generate wallpapers" \
             "  Stoic system fetch" \
@@ -5351,50 +5041,10 @@ menu_stoa() {
     done
 }
 
-# ══════════════════════════════════════════════════════════════
-#   POWER
-# ══════════════════════════════════════════════════════════════
-
-menu_power() {
-    local choice
-    choice=$(_rofi_select "  Power" \
-        "  Lock screen" \
-        "  Logout" \
-        "  Reboot" \
-        "  Shutdown" \
-        "  Back")
-    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-    case "$choice" in
-        *Lock*)
-            if [ -n "$WAYLAND_DISPLAY" ]; then
-                hyprlock &
-            else
-                i3lock-color --blur 5 --ring-color=c49a5c --inside-color=211e19cc \
-                    --line-uses-inside --keyhl-color=8a9a6c --bshl-color=b36b5a \
-                    --separator-color=6e6a62 --time-color=c49a5c --date-color=d4cfc4aa \
-                    --verif-color=8a9a6c --wrong-color=b36b5a --clock \
-                    --time-str="%H:%M" --date-str="%A, %d %B" \
-                    --time-font="JetBrains Mono" --date-font="JetBrains Mono" &
-            fi
-            ;;
-        *Logout*)
-            _rofi_confirm "Logout?" && {
-                if [ -n "$WAYLAND_DISPLAY" ]; then
-                    hyprctl dispatch exit
-                else
-                    i3-msg exit
-                fi
-            }
-            ;;
-        *Reboot*)
-            _rofi_confirm "Reboot?" && systemctl reboot
-            ;;
-        *Shutdown*)
-            _rofi_confirm "Shutdown?" && systemctl poweroff
-            ;;
-    esac
-}
+# Session actions (lock/logout/reboot/shutdown) used to live in a "Power"
+# menu here — removed as redundant with Noctalia's native control center
+# session shortcut (control_center.shortcuts type="session" in
+# config/noctalia/config.toml), which already covers all four.
 
 # ══════════════════════════════════════════════════════════════
 #   DISKS & STORAGE (gnome-disks + disk-usage-analyzer)
@@ -5471,7 +5121,7 @@ _disk_smart() {
     if [ ${#disks[@]} -eq 1 ]; then
         disk="${disks[0]}"
     else
-        disk=$(printf '%s\n' "${disks[@]}" | "${ROFI[@]}" -p "  Select disk")
+        disk=$(printf '%s\n' "${disks[@]}" | _yad_pipe "  Select disk")
         [ -z "$disk" ] && return
     fi
 
@@ -5511,7 +5161,7 @@ _disk_smart() {
         [ -n "$wear" ] && lines+=("  Wear level: $wear")
     fi
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  SMART"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  SMART"
 }
 
 # ── Mount / Unmount partitions ──
@@ -5533,7 +5183,7 @@ _disk_mount() {
     [ ${#parts[@]} -eq 0 ] && { _notify "No unmounted partitions found"; return; }
 
     local choice
-    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Mount partition")
+    choice=$(printf '%s\n' "${parts[@]}" | _yad_pipe "  Mount partition")
     [ -z "$choice" ] && return
 
     local dev
@@ -5570,13 +5220,13 @@ _disk_unmount() {
     [ ${#parts[@]} -eq 0 ] && { _notify "No unmountable partitions"; return; }
 
     local choice
-    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Unmount partition")
+    choice=$(printf '%s\n' "${parts[@]}" | _yad_pipe "  Unmount partition")
     [ -z "$choice" ] && return
 
     local dev
     dev=$(echo "$choice" | awk '{print $1}')
 
-    _rofi_confirm "Unmount $dev?" || return
+    _yad_confirm "Unmount $dev?" || return
 
     if command -v udisksctl &>/dev/null; then
         udisksctl unmount -b "$dev" 2>&1 | head -1
@@ -5589,7 +5239,7 @@ _disk_unmount() {
 # ── Disk Usage Analyzer (du-based) ──
 _disk_usage_scan() {
     local target
-    target=$(_rofi_select "  Analyze directory" \
+    target=$(_yad_select "  Analyze directory" \
         "  ~ (Home)" \
         "  / (Root)" \
         "  Custom path")
@@ -5598,7 +5248,7 @@ _disk_usage_scan() {
     case "$target" in
         *Home*)   target="$HOME" ;;
         *Root*)   target="/" ;;
-        *Custom*) target=$(_rofi_input "  Path to analyze")
+        *Custom*) target=$(_yad_input "  Path to analyze")
                   [ -z "$target" ] && return
                   [ ! -d "$target" ] && { _notify "Not a directory: $target"; return; }
                   ;;
@@ -5626,7 +5276,7 @@ _disk_usage_scan() {
     lines+=("  $total    $target")
 
     local selected
-    selected=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Usage" -mesg "Select to drill down")
+    selected=$(printf '%s\n' "${lines[@]}" | _yad_pipe "  Usage — select to drill down")
 
     # Drill-down: if user selects a directory, scan it recursively
     if [ -n "$selected" ]; then
@@ -5656,7 +5306,7 @@ _disk_usage_drill() {
         done < <(du -h --max-depth=1 "$target" 2>/dev/null | sort -rh | head -25)
 
         local selected
-        selected=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Usage")
+        selected=$(printf '%s\n' "${lines[@]}" | _yad_pipe "  Usage")
         [ -z "$selected" ] && return
         [[ "$selected" == *"Back"* ]] && return
 
@@ -5671,7 +5321,7 @@ _disk_usage_drill() {
 # ── Largest files finder ──
 _disk_largest_files() {
     local target
-    target=$(_rofi_select "  Find largest files" \
+    target=$(_yad_select "  Find largest files" \
         "  ~ (Home)" \
         "  / (Root)" \
         "  Custom path")
@@ -5680,7 +5330,7 @@ _disk_largest_files() {
     case "$target" in
         *Home*)   target="$HOME" ;;
         *Root*)   target="/" ;;
-        *Custom*) target=$(_rofi_input "  Path")
+        *Custom*) target=$(_yad_input "  Path")
                   [ -z "$target" ] && return ;;
     esac
 
@@ -5697,7 +5347,7 @@ _disk_largest_files() {
         lines+=("  $size    $file")
     done < <(find "$target" -xdev -type f -exec du -h {} + 2>/dev/null | sort -rh | head -30)
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Large Files"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  Large Files"
 }
 
 # ── Filesystem check ──
@@ -5719,7 +5369,7 @@ _disk_fsck() {
     [ ${#parts[@]} -eq 0 ] && { _notify "No partitions found"; return; }
 
     local choice
-    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Filesystem check")
+    choice=$(printf '%s\n' "${parts[@]}" | _yad_pipe "  Filesystem check")
     [ -z "$choice" ] && return
 
     local dev
@@ -5730,11 +5380,11 @@ _disk_fsck() {
         return
     fi
 
-    _rofi_confirm "Run filesystem check on $dev?" || return
+    _yad_confirm "Run filesystem check on $dev?" || return
 
     local result
     result=$(sudo fsck -n "$dev" 2>&1)
-    echo "$result" | "${ROFI[@]}" -p "  fsck $dev"
+    echo "$result" | _yad_pipe "  fsck $dev"
 }
 
 # ── Format partition (dangerous!) ──
@@ -5756,19 +5406,19 @@ _disk_format() {
     [ ${#parts[@]} -eq 0 ] && { _notify "No unmounted partitions available"; return; }
 
     local choice
-    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "⚠ Format partition")
+    choice=$(printf '%s\n' "${parts[@]}" | _yad_pipe "⚠ Format partition")
     [ -z "$choice" ] && return
 
     local dev
     dev=$(echo "$choice" | awk '{print $1}')
 
     local fs_choice
-    fs_choice=$(_rofi_select "  Filesystem for $dev" \
+    fs_choice=$(_yad_select "  Filesystem for $dev" \
         "ext4" "btrfs" "xfs" "fat32 (vfat)" "ntfs" "exfat")
     [ -z "$fs_choice" ] && return
 
-    _rofi_confirm "FORMAT $dev as $fs_choice? ALL DATA WILL BE LOST!" || return
-    _rofi_confirm "Are you ABSOLUTELY sure? This is irreversible!" || return
+    _yad_confirm "FORMAT $dev as $fs_choice? ALL DATA WILL BE LOST!" || return
+    _yad_confirm "Are you ABSOLUTELY sure? This is irreversible!" || return
 
     local mkfs_cmd
     case "$fs_choice" in
@@ -5806,7 +5456,7 @@ _disk_label() {
     [ ${#parts[@]} -eq 0 ] && { _notify "No partitions found"; return; }
 
     local choice
-    choice=$(printf '%s\n' "${parts[@]}" | "${ROFI[@]}" -p "  Set label")
+    choice=$(printf '%s\n' "${parts[@]}" | _yad_pipe "  Set label")
     [ -z "$choice" ] && return
 
     local dev fstype
@@ -5814,7 +5464,7 @@ _disk_label() {
     fstype=$(echo "$choice" | awk '{print $3}')
 
     local new_label
-    new_label=$(_rofi_input "  New label for $dev")
+    new_label=$(_yad_input "  New label for $dev")
     [ -z "$new_label" ] && return
 
     case "$fstype" in
@@ -5842,11 +5492,11 @@ _disk_benchmark() {
     if [ ${#disks[@]} -eq 1 ]; then
         disk="${disks[0]}"
     else
-        disk=$(printf '%s\n' "${disks[@]}" | "${ROFI[@]}" -p "  Benchmark disk")
+        disk=$(printf '%s\n' "${disks[@]}" | _yad_pipe "  Benchmark disk")
         [ -z "$disk" ] && return
     fi
 
-    _rofi_confirm "Run sequential read test on $disk? (read-only, safe)" || return
+    _yad_confirm "Run sequential read test on $disk? (read-only, safe)" || return
     _notify "Benchmarking $disk... (this takes a few seconds)"
 
     local result
@@ -5862,13 +5512,13 @@ _disk_benchmark() {
         [ -n "$line" ] && lines+=("  $line")
     done <<< "$result"
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Benchmark"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  Benchmark"
 }
 
 # ── Manage fstab (show + edit) ──
 _disk_fstab() {
     local choice
-    choice=$(_rofi_select "  /etc/fstab" \
+    choice=$(_yad_select "  /etc/fstab" \
         "  View fstab" \
         "  Add current mounts to fstab" \
         "  Back")
@@ -5876,7 +5526,7 @@ _disk_fstab() {
 
     case "$choice" in
         *View*)
-            cat /etc/fstab 2>/dev/null | "${ROFI[@]}" -p "  fstab"
+            cat /etc/fstab 2>/dev/null | _yad_pipe "  fstab"
             ;;
         *Add*)
             # Show non-fstab mounts that could be added
@@ -5903,10 +5553,10 @@ _disk_fstab() {
             fi
 
             local entry
-            entry=$(printf '%s\n' "${mounts[@]}" | "${ROFI[@]}" -p "  Add to fstab")
+            entry=$(printf '%s\n' "${mounts[@]}" | _yad_pipe "  Add to fstab")
             [ -z "$entry" ] && return
 
-            _rofi_confirm "Add to /etc/fstab?\n$entry" || return
+            _yad_confirm "Add to /etc/fstab?\n$entry" || return
             echo "$entry" | sudo tee -a /etc/fstab >/dev/null
             _notify "Entry added to fstab"
             ;;
@@ -5954,13 +5604,13 @@ _disk_cleanup() {
     lines+=("  Remove orphaned packages")
 
     local choice
-    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Cleanup")
+    choice=$(printf '%s\n' "${lines[@]}" | _yad_pipe "  Cleanup")
     [ -z "$choice" ] && return
 
     case "$choice" in
         *"package cache"*)
             if command -v paccache &>/dev/null; then
-                _rofi_confirm "Clean package cache? (keep last 3 versions)" || return
+                _yad_confirm "Clean package cache? (keep last 3 versions)" || return
                 sudo paccache -r 2>&1 | tail -1
                 _notify "Package cache cleaned"
             else
@@ -5968,12 +5618,12 @@ _disk_cleanup() {
             fi
             ;;
         *journal*)
-            _rofi_confirm "Vacuum journal to 2 weeks?" || return
+            _yad_confirm "Vacuum journal to 2 weeks?" || return
             sudo journalctl --vacuum-time=2weeks 2>&1 | tail -1
             _notify "Journal cleaned"
             ;;
         *trash*)
-            _rofi_confirm "Empty trash?" || return
+            _yad_confirm "Empty trash?" || return
             rm -rf "${HOME}/.local/share/Trash/files/"* "${HOME}/.local/share/Trash/info/"*
             _notify "Trash emptied"
             ;;
@@ -5981,7 +5631,7 @@ _disk_cleanup() {
             local pkgs
             pkgs=$(pacman -Qtdq 2>/dev/null)
             [ -z "$pkgs" ] && { _notify "No orphaned packages"; return; }
-            _rofi_confirm "Remove orphaned packages?\n$(echo "$pkgs" | head -10)" || return
+            _yad_confirm "Remove orphaned packages?\n$(echo "$pkgs" | head -10)" || return
             echo "$pkgs" | sudo pacman -Rns - 2>&1 | tail -3
             _notify "Orphaned packages removed"
             ;;
@@ -5996,7 +5646,7 @@ menu_disks() {
         read -r total used avail pct < <(df -h --total 2>/dev/null | grep '^total' | awk '{print $2, $3, $4, $5}')
 
         local choice
-        choice=$(_rofi_select "  Disks & Storage (${used:-?}/${total:-?} — ${pct:-?})" \
+        choice=$(_yad_select "  Disks & Storage (${used:-?}/${total:-?} — ${pct:-?})" \
             "  Overview" \
             "  Disk Usage Analyzer" \
             "  Largest Files" \
@@ -6009,11 +5659,12 @@ menu_disks() {
             "  Set Label" \
             "  fstab" \
             "  Cleanup" \
+            "  Disk Utility (gnome-disks)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *Overview*)      _disk_overview | "${ROFI[@]}" -p "  Disks" ;;
+            *Overview*)      _disk_overview | _yad_pipe "  Disks" ;;
             *Analyzer*)      _disk_usage_scan ;;
             *"Largest Files"*) _disk_largest_files ;;
             *"Mount P"*)     _disk_mount ;;
@@ -6025,6 +5676,13 @@ menu_disks() {
             *Label*)         _disk_label ;;
             *fstab*)         _disk_fstab ;;
             *Cleanup*)       _disk_cleanup ;;
+            *"Disk Utility"*)
+                if command -v gnome-disks &>/dev/null; then
+                    gnome-disks & disown
+                else
+                    _notify "gnome-disk-utility not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -6039,7 +5697,7 @@ _health_doctor() {
     stoa-doctor 2>/dev/null
     local log="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/doctor.log"
     if [ -f "$log" ]; then
-        cat "$log" | "${ROFI[@]}" -p "  Doctor Report"
+        cat "$log" | _yad_pipe "  Doctor Report"
     else
         _notify "No doctor log found"
     fi
@@ -6049,7 +5707,7 @@ _health_doctor() {
 _health_last_log() {
     local log="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/doctor.log"
     if [ -f "$log" ]; then
-        cat "$log" | "${ROFI[@]}" -p "  Last Report"
+        cat "$log" | _yad_pipe "  Last Report"
     else
         _notify "No doctor log found — run health check first"
     fi
@@ -6072,7 +5730,7 @@ _health_pkg_snapshots() {
     [ ${#snaps[@]} -eq 0 ] && { _notify "No snapshots yet — they're created before pacman transactions"; return; }
 
     local choice
-    choice=$(printf '%s\n' "${snaps[@]}" | "${ROFI[@]}" -p "  Snapshots (${#snaps[@]})")
+    choice=$(printf '%s\n' "${snaps[@]}" | _yad_pipe "  Snapshots (${#snaps[@]})")
     [ -z "$choice" ] && return
 
     local selected_file
@@ -6080,7 +5738,7 @@ _health_pkg_snapshots() {
     [ ! -f "$selected_file" ] && return
 
     local action
-    action=$(_rofi_select "  $choice" \
+    action=$(_yad_select "  $choice" \
         "  View snapshot" \
         "  Compare with current" \
         "  Compare two snapshots" \
@@ -6089,7 +5747,7 @@ _health_pkg_snapshots() {
 
     case "$action" in
         *"View"*)
-            cat "$selected_file" | "${ROFI[@]}" -p "  Snapshot"
+            cat "$selected_file" | _yad_pipe "  Snapshot"
             ;;
         *"with current"*)
             local lines=()
@@ -6152,11 +5810,11 @@ _health_pkg_snapshots() {
 
             [ ${#lines[@]} -le 2 ] && lines+=("  No changes detected")
 
-            printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Diff"
+            printf '%s\n' "${lines[@]}" | _yad_pipe "  Diff"
             ;;
         *"two snapshots"*)
             local snap2
-            snap2=$(printf '%s\n' "${snaps[@]}" | "${ROFI[@]}" -p "  Compare with")
+            snap2=$(printf '%s\n' "${snaps[@]}" | _yad_pipe "  Compare with")
             [ -z "$snap2" ] && return
             local file2="$snap_dir/$(echo "$snap2" | awk '{print $1}')"
             [ ! -f "$file2" ] && return
@@ -6179,7 +5837,7 @@ _health_pkg_snapshots() {
                 done <<< "$d"
             fi
 
-            printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Diff"
+            printf '%s\n' "${lines[@]}" | _yad_pipe "  Diff"
             ;;
     esac
 }
@@ -6196,13 +5854,9 @@ _health_system_info() {
     lines+=("")
 
     # WM info
-    if [ -n "${WAYLAND_DISPLAY:-}" ]; then
-        local hypr_ver
-        hypr_ver=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/hyprland-version" 2>/dev/null || echo "?")
-        lines+=("  Session: Wayland (Hyprland $hypr_ver)")
-    else
-        lines+=("  Session: Xorg (i3)")
-    fi
+    local hypr_ver
+    hypr_ver=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/hyprland-version" 2>/dev/null || echo "?")
+    lines+=("  Session: Wayland (Hyprland $hypr_ver)")
 
     # Shell
     lines+=("  Shell: $SHELL")
@@ -6220,7 +5874,7 @@ _health_system_info() {
     lines+=("  AUR/foreign: $(pacman -Qqm 2>/dev/null | wc -l)")
     lines+=("  Orphans: $(pacman -Qqtd 2>/dev/null | wc -l)")
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  System"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  System"
 }
 
 # ── Services status ──
@@ -6268,7 +5922,7 @@ _health_services() {
         fi
     done
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Services"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  Services"
 }
 
 # ── Failed systemd units ──
@@ -6298,13 +5952,13 @@ _health_failed_units() {
         fi
     fi
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Failed Units"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  Failed Units"
 }
 
 # ── Journal errors (recent) ──
 _health_journal() {
     local choice
-    choice=$(_rofi_select "  Journal" \
+    choice=$(_yad_select "  Journal" \
         "  Errors (last boot)" \
         "  Warnings (last boot)" \
         "  Kernel messages (dmesg)" \
@@ -6314,16 +5968,16 @@ _health_journal() {
 
     case "$choice" in
         *Errors*)
-            journalctl -b -p err --no-pager -n 100 2>/dev/null | "${ROFI[@]}" -p "  Errors"
+            journalctl -b -p err --no-pager -n 100 2>/dev/null | _yad_pipe "  Errors"
             ;;
         *Warnings*)
-            journalctl -b -p warning --no-pager -n 100 2>/dev/null | "${ROFI[@]}" -p "  Warnings"
+            journalctl -b -p warning --no-pager -n 100 2>/dev/null | _yad_pipe "  Warnings"
             ;;
         *Kernel*)
-            dmesg --level=err,warn -T 2>/dev/null | tail -80 | "${ROFI[@]}" -p "  dmesg"
+            dmesg --level=err,warn -T 2>/dev/null | tail -80 | _yad_pipe "  dmesg"
             ;;
         *"disk usage"*)
-            journalctl --disk-usage 2>/dev/null | "${ROFI[@]}" -p "  Journal"
+            journalctl --disk-usage 2>/dev/null | _yad_pipe "  Journal"
             ;;
     esac
 }
@@ -6350,11 +6004,11 @@ _health_updates() {
     done <<< "$updates"
 
     local choice
-    choice=$(printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Updates ($count)")
+    choice=$(printf '%s\n' "${lines[@]}" | _yad_pipe "  Updates ($count)")
 
     # Offer to update
     if [ -n "$choice" ]; then
-        _rofi_confirm "Run system update? (sudo pacman -Syu)" || return
+        _yad_confirm "Run system update? (sudo pacman -Syu)" || return
         kitty --hold -e sudo pacman -Syu &
         disown
     fi
@@ -6411,7 +6065,7 @@ _health_security() {
         lines+=("  ✕ nftables not installed")
     fi
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Security"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  Security"
 }
 
 # ── Temperatures & fans ──
@@ -6454,7 +6108,7 @@ _health_thermals() {
     done
     $fans_found || lines+=("  No fan sensors detected")
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Thermals"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  Thermals"
 }
 
 # ── Stoa config files integrity ──
@@ -6464,12 +6118,10 @@ _health_config_check() {
 
     local configs=(
         "${HOME}/.config/hypr/hyprland.lua:Hyprland config"
-        "${HOME}/.config/rofi/config.rasi:Rofi config"
         "${HOME}/.config/noctalia/config.toml:Noctalia config"
         "${HOME}/.config/kitty/kitty.conf:Kitty config"
         "${HOME}/.config/eww/eww.yuck:EWW widgets"
         "${HOME}/.config/eww/eww.scss:EWW styles"
-        "${HOME}/.config/i3/config:i3 config"
         "${HOME}/.config/stoa/stoa.conf:Stoa config"
     )
 
@@ -6494,14 +6146,14 @@ _health_config_check() {
         lines+=("  $status    $name")
     done
 
-    printf '%s\n' "${lines[@]}" | "${ROFI[@]}" -p "  Configs"
+    printf '%s\n' "${lines[@]}" | _yad_pipe "  Configs"
 }
 
 # ── System Health menu ──
 menu_health() {
     while true; do
         local choice
-        choice=$(_rofi_select "  System Health" \
+        choice=$(_yad_select "  System Health" \
             "  Run Health Check" \
             "  Last Doctor Report" \
             "  System Info" \
@@ -6552,7 +6204,7 @@ _maintain_backup() {
         return
     fi
 
-    _rofi_confirm "Backup all system & user configs?" || return
+    _yad_confirm "Backup all system & user configs?" || return
     _notify "Backing up configurations..."
 
     local hostname_str="${HOSTNAME:-$(hostname 2>/dev/null || echo unknown)}"
@@ -6671,7 +6323,7 @@ _maintain_list() {
     [ ${#backups[@]} -eq 0 ] && { _notify "No backups found in \$HOME"; return; }
 
     local choice
-    choice=$(printf '%s\n' "${backups[@]}" | "${ROFI[@]}" -p "  Backups (${#backups[@]})")
+    choice=$(printf '%s\n' "${backups[@]}" | _yad_pipe "  Backups (${#backups[@]})")
     [ -z "$choice" ] && return
 
     local selected_file
@@ -6679,7 +6331,7 @@ _maintain_list() {
     [ ! -f "$selected_file" ] && return
 
     local action
-    action=$(_rofi_select "  $(basename "$selected_file")" \
+    action=$(_yad_select "  $(basename "$selected_file")" \
         "  View contents" \
         "  Restore (interactive)" \
         "  Restore all" \
@@ -6688,7 +6340,7 @@ _maintain_list() {
 
     case "$action" in
         *"View"*)
-            unzip -l "$selected_file" 2>/dev/null | "${ROFI[@]}" -p "  Contents"
+            unzip -l "$selected_file" 2>/dev/null | _yad_pipe "  Contents"
             ;;
         *"interactive"*)
             _maintain_restore_interactive "$selected_file"
@@ -6729,7 +6381,7 @@ _maintain_restore_interactive() {
         _notify "Safety backup: $(basename "$pre_restore")"
     fi
 
-    # Build file list for rofi selection
+    # Build file list for yad selection
     local files=()
     while IFS= read -r -d '' f; do
         local dest="/${f#"$tmpdir"/}"
@@ -6743,7 +6395,7 @@ _maintain_restore_interactive() {
         [ -f "$dest" ] && status="EXISTS"
 
         local confirm
-        confirm=$(_rofi_select "  [$status] $dest" "  Restore" "  Skip")
+        confirm=$(_yad_select "  [$status] $dest" "  Restore" "  Skip")
         if [[ "$confirm" == *"Restore"* ]]; then
             sudo mkdir -p "$(dirname "$dest")"
             sudo cp "$src" "$dest"
@@ -6765,7 +6417,7 @@ _maintain_restore_all() {
         return
     fi
 
-    _rofi_confirm "Restore ALL files from $(basename "$backup_file")? This overwrites existing files." || return
+    _yad_confirm "Restore ALL files from $(basename "$backup_file")? This overwrites existing files." || return
 
     if ! unzip -t "$backup_file" >/dev/null 2>&1; then
         _notify "Invalid or corrupted zip file"
@@ -6806,7 +6458,7 @@ _maintain_cleanup() {
     local mode="Cleanup"
     [ "$dry_run" -eq 1 ] && mode="Cleanup (dry-run)"
 
-    _rofi_confirm "Run full system cleanup? Includes package cache, orphans, journal, flatpak, docker, Steam cache, tmp files." || return
+    _yad_confirm "Run full system cleanup? Includes package cache, orphans, journal, flatpak, docker, Steam cache, tmp files." || return
     _notify "Running $mode..."
 
     local space_before
@@ -6971,7 +6623,7 @@ _maintain_cleanup() {
         log_lines+=("  Cleanup complete (no measurable space freed)")
     fi
 
-    printf '%s\n' "${log_lines[@]}" | "${ROFI[@]}" -p "  $mode"
+    printf '%s\n' "${log_lines[@]}" | _yad_pipe "  $mode"
     _notify "$mode complete"
 }
 
@@ -6993,7 +6645,7 @@ _maintain_schedule() {
 
     if [ "$already_scheduled" -eq 1 ]; then
         local action
-        action=$(_rofi_select "  Cleanup already scheduled ($method)" \
+        action=$(_yad_select "  Cleanup already scheduled ($method)" \
             "  Remove schedule" \
             "  Keep" \
             "  Back")
@@ -7010,7 +6662,7 @@ _maintain_schedule() {
         return
     fi
 
-    _rofi_confirm "Schedule system cleanup to run at every boot?" || return
+    _yad_confirm "Schedule system cleanup to run at every boot?" || return
 
     if command -v crontab &>/dev/null; then
         local cron_cmd="@reboot bash $script_path --cleanup"
@@ -7049,7 +6701,7 @@ TMREOF
 menu_maintain() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Maintenance" \
+        choice=$(_yad_select "  Maintenance" \
             "  Backup Configs" \
             "  Restore / Browse Backups" \
             "  Full Cleanup" \
@@ -7075,7 +6727,7 @@ menu_maintain() {
 main_menu() {
     while true; do
         local choice
-        choice=$(_rofi_select "  Settings" \
+        choice=$(_yad_select "  Settings" \
             "  Display" \
             "  Audio" \
             "  Equalizer" \
@@ -7099,8 +6751,7 @@ main_menu() {
             "  Lock Screen" \
             "  System Health" \
             "  Maintenance" \
-            "  Stoa Config" \
-            "  Power")
+            "  Stoa Config")
         [ -z "$choice" ] && exit 0
 
         case "$choice" in
@@ -7128,7 +6779,6 @@ main_menu() {
             *"System Health"*) menu_health ;;
             *Maintenance*)  menu_maintain ;;
             *Stoa*)         menu_stoa ;;
-            *Power*)        menu_power ;;
         esac
     done
 }

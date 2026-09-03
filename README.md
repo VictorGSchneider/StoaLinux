@@ -2,7 +2,7 @@
 
 # StoaLinux
 
-**A Stoic desktop for Arch Linux — Hyprland, i3, and a unified dark theme inspired by the ancient world.**
+**A Stoic desktop for Arch Linux — Hyprland (Wayland) and a unified dark theme inspired by the ancient world.**
 
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?style=flat-square&logo=wayland&logoColor=black)](https://hyprland.org)
@@ -23,9 +23,9 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 ### Highlights
 
 - **Arch Linux** with automated installation (from live ISO or existing Arch)
-- **Hyprland** (Wayland) as the main compositor, **i3** as Xorg fallback
+- **Hyprland** (Wayland) as the compositor — Wayland-only, no Xorg fallback
 - **Noctalia v5** as the bar + launcher + control centre + notifications + OSD + clipboard history + wallpaper + lock screen, themed via the bundled **Stoa palette** (`config/noctalia/palettes/Stoa.json`)
-- **25-panel settings app** via Rofi — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
+- **25-panel settings app** — a mix of native dialogs (yad) and standalone GUI apps (wdisplays, pwvucontrol, nm-connection-editor, blueman, gnome-disks, nwg-look) — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
 - **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
 - **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird, VS Code, Neovim
 - **Capture toolbar** (eww) — screenshot + recording with mode selection, toggle, and delay
@@ -227,7 +227,7 @@ Change the entire color scheme from `Super+S → Theme → Color Palette`:
 - **View Current Palette** — see the active colors at a glance
 - **Reset to Stoic** — restore the default marble/bronze palette
 
-Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Rofi, Waybar, Kitty, eww, GTK 3/4, Hyprland, hyprlock, i3, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
+Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Waybar, Kitty, eww, GTK 3/4, Hyprland, hyprlock, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
 
 ### Stoa Greeter
 

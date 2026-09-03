@@ -10,7 +10,7 @@
 #  a whole tabbed settings-driven UI in the Luau UI-tree DSL untested is a
 #  lot of surface to get wrong on a first port with no way to render it
 #  locally. Rather than risk that, the tab content moved to
-#  scripts/stoa-health.sh, a rofi menu in the same spirit as the existing
+#  scripts/stoa-health.sh, a yad menu in the same spirit as the existing
 #  stoa-drive.sh — the bar widget just shows severity and opens it.
 #
 #  The data source is unchanged: scripts/stoa-vitals-status still emits the

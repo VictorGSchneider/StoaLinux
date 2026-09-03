@@ -3,11 +3,12 @@
 --  ║  "The wise man carries his possessions within him." — Bias    ║
 --  ╚══════════════════════════════════════════════════════════════╝
 --
---  Native replacement for the rofi menu in scripts/stoa-drive.sh. All the
---  business logic (mount/unmount, bisync, rclone account create/delete)
---  still lives in that script — this panel is a thin declarative front
---  end: it reads the same JSON status endpoints the bar widget already
---  polls and dispatches to the script's non-interactive CLI subcommands
+--  Native replacement for the old rofi menu in scripts/stoa-drive.sh
+--  (now a yad-based CLI fallback). All the business logic (mount/unmount,
+--  bisync, rclone account create/delete) still lives in that script —
+--  this panel is a thin declarative front end: it reads the same JSON
+--  status endpoints the bar widget already polls and dispatches to the
+--  script's non-interactive CLI subcommands
 --  (add-account/remove-account/add-sync-pair/remove-sync-pair/...).
 --
 --  The one step that still opens a terminal is creating a new rclone

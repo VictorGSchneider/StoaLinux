@@ -3,9 +3,9 @@
 # ║  STOA LINUX — Keybinds cheatsheet                           ║
 # ║    text → the cheatsheet as plain text (used by Super+/)     ║
 # ║    bar  → compact apps line     ┐ legacy waybar custom       ║
-# ║    info → JSON with tooltip     ┘ modules, kept for the i3   ║
-# ║                                   session and any external   ║
-# ║                                   bar that still wants them  ║
+# ║    info → JSON with tooltip     ┘ modules, kept for any      ║
+# ║                                   external bar that still    ║
+# ║                                   wants them                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
@@ -20,7 +20,7 @@ MODE="${1:-bar}"
 
 # ── Compact bar text: only the most-used apps ──
 SEP=" • "
-BAR_TEXT="⏎ Term${SEP}␣ Rofi${SEP}B Brave${SEP}E Files${SEP}O Notes${SEP}V Clip"
+BAR_TEXT="⏎ Term${SEP}␣ Launcher${SEP}B Brave${SEP}E Files${SEP}O Notes${SEP}V Clip"
 
 # ── Full tooltip (organized into sections) ──
 read -r -d '' TOOLTIP <<'EOF'
@@ -113,9 +113,9 @@ case "$MODE" in
         emit "⌨" "$TOOLTIP" "$class"
         ;;
     text)
-        # Plain text, for rofi/notify consumers. Noctalia v5 has no
-        # cheatsheet widget, so Super+/ renders this through rofi instead
-        # of the waybar module that used to carry it.
+        # Plain text, for the yad/notify consumers. Noctalia v5 has no
+        # cheatsheet widget, so Super+/ renders this through a yad text
+        # dialog instead of the waybar module that used to carry it.
         printf '%s\n' "$TOOLTIP"
         ;;
     *)
