@@ -311,6 +311,7 @@ _link "${STOA_DIR}/scripts/stoa-bar-toggle.sh"   "${HOME}/.local/bin/stoa-bar-to
 _link "${STOA_DIR}/scripts/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
 _link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
+_link "${STOA_DIR}/scripts/stoa-bauh.py"          "${HOME}/.local/bin/stoa-bauh"
 
 # The bins above are all symlinks to source files tracked in-tree with +x
 # already set, so no chmod loop is needed here. If a source ever loses +x,
