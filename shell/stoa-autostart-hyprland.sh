@@ -8,6 +8,6 @@
 # ║  exec-once is hyprlock — so the lock page IS the login.      ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-if [ -z "$WAYLAND_DISPLAY" ] && [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && command -v Hyprland >/dev/null 2>&1; then
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && command -v Hyprland >/dev/null 2>&1; then
     exec start-hyprland
 fi

@@ -38,7 +38,7 @@ source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/aur.sh"
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     STOA LINUX — Arch Installer                      ║${R}"
-echo -e "  ${B}║     archinstall + Hyprland/Wayland + i3/Xorg         ║${R}"
+echo -e "  ${B}║     archinstall + Hyprland/Wayland                   ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
@@ -79,7 +79,7 @@ echo -e "  ${S}  Audio:       PipeWire${R}"
 echo -e "  ${S}  Network:     NetworkManager${R}"
 echo -e "  ${S}  Locale:      pt_BR.UTF-8 / keyboard br-abnt2${R}"
 echo -e "  ${S}  Timezone:    America/Sao_Paulo${R}"
-echo -e "  ${S}  Packages:    Hyprland, Waybar, i3, Kitty, Neovim, Rofi...${R}"
+echo -e "  ${S}  Packages:    Hyprland, Waybar, Kitty, Neovim...${R}"
 echo ""
 echo -e "  ${F}You configure in archinstall TUI:${R}"
 echo -e "  ${B}  → Disks (partitioning and formatting)${R}"
@@ -182,17 +182,18 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     _install_aur_chroot satty                     "Satty"
     _install_aur_chroot enpass-bin                "Enpass"
     _install_aur_chroot howdy-git                 "howdy"
-    _install_aur_chroot i3lock-color              "i3lock-color"
     _install_aur_chroot otf-eb-garamond           "EB Garamond font"
     _install_aur_chroot colloid-icon-theme-git    "Colloid icon theme"
     _install_aur_chroot colloid-cursors-git       "Colloid cursors"
     _install_aur_chroot yacreader                 "YACReader"
+    _install_aur_chroot bauh                      "Bauh (package manager GUI)"
+    _install_aur_chroot nwg-look                  "nwg-look (GTK theme editor)"
     echo -e "  ${O}[✓] AUR packages installed.${R}"
 else
     echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
     echo -e "  ${S}Install after first boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
-    echo -e "  ${B}    yay -S brave-bin obsidian visual-studio-code-bin eww-wayland satty enpass-bin howdy-git i3lock-color otf-eb-garamond colloid-icon-theme-git colloid-cursors-git yacreader${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian visual-studio-code-bin eww-wayland satty enpass-bin howdy-git otf-eb-garamond colloid-icon-theme-git colloid-cursors-git yacreader bauh nwg-look${R}"
 fi
 
 # Remove temporary sudo
@@ -222,10 +223,6 @@ arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
 # Make zsh the login shell for the created user (bash remains available via `chsh -s /bin/bash`).
 arch-chroot "$INSTALL_ROOT" chsh -s /bin/zsh "$CREATED_USER" 2>/dev/null || true
 
-# .xinitrc for Xorg fallback
-arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c \
-    "[ -f ~/.xinitrc ] || echo 'exec i3' > ~/.xinitrc" 2>/dev/null || true
-
 echo -e "  ${O}[✓] Dotfiles installed for ${CREATED_USER}.${R}"
 
 # ── GPU + CPU Setup ──
@@ -244,7 +241,6 @@ echo -e "  ${B}╚════════════════════�
 echo ""
 echo -e "  ${F}After reboot, login and start:${R}"
 echo -e "  ${B}  Hyprland (Wayland):  Hyprland${R}"
-echo -e "  ${B}  i3 (Xorg fallback):  startx${R}"
 echo ""
 echo -e "  ${F}Shortcuts:${R}"
 echo -e "  ${S}  Super+Return  Terminal     Super+B  Brave${R}"

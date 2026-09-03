@@ -106,6 +106,15 @@ if [ -L "${CONFIG_DIR}/hypr/hyprland.conf" ]; then
     rm -f "${CONFIG_DIR}/hypr/hyprland.conf"
     echo -e "  ${S}[~] Removed stale hyprland.conf symlink (migrated to hyprland.lua).${R}"
 fi
+# Stoa is Wayland-only now — i3/picom/rofi configs no longer ship, so drop
+# any symlinks a previous install left pointing at files we removed.
+for stale in "${CONFIG_DIR}/i3/config" "${CONFIG_DIR}/i3/i3status.conf" \
+             "${CONFIG_DIR}/picom/picom.conf" "${CONFIG_DIR}/rofi/config.rasi"; do
+    if [ -L "$stale" ]; then
+        rm -f "$stale"
+        echo -e "  ${S}[~] Removed stale ${stale} symlink (i3/Xorg/rofi support dropped).${R}"
+    fi
+done
 # ── Noctalia v5 ──
 # v5 is configured from ~/.config/noctalia/*.toml (all merged, hot-reloaded)
 # plus palettes/<name>.json. Both are symlinked so a `git pull` propagates,
@@ -126,15 +135,10 @@ _link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive" \
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-health" \
       "${NOCTALIA_PLUGINS}/stoa-health"
 
-_link "${STOA_DIR}/config/i3/config"            "${CONFIG_DIR}/i3/config"
-_link "${STOA_DIR}/config/i3/i3status.conf"     "${CONFIG_DIR}/i3/i3status.conf"
-_link "${STOA_DIR}/config/picom/picom.conf"     "${CONFIG_DIR}/picom/picom.conf"
-
 # ── Apps ──
 _link "${STOA_DIR}/config/kitty/kitty.conf" "${CONFIG_DIR}/kitty/kitty.conf"
 _link "${STOA_DIR}/config/nvim/init.vim"            "${CONFIG_DIR}/nvim/init.vim"
 _link "${STOA_DIR}/config/nvim/colors/stoa.vim"     "${CONFIG_DIR}/nvim/colors/stoa.vim"
-_link "${STOA_DIR}/config/rofi/config.rasi"         "${CONFIG_DIR}/rofi/config.rasi"
 _link "${STOA_DIR}/config/zathura/zathurarc"        "${CONFIG_DIR}/zathura/zathurarc"
 _link "${STOA_DIR}/config/mpv/mpv.conf"             "${CONFIG_DIR}/mpv/mpv.conf"
 _link "${STOA_DIR}/config/btop/btop.conf"           "${CONFIG_DIR}/btop/btop.conf"

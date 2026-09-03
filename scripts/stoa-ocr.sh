@@ -13,27 +13,16 @@
 
 OCR_TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
 
-# Detect session type
-_is_wayland() { [ -n "${WAYLAND_DISPLAY:-}" ]; }
-
 _copy() {
-    if _is_wayland; then
-        wl-copy
-    else
-        xclip -selection clipboard
-    fi
+    wl-copy
 }
 
 _screenshot_area() {
     local outfile="$1"
-    if _is_wayland; then
-        local geometry
-        geometry=$(slurp 2>/dev/null)
-        [ -z "$geometry" ] && exit 0
-        grim -g "$geometry" "$outfile"
-    else
-        maim -s "$outfile"
-    fi
+    local geometry
+    geometry=$(slurp 2>/dev/null)
+    [ -z "$geometry" ] && exit 0
+    grim -g "$geometry" "$outfile"
 }
 
 # Detect language: argument or default
