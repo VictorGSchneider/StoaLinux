@@ -72,8 +72,8 @@ _yad_info() {
               --width=520 --height=440 --button="Close:0"
 }
 
-# Drop-in for the old `_yad_pipe "<title>"` pattern: reads a list
-# from stdin (one option per line) and returns the picked line.
+# Drop-in for the old rofi `"${ROFI[@]}" -p "<title>"` pattern: reads a
+# list from stdin (one option per line) and returns the picked line.
 _yad_pipe() {
     yad --list --title="$1" --column="Option" --no-headers \
         --width=480 --height=440 --separator=''
@@ -109,232 +109,16 @@ _display_brightness() {
     _notify "Brightness: ${pct}%"
 }
 
-_display_resolution() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        # Hyprland: list available modes
-        local monitor
-        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
-        [ -z "$monitor" ] && { _notify "No monitor detected"; return; }
-
-        local modes
-        modes=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].availableModes[]' 2>/dev/null)
-        [ -z "$modes" ] && { _notify "Could not read modes"; return; }
-
-        local current
-        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0] | "\(.width)x\(.height)@\(.refreshRate)Hz"' 2>/dev/null)
-
-        local choice
-        choice=$(echo "$modes" | _yad_pipe "  Resolution (${current})")
-        [ -z "$choice" ] && return
-
-        local res rate
-        res=$(echo "$choice" | cut -d@ -f1)
-        rate=$(echo "$choice" | cut -d@ -f2 | tr -d 'Hz')
-        hyprctl keyword monitor "$monitor, ${res}@${rate}, auto, 1" &>/dev/null
-        _notify "Resolution: ${choice}"
-    else
-        # Xorg: xrandr
-        local output
-        output=$(xrandr 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
-        [ -z "$output" ] && { _notify "No display detected"; return; }
-
-        local modes
-        modes=$(xrandr 2>/dev/null | grep -A 20 "^${output}" | grep -oP '^\s+\K\d+x\d+' | sort -u)
-
-        local choice
-        choice=$(echo "$modes" | _yad_pipe "  Resolution")
-        [ -z "$choice" ] && return
-
-        xrandr --output "$output" --mode "$choice"
-        _notify "Resolution: ${choice}"
+# Resolution, scale, rotation and multi-monitor layout are all handled by
+# wdisplays — a standalone GTK GUI for wlr-output-management that covers
+# everything the old rofi menu reimplemented over hyprctl/xrandr, with a
+# visual drag-and-drop layout editor xrandr-based text menus never had.
+_display_layout() {
+    if ! command -v wdisplays &>/dev/null; then
+        _notify "wdisplays not installed — cannot configure display layout"
+        return
     fi
-}
-
-_display_scale() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        local monitor
-        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
-        local current
-        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].scale' 2>/dev/null)
-
-        local choice
-        choice=$(_yad_select "  Scale (${current}x)" \
-            "1.0" "1.25" "1.5" "1.75" "2.0")
-        [ -z "$choice" ] && return
-
-        hyprctl keyword monitor "$monitor, preferred, auto, $choice" &>/dev/null
-        _notify "Scale: ${choice}x"
-    else
-        _notify "Scaling only available on Wayland (Hyprland)"
-    fi
-}
-
-_display_rotation() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        local monitor
-        monitor=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null)
-        local current
-        current=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].transform' 2>/dev/null)
-
-        local label="Normal"
-        case "$current" in
-            1) label="90°" ;; 2) label="180°" ;; 3) label="270°" ;;
-        esac
-
-        local choice
-        choice=$(_yad_select "  Rotation ($label)" \
-            "  Normal (0°)" \
-            "  90° (portrait)" \
-            "  180° (inverted)" \
-            "  270° (portrait inverted)" \
-            "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        local transform
-        case "$choice" in
-            *Normal*)  transform=0 ;;
-            *90*)      transform=1 ;;
-            *180*)     transform=2 ;;
-            *270*)     transform=3 ;;
-        esac
-
-        hyprctl keyword monitor "$monitor, preferred, auto, 1, transform, $transform" &>/dev/null
-        _notify "Rotation: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
-    else
-        local output
-        output=$(xrandr 2>/dev/null | grep " connected" | head -1 | awk '{print $1}')
-        [ -z "$output" ] && { _notify "No display detected"; return; }
-
-        local choice
-        choice=$(_yad_select "  Rotation" \
-            "  Normal" "  Left (90°)" "  Inverted (180°)" "  Right (270°)" "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        case "$choice" in
-            *Normal*)   xrandr --output "$output" --rotate normal ;;
-            *Left*)     xrandr --output "$output" --rotate left ;;
-            *Inverted*) xrandr --output "$output" --rotate inverted ;;
-            *Right*)    xrandr --output "$output" --rotate right ;;
-        esac
-        _notify "Rotation applied"
-    fi
-}
-
-_display_multi_monitor() {
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
-        local monitors
-        monitors=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name' 2>/dev/null)
-        local count
-        count=$(echo "$monitors" | wc -l)
-
-        if [ "$count" -lt 2 ]; then
-            _notify "Only one monitor detected"
-            return
-        fi
-
-        local primary secondary
-        primary=$(echo "$monitors" | head -1)
-        secondary=$(echo "$monitors" | tail -1)
-
-        local choice
-        choice=$(_yad_select "  Multi-Monitor ($primary + $secondary)" \
-            "  Extend right" \
-            "  Extend left" \
-            "  Extend above" \
-            "  Extend below" \
-            "  Mirror (same on both)" \
-            "  Primary only ($primary)" \
-            "  Secondary only ($secondary)" \
-            "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        local pri_res
-        pri_res=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0] | "\(.width)x\(.height)"' 2>/dev/null)
-        local pri_w pri_h
-        pri_w=$(echo "$pri_res" | cut -dx -f1)
-        pri_h=$(echo "$pri_res" | cut -dx -f2)
-
-        case "$choice" in
-            *"Extend right"*)
-                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$secondary, preferred, ${pri_w}x0, 1" &>/dev/null
-                _notify "Extended right"
-                ;;
-            *"Extend left"*)
-                local sec_w
-                sec_w=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].width' 2>/dev/null)
-                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$primary, preferred, ${sec_w}x0, 1" &>/dev/null
-                _notify "Extended left"
-                ;;
-            *"Extend above"*)
-                local sec_h
-                sec_h=$(hyprctl monitors -j 2>/dev/null | jq -r '.[1].height' 2>/dev/null)
-                hyprctl keyword monitor "$secondary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$primary, preferred, 0x${sec_h}, 1" &>/dev/null
-                _notify "Extended above"
-                ;;
-            *"Extend below"*)
-                hyprctl keyword monitor "$primary, preferred, 0x0, 1" &>/dev/null
-                hyprctl keyword monitor "$secondary, preferred, 0x${pri_h}, 1" &>/dev/null
-                _notify "Extended below"
-                ;;
-            *Mirror*)
-                hyprctl keyword monitor "$secondary, preferred, auto, 1, mirror, $primary" &>/dev/null
-                _notify "Mirroring: $secondary → $primary"
-                ;;
-            *"Primary only"*)
-                hyprctl keyword monitor "$secondary, disable" &>/dev/null
-                _notify "Using $primary only"
-                ;;
-            *"Secondary only"*)
-                hyprctl keyword monitor "$primary, disable" &>/dev/null
-                _notify "Using $secondary only"
-                ;;
-        esac
-    else
-        local outputs
-        outputs=$(xrandr 2>/dev/null | grep " connected" | awk '{print $1}')
-        local count
-        count=$(echo "$outputs" | wc -l)
-
-        if [ "$count" -lt 2 ]; then
-            _notify "Only one monitor detected"
-            return
-        fi
-
-        local primary secondary
-        primary=$(echo "$outputs" | head -1)
-        secondary=$(echo "$outputs" | tail -1)
-
-        local choice
-        choice=$(_yad_select "  Multi-Monitor" \
-            "  Extend right" \
-            "  Mirror" \
-            "  Primary only ($primary)" \
-            "  Secondary only ($secondary)" \
-            "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        case "$choice" in
-            *"Extend right"*)
-                xrandr --output "$secondary" --auto --right-of "$primary" 2>/dev/null
-                _notify "Extended right"
-                ;;
-            *Mirror*)
-                xrandr --output "$secondary" --auto --same-as "$primary" 2>/dev/null
-                _notify "Mirroring"
-                ;;
-            *"Primary only"*)
-                xrandr --output "$secondary" --off 2>/dev/null
-                _notify "Using $primary only"
-                ;;
-            *"Secondary only"*)
-                xrandr --output "$primary" --off --output "$secondary" --auto 2>/dev/null
-                _notify "Using $secondary only"
-                ;;
-        esac
-    fi
+    wdisplays & disown
 }
 
 menu_display() {
@@ -342,19 +126,13 @@ menu_display() {
         local choice
         choice=$(_yad_select "  Display" \
             "  Brightness" \
-            "  Resolution" \
-            "  Scale" \
-            "  Rotation" \
-            "  Multi-Monitor" \
+            "  Layout (resolution, rotation, position, scale)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *Brightness*)      _display_brightness ;;
-            *Resolution*)      _display_resolution ;;
-            *Scale*)           _display_scale ;;
-            *Rotation*)        _display_rotation ;;
-            *"Multi-Monitor"*) _display_multi_monitor ;;
+            *Brightness*) _display_brightness ;;
+            *Layout*)     _display_layout ;;
         esac
     done
 }
@@ -428,6 +206,7 @@ menu_audio() {
             "  Volume" \
             "  Output device" \
             "  Input device" \
+            "  Mixer (pwvucontrol)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -435,6 +214,13 @@ menu_audio() {
             *Volume*)  _audio_volume ;;
             *Output*)  _audio_output ;;
             *Input*)   _audio_input ;;
+            *Mixer*)
+                if command -v pwvucontrol &>/dev/null; then
+                    pwvucontrol & disown
+                else
+                    _notify "pwvucontrol not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -686,6 +472,7 @@ menu_network() {
             "  Disconnect" \
             "  Forget network" \
             "  Toggle Wi-Fi ($wifi_state)" \
+            "  Advanced (nm-connection-editor)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -696,6 +483,13 @@ menu_network() {
             *Disconnect*) _wifi_disconnect ;;
             *Forget*)     _wifi_forget ;;
             *Toggle*)     _wifi_toggle ;;
+            *Advanced*)
+                if command -v nm-connection-editor &>/dev/null; then
+                    nm-connection-editor & disown
+                else
+                    _notify "nm-connection-editor not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -857,6 +651,7 @@ menu_bluetooth() {
             "  Saved devices" \
             "  Disconnect device" \
             "  Toggle Bluetooth ($status)" \
+            "  Advanced (blueman-manager)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -865,6 +660,13 @@ menu_bluetooth() {
             *Saved*)      _bt_saved ;;
             *Disconnect*) _bt_disconnect ;;
             *Toggle*)     _bt_toggle ;;
+            *Advanced*)
+                if command -v blueman-manager &>/dev/null; then
+                    blueman-manager & disown
+                else
+                    _notify "blueman not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -917,16 +719,12 @@ menu_wallpaper() {
 
 _apply_wallpaper() {
     local path="$1"
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        # Noctalia owns the wallpaper layer on Wayland. Starting swaybg here
-        # would stack a second surface over it. `wallpaper-set` with a single
-        # token applies to every output (parseWallpaperSetTokens), and it
-        # persists, so the choice survives a restart.
-        noctalia msg wallpaper-set "$path" >/dev/null 2>&1
-    else
-        # X11 / i3 session — no Noctalia there.
-        feh --bg-fill "$path" 2>/dev/null
-    fi
+    # Noctalia owns the wallpaper layer. Starting a second compositor-level
+    # wallpaper tool here would stack a second surface over it.
+    # `wallpaper-set` with a single token applies to every output
+    # (parseWallpaperSetTokens), and it persists, so the choice survives a
+    # restart.
+    noctalia msg wallpaper-set "$path" >/dev/null 2>&1
     _notify "Wallpaper: $(basename "$path")"
 }
 
@@ -1005,9 +803,7 @@ _theme_cursor() {
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
     [ -f "$gtk3" ] && _deref "$gtk3" && sed -i "s/^gtk-cursor-theme-name\s*=.*/gtk-cursor-theme-name = ${choice}/" "$gtk3"
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
-        hyprctl setcursor "$choice" 24 &>/dev/null
-    fi
+    command -v hyprctl &>/dev/null && hyprctl setcursor "$choice" 24 &>/dev/null
 
     _notify "Cursor: $choice"
 }
@@ -1194,9 +990,7 @@ _colors_apply() {
                  "$accent" "$accent2" "$green" "$red" "$blue" "$grey"
 
     # Reload live components
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
-        hyprctl reload &>/dev/null
-    fi
+    command -v hyprctl &>/dev/null && hyprctl reload &>/dev/null
     pkill -USR1 kitty 2>/dev/null
     disown 2>/dev/null
 }
@@ -1354,6 +1148,7 @@ menu_theme() {
             "  Icon Theme" \
             "  Cursor Theme" \
             "  Font Size" \
+            "  Advanced (nwg-look)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -1363,6 +1158,13 @@ menu_theme() {
             *Icon*)   _theme_icons ;;
             *Cursor*) _theme_cursor ;;
             *Font*)   _theme_font_size ;;
+            *Advanced*)
+                if command -v nwg-look &>/dev/null; then
+                    nwg-look & disown
+                else
+                    _notify "nwg-look not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -1383,16 +1185,8 @@ menu_lockscreen() {
 
         case "$choice" in
             *"Lock now"*)
-                if [ -n "$WAYLAND_DISPLAY" ]; then
-                    hyprlock &
-                else
-                    i3lock-color --blur 5 --ring-color=c49a5c --inside-color=211e19cc \
-                        --line-uses-inside --keyhl-color=8a9a6c --bshl-color=b36b5a \
-                        --separator-color=6e6a62 --time-color=c49a5c --date-color=d4cfc4aa \
-                        --verif-color=8a9a6c --wrong-color=b36b5a --clock \
-                        --time-str="%H:%M" --date-str="%A, %d %B" \
-                        --time-font="JetBrains Mono" --date-font="JetBrains Mono" &
-                fi
+                hyprlock &
+                disown
                 ;;
             *"setup"*)
                 kitty -e sudo stoa-face setup &
@@ -2065,7 +1859,7 @@ _hw_input() {
     done < <(grep "^N:" /proc/bus/input/devices 2>/dev/null)
 
     # Touchpad settings (libinput)
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+    if command -v hyprctl &>/dev/null; then
         local tap nat_scroll speed
         tap=$(_hyprctl_get input:touchpad:tap int)
         nat_scroll=$(_hyprctl_get input:touchpad:natural_scroll int)
@@ -2081,7 +1875,7 @@ _hw_input() {
 
     # Keyboard layout
     local layout
-    if command -v hyprctl &>/dev/null && [ -n "$WAYLAND_DISPLAY" ]; then
+    if command -v hyprctl &>/dev/null; then
         layout=$(_hyprctl_get input:kb_layout str)
     else
         layout=$(setxkbmap -query 2>/dev/null | grep "layout:" | awk '{print $2}')
@@ -2175,23 +1969,10 @@ _input_apply_hypr() {
     hyprctl keyword "$key" "$val" &>/dev/null
 }
 
-# ── Apply to Xorg via xinput ──
-_xinput_set() {
-    local prop="$1" val="$2"
-    while IFS= read -r id; do
-        [ -z "$id" ] && continue
-        xinput set-prop "$id" "$prop" $val 2>/dev/null
-    done < <(xinput list --id-only 2>/dev/null)
-}
-
 # ── Sensitivity / Speed ──
 _mouse_sensitivity() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:sensitivity float)
-    else
-        current=$(_input_get "sensitivity" "0")
-    fi
+    current=$(_hyprctl_get input:sensitivity float)
 
     local choice
     choice=$(_yad_select "  Sensitivity ($current)" \
@@ -2209,12 +1990,7 @@ _mouse_sensitivity() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:sensitivity" "$val"
-    else
-        # xinput: map -1..1 to 0.25..4.0 (accel speed)
-        _xinput_set "libinput Accel Speed" "$val"
-    fi
+    _input_apply_hypr "input:sensitivity" "$val"
     _input_save "sensitivity" "$val"
     _notify "Sensitivity: $val"
 }
@@ -2222,12 +1998,8 @@ _mouse_sensitivity() {
 # ── Acceleration Profile ──
 _mouse_accel_profile() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:accel_profile str)
-        [ -z "$current" ] && current="(default)"
-    else
-        current=$(_input_get "accel_profile" "adaptive")
-    fi
+    current=$(_hyprctl_get input:accel_profile str)
+    [ -z "$current" ] && current="(default)"
 
     local choice
     choice=$(_yad_select "  Accel Profile ($current)" \
@@ -2239,14 +2011,7 @@ _mouse_accel_profile() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:accel_profile" "$val"
-    else
-        case "$val" in
-            adaptive) _xinput_set "libinput Accel Profile Enabled" "1 0" ;;
-            flat)     _xinput_set "libinput Accel Profile Enabled" "0 1" ;;
-        esac
-    fi
+    _input_apply_hypr "input:accel_profile" "$val"
     _input_save "accel_profile" "$val"
     _notify "Accel profile: $val"
 }
@@ -2254,11 +2019,7 @@ _mouse_accel_profile() {
 # ── Scroll Direction ──
 _mouse_natural_scroll() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:natural_scroll int)
-    else
-        current=$(_input_get "natural_scroll" "0")
-    fi
+    current=$(_hyprctl_get input:natural_scroll int)
     [ "$current" = "1" ] || [ "$current" = "true" ] && label="on" || label="off"
 
     local choice
@@ -2270,11 +2031,7 @@ _mouse_natural_scroll() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:natural_scroll" "$val"
-    else
-        _xinput_set "libinput Natural Scrolling Enabled" "$val"
-    fi
+    _input_apply_hypr "input:natural_scroll" "$val"
     _input_save "natural_scroll" "$val"
     [ "$val" = "1" ] && _notify "Natural scroll: on" || _notify "Natural scroll: off"
 }
@@ -2298,9 +2055,7 @@ _mouse_scroll_factor() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:scroll_factor" "$val"
-    fi
+    _input_apply_hypr "input:scroll_factor" "$val"
     _input_save "scroll_factor" "$val"
     _notify "Scroll speed: $val"
 }
@@ -2308,11 +2063,7 @@ _mouse_scroll_factor() {
 # ── Left-handed Mode ──
 _mouse_left_handed() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:left_handed int)
-    else
-        current=$(_input_get "left_handed" "0")
-    fi
+    current=$(_hyprctl_get input:left_handed int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
@@ -2324,11 +2075,7 @@ _mouse_left_handed() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:left_handed" "$val"
-    else
-        _xinput_set "libinput Left Handed Enabled" "$val"
-    fi
+    _input_apply_hypr "input:left_handed" "$val"
     _input_save "left_handed" "$val"
     [ "$val" = "1" ] && _notify "Left-handed: on" || _notify "Left-handed: off"
 }
@@ -2358,11 +2105,7 @@ _mouse_follow() {
 # ── Touchpad: Tap to Click ──
 _tp_tap() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:tap-to-click int)
-    else
-        current=$(_input_get "tap_to_click" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:tap-to-click int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
@@ -2374,11 +2117,7 @@ _tp_tap() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:tap-to-click" "$val"
-    else
-        _xinput_set "libinput Tapping Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:tap-to-click" "$val"
     _input_save "tap_to_click" "$val"
     [ "$val" = "1" ] && _notify "Tap to click: on" || _notify "Tap to click: off"
 }
@@ -2386,11 +2125,7 @@ _tp_tap() {
 # ── Touchpad: Natural Scroll ──
 _tp_natural_scroll() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:natural_scroll int)
-    else
-        current=$(_input_get "tp_natural_scroll" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:natural_scroll int)
     [ "$current" = "1" ] || [ "$current" = "true" ] && label="on" || label="off"
 
     local choice
@@ -2402,11 +2137,7 @@ _tp_natural_scroll() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:natural_scroll" "$val"
-    else
-        _xinput_set "libinput Natural Scrolling Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:natural_scroll" "$val"
     _input_save "tp_natural_scroll" "$val"
     [ "$val" = "1" ] && _notify "TP natural scroll: on" || _notify "TP natural scroll: off"
 }
@@ -2414,11 +2145,7 @@ _tp_natural_scroll() {
 # ── Touchpad: Disable While Typing ──
 _tp_dwt() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:disable_while_typing int)
-    else
-        current=$(_input_get "dwt" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:disable_while_typing int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
@@ -2430,11 +2157,7 @@ _tp_dwt() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:disable_while_typing" "$val"
-    else
-        _xinput_set "libinput Disable While Typing Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:disable_while_typing" "$val"
     _input_save "dwt" "$val"
     [ "$val" = "1" ] && _notify "Disable while typing: on" || _notify "Disable while typing: off"
 }
@@ -2442,12 +2165,8 @@ _tp_dwt() {
 # ── Touchpad: Scroll Method ──
 _tp_scroll_method() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:scroll_method str)
-        [ -z "$current" ] && current="2fg"
-    else
-        current=$(_input_get "tp_scroll_method" "2fg")
-    fi
+    current=$(_hyprctl_get input:touchpad:scroll_method str)
+    [ -z "$current" ] && current="2fg"
 
     local choice
     choice=$(_yad_select "  Scroll Method ($current)" \
@@ -2460,16 +2179,7 @@ _tp_scroll_method() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:scroll_method" "$val"
-    else
-        case "$val" in
-            2fg)            _xinput_set "libinput Scroll Method Enabled" "1 0 0" ;;
-            edge)           _xinput_set "libinput Scroll Method Enabled" "0 1 0" ;;
-            on_button_down) _xinput_set "libinput Scroll Method Enabled" "0 0 1" ;;
-            no_scroll)      _xinput_set "libinput Scroll Method Enabled" "0 0 0" ;;
-        esac
-    fi
+    _input_apply_hypr "input:touchpad:scroll_method" "$val"
     _input_save "tp_scroll_method" "$val"
     _notify "Scroll method: $val"
 }
@@ -2477,12 +2187,8 @@ _tp_scroll_method() {
 # ── Touchpad: Click Method ──
 _tp_click_method() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:clickfinger_behavior int)
-        [ "$current" = "1" ] && current="clickfinger" || current="button_areas"
-    else
-        current=$(_input_get "tp_click_method" "button_areas")
-    fi
+    current=$(_hyprctl_get input:touchpad:clickfinger_behavior int)
+    [ "$current" = "1" ] && current="clickfinger" || current="button_areas"
 
     local choice
     choice=$(_yad_select "  Click Method ($current)" \
@@ -2493,15 +2199,8 @@ _tp_click_method() {
     local val
     val=$(echo "$choice" | awk '{print $1}')
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        [ "$val" = "clickfinger" ] && _input_apply_hypr "input:touchpad:clickfinger_behavior" "1" \
-            || _input_apply_hypr "input:touchpad:clickfinger_behavior" "0"
-    else
-        case "$val" in
-            button_areas) _xinput_set "libinput Click Method Enabled" "1 0" ;;
-            clickfinger)  _xinput_set "libinput Click Method Enabled" "0 1" ;;
-        esac
-    fi
+    [ "$val" = "clickfinger" ] && _input_apply_hypr "input:touchpad:clickfinger_behavior" "1" \
+        || _input_apply_hypr "input:touchpad:clickfinger_behavior" "0"
     _input_save "tp_click_method" "$val"
     _notify "Click method: $val"
 }
@@ -2509,11 +2208,7 @@ _tp_click_method() {
 # ── Touchpad: Drag ──
 _tp_drag() {
     local current label
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        current=$(_hyprctl_get input:touchpad:tap-and-drag int)
-    else
-        current=$(_input_get "tap_and_drag" "1")
-    fi
+    current=$(_hyprctl_get input:touchpad:tap-and-drag int)
     [ "$current" = "1" ] && label="on" || label="off"
 
     local choice
@@ -2525,11 +2220,7 @@ _tp_drag() {
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
 
-    if [ -n "$WAYLAND_DISPLAY" ]; then
-        _input_apply_hypr "input:touchpad:tap-and-drag" "$val"
-    else
-        _xinput_set "libinput Tapping Drag Enabled" "$val"
-    fi
+    _input_apply_hypr "input:touchpad:tap-and-drag" "$val"
     _input_save "tap_and_drag" "$val"
     [ "$val" = "1" ] && _notify "Tap and drag: on" || _notify "Tap and drag: off"
 }
@@ -3242,7 +2933,7 @@ _power_set_profile() {
 
 _power_idle_timeout() {
     local current
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         current=$(_hyprctl_get misc:dpms_timeout int)
         [ -z "$current" ] || [ "$current" = "0" ] && current="off"
         [ "$current" != "off" ] && current="${current}s"
@@ -3273,7 +2964,7 @@ _power_idle_timeout() {
         *Never*)        seconds=0 ;;
     esac
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword misc:dpms_timeout "$seconds" &>/dev/null
         [ "$seconds" -eq 0 ] && _notify "Screen off: never" || _notify "Screen off: $((seconds / 60)) min"
     else
@@ -4073,7 +3764,7 @@ _menu_fan_perf() {
 # ══════════════════════════════════════════════════════════════
 
 _kb_current_layout() {
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         _hyprctl_get input:kb_layout str
     else
         setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}'
@@ -4113,7 +3804,7 @@ _kb_layout() {
         layout=$(echo "$choice" | awk '{print $2}')
     fi
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword input:kb_layout "$layout" &>/dev/null
         _notify "Keyboard layout: $layout"
     else
@@ -4124,7 +3815,7 @@ _kb_layout() {
 
 _kb_repeat_rate() {
     local current_rate current_delay
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         current_rate=$(_hyprctl_get input:repeat_rate int)
         current_delay=$(_hyprctl_get input:repeat_delay int)
     else
@@ -4149,7 +3840,7 @@ _kb_repeat_rate() {
         *"Very fast"*) rate=50; delay=200 ;;
     esac
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword input:repeat_rate "$rate" &>/dev/null
         hyprctl keyword input:repeat_delay "$delay" &>/dev/null
     else
@@ -4178,7 +3869,7 @@ _kb_capslock_behavior() {
         *Disabled*)   opt="caps:none" ;;
     esac
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword input:kb_options "$opt" &>/dev/null
         _notify "Caps Lock: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
     else
@@ -4203,7 +3894,7 @@ _kb_numlock() {
 
     case "$choice" in
         *On*)
-            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+            if command -v hyprctl &>/dev/null; then
                 hyprctl keyword input:numlock_by_default true &>/dev/null
             else
                 numlockx on 2>/dev/null
@@ -4211,7 +3902,7 @@ _kb_numlock() {
             _notify "NumLock on boot: on"
             ;;
         *Off*)
-            if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+            if command -v hyprctl &>/dev/null; then
                 hyprctl keyword input:numlock_by_default false &>/dev/null
             else
                 numlockx off 2>/dev/null
@@ -4839,7 +4530,7 @@ _a11y_cursor_size() {
     size=$(echo "$choice" | grep -oP '\d+' | head -1)
 
     gsettings set org.gnome.desktop.interface cursor-size "$size" 2>/dev/null
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         hyprctl keyword env "XCURSOR_SIZE,$size" &>/dev/null
     fi
     _notify "Cursor size: ${size}px"
@@ -4868,7 +4559,7 @@ _a11y_text_scaling() {
 
 _a11y_animations() {
     local current="on"
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         local enabled
         enabled=$(_hyprctl_get animations:enabled int)
         [ "$enabled" = "0" ] && current="off"
@@ -4882,7 +4573,7 @@ _a11y_animations() {
         "  Back")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
-    if [ -n "$WAYLAND_DISPLAY" ] && command -v hyprctl &>/dev/null; then
+    if command -v hyprctl &>/dev/null; then
         case "$choice" in
             *Enable*)
                 hyprctl keyword animations:enabled true &>/dev/null
@@ -4916,7 +4607,7 @@ _a11y_animations() {
 }
 
 _a11y_gaps() {
-    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+    if ! command -v hyprctl &>/dev/null; then
         _notify "Gaps only available on Hyprland"
         return
     fi
@@ -4950,7 +4641,7 @@ _a11y_gaps() {
 }
 
 _a11y_opacity() {
-    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+    if ! command -v hyprctl &>/dev/null; then
         _notify "Opacity only available on Hyprland"
         return
     fi
@@ -4984,7 +4675,7 @@ _a11y_opacity() {
 }
 
 _a11y_border_size() {
-    if ! command -v hyprctl &>/dev/null || [ -z "$WAYLAND_DISPLAY" ]; then
+    if ! command -v hyprctl &>/dev/null; then
         _notify "Border size only available on Hyprland"
         return
     fi
@@ -5350,50 +5041,10 @@ menu_stoa() {
     done
 }
 
-# ══════════════════════════════════════════════════════════════
-#   POWER
-# ══════════════════════════════════════════════════════════════
-
-menu_power() {
-    local choice
-    choice=$(_yad_select "  Power" \
-        "  Lock screen" \
-        "  Logout" \
-        "  Reboot" \
-        "  Shutdown" \
-        "  Back")
-    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-    case "$choice" in
-        *Lock*)
-            if [ -n "$WAYLAND_DISPLAY" ]; then
-                hyprlock &
-            else
-                i3lock-color --blur 5 --ring-color=c49a5c --inside-color=211e19cc \
-                    --line-uses-inside --keyhl-color=8a9a6c --bshl-color=b36b5a \
-                    --separator-color=6e6a62 --time-color=c49a5c --date-color=d4cfc4aa \
-                    --verif-color=8a9a6c --wrong-color=b36b5a --clock \
-                    --time-str="%H:%M" --date-str="%A, %d %B" \
-                    --time-font="JetBrains Mono" --date-font="JetBrains Mono" &
-            fi
-            ;;
-        *Logout*)
-            _yad_confirm "Logout?" && {
-                if [ -n "$WAYLAND_DISPLAY" ]; then
-                    hyprctl dispatch exit
-                else
-                    i3-msg exit
-                fi
-            }
-            ;;
-        *Reboot*)
-            _yad_confirm "Reboot?" && systemctl reboot
-            ;;
-        *Shutdown*)
-            _yad_confirm "Shutdown?" && systemctl poweroff
-            ;;
-    esac
-}
+# Session actions (lock/logout/reboot/shutdown) used to live in a "Power"
+# menu here — removed as redundant with Noctalia's native control center
+# session shortcut (control_center.shortcuts type="session" in
+# config/noctalia/config.toml), which already covers all four.
 
 # ══════════════════════════════════════════════════════════════
 #   DISKS & STORAGE (gnome-disks + disk-usage-analyzer)
@@ -6008,6 +5659,7 @@ menu_disks() {
             "  Set Label" \
             "  fstab" \
             "  Cleanup" \
+            "  Disk Utility (gnome-disks)" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -6024,6 +5676,13 @@ menu_disks() {
             *Label*)         _disk_label ;;
             *fstab*)         _disk_fstab ;;
             *Cleanup*)       _disk_cleanup ;;
+            *"Disk Utility"*)
+                if command -v gnome-disks &>/dev/null; then
+                    gnome-disks & disown
+                else
+                    _notify "gnome-disk-utility not installed"
+                fi
+                ;;
         esac
     done
 }
@@ -6195,13 +5854,9 @@ _health_system_info() {
     lines+=("")
 
     # WM info
-    if [ -n "${WAYLAND_DISPLAY:-}" ]; then
-        local hypr_ver
-        hypr_ver=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/hyprland-version" 2>/dev/null || echo "?")
-        lines+=("  Session: Wayland (Hyprland $hypr_ver)")
-    else
-        lines+=("  Session: Xorg (i3)")
-    fi
+    local hypr_ver
+    hypr_ver=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/hyprland-version" 2>/dev/null || echo "?")
+    lines+=("  Session: Wayland (Hyprland $hypr_ver)")
 
     # Shell
     lines+=("  Shell: $SHELL")
@@ -7096,8 +6751,7 @@ main_menu() {
             "  Lock Screen" \
             "  System Health" \
             "  Maintenance" \
-            "  Stoa Config" \
-            "  Power")
+            "  Stoa Config")
         [ -z "$choice" ] && exit 0
 
         case "$choice" in
@@ -7125,7 +6779,6 @@ main_menu() {
             *"System Health"*) menu_health ;;
             *Maintenance*)  menu_maintain ;;
             *Stoa*)         menu_stoa ;;
-            *Power*)        menu_power ;;
         esac
     done
 }
