@@ -318,6 +318,19 @@ _link "${STOA_DIR}/scripts/stoa-bauh.py"          "${HOME}/.local/bin/stoa-bauh"
 # instead of the AUR package's broken /usr/bin/bauh entry point.
 _link "${STOA_DIR}/scripts/stoa-bauh.py"          "${HOME}/.local/bin/bauh"
 
+# Bauh config (preserves user settings): seed the default config once so
+# the snap gem — which errors in the background on any machine without
+# snapd installed, StoaLinux's default — starts out disabled. See
+# config/bauh/config.yml for the full rationale.
+BAUH_CONFIG_DIR="${CONFIG_DIR}/bauh"
+mkdir -p "$BAUH_CONFIG_DIR"
+if [ ! -f "${BAUH_CONFIG_DIR}/config.yml" ]; then
+    cp "${STOA_DIR}/config/bauh/config.yml" "${BAUH_CONFIG_DIR}/config.yml"
+    echo -e "  ${O}[+] ${BAUH_CONFIG_DIR}/config.yml${R}"
+else
+    echo -e "  ${S}[~] bauh/config.yml already exists (preserved)${R}"
+fi
+
 # The bins above are all symlinks to source files tracked in-tree with +x
 # already set, so no chmod loop is needed here. If a source ever loses +x,
 # fix it in the repo rather than papering over it at install time.

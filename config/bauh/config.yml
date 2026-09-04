@@ -1,0 +1,16 @@
+# Seeded once by install.sh into ~/.config/bauh/config.yml (never overwritten
+# if that file already exists — see the "Bauh config" block in install.sh).
+#
+# `gems: null` (bauh's own default) loads every backend, including `snap`.
+# StoaLinux treats Snap as opt-in (snapd isn't installed by default; see
+# scripts/stoa-store/snap.sh's _snap_setup), so with no snapd socket to talk
+# to, bauh's snap gem spends a background thread repeatedly failing to
+# resolve the `snapd` host and logs a noisy (harmless) urllib3
+# NameResolutionError on every refresh. Leaving `snap` out of this list
+# disables that gem so it stops trying — install snapd via Stoa Store's
+# Snap menu and add `snap` back here if you want bauh to manage snaps too.
+gems:
+- arch
+- flatpak
+- appimage
+- web
