@@ -74,18 +74,34 @@ _pkg_quick_info() {
 # was removed from the stdlib in Python 3.12+, so bare `bauh` crashes on
 # startup on any current Arch install. stoa-bauh patches that back in
 # before importing bauh's own code — see scripts/stoa-bauh.py.
+#
+# Launched detached with stdout/stderr captured to a log file instead of a
+# bare `& disown`: when this fires from a keybind or the Stoa Store menu
+# (no terminal attached), a crash on launch would otherwise be completely
+# silent — the window just never appears, with no way to tell why.
 _open_bauh() {
     local shim="${HOME}/.local/bin/stoa-bauh"
+    local cmd=""
     if [ -x "$shim" ]; then
-        "$shim" & disown
-        return 0
+        cmd="$shim"
+    elif command -v bauh &>/dev/null; then
+        cmd="bauh"
+    else
+        _notify "bauh not found — install it (AUR: bauh) to manage packages"
+        return 1
     fi
-    if command -v bauh &>/dev/null; then
-        bauh & disown
-        return 0
-    fi
-    _notify "bauh not found — install it (AUR: bauh) to manage packages"
-    return 1
+
+    local log="${XDG_CACHE_HOME:-$HOME/.cache}/stoa/bauh.log"
+    mkdir -p "$(dirname "$log")"
+    (
+        "$cmd" >"$log" 2>&1
+        status=$?
+        if [ "$status" -ne 0 ]; then
+            notify-send -u critical -t 8000 "Stoa Store" \
+                "bauh exited with an error (code ${status}) — see ${log}" 2>/dev/null
+        fi
+    ) &
+    disown
 }
 
 _run_in_term() {
