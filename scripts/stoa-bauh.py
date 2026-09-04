@@ -12,6 +12,12 @@
 # known-good replacement is importlib.util.find_spec, which returns an
 # equivalent loader object. We patch pkgutil before bauh imports run,
 # so this is a no-op the day upstream (or Python) fixes it for real.
+#
+# install.sh symlinks this file to BOTH ~/.local/bin/stoa-bauh and
+# ~/.local/bin/bauh — the latter so that typing plain `bauh` in a
+# terminal also gets the patched launcher (~/.local/bin comes before
+# /usr/bin in PATH; see shell/.zshrc, shell/.bashrc), not just Stoa
+# Store's "Search & install" menu entry.
 import pkgutil
 import sys
 
