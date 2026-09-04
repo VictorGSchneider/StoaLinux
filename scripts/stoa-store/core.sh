@@ -68,12 +68,24 @@ _pkg_quick_info() {
 # unified package-manager GUI (added as a dependency in setup/*-install.sh).
 # Search, install, removal and updates for those sources go through it
 # instead of the custom rofi menus this store used to carry.
+#
+# Launched through stoa-bauh (a thin Python wrapper) instead of the bare
+# `bauh` binary: the AUR package still calls pkgutil.find_loader(), which
+# was removed from the stdlib in Python 3.12+, so bare `bauh` crashes on
+# startup on any current Arch install. stoa-bauh patches that back in
+# before importing bauh's own code — see scripts/stoa-bauh.py.
 _open_bauh() {
-    if ! command -v bauh &>/dev/null; then
-        _notify "bauh not found — install it (AUR: bauh) to manage packages"
-        return 1
+    local shim="${HOME}/.local/bin/stoa-bauh"
+    if [ -x "$shim" ]; then
+        "$shim" & disown
+        return 0
     fi
-    bauh & disown
+    if command -v bauh &>/dev/null; then
+        bauh & disown
+        return 0
+    fi
+    _notify "bauh not found — install it (AUR: bauh) to manage packages"
+    return 1
 }
 
 _run_in_term() {
