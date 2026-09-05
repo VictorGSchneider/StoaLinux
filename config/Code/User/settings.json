@@ -23,5 +23,6 @@
     "chat.mcp.gallery.enabled": true,
     "workbench.editor.empty.hint": "hidden",
     "go.toolsManagement.autoUpdate": true,
-    "chat.disableAIFeatures": true
+    "chat.disableAIFeatures": true,
+    "claudeCode.preferredLocation": "panel"
 }
