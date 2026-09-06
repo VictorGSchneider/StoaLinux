@@ -91,8 +91,22 @@ run_cmd() {
 }
 
 check_root() {
-    if [ "$(id -u)" -ne 0 ] && ! command -v sudo >/dev/null 2>&1; then
-        log_msg WARN "Not running as root and sudo not found. Some operations may fail."
+    [ "$(id -u)" -eq 0 ] && return 0
+
+    if ! command -v sudo >/dev/null 2>&1; then
+        log_msg ERROR "Needs root and sudo is not installed."
+        return 1
+    fi
+
+    # Unattended and unprivileged is the dangerous combination. Every sudo
+    # below would be a PAM auth attempt with no terminal to prompt on; PAM
+    # logs each as "conversation failed" and pam_faillock counts it. Three
+    # is the Arch default, and the account is then locked for ten minutes
+    # — at the login screen, on the next boot. Refuse once, loudly, rather
+    # than trip that.
+    if ! sudo -n true 2>/dev/null && [ ! -t 0 ]; then
+        log_msg ERROR "Needs root, but there is no terminal to ask for a password."
+        log_msg ERROR "Run it as root, or grant this user a NOPASSWD sudoers rule."
         return 1
     fi
     return 0
@@ -489,7 +503,7 @@ pkg_autoremove() {
 # ── Full cleanup ──
 
 full_cleanup() {
-    check_root
+    check_root || return 1
     log_msg INFO "Starting full cleanup..."
 
     local space_before
@@ -611,13 +625,16 @@ schedule_cleanup() {
     local script_path
     script_path="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
 
-    if command -v crontab >/dev/null 2>&1; then
-        local CRON_CMD="@reboot bash $script_path --cleanup"
-        (crontab -l 2>/dev/null | grep -v "$script_path" ; echo "$CRON_CMD") | crontab -
-        log_msg INFO "Cleanup scheduled at boot via crontab."
-    elif command -v systemctl >/dev/null 2>&1; then
+    # systemd first, deliberately. The cleanup runs pacman, paccache and
+    # journalctl: it needs root. A @reboot line in *this user's* crontab
+    # would run it unprivileged with no terminal, so each sudo inside would
+    # fail as a PAM "conversation failed" and pam_faillock would lock the
+    # account for ten minutes — locking you out of your own login screen on
+    # every boot. The systemd unit runs as root, so nothing has to ask.
+    _unschedule_user_crontab
+    if command -v systemctl >/dev/null 2>&1; then
         local unit_dir="/etc/systemd/system"
-        check_root
+        check_root || return 1
 
         sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
 [Unit]
@@ -643,10 +660,25 @@ TMREOF
         sudo systemctl daemon-reload
         sudo systemctl enable stoa-maintain-cleanup.timer
         log_msg INFO "Cleanup scheduled at boot via systemd timer."
+    elif command -v crontab >/dev/null 2>&1; then
+        # No systemd: root's crontab, so the job is already privileged.
+        local CRON_CMD="@reboot bash $script_path --cleanup"
+        (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$CRON_CMD") \
+            | sudo crontab -
+        log_msg INFO "Cleanup scheduled at boot via root crontab."
     else
-        log_msg ERROR "Neither crontab nor systemctl found. Cannot schedule cleanup."
+        log_msg ERROR "Neither systemctl nor crontab found. Cannot schedule cleanup."
         return 1
     fi
+}
+
+# Older releases scheduled the cleanup in the *user's* crontab, where it
+# could never authenticate. Drop that entry wherever it is still installed.
+_unschedule_user_crontab() {
+    command -v crontab >/dev/null 2>&1 || return 0
+    crontab -l 2>/dev/null | grep -q "stoa-maintain" || return 0
+    crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+    log_msg INFO "Removed the legacy user-crontab cleanup entry (it could not authenticate)."
 }
 
 # ── Skip menu when sourced ──

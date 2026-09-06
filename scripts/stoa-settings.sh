@@ -6729,7 +6729,8 @@ _maintain_schedule() {
     # Check if already scheduled (crontab or systemd)
     local already_scheduled=0
     local method=""
-    if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
+    if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup" \
+       || sudo -n crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
         already_scheduled=1
         method="crontab"
     elif systemctl is-enabled stoa-maintain-cleanup.timer &>/dev/null; then
@@ -6746,6 +6747,7 @@ _maintain_schedule() {
         if [[ "$action" == *"Remove"* ]]; then
             if [ "$method" = "crontab" ]; then
                 crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+                sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" | sudo crontab -
             else
                 sudo systemctl disable stoa-maintain-cleanup.timer 2>/dev/null
                 sudo rm -f /etc/systemd/system/stoa-maintain-cleanup.{service,timer} 2>/dev/null
@@ -6758,11 +6760,15 @@ _maintain_schedule() {
 
     _yad_confirm "Schedule system cleanup to run at every boot?" || return
 
-    if command -v crontab &>/dev/null; then
-        local cron_cmd="@reboot bash $script_path --cleanup"
-        (crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") | crontab -
-        _notify "Cleanup scheduled at boot (crontab)"
-    elif command -v systemctl &>/dev/null; then
+    # systemd first, deliberately: the cleanup runs pacman and journalctl,
+    # so it needs root. Scheduled in *this user's* crontab it runs
+    # unprivileged with no terminal, every sudo inside fails as a PAM
+    # "conversation failed", and pam_faillock counts each one — three is
+    # the Arch default and the account is then locked for ten minutes, at
+    # the login screen, on the next boot. A root unit has nothing to ask.
+    crontab -l 2>/dev/null | grep -q "stoa-maintain" && \
+        crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+    if command -v systemctl &>/dev/null; then
         local unit_dir="/etc/systemd/system"
         sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
 [Unit]
@@ -6786,8 +6792,14 @@ TMREOF
         sudo systemctl daemon-reload
         sudo systemctl enable stoa-maintain-cleanup.timer
         _notify "Cleanup scheduled at boot (systemd timer)"
+    elif command -v crontab &>/dev/null; then
+        # No systemd: root's crontab, so the job is privileged already.
+        local cron_cmd="@reboot bash $script_path --cleanup"
+        (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") \
+            | sudo crontab -
+        _notify "Cleanup scheduled at boot (root crontab)"
     else
-        _notify "Neither crontab nor systemctl found"
+        _notify "Neither systemctl nor crontab found"
     fi
 }
 

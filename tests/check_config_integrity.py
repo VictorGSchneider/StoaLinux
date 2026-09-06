@@ -20,7 +20,13 @@ they went unnoticed:
       long after the bind became Super+S, and the cheatsheet in the bar
       still offered a Super+M that was never bound at all.
 
-  R4  the shipped Noctalia palette is still the Stoic one. Applying a
+  R4  nothing schedules a privileged job into the invoking user's
+      crontab. A @reboot line there runs unprivileged with no terminal,
+      so every sudo inside it is a PAM auth attempt that cannot prompt —
+      pam_faillock counts each as a failure and locks the account for ten
+      minutes, at the login screen, on the next boot.
+
+  R5  the shipped Noctalia palette is still the Stoic one. Applying a
       custom palette writes StoaCustom.json beside it precisely so that
       Stoa.json keeps meaning Stoa; if a future change points the
       rewrite at the shipped file instead, the palette named Stoa
@@ -241,9 +247,36 @@ def check_keybind_docs() -> list[str]:
     return problems
 
 
+def check_user_crontab_writes() -> list[str]:
+    """A pipeline that appends a line to the *user's* crontab schedules
+    something unprivileged. Removals (grep -v with no echo) are fine."""
+    problems = []
+    for f in reader_files():
+        if f.suffix not in {".sh", ""}:
+            continue
+        try:
+            lines = f.read_text(errors="replace").split("\n")
+        except OSError:
+            continue
+        for number, line in enumerate(lines, 1):
+            if "crontab -" not in line or "sudo crontab -" in line:
+                continue
+            if not re.search(r"\|\s*crontab\s+-\s*$", line):
+                continue
+            if not re.search(r"\b(echo|printf)\b", line):
+                continue  # a removal, not a schedule
+            problems.append(
+                f"{f.relative_to(ROOT)}:{number}: schedules a job in the user's "
+                "crontab — it runs with no terminal, so any sudo inside it trips "
+                "pam_faillock and locks the account out of the login screen"
+            )
+    return problems
+
+
 def main() -> int:
     problems = (check_hook_targets() + check_conf_options()
-                + check_keybind_docs() + check_shipped_palette())
+                + check_keybind_docs() + check_user_crontab_writes()
+                + check_shipped_palette())
     for problem in problems:
         print(f"config-integrity: {problem}")
     if problems:
