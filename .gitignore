@@ -16,3 +16,11 @@ scripts/stoa-dfm/dfm.egg-info/
 # link and recreates the file in here, where `stoa-sync`'s `git add -A`
 # would happily commit it. Ignore it so the stub can never come back.
 config/hypr/hyprland.conf
+
+# Config backups. stoa-maintain writes "<host>.confs.<date>.zip" and the
+# restore paths write "pre_restore_<stamp>.zip"; both used to be relative,
+# so running a backup from this checkout dropped a multi-megabyte archive
+# in here that `stoa-sync`'s `git add -A` then committed. The paths are
+# anchored to $HOME now — this is the belt to that pair of braces.
+*.confs.*.zip
+pre_restore_*.zip

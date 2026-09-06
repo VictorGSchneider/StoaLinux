@@ -55,7 +55,6 @@ read -r -d '' TOOLTIP <<'EOF'
   Super+E              Files (Thunar)
   Super+Shift+E        Files (lf in kitty)
   Super+G              DFM (Dotfile Manager)
-  Super+M              Memento Mori
   Super+N              Monitor (btop)
   Super+O              Obsidian
   Super+S              Settings

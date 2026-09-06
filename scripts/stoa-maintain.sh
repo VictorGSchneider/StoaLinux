@@ -35,7 +35,11 @@ R='\033[0m'                   # Reset
 # ── Globals ──
 MY_HOSTNAME="${HOSTNAME:-$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo unknown)}"
 TODAY=$(date +%Y%m%d)
-arq="$MY_HOSTNAME.confs.$TODAY.zip"
+# Anchored to $HOME like the log below it: unanchored, the backup landed
+# in whatever directory you happened to run from — and stoa-settings'
+# restore browser and the health widget both only ever look in $HOME,
+# so those backups were invisible to the rest of the system.
+arq="$HOME/$MY_HOSTNAME.confs.$TODAY.zip"
 log="$HOME/backup_$TODAY.log"
 USER_DIR="$HOME"
 DRY_RUN=0
@@ -448,8 +452,15 @@ pkg_autoremove() {
         apt)
             run_cmd sudo apt-get autoremove -y
             if command -v deborphan >/dev/null 2>&1; then
-                deborphan | xargs run_cmd sudo apt-get -y remove --purge 2>/dev/null
-                deborphan --guess-data | xargs run_cmd sudo apt-get -y remove --purge 2>/dev/null
+                # run_cmd is a shell function, so it cannot be exec'd by
+                # xargs — collect the names and pass them as arguments.
+                local orphaned
+                mapfile -t orphaned < <(deborphan 2>/dev/null)
+                [ "${#orphaned[@]}" -gt 0 ] && \
+                    run_cmd sudo apt-get -y remove --purge "${orphaned[@]}"
+                mapfile -t orphaned < <(deborphan --guess-data 2>/dev/null)
+                [ "${#orphaned[@]}" -gt 0 ] && \
+                    run_cmd sudo apt-get -y remove --purge "${orphaned[@]}"
             fi
             if command -v localepurge >/dev/null 2>&1; then
                 run_cmd sudo localepurge
@@ -464,7 +475,12 @@ pkg_autoremove() {
                 echo "$orphans" | run_cmd sudo pacman -Rns --noconfirm - 2>/dev/null
             fi
             ;;
-        zypper) zypper packages --unneeded 2>/dev/null | awk -F'|' 'NR>4{print $3}' | xargs run_cmd sudo zypper remove -y 2>/dev/null ;;
+        zypper)
+            local unneeded
+            mapfile -t unneeded < <(zypper packages --unneeded 2>/dev/null \
+                | awk -F'|' 'NR>4 {gsub(/ /, "", $3); if ($3 != "") print $3}')
+            [ "${#unneeded[@]}" -gt 0 ] && run_cmd sudo zypper remove -y "${unneeded[@]}"
+            ;;
         apk)    : ;;
         *)      log_msg WARN "Unknown package manager, skipping autoremove." ;;
     esac

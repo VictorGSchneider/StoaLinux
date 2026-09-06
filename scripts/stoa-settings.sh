@@ -905,6 +905,39 @@ _colors_load() {
     fi
 }
 
+# Point Noctalia at a palette by name.
+#
+# Noctalia merges every *.toml in ~/.config/noctalia alphabetically, so
+# stoa-custom.toml lands after config.toml and overrides its
+# `custom_palette`. GUI edits go to ~/.local/state/noctalia/settings.toml
+# and win over both, so that one is rewritten in place when it already
+# carries the key — if it does not, the config side is authoritative and
+# there is nothing to change there.
+_noctalia_select() {
+    local name="$1"
+    local conf_dir="${HOME}/.config/noctalia"
+    local override="${conf_dir}/stoa-custom.toml"
+    local state="${HOME}/.local/state/noctalia/settings.toml"
+
+    if [ "$name" = "Stoa" ]; then
+        rm -f "$override"
+    else
+        mkdir -p "$conf_dir"
+        cat > "$override" <<EOF
+# Written by stoa-settings when a custom palette is applied. Merged after
+# config.toml (alphabetical order), so it overrides the custom_palette
+# declared there. Removed again by Theme → Color Palette → Reset to Stoic.
+[theme]
+source         = "custom"
+custom_palette = "${name}"
+EOF
+    fi
+
+    if [ -f "$state" ] && grep -q '^[[:space:]]*custom_palette[[:space:]]*=' "$state"; then
+        sed -i "s/^\([[:space:]]*custom_palette[[:space:]]*=[[:space:]]*\).*/\1\"${name}\"/" "$state"
+    fi
+}
+
 # Apply palette to all config files
 _colors_apply() {
     local bg_dark="$1" bg="$2" bg_light="$3" fg="$4" fg_dim="$5"
@@ -985,6 +1018,62 @@ _colors_apply() {
         done
     fi
 
+    # Noctalia (bar, launcher, notifications, OSD, lock screen)
+    #
+    # Unlike every other target here, the shipped palette is left alone:
+    # ~/.config/noctalia/palettes/Stoa.json is a symlink into the repo and
+    # is what "Stoa" means, so overwriting it would rename the palette
+    # rather than change it. The custom palette is written beside it as
+    # StoaCustom.json, derived from Stoa.json on every apply — never from
+    # the previous custom file, so repeated changes cannot accumulate
+    # drift — and Noctalia is pointed at whichever of the two applies.
+    local pal_dir="${HOME}/.config/noctalia/palettes"
+    local shipped="${pal_dir}/Stoa.json"
+    if [ -f "$shipped" ]; then
+        # The stoic colours Stoa.json is written in, taken from the preset
+        # table so there is one source of truth for them.
+        local s_bg_dark s_bg s_bg_light s_fg s_fg_dim
+        local s_accent s_accent2 s_green s_red s_blue s_grey
+        IFS='|' read -r s_bg_dark s_bg s_bg_light s_fg s_fg_dim \
+                        s_accent s_accent2 s_green s_red s_blue s_grey _ \
+            < <(_color_presets | grep 'Stoic (default)$')
+
+        local -a noct_pairs=(
+            "$s_bg_dark|$bg_dark"
+            "$s_bg_light|$bg_light"
+            "$s_bg|$bg"
+            "$s_fg_dim|$fg_dim"
+            "$s_fg|$fg"
+            "$s_accent2|$accent2"
+            "$s_accent|$accent"
+            "$s_green|$green"
+            "$s_red|$red"
+            "$s_blue|$blue"
+            "$s_grey|$grey"
+        )
+
+        local custom="${pal_dir}/StoaCustom.json"
+        local differs=0
+        for pair in "${noct_pairs[@]}"; do
+            [ "${pair%%|*}" = "${pair##*|}" ] || differs=1
+        done
+
+        if [ "$differs" -eq 0 ]; then
+            # Back to stoic — drop the generated palette and let the
+            # shipped Stoa.json take over again.
+            rm -f "$custom"
+            _noctalia_select "Stoa"
+        else
+            cp "$shipped" "$custom"
+            for pair in "${noct_pairs[@]}"; do
+                local from="${pair%%|*}" to="${pair##*|}"
+                [ "$from" = "$to" ] && continue
+                sed -i "s/${from}/${to}/gi" "$custom"
+            done
+            _noctalia_select "StoaCustom"
+        fi
+    fi
+
     # Save new palette
     _colors_save "$bg_dark" "$bg" "$bg_light" "$fg" "$fg_dim" \
                  "$accent" "$accent2" "$green" "$red" "$blue" "$grey"
@@ -1038,7 +1127,10 @@ _theme_color_edit() {
             "  Grey (stone): ${C_GREY}" \
             "  Apply changes" \
             "  Back")
-        [[ -z "$choice" || "$choice" == *"Back"* ]] && return
+        # Anchored to the end of the label on purpose: an unanchored
+        # *"Back"* also matches "  Background …", which closed the menu
+        # instead of opening the colour editor.
+        [[ -z "$choice" || "$choice" == *Back ]] && return
 
         case "$choice" in
             *"Apply changes"*)
@@ -1050,47 +1142,91 @@ _theme_color_edit() {
                 ;;
             *"Background dark"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #1a1714)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_DARK="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BG_DARK="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Background light"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #2d2921)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_LIGHT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BG_LIGHT="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Background:"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #211e19)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BG="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Foreground dim"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #a89f91)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG_DIM="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_FG_DIM="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Foreground:"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #d4cfc4)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_FG="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Accent (bronze)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #c49a5c)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_ACCENT="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Accent 2 (gold)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #d4a84b)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT2="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_ACCENT2="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Green (olive)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #8a9a6c)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREEN="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_GREEN="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Red (terracotta)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #b36b5a)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_RED="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_RED="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Blue (azure)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #5a7a8a)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BLUE="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BLUE="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Grey (stone)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #6e6a62)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREY="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_GREY="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
         esac
     done
@@ -1164,49 +1300,6 @@ menu_theme() {
                 else
                     _notify "nwg-look not installed"
                 fi
-                ;;
-        esac
-    done
-}
-
-# ══════════════════════════════════════════════════════════════
-#   LOCK SCREEN
-# ══════════════════════════════════════════════════════════════
-
-menu_lockscreen() {
-    while true; do
-        local choice
-        choice=$(_yad_select "  Lock Screen" \
-            "  Lock now" \
-            "  Face recognition setup" \
-            "  Face recognition status" \
-            "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
-
-        case "$choice" in
-            *"Lock now"*)
-                hyprlock &
-                disown
-                ;;
-            *"setup"*)
-                kitty -e sudo stoa-face setup &
-                disown
-                ;;
-            *"status"*)
-                local status_text=""
-                if command -v howdy &>/dev/null; then
-                    status_text="howdy: installed"
-                    for svc in sudo hyprlock login; do
-                        if grep -q "pam_howdy.so" "/etc/pam.d/$svc" 2>/dev/null; then
-                            status_text+="\nPAM ($svc): active"
-                        else
-                            status_text+="\nPAM ($svc): not configured"
-                        fi
-                    done
-                else
-                    status_text="howdy: not installed\nRun: sudo stoa-face setup"
-                fi
-                echo -e "$status_text" | _yad_pipe "  Face Recognition"
                 ;;
         esac
     done
@@ -2367,7 +2460,7 @@ _gestures_apply() {
 
     {
         echo "# Generated by Stoa Linux — do not edit manually"
-        echo "# Regenerate via: Super+I → Mouse & Touchpad → Touchpad → Gestures"
+        echo "# Regenerate via: Super+S → Mouse & Touchpad → Touchpad → Gestures"
         echo ""
 
         for i in "${!_GESTURE_KEYS[@]}"; do
@@ -2957,7 +3050,7 @@ _power_idle_timeout() {
     case "$choice" in
         *"1 minute"*)   seconds=60 ;;
         *"2 minute"*)   seconds=120 ;;
-        *"5 minute"*)   seconds=300 ;;
+        *" 5 minute"*)  seconds=300 ;;   # leading space: "15 minutes" contains "5 minute"
         *"10 minute"*)  seconds=600 ;;
         *"15 minute"*)  seconds=900 ;;
         *"30 minute"*)  seconds=1800 ;;
@@ -3858,7 +3951,8 @@ _kb_capslock_behavior() {
         "  Backspace" \
         "  Disabled" \
         "  Back")
-    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+    # Anchored: an unanchored *"Back"* also swallows "  Backspace".
+    [ -z "$choice" ] || [[ "$choice" == *Back ]] && return
 
     local opt
     case "$choice" in
@@ -4944,7 +5038,7 @@ _ss_set_timeout() {
     case "$choice" in
         *"1 minute"*)   seconds=60 ;;
         *"2 minute"*)   seconds=120 ;;
-        *"5 minute"*)   seconds=300 ;;
+        *" 5 minute"*)  seconds=300 ;;   # leading space: "15 minutes" contains "5 minute"
         *"10 minute"*)  seconds=600 ;;
         *"15 minute"*)  seconds=900 ;;
         *"30 minute"*)  seconds=1800 ;;
@@ -6708,10 +6802,12 @@ menu_maintain() {
             "  Cleanup (dry-run)" \
             "  Schedule Cleanup at Boot" \
             "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+        # Anchored: an unanchored *"Back"* also matches "  Backup Configs"
+        # and "  Restore / Browse Backups", making both unreachable.
+        [ -z "$choice" ] || [[ "$choice" == *Back ]] && return
 
         case "$choice" in
-            *"Backup"*)         _maintain_backup ;;
+            *"Backup Configs"*) _maintain_backup ;;
             *"Restore"*)        _maintain_list ;;
             *"dry-run"*)        _maintain_cleanup 1 ;;
             *"Full Cleanup"*)   _maintain_cleanup 0 ;;
@@ -6748,7 +6844,6 @@ main_menu() {
             "  Date & Time" \
             "  Accessibility" \
             "  Screensaver" \
-            "  Lock Screen" \
             "  System Health" \
             "  Maintenance" \
             "  Stoa Config")
@@ -6775,7 +6870,6 @@ main_menu() {
             *"Date & Time"*) menu_datetime ;;
             *Accessibility*) menu_accessibility ;;
             *Screensaver*)  menu_screensaver ;;
-            *Lock*)         menu_lockscreen ;;
             *"System Health"*) menu_health ;;
             *Maintenance*)  menu_maintain ;;
             *Stoa*)         menu_stoa ;;

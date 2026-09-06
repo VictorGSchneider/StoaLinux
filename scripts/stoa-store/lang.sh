@@ -256,7 +256,7 @@ menu_lang_packages() {
         case "$choice" in
             *"Python (pip)"*) _lang_pip ;;
             *pipx*)           _lang_pipx ;;
-            *npm*)            _lang_npm ;;
+            *"(npm)"*)        _lang_npm ;;   # parenthesised: "(pnpm)" contains "npm"
             *yarn*)           _lang_yarn ;;
             *pnpm*)           _lang_pnpm ;;
             *cargo*)          _lang_cargo ;;

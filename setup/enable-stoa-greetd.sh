@@ -25,7 +25,6 @@
 set -e
 
 STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TARGET_USER="${SUDO_USER:-$(whoami)}"
 
 # Colors
 B='\033[38;2;196;154;92m'
@@ -34,6 +33,17 @@ F='\033[38;2;212;207;196m'
 O='\033[38;2;138;154;108m'
 T='\033[38;2;179;107;90m'
 R='\033[0m'
+
+# ── Check that it is not root ──
+# Everything privileged below goes through sudo on purpose: the rest writes
+# into the invoking user's HOME (profile snippets, hyprland.lua, the keyring
+# default). Under sudo, HOME is root's — the system half gets configured and
+# the user half silently does not, leaving a machine that autologins into a
+# bare shell.
+if [ "$(id -u)" -eq 0 ]; then
+    echo -e "  ${T}[!] Do not run as root. The script uses sudo when necessary.${R}"
+    exit 1
+fi
 
 # Stoa palette (mirrors theme/colors.sh)
 BRONZE="#c49a5c"
@@ -67,8 +77,15 @@ _unseed_profile() {
     local rc="$1"
     [ -f "$rc" ] || return 0
     grep -q "stoa-autostart-hyprland" "$rc" 2>/dev/null || return 0
-    sed -i "\|^${PROFILE_MARK}\$|,\|^${PROFILE_MARK_END}\$|d" "$rc"
-    sed -i "\|^${PROFILE_MARK}\$|,+1d" "$rc"
+    # Pick the form that is actually there. Running the block delete on a
+    # legacy profile makes a range whose end marker never matches, and sed
+    # deletes from the start marker to end of file — taking everything the
+    # user keeps below the block with it.
+    if grep -qF -- "$PROFILE_MARK_END" "$rc"; then
+        sed -i "\|^${PROFILE_MARK}\$|,\|^${PROFILE_MARK_END}\$|d" "$rc"
+    else
+        sed -i "\|^${PROFILE_MARK}\$|,+1d" "$rc"
+    fi
     echo -e "  ${O}[✓] $(basename "$rc") snippet removed.${R}"
 }
 

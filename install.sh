@@ -227,8 +227,8 @@ elif [ -d "${HOME}/.thunderbird" ]; then
 fi
 
 # ── Pacman hook (auto-apply theme after installs) ──
-# stoa-theme.hook and stoa-theme-enforce are linked in the Pacman hooks
-# section below together with the other hooks that require sudo.
+# stoa-theme.hook and the stoa-theme-enforce program it runs are both
+# linked in the "Pacman hooks" section below, with the other sudo steps.
 if ! sudo test -d /etc/pacman.d/hooks; then
     sudo mkdir -p /etc/pacman.d/hooks 2>/dev/null || \
         echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
@@ -286,7 +286,6 @@ _link "${STOA_DIR}/scripts/stoa-paste.sh"           "${HOME}/.local/bin/stoa-pas
 _link "${STOA_DIR}/scripts/stoa-ocr.sh"             "${HOME}/.local/bin/stoa-ocr"
 _link "${STOA_DIR}/scripts/stoa-rename.sh"          "${HOME}/.local/bin/stoa-rename"
 _link "${STOA_DIR}/scripts/stoa-archive.sh"         "${HOME}/.local/bin/stoa-archive"
-_link "${STOA_DIR}/scripts/stoa-face-setup.sh"      "${HOME}/.local/bin/stoa-face"
 _link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
 _link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
 _link "${STOA_DIR}/scripts/stoa-drive.sh"           "${HOME}/.local/bin/stoa-drive"
@@ -374,12 +373,12 @@ HOOK_DIR="/etc/pacman.d/hooks"
 if [ -d "$HOOK_DIR" ] || sudo mkdir -p "$HOOK_DIR" 2>/dev/null; then
     _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-pkg-snapshot.hook" "${HOOK_DIR}/stoa-pkg-snapshot.hook"
     _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook"        "${HOOK_DIR}/stoa-theme.hook"
-    # The hooks call /usr/local/bin/{stoa-pkg-snapshot,stoa-theme-enforce}.
-    # The theme-enforce link is created above (pacman-hook block). Here we
-    # link the pkg-snapshot bin — pointing at the repo source directly so
-    # it also works when ~/.local/bin/stoa-pkg-snapshot (itself a symlink
-    # into the repo) resolves on a per-user basis.
+    # Both hooks run as root out of /usr/local/bin, so the programs they
+    # name are linked here — pointing at the repo source directly, since
+    # ~/.local/bin/stoa-* resolves per user and pacman has no user.
     _sudo_link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh" /usr/local/bin/stoa-pkg-snapshot
+    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" \
+               /usr/local/bin/stoa-theme-enforce
 else
     echo -e "  ${S}[!] Could not create ${HOOK_DIR} (need sudo)${R}"
 fi

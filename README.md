@@ -25,7 +25,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 - **Arch Linux** with automated installation (from live ISO or existing Arch)
 - **Hyprland** (Wayland) as the compositor — Wayland-only, no Xorg fallback
 - **Noctalia v5** as the bar + launcher + control centre + notifications + OSD + clipboard history + wallpaper + lock screen, themed via the bundled **Stoa palette** (`config/noctalia/palettes/Stoa.json`)
-- **25-panel settings app** — a mix of native dialogs (yad) and standalone GUI apps (wdisplays, pwvucontrol, nm-connection-editor, blueman, gnome-disks, nwg-look) — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
+- **23-panel settings app** — a mix of native dialogs (yad) and standalone GUI apps (wdisplays, pwvucontrol, nm-connection-editor, blueman, gnome-disks, nwg-look) — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
 - **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
 - **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird, VS Code, Neovim
 - **Capture toolbar** (eww) — screenshot + recording with mode selection, toggle, and delay
@@ -152,7 +152,6 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
   <tr><td><b>Screensaver</b></td><td>Living marble animation (plasma noise in Stoa palette), idle timeout</td></tr>
   <tr><td><b>Wallpaper</b></td><td>Browse, generate, set custom</td></tr>
   <tr><td><b>Theme</b></td><td>Color palette (10 presets + custom), GTK, icons, cursors, font size</td></tr>
-  <tr><td><b>Lock Screen</b></td><td>Lock now, face recognition setup</td></tr>
   <tr><td><b>System Health</b></td><td>Doctor report, services status, failed units, thermals, journal, updates, package snapshots (diff), security audit, config integrity</td></tr>
   <tr><td><b>Maintenance</b></td><td>Backup configs, restore (interactive/bulk), full system cleanup (10-step), dry-run preview, schedule cleanup at boot</td></tr>
 </table>
@@ -161,7 +160,7 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
 
 <table>
   <tr><th>Script</th><th>What it does</th><th>Stoatool</th><th>What it does</th></tr>
-  <tr><td><code>stoa-settings</code></td><td>Settings panel (25 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
+  <tr><td><code>stoa-settings</code></td><td>Settings panel (23 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
   <tr><td><code>stoa-store</code></td><td>Package manager</td><td><code>stoa-paste</code></td><td>Paste as UPPER/lower/etc</td></tr>
   <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
   <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
@@ -175,7 +174,6 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
   <tr><td><code>stoa-winapps</code></td><td>Windows apps (KVM/RDP)</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
-  <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
   <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
   <tr><td><code>stoa-maintain</code></td><td>Backup, restore, cleanup (BRCS)</td><td></td><td></td></tr>
   <tr><td><code>stoa-pkg-snapshot</code></td><td>Package snapshot (pacman hook)</td><td></td><td></td></tr>
@@ -193,7 +191,7 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
   <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
   <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>
   <tr><td>OnlyOffice</td><td>Office suite</td><td>Enpass</td><td>Passwords</td></tr>
-  <tr><td>Betterbird</td><td>Email</td><td>howdy</td><td>Face unlock</td></tr>
+  <tr><td>Betterbird</td><td>Email</td><td></td><td></td></tr>
   <tr><td>imv</td><td>Images</td><td>lf / Thunar</td><td>Files</td></tr>
   <tr><td>EasyEffects</td><td>Audio equalizer</td><td>gammastep</td><td>Night light</td></tr>
   <tr><td>QEMU/KVM</td><td>WinApps (VM)</td><td>FreeRDP</td><td>Remote desktop</td></tr>
@@ -227,7 +225,9 @@ Change the entire color scheme from `Super+S → Theme → Color Palette`:
 - **View Current Palette** — see the active colors at a glance
 - **Reset to Stoic** — restore the default marble/bronze palette
 
-Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Waybar, Kitty, eww, GTK 3/4, Hyprland, hyprlock, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
+Changes propagate automatically to: Kitty, eww, GTK 3/4, Hyprland, hyprlock, `colors.sh`, and Noctalia Shell. Hyprland and Kitty reload live; other apps take effect on restart.
+
+Noctalia is the one target that is not rewritten in place. `~/.config/noctalia/palettes/Stoa.json` is the shipped palette and is what *Stoa* means, so a custom palette is written beside it as `StoaCustom.json` and Noctalia is pointed at that instead — via `stoa-custom.toml` (merged after `config.toml`) and the `custom_palette` key in `~/.local/state/noctalia/settings.toml`, which wins over both. **Reset to Stoic** deletes the generated palette and points Noctalia back at `Stoa.json`, untouched.
 
 ### Stoa Greeter
 
@@ -283,6 +283,32 @@ Pick one or the other:
 - **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
 - **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
 - **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, and notifies via Noctalia Shell (which owns `org.freedesktop.Notifications` — scripts call `notify-send`). Full log at `~/.config/stoa/doctor.log`.
+
+### Checks
+
+Everything CI runs lives in `tests/run.sh`, so the same command answers the
+same question on your machine:
+
+```bash
+bash tests/run.sh            # every group
+bash tests/run.sh shell      # shell | data | stoa
+bash tests/run.sh --list     # what each group covers
+```
+
+- **shell** — `bash -n` and shellcheck over every script shipped, including
+  the extensionless ones (`stoa-drive-pin`, the pacman hooks). The floor is
+  `warning` minus an explicit list of patterns this tree uses on purpose.
+- **data** — the formats where a typo fails *silently*: JSON, TOML (a broken
+  `plugin.toml` just makes Noctalia skip the widget), Lua/Luau, and Python
+  under `py_compile` plus the ruff rules that bite at runtime.
+- **stoa** — the invariants in `tests/check_*.py` and `tests/test_*.sh`:
+  menu labels that a dispatch pattern would swallow, the `A && B || C && D`
+  precedence trap, pacman hooks pointing at a program nothing installs,
+  `stoa.conf` options nothing reads, `Super+<key>` shortcuts nothing binds,
+  and the profile-unseeding that once ate the rest of `.zprofile`.
+
+A missing tool is reported as a skip locally and fails under `--strict`,
+which is how CI runs it.
 
 ### Vendored upstreams
 

@@ -15,14 +15,20 @@ polkit.addRule(function(action, subject) {
         "org.bluez.",
         // NetworkManager — connect / change settings
         "org.freedesktop.NetworkManager.",
-        // Login1 — power, suspend, reboot (own session only)
+        // Login1 — power, suspend, reboot for your own session. The
+        // -multiple-sessions and -ignore-inhibit variants are deliberately
+        // not here: those still ask.
         "org.freedesktop.login1.power-off",
         "org.freedesktop.login1.reboot",
         "org.freedesktop.login1.suspend",
         "org.freedesktop.login1.hibernate",
         "org.freedesktop.login1.lock-sessions",
-        // udisks2 — mount/unmount removable media
+        // udisks2 — mount/unmount media, removable and internal alike
+        // (-system is the internal one). Unlocking an encrypted device is
+        // allowed for removable media only: encrypted-unlock-system, for an
+        // internal LUKS volume, still asks.
         "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-mount-system",
         "org.freedesktop.udisks2.filesystem-unmount-others",
         "org.freedesktop.udisks2.encrypted-unlock",
         "org.freedesktop.udisks2.eject-media",
@@ -33,8 +39,17 @@ polkit.addRule(function(action, subject) {
         "org.freedesktop.hostname1.",
     ];
 
+    // An entry ending in "." is a namespace and matches everything under
+    // it. Every other entry is one exact action id — polkit names the wider
+    // variant of an action by suffixing it (power-off-ignore-inhibit,
+    // encrypted-unlock-system, filesystem-mount-other-seat), so matching on
+    // prefix would hand those out silently along with the one named here.
     for (var i = 0; i < allow.length; i++) {
-        if (action.id.indexOf(allow[i]) === 0) {
+        var rule = allow[i];
+        var matched = rule.charAt(rule.length - 1) === "."
+            ? action.id.indexOf(rule) === 0
+            : action.id === rule;
+        if (matched) {
             return polkit.Result.YES;
         }
     }
