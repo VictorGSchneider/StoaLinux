@@ -108,6 +108,20 @@ jobs:
         shell: bash
         run: python3 tests/check_menu_dispatch.py
 
+      # `A && B || C && D` reads like if/elif but runs D on the success
+      # path too — every colour editor accepted a valid hex and called it
+      # invalid in the same breath.
+      - name: Shell pitfalls
+        shell: bash
+        run: python3 tests/check_shell_pitfalls.py
+
+      # Config that promises something the tree no longer does: a pacman
+      # hook whose program install.sh never links, or a stoa.conf option
+      # nothing reads.
+      - name: Config integrity
+        shell: bash
+        run: python3 tests/check_config_integrity.py
+
       - name: JSON validation
         shell: bash
         run: |

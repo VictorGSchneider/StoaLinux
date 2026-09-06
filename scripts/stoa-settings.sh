@@ -1053,47 +1053,91 @@ _theme_color_edit() {
                 ;;
             *"Background dark"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #1a1714)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_DARK="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BG_DARK="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Background light"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #2d2921)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG_LIGHT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BG_LIGHT="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Background:"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #211e19)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BG="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Foreground dim"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #a89f91)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG_DIM="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_FG_DIM="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Foreground:"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #d4cfc4)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_FG="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_FG="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Accent (bronze)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #c49a5c)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_ACCENT="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Accent 2 (gold)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #d4a84b)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_ACCENT2="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_ACCENT2="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Green (olive)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #8a9a6c)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREEN="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_GREEN="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Red (terracotta)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #b36b5a)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_RED="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_RED="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Blue (azure)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #5a7a8a)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_BLUE="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_BLUE="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
             *"Grey (stone)"*)
                 local val; val=$(_yad_input "  Hex color (e.g. #6e6a62)")
-                [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]] && C_GREY="$val" || [ -n "$val" ] && _notify "Invalid hex color"
+                if [[ "$val" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+                    C_GREY="$val"
+                elif [ -n "$val" ]; then
+                    _notify "Invalid hex color"
+                fi
                 ;;
         esac
     done
