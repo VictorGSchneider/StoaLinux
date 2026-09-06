@@ -21,6 +21,10 @@ set -u
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 DOCTOR_LOG="$STOA_DIR/doctor.log"
 SNAPSHOT_DIR="$STOA_DIR/pkg-snapshots"
+# Read-only poller: takes the shared path definitions, never migrates.
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+# shellcheck source=lib/stoa-paths.sh
+[ -r "$_STOA_LIB/stoa-paths.sh" ] && source "$_STOA_LIB/stoa-paths.sh"
 
 # ── Doctor ──
 d_issues=-1
@@ -111,7 +115,8 @@ if [ -d "$SNAPSHOT_DIR" ]; then
 fi
 
 hostname_str="${HOSTNAME:-$(hostname 2>/dev/null || echo host)}"
-backups=$(find "$HOME" -maxdepth 1 -type f -name "${hostname_str}.confs.*.zip" 2>/dev/null | wc -l)
+backups=$(find "$STOA_BACKUP_DIR" -maxdepth 1 -type f \
+    -name "${hostname_str}.confs.*.zip" 2>/dev/null | wc -l)
 
 # ── Scheduled cleanup? ──
 scheduled=false

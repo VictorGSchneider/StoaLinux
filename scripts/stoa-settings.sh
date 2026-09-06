@@ -6282,7 +6282,12 @@ menu_health() {
 #   MAINTENANCE (backup, restore, cleanup — BRCS integration)
 # ══════════════════════════════════════════════════════════════
 
-_maintain_log="${HOME}/backup_$(date +%Y%m%d).log"
+# Shared with stoa-maintain and stoa-vitals-status so the three cannot
+# disagree about where a backup is written and where it is looked for.
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+# shellcheck source=lib/stoa-paths.sh
+[ -r "$_STOA_LIB/stoa-paths.sh" ] && source "$_STOA_LIB/stoa-paths.sh" && stoa_paths_migrate
+_maintain_log="${STOA_LOG_DIR}/backup_$(date +%Y%m%d).log"
 
 _maintain_log_msg() {
     local level="$1"; shift
@@ -6303,7 +6308,8 @@ _maintain_backup() {
 
     local hostname_str="${HOSTNAME:-$(hostname 2>/dev/null || echo unknown)}"
     local today=$(date +%Y%m%d)
-    local arq="${HOME}/${hostname_str}.confs.${today}.zip"
+    stoa_paths_init
+    local arq="${STOA_BACKUP_DIR}/${hostname_str}.confs.${today}.zip"
     local all_files=""
 
     # /etc/ config files
@@ -6412,7 +6418,7 @@ _maintain_list() {
         name=$(basename "$f")
         size=$(du -h "$f" 2>/dev/null | cut -f1)
         backups+=("$name  ($size)")
-    done < <(ls -1t "$HOME"/*.confs.*.zip 2>/dev/null)
+    done < <(ls -1t "$STOA_BACKUP_DIR"/*.confs.*.zip 2>/dev/null)
 
     [ ${#backups[@]} -eq 0 ] && { _notify "No backups found in \$HOME"; return; }
 
@@ -6463,7 +6469,7 @@ _maintain_restore_interactive() {
     unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
 
     # Safety backup
-    local pre_restore="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    local pre_restore="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing=()
     while IFS= read -r -d '' f; do
         local dest="/${f#"$tmpdir"/}"
@@ -6523,7 +6529,7 @@ _maintain_restore_all() {
     unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
 
     # Safety backup
-    local pre_restore="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    local pre_restore="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing=()
     while IFS= read -r -d '' f; do
         local dest="/${f#"$tmpdir"/}"
@@ -6668,15 +6674,16 @@ _maintain_cleanup() {
     # 9. Steam shader cache cleanup
     log_lines+=("  [9/10] Steam cache")
     if [ -d "$HOME/.steam/steam/steamapps" ]; then
-        local shader_size compat_size
+        # shadercache only, as the heading says. compatdata beside it holds
+        # the Proton prefixes, where a game keeps its saves unless it uses
+        # Steam Cloud — that is not cache, and clearing it loses progress.
+        local shader_size
         shader_size=$(du -sh "$HOME/.steam/steam/steamapps/shadercache" 2>/dev/null | cut -f1)
-        compat_size=$(du -sh "$HOME/.steam/steam/steamapps/compatdata" 2>/dev/null | cut -f1)
         if [ "$dry_run" -eq 0 ]; then
             rm -rf "$HOME/.steam/steam/steamapps/shadercache/"* 2>/dev/null
-            rm -rf "$HOME/.steam/steam/steamapps/compatdata/"* 2>/dev/null
-            log_lines+=("    ✓ Cleared shader (${shader_size:-0}) + compat (${compat_size:-0})")
+            log_lines+=("    ✓ Cleared shader cache (${shader_size:-0})")
         else
-            log_lines+=("    [DRY-RUN] Would clear shader (${shader_size:-0}) + compat (${compat_size:-0})")
+            log_lines+=("    [DRY-RUN] Would clear shader cache (${shader_size:-0})")
         fi
     else
         log_lines+=("    — Steam not installed")
@@ -6729,7 +6736,8 @@ _maintain_schedule() {
     # Check if already scheduled (crontab or systemd)
     local already_scheduled=0
     local method=""
-    if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
+    if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup" \
+       || sudo -n crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
         already_scheduled=1
         method="crontab"
     elif systemctl is-enabled stoa-maintain-cleanup.timer &>/dev/null; then
@@ -6746,6 +6754,7 @@ _maintain_schedule() {
         if [[ "$action" == *"Remove"* ]]; then
             if [ "$method" = "crontab" ]; then
                 crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+                sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" | sudo crontab -
             else
                 sudo systemctl disable stoa-maintain-cleanup.timer 2>/dev/null
                 sudo rm -f /etc/systemd/system/stoa-maintain-cleanup.{service,timer} 2>/dev/null
@@ -6758,11 +6767,15 @@ _maintain_schedule() {
 
     _yad_confirm "Schedule system cleanup to run at every boot?" || return
 
-    if command -v crontab &>/dev/null; then
-        local cron_cmd="@reboot bash $script_path --cleanup"
-        (crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") | crontab -
-        _notify "Cleanup scheduled at boot (crontab)"
-    elif command -v systemctl &>/dev/null; then
+    # systemd first, deliberately: the cleanup runs pacman and journalctl,
+    # so it needs root. Scheduled in *this user's* crontab it runs
+    # unprivileged with no terminal, every sudo inside fails as a PAM
+    # "conversation failed", and pam_faillock counts each one — three is
+    # the Arch default and the account is then locked for ten minutes, at
+    # the login screen, on the next boot. A root unit has nothing to ask.
+    crontab -l 2>/dev/null | grep -q "stoa-maintain" && \
+        crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+    if command -v systemctl &>/dev/null; then
         local unit_dir="/etc/systemd/system"
         sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
 [Unit]
@@ -6771,7 +6784,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash $script_path --cleanup
+ExecStart=/bin/bash $script_path --cleanup --unattended
 SVCEOF
         sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
 [Unit]
@@ -6786,8 +6799,14 @@ TMREOF
         sudo systemctl daemon-reload
         sudo systemctl enable stoa-maintain-cleanup.timer
         _notify "Cleanup scheduled at boot (systemd timer)"
+    elif command -v crontab &>/dev/null; then
+        # No systemd: root's crontab, so the job is privileged already.
+        local cron_cmd="@reboot bash $script_path --cleanup --unattended"
+        (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") \
+            | sudo crontab -
+        _notify "Cleanup scheduled at boot (root crontab)"
     else
-        _notify "Neither crontab nor systemctl found"
+        _notify "Neither systemctl nor crontab found"
     fi
 }
 

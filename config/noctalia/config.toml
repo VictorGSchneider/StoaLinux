@@ -46,11 +46,17 @@ control_center_placement = "attached"
 # permanently shadow this and freeze the login screen on whatever the
 # palette happened to be that day.
 #
-# Sync escalates through pkexec/run0 to write /var/lib/noctalia-greeter;
-# shell.polkit_agent above provides the prompt.
+# Sync escalates through pkexec/run0 to write /var/lib/noctalia-greeter,
+# and that escalation is a polkit password prompt every single time. With
+# auto_sync on it fires on every change it watches — including each
+# wallpaper rotation, so turning on [wallpaper.automation] turns on a
+# password box every interval_seconds. The login screen does not need to
+# follow a rotating wallpaper, and the palette changes rarely, so the sync
+# is on demand: `noctalia msg greeter-sync`, or Settings -> Security ->
+# Noctalia Greeter -> Sync Now, after changing the theme.
 
 [shell.greeter_sync]
-auto_sync = true
+auto_sync = false
 
 [shell.launcher]
 categories    = true

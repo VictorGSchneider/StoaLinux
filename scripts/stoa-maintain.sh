@@ -14,6 +14,7 @@
 #   stoa-maintain --restore-interactive backup.zip  # Restore with prompts
 #   stoa-maintain --cleanup                # Full system cleanup
 #   stoa-maintain --dry-run --cleanup      # Preview cleanup actions
+#   stoa-maintain --cleanup --unattended   # Safe subset (what the boot job runs)
 #   stoa-maintain --list backup.zip        # Show backup contents
 #   stoa-maintain --schedule               # Schedule cleanup at boot
 
@@ -39,8 +40,19 @@ TODAY=$(date +%Y%m%d)
 # in whatever directory you happened to run from — and stoa-settings'
 # restore browser and the health widget both only ever look in $HOME,
 # so those backups were invisible to the rest of the system.
-arq="$HOME/$MY_HOSTNAME.confs.$TODAY.zip"
-log="$HOME/backup_$TODAY.log"
+# Resolve through the install-time symlink so ~/.local/bin/stoa-maintain
+# still finds the shared path definitions in-tree — same trick stoa-store
+# uses for its modules.
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+if [ ! -r "$_STOA_LIB/stoa-paths.sh" ]; then
+    echo "stoa-maintain: missing $_STOA_LIB/stoa-paths.sh" >&2
+    exit 1
+fi
+# shellcheck source=lib/stoa-paths.sh
+source "$_STOA_LIB/stoa-paths.sh"
+
+arq="$STOA_BACKUP_DIR/$MY_HOSTNAME.confs.$TODAY.zip"
+log="$STOA_LOG_DIR/backup_$TODAY.log"
 USER_DIR="$HOME"
 DRY_RUN=0
 
@@ -90,9 +102,40 @@ run_cmd() {
     fi
 }
 
+# ── Cleanup scope ──
+# "full" is every step, for a person watching it run. "safe" is what a
+# scheduled, unattended run is allowed to do on its own: delete garbage and
+# change nothing else. It leaves out the system upgrade and orphan removal
+# (those alter what is installed, unwatched), old-kernel removal, docker
+# prune (stopped containers are someone's work), and the Steam step —
+# the shader cache is regenerable, but rebuilding it costs a stuttering
+# first launch per game, so wiping it every boot is worse than useless.
+CLEANUP_SCOPE="full"
+_SAFE_STEPS=" clean flatpak journal stoa tmp "
+
+_step() {
+    [ "$CLEANUP_SCOPE" = "full" ] && return 0
+    case "$_SAFE_STEPS" in *" $1 "*) return 0 ;; esac
+    return 1
+}
+
 check_root() {
-    if [ "$(id -u)" -ne 0 ] && ! command -v sudo >/dev/null 2>&1; then
-        log_msg WARN "Not running as root and sudo not found. Some operations may fail."
+    [ "$(id -u)" -eq 0 ] && return 0
+
+    if ! command -v sudo >/dev/null 2>&1; then
+        log_msg ERROR "Needs root and sudo is not installed."
+        return 1
+    fi
+
+    # Unattended and unprivileged is the dangerous combination. Every sudo
+    # below would be a PAM auth attempt with no terminal to prompt on; PAM
+    # logs each as "conversation failed" and pam_faillock counts it. Three
+    # is the Arch default, and the account is then locked for ten minutes
+    # — at the login screen, on the next boot. Refuse once, loudly, rather
+    # than trip that.
+    if ! sudo -n true 2>/dev/null && [ ! -t 0 ]; then
+        log_msg ERROR "Needs root, but there is no terminal to ask for a password."
+        log_msg ERROR "Run it as root, or grant this user a NOPASSWD sudoers rule."
         return 1
     fi
     return 0
@@ -165,6 +208,7 @@ get_disk_used_kb() {
 # ── Backup ──
 
 backup_configs() {
+    stoa_paths_init
     log_msg INFO "Starting backup..."
 
     if ! command -v zip >/dev/null 2>&1; then
@@ -320,7 +364,8 @@ restore_interactive() {
     local total=${#files[@]}
     local count=0
 
-    local pre_restore_backup="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    stoa_paths_init
+    local pre_restore_backup="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing_targets=()
     for FILE in "${files[@]}"; do
         local DEST="/${FILE#"$TMPDIR_RESTORE"/}"
@@ -388,7 +433,8 @@ restore_all() {
     local total=${#files[@]}
     local count=0
 
-    local pre_restore_backup="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    stoa_paths_init
+    local pre_restore_backup="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing_targets=()
     for FILE in "${files[@]}"; do
         local DEST="/${FILE#"$TMPDIR_RESTORE"/}"
@@ -489,26 +535,38 @@ pkg_autoremove() {
 # ── Full cleanup ──
 
 full_cleanup() {
-    check_root
-    log_msg INFO "Starting full cleanup..."
+    check_root || return 1
+    log_msg INFO "Starting ${CLEANUP_SCOPE} cleanup..."
 
     local space_before
     space_before=$(get_disk_used_kb)
 
-    local steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" "kernels" "docker" "steam" "tmp")
+    local steps
+    if [ "$CLEANUP_SCOPE" = "safe" ]; then
+        steps=("clean" "flatpak" "journal" "stoa" "tmp")
+    else
+        steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" "kernels" "docker" "steam" "stoa" "tmp")
+    fi
     local total=${#steps[@]}
     local count=0
 
-    pkg_update
-    count=$((count+1)); progress_bar "$total" "$count"
+    if _step update; then
+        pkg_update
+        count=$((count+1)); progress_bar "$total" "$count"
+    fi
 
-    pkg_clean
-    count=$((count+1)); progress_bar "$total" "$count"
+    if _step clean; then
+        pkg_clean
+        count=$((count+1)); progress_bar "$total" "$count"
+    fi
 
-    pkg_autoremove
-    count=$((count+1)); progress_bar "$total" "$count"
+    if _step autoremove; then
+        pkg_autoremove
+        count=$((count+1)); progress_bar "$total" "$count"
+    fi
 
-    if command -v snap >/dev/null 2>&1; then
+    if _step snap; then
+      if command -v snap >/dev/null 2>&1; then
         run_cmd sudo snap set system refresh.retain=2 2>/dev/null
         if [ "$DRY_RUN" -eq 0 ]; then
             snap list --all 2>/dev/null | awk '/disabled/{print $1, $2}' | while read -r snapname revision; do
@@ -518,21 +576,25 @@ full_cleanup() {
         else
             log_msg INFO "[DRY-RUN] Would clean disabled snap revisions"
         fi
+      fi
+      count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if command -v flatpak >/dev/null 2>&1; then
-        run_cmd flatpak uninstall --unused -y 2>/dev/null
+    if _step flatpak; then
+        command -v flatpak >/dev/null 2>&1 && \
+            run_cmd flatpak uninstall --unused -y 2>/dev/null
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if command -v journalctl >/dev/null 2>&1; then
-        run_cmd sudo journalctl --vacuum-time=7d 2>/dev/null
-        run_cmd sudo journalctl --vacuum-size=100M 2>/dev/null
+    if _step journal; then
+        if command -v journalctl >/dev/null 2>&1; then
+            run_cmd sudo journalctl --vacuum-time=7d 2>/dev/null
+            run_cmd sudo journalctl --vacuum-size=100M 2>/dev/null
+        fi
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if [ "$PKG_MANAGER" = "apt" ]; then
+    if _step kernels && [ "$PKG_MANAGER" = "apt" ]; then
         local current_kernel
         current_kernel=$(uname -r)
         if [ "$DRY_RUN" -eq 0 ]; then
@@ -544,25 +606,82 @@ full_cleanup() {
             old_kernels=$(dpkg -l 'linux-image-*' 2>/dev/null | awk '/^ii/{print $2}' | grep -v "$current_kernel" | grep -v 'linux-image-generic')
             [ -n "$old_kernels" ] && log_msg INFO "[DRY-RUN] Would remove old kernels: $old_kernels"
         fi
-    elif [ "$PKG_MANAGER" = "dnf" ]; then
+    elif _step kernels && [ "$PKG_MANAGER" = "dnf" ]; then
         run_cmd sudo dnf remove --oldinstallonly -y 2>/dev/null
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
+    _step kernels && { count=$((count+1)); progress_bar "$total" "$count"; }
 
-    if command -v docker >/dev/null 2>&1; then
-        run_cmd docker system prune -f 2>/dev/null
+    if _step docker; then
+        command -v docker >/dev/null 2>&1 && \
+            run_cmd docker system prune -f 2>/dev/null
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if [ -d "$HOME/.steam/steam/steamapps" ]; then
+    if _step steam; then
+      if [ -d "$HOME/.steam/steam/steamapps" ]; then
+        # shadercache only. compatdata next to it holds the Proton
+        # prefixes — a game's saves live there unless it uses Steam Cloud,
+        # so it is not cache and is never deleted here.
         if [ "$DRY_RUN" -eq 0 ]; then
             rm -rf "$HOME/.steam/steam/steamapps/shadercache/"* 2>/dev/null
-            rm -rf "$HOME/.steam/steam/steamapps/compatdata/"* 2>/dev/null
         else
-            log_msg INFO "[DRY-RUN] Would clean Steam shader/compat cache"
+            log_msg INFO "[DRY-RUN] Would clean the Steam shader cache"
         fi
+      fi
+      count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
+
+    # Leftovers: our own archives, and the .bak/.log debris that any tool
+    # leaves behind. Everything here is age-gated at 30 days except the
+    # archive pruning, which is count-gated — a file nothing has written to
+    # in a month is not in use by anything, which is what makes sweeping
+    # *.log safe at all.
+    #
+    # Deliberately NOT touched: /var/log. Those belong to services that
+    # hold them open, and the journal has its own step above.
+    if _step stoa; then
+        local pruned=0 swept=0 f
+        [ "$DRY_RUN" -eq 0 ] && stoa_paths_init
+
+        # Keep the two most recent of each archive kind; older ones are
+        # superseded by definition — the newest is what you would restore.
+        local pattern old
+        for pattern in '*.confs.*.zip' 'pre_restore_*.zip'; do
+            while IFS= read -r old; do
+                [ -n "$old" ] || continue
+                if [ "$DRY_RUN" -eq 0 ]; then rm -f "$old" 2>/dev/null; fi
+                pruned=$((pruned + 1))
+            done < <(find "$STOA_BACKUP_DIR" -maxdepth 1 -type f -name "$pattern" \
+                        -printf '%T@ %p\n' 2>/dev/null | sort -rn | tail -n +3 \
+                        | cut -d' ' -f2-)
+        done
+
+        # $HOME's top level: a stray .log or .bak there is debris, never a
+        # program's working file. ~/.cache is debris by definition. Under
+        # ~/.config and ~/.local/share only .bak is swept — a .log there
+        # may well be an application's real log.
+        while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            if [ "$DRY_RUN" -eq 0 ]; then rm -f "$f" 2>/dev/null; fi
+            swept=$((swept + 1))
+        done < <(
+            {
+                find "$USER_DIR" -maxdepth 1 -type f \
+                    \( -name '*.log' -o -name '*.bak' -o -name '*.bak.*' \) -mtime +30
+                find "$USER_DIR/.cache" "$STOA_LOG_DIR" -type f \
+                    \( -name '*.log' -o -name '*.bak' -o -name '*.bak.*' \) -mtime +30
+                find "$USER_DIR/.config" "$USER_DIR/.local/share" -type f \
+                    \( -name '*.bak' -o -name '*.bak.*' \) -mtime +30
+            } 2>/dev/null
+        )
+
+        if [ "$DRY_RUN" -eq 0 ]; then
+            log_msg INFO "Leftovers: pruned ${pruned} old archive(s), swept ${swept} stale .log/.bak"
+        else
+            log_msg INFO "[DRY-RUN] Would prune ${pruned} old archive(s) and sweep ${swept} stale .log/.bak"
+        fi
+        count=$((count + 1)); progress_bar "$total" "$count"
+    fi
 
     log_msg INFO "Cleaning temporary files in /tmp and /var/tmp..."
     if [ "$DRY_RUN" -eq 0 ]; then
@@ -601,7 +720,7 @@ full_cleanup() {
         log_msg INFO "Cleanup complete (no measurable space freed or running in dry-run mode)."
     fi
 
-    log_msg INFO "Full cleanup completed."
+    log_msg INFO "${CLEANUP_SCOPE^} cleanup completed."
 }
 
 # ── Schedule cleanup at boot ──
@@ -611,13 +730,16 @@ schedule_cleanup() {
     local script_path
     script_path="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
 
-    if command -v crontab >/dev/null 2>&1; then
-        local CRON_CMD="@reboot bash $script_path --cleanup"
-        (crontab -l 2>/dev/null | grep -v "$script_path" ; echo "$CRON_CMD") | crontab -
-        log_msg INFO "Cleanup scheduled at boot via crontab."
-    elif command -v systemctl >/dev/null 2>&1; then
+    # systemd first, deliberately. The cleanup runs pacman, paccache and
+    # journalctl: it needs root. A @reboot line in *this user's* crontab
+    # would run it unprivileged with no terminal, so each sudo inside would
+    # fail as a PAM "conversation failed" and pam_faillock would lock the
+    # account for ten minutes — locking you out of your own login screen on
+    # every boot. The systemd unit runs as root, so nothing has to ask.
+    _unschedule_user_crontab
+    if command -v systemctl >/dev/null 2>&1; then
         local unit_dir="/etc/systemd/system"
-        check_root
+        check_root || return 1
 
         sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
 [Unit]
@@ -626,7 +748,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash $script_path --cleanup
+ExecStart=/bin/bash $script_path --cleanup --unattended
 SVCEOF
 
         sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
@@ -643,10 +765,25 @@ TMREOF
         sudo systemctl daemon-reload
         sudo systemctl enable stoa-maintain-cleanup.timer
         log_msg INFO "Cleanup scheduled at boot via systemd timer."
+    elif command -v crontab >/dev/null 2>&1; then
+        # No systemd: root's crontab, so the job is already privileged.
+        local CRON_CMD="@reboot bash $script_path --cleanup --unattended"
+        (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$CRON_CMD") \
+            | sudo crontab -
+        log_msg INFO "Cleanup scheduled at boot via root crontab."
     else
-        log_msg ERROR "Neither crontab nor systemctl found. Cannot schedule cleanup."
+        log_msg ERROR "Neither systemctl nor crontab found. Cannot schedule cleanup."
         return 1
     fi
+}
+
+# Older releases scheduled the cleanup in the *user's* crontab, where it
+# could never authenticate. Drop that entry wherever it is still installed.
+_unschedule_user_crontab() {
+    command -v crontab >/dev/null 2>&1 || return 0
+    crontab -l 2>/dev/null | grep -q "stoa-maintain" || return 0
+    crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+    log_msg INFO "Removed the legacy user-crontab cleanup entry (it could not authenticate)."
 }
 
 # ── Skip menu when sourced ──
@@ -659,21 +796,85 @@ trap _brcs_cleanup EXIT INT TERM HUP
 
 show_help() {
     echo ""
-    echo -e "  ${B}stoa-maintain${R} v${VERSION} — System Maintenance (BRCS)"
+    echo -e "  ${B}stoa-maintain${R} v${VERSION} — Backup · Restore · Cleanup · Schedule"
     echo ""
-    echo -e "  ${F}Usage:${R} stoa-maintain [OPTIONS]"
+    echo -e "  ${F}Usage:${R} stoa-maintain [OPTION]"
+    echo -e "         stoa-maintain            ${S}opens the interactive menu${R}"
     echo ""
-    echo -e "  ${S}Options:${R}"
-    echo -e "    --backup                    Backup system and user configurations"
-    echo -e "    --restore FILE              Restore all configs from backup"
-    echo -e "    --restore-interactive FILE   Restore configs interactively"
-    echo -e "    --cleanup                   Run full system cleanup"
-    echo -e "    --dry-run                   Preview cleanup (use with --cleanup)"
-    echo -e "    --list FILE                 List contents of a backup"
-    echo -e "    --schedule                  Schedule cleanup at boot"
-    echo -e "    --help, -h                  Show this help"
+
+    echo -e "  ${B}BACKUP${R}"
+    echo -e "    ${F}--backup${R}"
+    echo -e "${S}        Collects how this machine is set up into${R}"
+    echo -e "${S}        ~/.local/state/stoa/backups/<host>.confs.<date>.zip, with${R}"
+    echo -e "${S}        the log under ~/.local/state/stoa/logs/. Anything an older${R}"
+    echo -e "${S}        release left at the top of \$HOME is moved there on first${R}"
+    echo -e "${S}        run.${R}"
+    echo -e "${S}        Takes /etc (*.conf, *.ini, *.rules), the package manager's${R}"
+    echo -e "${S}        repo config, the usual dotfiles, ~/.config three levels${R}"
+    echo -e "${S}        deep, your crontab, systemd units and network profiles.${R}"
+    echo -e "${S}        Your documents are not in it — this is configuration${R}"
+    echo -e "${S}        only, not a data backup.${R}"
     echo ""
-    echo -e "  ${S}Package manager:${R} $PKG_MANAGER"
+
+    echo -e "  ${B}RESTORE${R}"
+    echo -e "    ${F}--restore FILE${R}"
+    echo -e "${S}        Writes every file in FILE back where it came from, without${R}"
+    echo -e "${S}        asking. Saves what it is about to overwrite first, to${R}"
+    echo -e "${S}        ~/.local/state/stoa/backups/pre_restore_<timestamp>.zip.${R}"
+    echo ""
+    echo -e "    ${F}--restore-interactive FILE${R}"
+    echo -e "${S}        The same, one file at a time: shows a coloured diff between${R}"
+    echo -e "${S}        disk and backup and asks before each. Use this to pull a${R}"
+    echo -e "${S}        single config out of an old archive.${R}"
+    echo ""
+    echo -e "    ${F}--list FILE${R}"
+    echo -e "${S}        Verifies the archive and prints what is inside. Changes${R}"
+    echo -e "${S}        nothing.${R}"
+    echo ""
+
+    echo -e "  ${B}CLEANUP${R}"
+    echo -e "    ${F}--cleanup${R}"
+    echo -e "${S}        Eleven steps, reporting the space freed at the end:${R}"
+    echo -e "${S}          1  upgrade every package${R}         ${T}changes what is installed${R}"
+    echo -e "${S}          2  trim the package cache to one version per package${R}"
+    echo -e "${S}          3  remove orphaned packages${R}       ${T}changes what is installed${R}"
+    echo -e "${S}          4  drop disabled snap revisions${R}"
+    echo -e "${S}          5  uninstall unused flatpak runtimes${R}"
+    echo -e "${S}          6  vacuum the journal to 7 days / 100M${R}"
+    echo -e "${S}          7  remove old kernels${R}             ${T}apt and dnf only${R}"
+    echo -e "${S}          8  docker system prune${R}            ${T}drops stopped containers${R}"
+    echo -e "${S}          9  clear the Steam shader cache${R}"
+    echo -e "${S}         10  leftovers: keep the 2 newest archives of each kind,${R}"
+    echo -e "${S}             and sweep, over 30 days old, .log/.bak at the top${R}"
+    echo -e "${S}             of \$HOME and in ~/.cache, plus .bak under${R}"
+    echo -e "${S}             ~/.config and ~/.local/share. Never /var/log.${R}"
+    echo -e "${S}         11  clear /tmp and /var/tmp, skipping files in use${R}"
+    echo -e "${S}        compatdata is never touched: Proton keeps game saves there.${R}"
+    echo -e "${S}        Run this when you can watch it.${R}"
+    echo ""
+    echo -e "    ${F}--cleanup --unattended${R}"
+    echo -e "${S}        Only steps 2, 5, 6, 10 and 11 — delete garbage, change${R}"
+    echo -e "${S}        nothing else. No upgrade, no package removal, no Steam.${R}"
+    echo -e "${S}        This is what the scheduled boot job runs.${R}"
+    echo ""
+    echo -e "    ${F}--dry-run${R}"
+    echo -e "${S}        Use with --cleanup. Prints each command it would run${R}"
+    echo -e "${S}        instead of running it.${R}"
+    echo ""
+
+    echo -e "  ${B}SCHEDULE${R}"
+    echo -e "    ${F}--schedule${R}"
+    echo -e "${S}        Runs the unattended cleanup two minutes after each boot,${R}"
+    echo -e "${S}        as a systemd timer owned by root — it needs root, and a${R}"
+    echo -e "${S}        job that has to ask for a password at boot has nobody to${R}"
+    echo -e "${S}        ask. To undo:${R}"
+    echo -e "${S}          sudo systemctl disable --now stoa-maintain-cleanup.timer${R}"
+    echo -e "${S}        or Super+S → Maintenance → Schedule Cleanup at Boot.${R}"
+    echo ""
+
+    echo -e "    ${F}--help, -h${R}   ${S}this text${R}"
+    echo ""
+    echo -e "  ${S}Package manager detected:${R} ${B}${PKG_MANAGER}${R}"
     echo ""
 }
 
@@ -689,6 +890,7 @@ while [ $# -gt 0 ]; do
         --list)                 ACTION="list"; CLI_FILE="${2:-}"; shift; [ -n "$CLI_FILE" ] && shift ;;
         --schedule)             ACTION="schedule"; shift ;;
         --dry-run)              DRY_RUN=1; shift ;;
+        --unattended)           CLEANUP_SCOPE="safe"; shift ;;
         --help|-h)              show_help; exit 0 ;;
         *)
             echo -e "  ${T}Unknown option: $1${R}"
@@ -697,6 +899,10 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+# One-time housekeeping, after the parser so --dry-run stays a preview:
+# it must not move anything either.
+[ "$DRY_RUN" -eq 0 ] && stoa_paths_migrate
 
 case "$ACTION" in
     backup)
