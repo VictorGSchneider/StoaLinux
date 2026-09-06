@@ -23,11 +23,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # *.sh plus the extensionless scripts (stoa-drive-pin,
+          # stoa-doctor-status, the pacman hooks…) — they are installed and
+          # run exactly like the rest, so they get linted like the rest.
           mapfile -t SH_FILES < <(
-              find . -type f -name '*.sh' \
-                  -not -path './.git/*' \
-                  -not -path './scripts/vendor/*' \
-              | sort
+              {
+                  find . -type f -name '*.sh' \
+                      -not -path './.git/*' \
+                      -not -path './scripts/vendor/*'
+                  find . -type f ! -name '*.*' \
+                      -not -path './.git/*' \
+                      -not -path './scripts/vendor/*' \
+                      -exec sh -c 'head -c 40 "$1" | grep -qE "^#!.*(bash|/sh)"' _ {} \; \
+                      -print
+              } | sort -u
           )
           mapfile -t JSON_FILES < <(
               find . -type f -name '*.json' \
@@ -79,6 +88,25 @@ jobs:
           # the floor to 'warning' later once the tree is clean.
           if [ ! -s sh.list ]; then exit 0; fi
           xargs -a sh.list shellcheck --severity=error --shell=bash
+
+      # Every stoa menu dispatches on unanchored substrings, so a `case`
+      # pattern can shadow a later, more specific one — that is how
+      # "15 minutes" silently became 5 minutes. SC2221/SC2222 catch it, and
+      # they are warnings, so they need their own pass above the error floor.
+      - name: Shellcheck (overlapping case patterns)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s sh.list ]; then exit 0; fi
+          xargs -a sh.list shellcheck --shell=bash --severity=warning \
+              --include=SC2221,SC2222
+
+      # The label-versus-pattern half of the same class, which shellcheck
+      # cannot see: a menu label swallowed by the guard that closes the menu
+      # ("  Backup Configs" matching *"Back"*).
+      - name: Menu dispatch
+        shell: bash
+        run: python3 tests/check_menu_dispatch.py
 
       - name: JSON validation
         shell: bash

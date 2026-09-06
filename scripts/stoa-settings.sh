@@ -1038,7 +1038,10 @@ _theme_color_edit() {
             "  Grey (stone): ${C_GREY}" \
             "  Apply changes" \
             "  Back")
-        [[ -z "$choice" || "$choice" == *"Back"* ]] && return
+        # Anchored to the end of the label on purpose: an unanchored
+        # *"Back"* also matches "  Background …", which closed the menu
+        # instead of opening the colour editor.
+        [[ -z "$choice" || "$choice" == *Back ]] && return
 
         case "$choice" in
             *"Apply changes"*)
@@ -2957,7 +2960,7 @@ _power_idle_timeout() {
     case "$choice" in
         *"1 minute"*)   seconds=60 ;;
         *"2 minute"*)   seconds=120 ;;
-        *"5 minute"*)   seconds=300 ;;
+        *" 5 minute"*)  seconds=300 ;;   # leading space: "15 minutes" contains "5 minute"
         *"10 minute"*)  seconds=600 ;;
         *"15 minute"*)  seconds=900 ;;
         *"30 minute"*)  seconds=1800 ;;
@@ -3858,7 +3861,8 @@ _kb_capslock_behavior() {
         "  Backspace" \
         "  Disabled" \
         "  Back")
-    [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+    # Anchored: an unanchored *"Back"* also swallows "  Backspace".
+    [ -z "$choice" ] || [[ "$choice" == *Back ]] && return
 
     local opt
     case "$choice" in
@@ -4944,7 +4948,7 @@ _ss_set_timeout() {
     case "$choice" in
         *"1 minute"*)   seconds=60 ;;
         *"2 minute"*)   seconds=120 ;;
-        *"5 minute"*)   seconds=300 ;;
+        *" 5 minute"*)  seconds=300 ;;   # leading space: "15 minutes" contains "5 minute"
         *"10 minute"*)  seconds=600 ;;
         *"15 minute"*)  seconds=900 ;;
         *"30 minute"*)  seconds=1800 ;;
@@ -6708,10 +6712,12 @@ menu_maintain() {
             "  Cleanup (dry-run)" \
             "  Schedule Cleanup at Boot" \
             "  Back")
-        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+        # Anchored: an unanchored *"Back"* also matches "  Backup Configs"
+        # and "  Restore / Browse Backups", making both unreachable.
+        [ -z "$choice" ] || [[ "$choice" == *Back ]] && return
 
         case "$choice" in
-            *"Backup"*)         _maintain_backup ;;
+            *"Backup Configs"*) _maintain_backup ;;
             *"Restore"*)        _maintain_list ;;
             *"dry-run"*)        _maintain_cleanup 1 ;;
             *"Full Cleanup"*)   _maintain_cleanup 0 ;;
