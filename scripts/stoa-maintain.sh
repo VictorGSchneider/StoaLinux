@@ -14,6 +14,7 @@
 #   stoa-maintain --restore-interactive backup.zip  # Restore with prompts
 #   stoa-maintain --cleanup                # Full system cleanup
 #   stoa-maintain --dry-run --cleanup      # Preview cleanup actions
+#   stoa-maintain --cleanup --unattended   # Safe subset (what the boot job runs)
 #   stoa-maintain --list backup.zip        # Show backup contents
 #   stoa-maintain --schedule               # Schedule cleanup at boot
 
@@ -88,6 +89,22 @@ run_cmd() {
     else
         "$@"
     fi
+}
+
+# ── Cleanup scope ──
+# "full" is every step, for a person watching it run. "safe" is what a
+# scheduled, unattended run is allowed to do on its own: delete garbage and
+# change nothing else. It leaves out the system upgrade and orphan removal
+# (those alter what is installed, unwatched), old-kernel removal, docker
+# prune (stopped containers are someone's work), and the Steam step — that
+# one wipes compatdata, which is where Proton keeps game saves.
+CLEANUP_SCOPE="full"
+_SAFE_STEPS=" clean flatpak journal tmp "
+
+_step() {
+    [ "$CLEANUP_SCOPE" = "full" ] && return 0
+    case "$_SAFE_STEPS" in *" $1 "*) return 0 ;; esac
+    return 1
 }
 
 check_root() {
@@ -504,25 +521,37 @@ pkg_autoremove() {
 
 full_cleanup() {
     check_root || return 1
-    log_msg INFO "Starting full cleanup..."
+    log_msg INFO "Starting ${CLEANUP_SCOPE} cleanup..."
 
     local space_before
     space_before=$(get_disk_used_kb)
 
-    local steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" "kernels" "docker" "steam" "tmp")
+    local steps
+    if [ "$CLEANUP_SCOPE" = "safe" ]; then
+        steps=("clean" "flatpak" "journal" "tmp")
+    else
+        steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" "kernels" "docker" "steam" "tmp")
+    fi
     local total=${#steps[@]}
     local count=0
 
-    pkg_update
-    count=$((count+1)); progress_bar "$total" "$count"
+    if _step update; then
+        pkg_update
+        count=$((count+1)); progress_bar "$total" "$count"
+    fi
 
-    pkg_clean
-    count=$((count+1)); progress_bar "$total" "$count"
+    if _step clean; then
+        pkg_clean
+        count=$((count+1)); progress_bar "$total" "$count"
+    fi
 
-    pkg_autoremove
-    count=$((count+1)); progress_bar "$total" "$count"
+    if _step autoremove; then
+        pkg_autoremove
+        count=$((count+1)); progress_bar "$total" "$count"
+    fi
 
-    if command -v snap >/dev/null 2>&1; then
+    if _step snap; then
+      if command -v snap >/dev/null 2>&1; then
         run_cmd sudo snap set system refresh.retain=2 2>/dev/null
         if [ "$DRY_RUN" -eq 0 ]; then
             snap list --all 2>/dev/null | awk '/disabled/{print $1, $2}' | while read -r snapname revision; do
@@ -532,21 +561,25 @@ full_cleanup() {
         else
             log_msg INFO "[DRY-RUN] Would clean disabled snap revisions"
         fi
+      fi
+      count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if command -v flatpak >/dev/null 2>&1; then
-        run_cmd flatpak uninstall --unused -y 2>/dev/null
+    if _step flatpak; then
+        command -v flatpak >/dev/null 2>&1 && \
+            run_cmd flatpak uninstall --unused -y 2>/dev/null
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if command -v journalctl >/dev/null 2>&1; then
-        run_cmd sudo journalctl --vacuum-time=7d 2>/dev/null
-        run_cmd sudo journalctl --vacuum-size=100M 2>/dev/null
+    if _step journal; then
+        if command -v journalctl >/dev/null 2>&1; then
+            run_cmd sudo journalctl --vacuum-time=7d 2>/dev/null
+            run_cmd sudo journalctl --vacuum-size=100M 2>/dev/null
+        fi
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if [ "$PKG_MANAGER" = "apt" ]; then
+    if _step kernels && [ "$PKG_MANAGER" = "apt" ]; then
         local current_kernel
         current_kernel=$(uname -r)
         if [ "$DRY_RUN" -eq 0 ]; then
@@ -558,25 +591,28 @@ full_cleanup() {
             old_kernels=$(dpkg -l 'linux-image-*' 2>/dev/null | awk '/^ii/{print $2}' | grep -v "$current_kernel" | grep -v 'linux-image-generic')
             [ -n "$old_kernels" ] && log_msg INFO "[DRY-RUN] Would remove old kernels: $old_kernels"
         fi
-    elif [ "$PKG_MANAGER" = "dnf" ]; then
+    elif _step kernels && [ "$PKG_MANAGER" = "dnf" ]; then
         run_cmd sudo dnf remove --oldinstallonly -y 2>/dev/null
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
+    _step kernels && { count=$((count+1)); progress_bar "$total" "$count"; }
 
-    if command -v docker >/dev/null 2>&1; then
-        run_cmd docker system prune -f 2>/dev/null
+    if _step docker; then
+        command -v docker >/dev/null 2>&1 && \
+            run_cmd docker system prune -f 2>/dev/null
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
-    if [ -d "$HOME/.steam/steam/steamapps" ]; then
+    if _step steam; then
+      if [ -d "$HOME/.steam/steam/steamapps" ]; then
         if [ "$DRY_RUN" -eq 0 ]; then
             rm -rf "$HOME/.steam/steam/steamapps/shadercache/"* 2>/dev/null
             rm -rf "$HOME/.steam/steam/steamapps/compatdata/"* 2>/dev/null
         else
             log_msg INFO "[DRY-RUN] Would clean Steam shader/compat cache"
         fi
+      fi
+      count=$((count+1)); progress_bar "$total" "$count"
     fi
-    count=$((count+1)); progress_bar "$total" "$count"
 
     log_msg INFO "Cleaning temporary files in /tmp and /var/tmp..."
     if [ "$DRY_RUN" -eq 0 ]; then
@@ -615,7 +651,7 @@ full_cleanup() {
         log_msg INFO "Cleanup complete (no measurable space freed or running in dry-run mode)."
     fi
 
-    log_msg INFO "Full cleanup completed."
+    log_msg INFO "${CLEANUP_SCOPE^} cleanup completed."
 }
 
 # ── Schedule cleanup at boot ──
@@ -643,7 +679,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash $script_path --cleanup
+ExecStart=/bin/bash $script_path --cleanup --unattended
 SVCEOF
 
         sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
@@ -662,7 +698,7 @@ TMREOF
         log_msg INFO "Cleanup scheduled at boot via systemd timer."
     elif command -v crontab >/dev/null 2>&1; then
         # No systemd: root's crontab, so the job is already privileged.
-        local CRON_CMD="@reboot bash $script_path --cleanup"
+        local CRON_CMD="@reboot bash $script_path --cleanup --unattended"
         (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$CRON_CMD") \
             | sudo crontab -
         log_msg INFO "Cleanup scheduled at boot via root crontab."
@@ -701,6 +737,10 @@ show_help() {
     echo -e "    --restore-interactive FILE   Restore configs interactively"
     echo -e "    --cleanup                   Run full system cleanup"
     echo -e "    --dry-run                   Preview cleanup (use with --cleanup)"
+    echo -e "    --unattended                Cleanup without the steps that need a"
+    echo -e "                                human watching: no upgrade, no package"
+    echo -e "                                removal, no Steam compatdata. Used by"
+    echo -e "                                the scheduled boot job."
     echo -e "    --list FILE                 List contents of a backup"
     echo -e "    --schedule                  Schedule cleanup at boot"
     echo -e "    --help, -h                  Show this help"
@@ -721,6 +761,7 @@ while [ $# -gt 0 ]; do
         --list)                 ACTION="list"; CLI_FILE="${2:-}"; shift; [ -n "$CLI_FILE" ] && shift ;;
         --schedule)             ACTION="schedule"; shift ;;
         --dry-run)              DRY_RUN=1; shift ;;
+        --unattended)           CLEANUP_SCOPE="safe"; shift ;;
         --help|-h)              show_help; exit 0 ;;
         *)
             echo -e "  ${T}Unknown option: $1${R}"

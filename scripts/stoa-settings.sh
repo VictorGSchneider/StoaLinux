@@ -6777,7 +6777,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash $script_path --cleanup
+ExecStart=/bin/bash $script_path --cleanup --unattended
 SVCEOF
         sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
 [Unit]
@@ -6794,7 +6794,7 @@ TMREOF
         _notify "Cleanup scheduled at boot (systemd timer)"
     elif command -v crontab &>/dev/null; then
         # No systemd: root's crontab, so the job is privileged already.
-        local cron_cmd="@reboot bash $script_path --cleanup"
+        local cron_cmd="@reboot bash $script_path --cleanup --unattended"
         (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") \
             | sudo crontab -
         _notify "Cleanup scheduled at boot (root crontab)"
