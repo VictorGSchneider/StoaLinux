@@ -14,6 +14,12 @@ they went unnoticed:
       offered a bar engine long after the alternative was removed from
       stoa-bar.sh.
 
+  R3  the shipped Noctalia palette is still the Stoic one. Applying a
+      custom palette writes StoaCustom.json beside it precisely so that
+      Stoa.json keeps meaning Stoa; if a future change points the
+      rewrite at the shipped file instead, the palette named Stoa
+      silently becomes Dracula and there is no way back to the original.
+
 Commented-out options in stoa.conf count: they are documentation of a
 supported setting, and a user who uncomments one expects it to work.
 """
@@ -28,6 +34,13 @@ ROOT = Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "install.sh"
 CONF = ROOT / "stoa.conf"
 HOOK_DIR = ROOT / "theme" / "pacman-hooks"
+SETTINGS = ROOT / "scripts" / "stoa-settings.sh"
+SHIPPED_PALETTE = ROOT / "config" / "noctalia" / "palettes" / "Stoa.json"
+
+# How many of the Stoic role colours the shipped palette must still carry.
+# It uses nine of the eleven — the two it leaves out have no Material role
+# in Noctalia — so six is a floor with room to re-map a couple of roles.
+MIN_STOIC_ROLES = 6
 
 # Where a setting could plausibly be read. stoa.conf itself is excluded —
 # it declares the options, it does not consume them.
@@ -90,8 +103,53 @@ def check_conf_options() -> list[str]:
     return problems
 
 
+def presets() -> dict[str, list[str]]:
+    """The palette table from stoa-settings.sh, name -> role colours."""
+    body = SETTINGS.read_text(errors="replace")
+    out = {}
+    for line in body.split("\n"):
+        if line.count("|") != 11:
+            continue
+        *colours, name = line.split("|")
+        # the table's own header comment has the same shape, so require
+        # every field to actually be a colour
+        if not all(re.fullmatch(r"#[0-9a-fA-F]{6}", c) for c in colours):
+            continue
+        out[name.strip()] = [c.lower() for c in colours]
+    return out
+
+
+def check_shipped_palette() -> list[str]:
+    if not SHIPPED_PALETTE.is_file():
+        return [f"{SHIPPED_PALETTE.name} is missing — it is what \"Stoa\" means"]
+    table = presets()
+    stoic = next((v for k, v in table.items() if k.startswith("Stoic")), None)
+    if not stoic:
+        return ["could not read the Stoic row of _color_presets"]
+
+    text = SHIPPED_PALETTE.read_text(errors="replace").lower()
+    kept = [c for c in stoic if c in text]
+    rel = SHIPPED_PALETTE.relative_to(ROOT)
+    problems = []
+    if len(kept) < MIN_STOIC_ROLES:
+        problems.append(
+            f"{rel}: only {len(kept)} Stoic colours left — the shipped palette has "
+            "drifted away from the Stoic default it is supposed to be"
+        )
+    for name, colours in table.items():
+        if name.startswith("Stoic"):
+            continue
+        borrowed = sorted({c for c in colours if c in text and c not in stoic})
+        if borrowed:
+            problems.append(
+                f"{rel}: carries {name} colours ({', '.join(borrowed)}) — a custom "
+                "palette must be written to StoaCustom.json, never over the shipped one"
+            )
+    return problems
+
+
 def main() -> int:
-    problems = check_hook_targets() + check_conf_options()
+    problems = check_hook_targets() + check_conf_options() + check_shipped_palette()
     for problem in problems:
         print(f"config-integrity: {problem}")
     if problems:

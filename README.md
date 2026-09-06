@@ -227,7 +227,9 @@ Change the entire color scheme from `Super+S → Theme → Color Palette`:
 - **View Current Palette** — see the active colors at a glance
 - **Reset to Stoic** — restore the default marble/bronze palette
 
-Changes propagate automatically to: Noctalia Shell (via `~/.config/noctalia/colorschemes/Stoa/Stoa.json`), Waybar, Kitty, eww, GTK 3/4, Hyprland, hyprlock, and `colors.sh`. Hyprland and Kitty reload live; Noctalia repaints on the next color-scheme selection — other apps take effect on restart.
+Changes propagate automatically to: Kitty, eww, GTK 3/4, Hyprland, hyprlock, `colors.sh`, and Noctalia Shell. Hyprland and Kitty reload live; other apps take effect on restart.
+
+Noctalia is the one target that is not rewritten in place. `~/.config/noctalia/palettes/Stoa.json` is the shipped palette and is what *Stoa* means, so a custom palette is written beside it as `StoaCustom.json` and Noctalia is pointed at that instead — via `stoa-custom.toml` (merged after `config.toml`) and the `custom_palette` key in `~/.local/state/noctalia/settings.toml`, which wins over both. **Reset to Stoic** deletes the generated palette and points Noctalia back at `Stoa.json`, untouched.
 
 ### Stoa Greeter
 

@@ -905,6 +905,39 @@ _colors_load() {
     fi
 }
 
+# Point Noctalia at a palette by name.
+#
+# Noctalia merges every *.toml in ~/.config/noctalia alphabetically, so
+# stoa-custom.toml lands after config.toml and overrides its
+# `custom_palette`. GUI edits go to ~/.local/state/noctalia/settings.toml
+# and win over both, so that one is rewritten in place when it already
+# carries the key — if it does not, the config side is authoritative and
+# there is nothing to change there.
+_noctalia_select() {
+    local name="$1"
+    local conf_dir="${HOME}/.config/noctalia"
+    local override="${conf_dir}/stoa-custom.toml"
+    local state="${HOME}/.local/state/noctalia/settings.toml"
+
+    if [ "$name" = "Stoa" ]; then
+        rm -f "$override"
+    else
+        mkdir -p "$conf_dir"
+        cat > "$override" <<EOF
+# Written by stoa-settings when a custom palette is applied. Merged after
+# config.toml (alphabetical order), so it overrides the custom_palette
+# declared there. Removed again by Theme → Color Palette → Reset to Stoic.
+[theme]
+source         = "custom"
+custom_palette = "${name}"
+EOF
+    fi
+
+    if [ -f "$state" ] && grep -q '^[[:space:]]*custom_palette[[:space:]]*=' "$state"; then
+        sed -i "s/^\([[:space:]]*custom_palette[[:space:]]*=[[:space:]]*\).*/\1\"${name}\"/" "$state"
+    fi
+}
+
 # Apply palette to all config files
 _colors_apply() {
     local bg_dark="$1" bg="$2" bg_light="$3" fg="$4" fg_dim="$5"
@@ -983,6 +1016,62 @@ _colors_apply() {
             [ "$from" = "$to" ] && continue
             sed -i "s/${from}/${to}/gi" "$colorssh"
         done
+    fi
+
+    # Noctalia (bar, launcher, notifications, OSD, lock screen)
+    #
+    # Unlike every other target here, the shipped palette is left alone:
+    # ~/.config/noctalia/palettes/Stoa.json is a symlink into the repo and
+    # is what "Stoa" means, so overwriting it would rename the palette
+    # rather than change it. The custom palette is written beside it as
+    # StoaCustom.json, derived from Stoa.json on every apply — never from
+    # the previous custom file, so repeated changes cannot accumulate
+    # drift — and Noctalia is pointed at whichever of the two applies.
+    local pal_dir="${HOME}/.config/noctalia/palettes"
+    local shipped="${pal_dir}/Stoa.json"
+    if [ -f "$shipped" ]; then
+        # The stoic colours Stoa.json is written in, taken from the preset
+        # table so there is one source of truth for them.
+        local s_bg_dark s_bg s_bg_light s_fg s_fg_dim
+        local s_accent s_accent2 s_green s_red s_blue s_grey
+        IFS='|' read -r s_bg_dark s_bg s_bg_light s_fg s_fg_dim \
+                        s_accent s_accent2 s_green s_red s_blue s_grey _ \
+            < <(_color_presets | grep 'Stoic (default)$')
+
+        local -a noct_pairs=(
+            "$s_bg_dark|$bg_dark"
+            "$s_bg_light|$bg_light"
+            "$s_bg|$bg"
+            "$s_fg_dim|$fg_dim"
+            "$s_fg|$fg"
+            "$s_accent2|$accent2"
+            "$s_accent|$accent"
+            "$s_green|$green"
+            "$s_red|$red"
+            "$s_blue|$blue"
+            "$s_grey|$grey"
+        )
+
+        local custom="${pal_dir}/StoaCustom.json"
+        local differs=0
+        for pair in "${noct_pairs[@]}"; do
+            [ "${pair%%|*}" = "${pair##*|}" ] || differs=1
+        done
+
+        if [ "$differs" -eq 0 ]; then
+            # Back to stoic — drop the generated palette and let the
+            # shipped Stoa.json take over again.
+            rm -f "$custom"
+            _noctalia_select "Stoa"
+        else
+            cp "$shipped" "$custom"
+            for pair in "${noct_pairs[@]}"; do
+                local from="${pair%%|*}" to="${pair##*|}"
+                [ "$from" = "$to" ] && continue
+                sed -i "s/${from}/${to}/gi" "$custom"
+            done
+            _noctalia_select "StoaCustom"
+        fi
     fi
 
     # Save new palette

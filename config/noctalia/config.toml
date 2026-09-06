@@ -221,9 +221,11 @@ type = "session"
 # render so the health pills would not race their data producer. The hook
 # removes the guess: the doctor runs when there is a shell to report into.
 #
-# Deliberately NOT set: colors_changed. The Stoa palette is static — it
-# lives in theme/colors.sh and is applied to apps by a pacman hook at
-# install time, so there is no runtime palette change to react to.
+# Deliberately NOT set: colors_changed. Palette changes do happen at
+# runtime — Super+S → Theme → Color Palette writes StoaCustom.json and
+# repoints custom_palette below — but that path already rewrites every
+# app's config itself and reloads Hyprland and Kitty, so a hook firing on
+# top of it would have nothing left to do.
 
 [hooks]
 started = "~/.local/bin/stoa-doctor"
