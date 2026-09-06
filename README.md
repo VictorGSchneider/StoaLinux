@@ -152,7 +152,7 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
   <tr><td><b>Screensaver</b></td><td>Living marble animation (plasma noise in Stoa palette), idle timeout</td></tr>
   <tr><td><b>Wallpaper</b></td><td>Browse, generate, set custom</td></tr>
   <tr><td><b>Theme</b></td><td>Color palette (10 presets + custom), GTK, icons, cursors, font size</td></tr>
-  <tr><td><b>Lock Screen</b></td><td>Lock now, face recognition setup</td></tr>
+  <tr><td><b>Lock Screen</b></td><td>Lock now</td></tr>
   <tr><td><b>System Health</b></td><td>Doctor report, services status, failed units, thermals, journal, updates, package snapshots (diff), security audit, config integrity</td></tr>
   <tr><td><b>Maintenance</b></td><td>Backup configs, restore (interactive/bulk), full system cleanup (10-step), dry-run preview, schedule cleanup at boot</td></tr>
 </table>
@@ -175,7 +175,6 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
   <tr><td><code>stoa-winapps</code></td><td>Windows apps (KVM/RDP)</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
-  <tr><td><code>stoa-face</code></td><td>Face unlock (howdy)</td><td></td><td></td></tr>
   <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
   <tr><td><code>stoa-maintain</code></td><td>Backup, restore, cleanup (BRCS)</td><td></td><td></td></tr>
   <tr><td><code>stoa-pkg-snapshot</code></td><td>Package snapshot (pacman hook)</td><td></td><td></td></tr>
@@ -193,7 +192,7 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
   <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
   <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>
   <tr><td>OnlyOffice</td><td>Office suite</td><td>Enpass</td><td>Passwords</td></tr>
-  <tr><td>Betterbird</td><td>Email</td><td>howdy</td><td>Face unlock</td></tr>
+  <tr><td>Betterbird</td><td>Email</td><td></td><td></td></tr>
   <tr><td>imv</td><td>Images</td><td>lf / Thunar</td><td>Files</td></tr>
   <tr><td>EasyEffects</td><td>Audio equalizer</td><td>gammastep</td><td>Night light</td></tr>
   <tr><td>QEMU/KVM</td><td>WinApps (VM)</td><td>FreeRDP</td><td>Remote desktop</td></tr>

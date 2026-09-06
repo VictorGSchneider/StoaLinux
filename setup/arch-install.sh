@@ -181,7 +181,6 @@ if arch-chroot "$INSTALL_ROOT" su - "$CREATED_USER" -c "yay --version" &>/dev/nu
     _install_aur_chroot eww-wayland               "eww (Wayland)"
     _install_aur_chroot satty                     "Satty"
     _install_aur_chroot enpass-bin                "Enpass"
-    _install_aur_chroot howdy-git                 "howdy"
     _install_aur_chroot otf-eb-garamond           "EB Garamond font"
     _install_aur_chroot colloid-icon-theme-git    "Colloid icon theme"
     _install_aur_chroot colloid-cursors-git       "Colloid cursors"
@@ -193,7 +192,7 @@ else
     echo -e "  ${T}[!] yay could not be installed in chroot.${R}"
     echo -e "  ${S}Install after first boot:${R}"
     echo -e "  ${B}    cd /tmp && git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si${R}"
-    echo -e "  ${B}    yay -S brave-bin obsidian visual-studio-code-bin eww-wayland satty enpass-bin howdy-git otf-eb-garamond colloid-icon-theme-git colloid-cursors-git yacreader bauh nwg-look${R}"
+    echo -e "  ${B}    yay -S brave-bin obsidian visual-studio-code-bin eww-wayland satty enpass-bin otf-eb-garamond colloid-icon-theme-git colloid-cursors-git yacreader bauh nwg-look${R}"
 fi
 
 # Remove temporary sudo

@@ -1314,8 +1314,6 @@ menu_lockscreen() {
         local choice
         choice=$(_yad_select "  Lock Screen" \
             "  Lock now" \
-            "  Face recognition setup" \
-            "  Face recognition status" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -1323,26 +1321,6 @@ menu_lockscreen() {
             *"Lock now"*)
                 hyprlock &
                 disown
-                ;;
-            *"setup"*)
-                kitty -e sudo stoa-face setup &
-                disown
-                ;;
-            *"status"*)
-                local status_text=""
-                if command -v howdy &>/dev/null; then
-                    status_text="howdy: installed"
-                    for svc in sudo hyprlock login; do
-                        if grep -q "pam_howdy.so" "/etc/pam.d/$svc" 2>/dev/null; then
-                            status_text+="\nPAM ($svc): active"
-                        else
-                            status_text+="\nPAM ($svc): not configured"
-                        fi
-                    done
-                else
-                    status_text="howdy: not installed\nRun: sudo stoa-face setup"
-                fi
-                echo -e "$status_text" | _yad_pipe "  Face Recognition"
                 ;;
         esac
     done

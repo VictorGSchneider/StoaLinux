@@ -231,10 +231,6 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
     _install_aur betterbird-bin         "Betterbird"            betterbird
     _install_aur visual-studio-code-bin "Visual Studio Code"    code
-    _install_aur howdy-git              "howdy"                 howdy
-    if [ "$_aur_fresh" = 1 ]; then
-        echo -e "  ${S}    To set up face recognition: sudo stoa-face setup${R}"
-    fi
     _install_aur libinput-gestures      "libinput-gestures"     libinput-gestures
     _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
     if [ "$_aur_fresh" = 1 ]; then
@@ -416,7 +412,6 @@ echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"
 echo -e "  ${S}  stoa-walls        — Generate wallpapers${R}"
 echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
-echo -e "  ${S}  stoa-face setup   — Face recognition (Windows Hello-style)${R}"
 echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
 echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P2P${R}"
 echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDrive, etc)${R}"
