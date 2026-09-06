@@ -6668,15 +6668,16 @@ _maintain_cleanup() {
     # 9. Steam shader cache cleanup
     log_lines+=("  [9/10] Steam cache")
     if [ -d "$HOME/.steam/steam/steamapps" ]; then
-        local shader_size compat_size
+        # shadercache only, as the heading says. compatdata beside it holds
+        # the Proton prefixes, where a game keeps its saves unless it uses
+        # Steam Cloud — that is not cache, and clearing it loses progress.
+        local shader_size
         shader_size=$(du -sh "$HOME/.steam/steam/steamapps/shadercache" 2>/dev/null | cut -f1)
-        compat_size=$(du -sh "$HOME/.steam/steam/steamapps/compatdata" 2>/dev/null | cut -f1)
         if [ "$dry_run" -eq 0 ]; then
             rm -rf "$HOME/.steam/steam/steamapps/shadercache/"* 2>/dev/null
-            rm -rf "$HOME/.steam/steam/steamapps/compatdata/"* 2>/dev/null
-            log_lines+=("    ✓ Cleared shader (${shader_size:-0}) + compat (${compat_size:-0})")
+            log_lines+=("    ✓ Cleared shader cache (${shader_size:-0})")
         else
-            log_lines+=("    [DRY-RUN] Would clear shader (${shader_size:-0}) + compat (${compat_size:-0})")
+            log_lines+=("    [DRY-RUN] Would clear shader cache (${shader_size:-0})")
         fi
     else
         log_lines+=("    — Steam not installed")

@@ -96,8 +96,9 @@ run_cmd() {
 # scheduled, unattended run is allowed to do on its own: delete garbage and
 # change nothing else. It leaves out the system upgrade and orphan removal
 # (those alter what is installed, unwatched), old-kernel removal, docker
-# prune (stopped containers are someone's work), and the Steam step — that
-# one wipes compatdata, which is where Proton keeps game saves.
+# prune (stopped containers are someone's work), and the Steam step —
+# the shader cache is regenerable, but rebuilding it costs a stuttering
+# first launch per game, so wiping it every boot is worse than useless.
 CLEANUP_SCOPE="full"
 _SAFE_STEPS=" clean flatpak journal tmp "
 
@@ -604,11 +605,13 @@ full_cleanup() {
 
     if _step steam; then
       if [ -d "$HOME/.steam/steam/steamapps" ]; then
+        # shadercache only. compatdata next to it holds the Proton
+        # prefixes — a game's saves live there unless it uses Steam Cloud,
+        # so it is not cache and is never deleted here.
         if [ "$DRY_RUN" -eq 0 ]; then
             rm -rf "$HOME/.steam/steam/steamapps/shadercache/"* 2>/dev/null
-            rm -rf "$HOME/.steam/steam/steamapps/compatdata/"* 2>/dev/null
         else
-            log_msg INFO "[DRY-RUN] Would clean Steam shader/compat cache"
+            log_msg INFO "[DRY-RUN] Would clean the Steam shader cache"
         fi
       fi
       count=$((count+1)); progress_bar "$total" "$count"
@@ -739,7 +742,7 @@ show_help() {
     echo -e "    --dry-run                   Preview cleanup (use with --cleanup)"
     echo -e "    --unattended                Cleanup without the steps that need a"
     echo -e "                                human watching: no upgrade, no package"
-    echo -e "                                removal, no Steam compatdata. Used by"
+    echo -e "                                removal, no Steam cache. Used by"
     echo -e "                                the scheduled boot job."
     echo -e "    --list FILE                 List contents of a backup"
     echo -e "    --schedule                  Schedule cleanup at boot"
