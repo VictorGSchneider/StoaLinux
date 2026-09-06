@@ -6282,7 +6282,12 @@ menu_health() {
 #   MAINTENANCE (backup, restore, cleanup — BRCS integration)
 # ══════════════════════════════════════════════════════════════
 
-_maintain_log="${HOME}/backup_$(date +%Y%m%d).log"
+# Shared with stoa-maintain and stoa-vitals-status so the three cannot
+# disagree about where a backup is written and where it is looked for.
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+# shellcheck source=lib/stoa-paths.sh
+[ -r "$_STOA_LIB/stoa-paths.sh" ] && source "$_STOA_LIB/stoa-paths.sh" && stoa_paths_migrate
+_maintain_log="${STOA_LOG_DIR}/backup_$(date +%Y%m%d).log"
 
 _maintain_log_msg() {
     local level="$1"; shift
@@ -6303,7 +6308,8 @@ _maintain_backup() {
 
     local hostname_str="${HOSTNAME:-$(hostname 2>/dev/null || echo unknown)}"
     local today=$(date +%Y%m%d)
-    local arq="${HOME}/${hostname_str}.confs.${today}.zip"
+    stoa_paths_init
+    local arq="${STOA_BACKUP_DIR}/${hostname_str}.confs.${today}.zip"
     local all_files=""
 
     # /etc/ config files
@@ -6412,7 +6418,7 @@ _maintain_list() {
         name=$(basename "$f")
         size=$(du -h "$f" 2>/dev/null | cut -f1)
         backups+=("$name  ($size)")
-    done < <(ls -1t "$HOME"/*.confs.*.zip 2>/dev/null)
+    done < <(ls -1t "$STOA_BACKUP_DIR"/*.confs.*.zip 2>/dev/null)
 
     [ ${#backups[@]} -eq 0 ] && { _notify "No backups found in \$HOME"; return; }
 
@@ -6463,7 +6469,7 @@ _maintain_restore_interactive() {
     unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
 
     # Safety backup
-    local pre_restore="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    local pre_restore="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing=()
     while IFS= read -r -d '' f; do
         local dest="/${f#"$tmpdir"/}"
@@ -6523,7 +6529,7 @@ _maintain_restore_all() {
     unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
 
     # Safety backup
-    local pre_restore="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    local pre_restore="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing=()
     while IFS= read -r -d '' f; do
         local dest="/${f#"$tmpdir"/}"

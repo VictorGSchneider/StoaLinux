@@ -40,8 +40,19 @@ TODAY=$(date +%Y%m%d)
 # in whatever directory you happened to run from — and stoa-settings'
 # restore browser and the health widget both only ever look in $HOME,
 # so those backups were invisible to the rest of the system.
-arq="$HOME/$MY_HOSTNAME.confs.$TODAY.zip"
-log="$HOME/backup_$TODAY.log"
+# Resolve through the install-time symlink so ~/.local/bin/stoa-maintain
+# still finds the shared path definitions in-tree — same trick stoa-store
+# uses for its modules.
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+if [ ! -r "$_STOA_LIB/stoa-paths.sh" ]; then
+    echo "stoa-maintain: missing $_STOA_LIB/stoa-paths.sh" >&2
+    exit 1
+fi
+# shellcheck source=lib/stoa-paths.sh
+source "$_STOA_LIB/stoa-paths.sh"
+
+arq="$STOA_BACKUP_DIR/$MY_HOSTNAME.confs.$TODAY.zip"
+log="$STOA_LOG_DIR/backup_$TODAY.log"
 USER_DIR="$HOME"
 DRY_RUN=0
 
@@ -197,6 +208,7 @@ get_disk_used_kb() {
 # ── Backup ──
 
 backup_configs() {
+    stoa_paths_init
     log_msg INFO "Starting backup..."
 
     if ! command -v zip >/dev/null 2>&1; then
@@ -352,7 +364,8 @@ restore_interactive() {
     local total=${#files[@]}
     local count=0
 
-    local pre_restore_backup="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    stoa_paths_init
+    local pre_restore_backup="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing_targets=()
     for FILE in "${files[@]}"; do
         local DEST="/${FILE#"$TMPDIR_RESTORE"/}"
@@ -420,7 +433,8 @@ restore_all() {
     local total=${#files[@]}
     local count=0
 
-    local pre_restore_backup="$HOME/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
+    stoa_paths_init
+    local pre_restore_backup="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
     local existing_targets=()
     for FILE in "${files[@]}"; do
         local DEST="/${FILE#"$TMPDIR_RESTORE"/}"
@@ -617,27 +631,56 @@ full_cleanup() {
       count=$((count+1)); progress_bar "$total" "$count"
     fi
 
-    # Stoa's own leavings. --backup writes one log per run into $HOME and
-    # never prunes them; install.sh keeps a .bak.<epoch> of every real file
-    # it replaces with a symlink. Both pile up and nothing else clears
-    # them. Thirty days, so this morning's .bak is still there when the
-    # install you just did turns out to have been a mistake.
+    # Leftovers: our own archives, and the .bak/.log debris that any tool
+    # leaves behind. Everything here is age-gated at 30 days except the
+    # archive pruning, which is count-gated — a file nothing has written to
+    # in a month is not in use by anything, which is what makes sweeping
+    # *.log safe at all.
+    #
+    # Deliberately NOT touched: /var/log. Those belong to services that
+    # hold them open, and the journal has its own step above.
     if _step stoa; then
-        local stale_logs stale_baks
-        stale_logs=$(find "$USER_DIR" -maxdepth 1 -type f -name 'backup_*.log' \
-            -mtime +30 2>/dev/null | wc -l)
-        stale_baks=$(find "$USER_DIR/.config" -type f -name '*.bak.[0-9]*' \
-            -mtime +30 2>/dev/null | wc -l)
+        local pruned=0 swept=0 f
+        [ "$DRY_RUN" -eq 0 ] && stoa_paths_init
+
+        # Keep the two most recent of each archive kind; older ones are
+        # superseded by definition — the newest is what you would restore.
+        local pattern old
+        for pattern in '*.confs.*.zip' 'pre_restore_*.zip'; do
+            while IFS= read -r old; do
+                [ -n "$old" ] || continue
+                if [ "$DRY_RUN" -eq 0 ]; then rm -f "$old" 2>/dev/null; fi
+                pruned=$((pruned + 1))
+            done < <(find "$STOA_BACKUP_DIR" -maxdepth 1 -type f -name "$pattern" \
+                        -printf '%T@ %p\n' 2>/dev/null | sort -rn | tail -n +3 \
+                        | cut -d' ' -f2-)
+        done
+
+        # $HOME's top level: a stray .log or .bak there is debris, never a
+        # program's working file. ~/.cache is debris by definition. Under
+        # ~/.config and ~/.local/share only .bak is swept — a .log there
+        # may well be an application's real log.
+        while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            if [ "$DRY_RUN" -eq 0 ]; then rm -f "$f" 2>/dev/null; fi
+            swept=$((swept + 1))
+        done < <(
+            {
+                find "$USER_DIR" -maxdepth 1 -type f \
+                    \( -name '*.log' -o -name '*.bak' -o -name '*.bak.*' \) -mtime +30
+                find "$USER_DIR/.cache" "$STOA_LOG_DIR" -type f \
+                    \( -name '*.log' -o -name '*.bak' -o -name '*.bak.*' \) -mtime +30
+                find "$USER_DIR/.config" "$USER_DIR/.local/share" -type f \
+                    \( -name '*.bak' -o -name '*.bak.*' \) -mtime +30
+            } 2>/dev/null
+        )
+
         if [ "$DRY_RUN" -eq 0 ]; then
-            find "$USER_DIR" -maxdepth 1 -type f -name 'backup_*.log' \
-                -mtime +30 -delete 2>/dev/null
-            find "$USER_DIR/.config" -type f -name '*.bak.[0-9]*' \
-                -mtime +30 -delete 2>/dev/null
-            log_msg INFO "Stoa leftovers removed: ${stale_logs} log(s), ${stale_baks} .bak"
+            log_msg INFO "Leftovers: pruned ${pruned} old archive(s), swept ${swept} stale .log/.bak"
         else
-            log_msg INFO "[DRY-RUN] Would remove ${stale_logs} Stoa log(s) and ${stale_baks} .bak file(s) older than 30 days"
+            log_msg INFO "[DRY-RUN] Would prune ${pruned} old archive(s) and sweep ${swept} stale .log/.bak"
         fi
-        count=$((count+1)); progress_bar "$total" "$count"
+        count=$((count + 1)); progress_bar "$total" "$count"
     fi
 
     log_msg INFO "Cleaning temporary files in /tmp and /var/tmp..."
@@ -762,7 +805,10 @@ show_help() {
     echo -e "  ${B}BACKUP${R}"
     echo -e "    ${F}--backup${R}"
     echo -e "${S}        Collects how this machine is set up into${R}"
-    echo -e "${S}        ~/<host>.confs.<date>.zip, logging to ~/backup_<date>.log.${R}"
+    echo -e "${S}        ~/.local/state/stoa/backups/<host>.confs.<date>.zip, with${R}"
+    echo -e "${S}        the log under ~/.local/state/stoa/logs/. Anything an older${R}"
+    echo -e "${S}        release left at the top of \$HOME is moved there on first${R}"
+    echo -e "${S}        run.${R}"
     echo -e "${S}        Takes /etc (*.conf, *.ini, *.rules), the package manager's${R}"
     echo -e "${S}        repo config, the usual dotfiles, ~/.config three levels${R}"
     echo -e "${S}        deep, your crontab, systemd units and network profiles.${R}"
@@ -774,7 +820,7 @@ show_help() {
     echo -e "    ${F}--restore FILE${R}"
     echo -e "${S}        Writes every file in FILE back where it came from, without${R}"
     echo -e "${S}        asking. Saves what it is about to overwrite first, to${R}"
-    echo -e "${S}        ~/pre_restore_<timestamp>.zip.${R}"
+    echo -e "${S}        ~/.local/state/stoa/backups/pre_restore_<timestamp>.zip.${R}"
     echo ""
     echo -e "    ${F}--restore-interactive FILE${R}"
     echo -e "${S}        The same, one file at a time: shows a coloured diff between${R}"
@@ -798,9 +844,10 @@ show_help() {
     echo -e "${S}          7  remove old kernels${R}             ${T}apt and dnf only${R}"
     echo -e "${S}          8  docker system prune${R}            ${T}drops stopped containers${R}"
     echo -e "${S}          9  clear the Steam shader cache${R}"
-    echo -e "${S}         10  drop Stoa's own leftovers over 30 days old:${R}"
-    echo -e "${S}             ~/backup_<date>.log and the .bak copies${R}"
-    echo -e "${S}             install.sh keeps of files it replaced${R}"
+    echo -e "${S}         10  leftovers: keep the 2 newest archives of each kind,${R}"
+    echo -e "${S}             and sweep, over 30 days old, .log/.bak at the top${R}"
+    echo -e "${S}             of \$HOME and in ~/.cache, plus .bak under${R}"
+    echo -e "${S}             ~/.config and ~/.local/share. Never /var/log.${R}"
     echo -e "${S}         11  clear /tmp and /var/tmp, skipping files in use${R}"
     echo -e "${S}        compatdata is never touched: Proton keeps game saves there.${R}"
     echo -e "${S}        Run this when you can watch it.${R}"
@@ -852,6 +899,10 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+# One-time housekeeping, after the parser so --dry-run stays a preview:
+# it must not move anything either.
+[ "$DRY_RUN" -eq 0 ] && stoa_paths_migrate
 
 case "$ACTION" in
     backup)
