@@ -1,173 +1,79 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  STOA LINUX — CI                                             ║
+# ║  "Only what serves, stays."                                  ║
+# ╚══════════════════════════════════════════════════════════════╝
+#
+# Every check lives in tests/run.sh, not here. This file only decides
+# what runs in parallel and which tool each job needs, so that
+# `bash tests/run.sh` on your machine and CI can never drift apart.
+#
+# The jobs are split by what breaks, not by tooling: a shellcheck
+# finding should not hide a broken plugin.toml, and a failing invariant
+# should not wait behind an apt install. Each reports on its own.
+#
+#   shell  the ~60 scripts we ship, including the extensionless ones
+#   data   the formats where a typo fails silently instead of loudly
+#   stoa   the repo-specific invariants under tests/
+#
+# --strict turns "tool missing, skipped" into a failure: locally a skip
+# is a convenience, in CI it would be a check quietly not running.
+
 name: ci
 
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
-# Vendored upstream code (scripts/vendor/**) is excluded from every check —
-# we forward-port bug fixes upstream-first, so we don't gate our CI on it.
+permissions:
+  contents: read
+
+# A second push supersedes the first; there is nothing to learn from
+# finishing a run against a commit nobody will look at again.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint:
-    name: lint (shell / json / python / lua)
+  shell:
+    name: shell (syntax + shellcheck)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install shellcheck + lua
-        run: sudo apt-get update && sudo apt-get install -y shellcheck lua5.4
-
-      - name: List targets
-        id: targets
-        shell: bash
+      - name: Install shellcheck
         run: |
-          set -euo pipefail
-          # *.sh plus the extensionless scripts (stoa-drive-pin,
-          # stoa-doctor-status, the pacman hooks…) — they are installed and
-          # run exactly like the rest, so they get linted like the rest.
-          mapfile -t SH_FILES < <(
-              {
-                  find . -type f -name '*.sh' \
-                      -not -path './.git/*' \
-                      -not -path './scripts/vendor/*'
-                  find . -type f ! -name '*.*' \
-                      -not -path './.git/*' \
-                      -not -path './scripts/vendor/*' \
-                      -exec sh -c 'head -c 40 "$1" | grep -qE "^#!.*(bash|/sh)"' _ {} \; \
-                      -print
-              } | sort -u
-          )
-          mapfile -t JSON_FILES < <(
-              find . -type f -name '*.json' \
-                  -not -path './.git/*' \
-                  -not -path './scripts/vendor/*' \
-              | sort
-          )
-          mapfile -t PY_FILES < <(
-              find . -type f -name '*.py' \
-                  -not -path './.git/*' \
-                  -not -path './scripts/vendor/*' \
-              | sort
-          )
-          mapfile -t LUA_FILES < <(
-              find . -type f \( -name '*.lua' -o -name '*.luau' \) \
-                  -not -path './.git/*' \
-                  -not -path './scripts/vendor/*' \
-              | sort
-          )
-          printf 'sh files:   %d\n' "${#SH_FILES[@]}"
-          printf 'json files: %d\n' "${#JSON_FILES[@]}"
-          printf 'py files:   %d\n' "${#PY_FILES[@]}"
-          printf 'lua files:  %d\n' "${#LUA_FILES[@]}"
-          printf '%s\n' "${SH_FILES[@]}"   > sh.list
-          printf '%s\n' "${JSON_FILES[@]}" > json.list
-          printf '%s\n' "${PY_FILES[@]}"   > py.list
-          printf '%s\n' "${LUA_FILES[@]}"  > lua.list
+          command -v shellcheck >/dev/null && exit 0
+          sudo apt-get update && sudo apt-get install -y shellcheck
 
-      - name: Shell syntax (bash -n)
-        shell: bash
+      - run: bash tests/run.sh shell --strict
+
+  data:
+    name: data (json / toml / lua / python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # luac5.4 parses config/hypr/hyprland.lua and the Noctalia *.luau
+      # plugins; ruff catches the runtime-only Python faults py_compile
+      # cannot see (undefined names, a dict key written twice).
+      - name: Install lua + ruff
         run: |
-          set -euo pipefail
-          status=0
-          while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              if ! bash -n "$f"; then
-                  echo "::error file=$f::bash -n failed"
-                  status=1
-              fi
-          done < sh.list
-          exit $status
+          command -v luac5.4 >/dev/null || {
+            sudo apt-get update && sudo apt-get install -y lua5.4
+          }
+          command -v ruff >/dev/null || pipx install ruff || pip install --user ruff
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Shellcheck (errors only)
-        shell: bash
-        run: |
-          set -euo pipefail
-          # --severity=error keeps CI focused on real bugs (SC2xxx style
-          # warnings are useful but noisy on an established codebase). Raise
-          # the floor to 'warning' later once the tree is clean.
-          if [ ! -s sh.list ]; then exit 0; fi
-          xargs -a sh.list shellcheck --severity=error --shell=bash
+      - run: bash tests/run.sh data --strict
 
-      # Every stoa menu dispatches on unanchored substrings, so a `case`
-      # pattern can shadow a later, more specific one — that is how
-      # "15 minutes" silently became 5 minutes. SC2221/SC2222 catch it, and
-      # they are warnings, so they need their own pass above the error floor.
-      - name: Shellcheck (overlapping case patterns)
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -s sh.list ]; then exit 0; fi
-          xargs -a sh.list shellcheck --shell=bash --severity=warning \
-              --include=SC2221,SC2222
+  stoa:
+    name: stoa (invariants)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      # The label-versus-pattern half of the same class, which shellcheck
-      # cannot see: a menu label swallowed by the guard that closes the menu
-      # ("  Backup Configs" matching *"Back"*).
-      - name: Menu dispatch
-        shell: bash
-        run: python3 tests/check_menu_dispatch.py
-
-      # `A && B || C && D` reads like if/elif but runs D on the success
-      # path too — every colour editor accepted a valid hex and called it
-      # invalid in the same breath.
-      - name: Shell pitfalls
-        shell: bash
-        run: python3 tests/check_shell_pitfalls.py
-
-      # Config that promises something the tree no longer does: a pacman
-      # hook whose program install.sh never links, or a stoa.conf option
-      # nothing reads.
-      - name: Config integrity
-        shell: bash
-        run: python3 tests/check_config_integrity.py
-
-      # The login-flow scripts edit ~/.zprofile and ~/.bash_profile in
-      # place. Getting the unseed wrong eats the rest of the user's
-      # profile silently, so it is exercised rather than eyeballed.
-      - name: Profile unseed
-        shell: bash
-        run: bash tests/test_profile_unseed.sh
-
-      - name: JSON validation
-        shell: bash
-        run: |
-          set -euo pipefail
-          status=0
-          while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"; then
-                  echo "::error file=$f::invalid JSON"
-                  status=1
-              fi
-          done < json.list
-          exit $status
-
-      - name: Python syntax (py_compile)
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -s py.list ]; then exit 0; fi
-          xargs -a py.list python3 -m py_compile
-
-      # config/hypr/hyprland.lua is the Hyprland config (0.55+ dropped
-      # hyprlang for lua). A syntax error there means the compositor
-      # refuses to load the config at all, so gate it in CI.
-      #
-      # *.luau (Noctalia v5 plugins) is checked by the same step. Luau is a
-      # superset of Lua 5.1, so luac5.4 only parses plugins written in the
-      # common subset — which is why they avoid type annotations and
-      # if-expressions. It catches ordinary syntax errors, not Luau types.
-      - name: Lua syntax (luac -p)
-        shell: bash
-        run: |
-          set -euo pipefail
-          status=0
-          while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              if ! luac5.4 -p "$f"; then
-                  echo "::error file=$f::luac -p failed"
-                  status=1
-              fi
-          done < lua.list
-          exit $status
+      # Nothing to install: these are plain python3 and bash, on purpose,
+      # so they stay runnable on the machine StoaLinux is installed on.
+      - run: bash tests/run.sh stoa --strict

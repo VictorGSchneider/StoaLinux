@@ -284,6 +284,32 @@ Pick one or the other:
 - **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
 - **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, and notifies via Noctalia Shell (which owns `org.freedesktop.Notifications` — scripts call `notify-send`). Full log at `~/.config/stoa/doctor.log`.
 
+### Checks
+
+Everything CI runs lives in `tests/run.sh`, so the same command answers the
+same question on your machine:
+
+```bash
+bash tests/run.sh            # every group
+bash tests/run.sh shell      # shell | data | stoa
+bash tests/run.sh --list     # what each group covers
+```
+
+- **shell** — `bash -n` and shellcheck over every script shipped, including
+  the extensionless ones (`stoa-drive-pin`, the pacman hooks). The floor is
+  `warning` minus an explicit list of patterns this tree uses on purpose.
+- **data** — the formats where a typo fails *silently*: JSON, TOML (a broken
+  `plugin.toml` just makes Noctalia skip the widget), Lua/Luau, and Python
+  under `py_compile` plus the ruff rules that bite at runtime.
+- **stoa** — the invariants in `tests/check_*.py` and `tests/test_*.sh`:
+  menu labels that a dispatch pattern would swallow, the `A && B || C && D`
+  precedence trap, pacman hooks pointing at a program nothing installs,
+  `stoa.conf` options nothing reads, `Super+<key>` shortcuts nothing binds,
+  and the profile-unseeding that once ate the rest of `.zprofile`.
+
+A missing tool is reported as a skip locally and fails under `--strict`,
+which is how CI runs it.
+
 ### Vendored upstreams
 
 Some `stoa-*` scripts are forks of standalone projects and live alongside a
