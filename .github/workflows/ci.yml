@@ -122,6 +122,13 @@ jobs:
         shell: bash
         run: python3 tests/check_config_integrity.py
 
+      # The login-flow scripts edit ~/.zprofile and ~/.bash_profile in
+      # place. Getting the unseed wrong eats the rest of the user's
+      # profile silently, so it is exercised rather than eyeballed.
+      - name: Profile unseed
+        shell: bash
+        run: bash tests/test_profile_unseed.sh
+
       - name: JSON validation
         shell: bash
         run: |
