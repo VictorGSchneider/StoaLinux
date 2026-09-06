@@ -100,7 +100,7 @@ run_cmd() {
 # the shader cache is regenerable, but rebuilding it costs a stuttering
 # first launch per game, so wiping it every boot is worse than useless.
 CLEANUP_SCOPE="full"
-_SAFE_STEPS=" clean flatpak journal tmp "
+_SAFE_STEPS=" clean flatpak journal stoa tmp "
 
 _step() {
     [ "$CLEANUP_SCOPE" = "full" ] && return 0
@@ -529,9 +529,9 @@ full_cleanup() {
 
     local steps
     if [ "$CLEANUP_SCOPE" = "safe" ]; then
-        steps=("clean" "flatpak" "journal" "tmp")
+        steps=("clean" "flatpak" "journal" "stoa" "tmp")
     else
-        steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" "kernels" "docker" "steam" "tmp")
+        steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" "kernels" "docker" "steam" "stoa" "tmp")
     fi
     local total=${#steps[@]}
     local count=0
@@ -615,6 +615,29 @@ full_cleanup() {
         fi
       fi
       count=$((count+1)); progress_bar "$total" "$count"
+    fi
+
+    # Stoa's own leavings. --backup writes one log per run into $HOME and
+    # never prunes them; install.sh keeps a .bak.<epoch> of every real file
+    # it replaces with a symlink. Both pile up and nothing else clears
+    # them. Thirty days, so this morning's .bak is still there when the
+    # install you just did turns out to have been a mistake.
+    if _step stoa; then
+        local stale_logs stale_baks
+        stale_logs=$(find "$USER_DIR" -maxdepth 1 -type f -name 'backup_*.log' \
+            -mtime +30 2>/dev/null | wc -l)
+        stale_baks=$(find "$USER_DIR/.config" -type f -name '*.bak.[0-9]*' \
+            -mtime +30 2>/dev/null | wc -l)
+        if [ "$DRY_RUN" -eq 0 ]; then
+            find "$USER_DIR" -maxdepth 1 -type f -name 'backup_*.log' \
+                -mtime +30 -delete 2>/dev/null
+            find "$USER_DIR/.config" -type f -name '*.bak.[0-9]*' \
+                -mtime +30 -delete 2>/dev/null
+            log_msg INFO "Stoa leftovers removed: ${stale_logs} log(s), ${stale_baks} .bak"
+        else
+            log_msg INFO "[DRY-RUN] Would remove ${stale_logs} Stoa log(s) and ${stale_baks} .bak file(s) older than 30 days"
+        fi
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
 
     log_msg INFO "Cleaning temporary files in /tmp and /var/tmp..."
@@ -765,7 +788,7 @@ show_help() {
 
     echo -e "  ${B}CLEANUP${R}"
     echo -e "    ${F}--cleanup${R}"
-    echo -e "${S}        Ten steps, reporting the space freed at the end:${R}"
+    echo -e "${S}        Eleven steps, reporting the space freed at the end:${R}"
     echo -e "${S}          1  upgrade every package${R}         ${T}changes what is installed${R}"
     echo -e "${S}          2  trim the package cache to one version per package${R}"
     echo -e "${S}          3  remove orphaned packages${R}       ${T}changes what is installed${R}"
@@ -775,14 +798,17 @@ show_help() {
     echo -e "${S}          7  remove old kernels${R}             ${T}apt and dnf only${R}"
     echo -e "${S}          8  docker system prune${R}            ${T}drops stopped containers${R}"
     echo -e "${S}          9  clear the Steam shader cache${R}"
-    echo -e "${S}         10  clear /tmp and /var/tmp, skipping files in use${R}"
+    echo -e "${S}         10  drop Stoa's own leftovers over 30 days old:${R}"
+    echo -e "${S}             ~/backup_<date>.log and the .bak copies${R}"
+    echo -e "${S}             install.sh keeps of files it replaced${R}"
+    echo -e "${S}         11  clear /tmp and /var/tmp, skipping files in use${R}"
     echo -e "${S}        compatdata is never touched: Proton keeps game saves there.${R}"
     echo -e "${S}        Run this when you can watch it.${R}"
     echo ""
     echo -e "    ${F}--cleanup --unattended${R}"
-    echo -e "${S}        Only steps 2, 5, 6 and 10 — delete garbage, change nothing${R}"
-    echo -e "${S}        else. No upgrade, no package removal, no Steam. This is${R}"
-    echo -e "${S}        what the scheduled boot job runs.${R}"
+    echo -e "${S}        Only steps 2, 5, 6, 10 and 11 — delete garbage, change${R}"
+    echo -e "${S}        nothing else. No upgrade, no package removal, no Steam.${R}"
+    echo -e "${S}        This is what the scheduled boot job runs.${R}"
     echo ""
     echo -e "    ${F}--dry-run${R}"
     echo -e "${S}        Use with --cleanup. Prints each command it would run${R}"
