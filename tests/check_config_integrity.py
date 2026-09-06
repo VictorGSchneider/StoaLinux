@@ -202,15 +202,6 @@ def documented_shortcuts() -> list[tuple[Path, int, str, str]]:
     for f in reader_files():
         if f.suffix == ".lua" or f.name == HYPRLAND.name:
             continue
-        # config/noctalia/{plugins,settings.json,colors.json} are the v4
-        # leftovers config.toml calls inert: nothing installs them and v5
-        # never reads them, so their shortcut lists describe a shell that
-        # no longer exists. Skipped rather than fixed — the fix is to
-        # delete them, which is not this check's call to make.
-        if "noctalia" in f.parts and (
-            "plugins" in f.parts or f.name in {"settings.json", "colors.json"}
-        ):
-            continue
         try:
             lines = f.read_text(errors="replace").split("\n")
         except OSError:

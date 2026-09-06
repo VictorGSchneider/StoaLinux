@@ -35,7 +35,11 @@ R='\033[0m'                   # Reset
 # ── Globals ──
 MY_HOSTNAME="${HOSTNAME:-$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo unknown)}"
 TODAY=$(date +%Y%m%d)
-arq="$MY_HOSTNAME.confs.$TODAY.zip"
+# Anchored to $HOME like the log below it: unanchored, the backup landed
+# in whatever directory you happened to run from — and stoa-settings'
+# restore browser and the health widget both only ever look in $HOME,
+# so those backups were invisible to the rest of the system.
+arq="$HOME/$MY_HOSTNAME.confs.$TODAY.zip"
 log="$HOME/backup_$TODAY.log"
 USER_DIR="$HOME"
 DRY_RUN=0
