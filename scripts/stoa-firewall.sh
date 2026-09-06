@@ -186,7 +186,7 @@ cmd_setup() {
     echo ""
     echo -e "  ${O}[✓] Firewall active. All incoming ports blocked.${R}"
     echo -e "  ${O}[✓] Port monitor running. You'll be notified of new ports.${R}"
-    echo -e "  ${S}    Manage via: Super+I → Firewall${R}"
+    echo -e "  ${S}    Manage via: Super+S → Firewall${R}"
     echo ""
 }
 

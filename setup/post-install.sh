@@ -235,7 +235,7 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
     if [ "$_aur_fresh" = 1 ]; then
         echo -e "  ${S}    To login: protonvpn-cli login <username>${R}"
-        echo -e "  ${S}    Or use: Super+I → VPN${R}"
+        echo -e "  ${S}    Or use: Super+S → VPN${R}"
     fi
     _install_aur bauh                   "Bauh (package manager GUI)" bauh
     _install_aur nwg-look               "nwg-look (GTK theme editor)" nwg-look
@@ -412,14 +412,14 @@ echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"
 echo -e "  ${S}  stoa-walls        — Generate wallpapers${R}"
 echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
-echo -e "  ${S}  stoa-settings     — Settings panel (Super+I)${R}"
+echo -e "  ${S}  stoa-settings     — Settings panel (Super+S)${R}"
 echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P2P${R}"
 echo -e "  ${S}  stoa-drive         — Cloud Drive manager (Google Drive, OneDrive, etc)${R}"
 echo -e "  ${S}  stoa-store        — App store / package manager (Super+A)${R}"
-echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+I → Firewall)${R}"
-echo -e "  ${S}  stoa-maintain     — Backup, restore & cleanup (Super+I → Maintenance)${R}"
+echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+S → Firewall)${R}"
+echo -e "  ${S}  stoa-maintain     — Backup, restore & cleanup (Super+S → Maintenance)${R}"
 echo -e "  ${S}  stoa-predict      — Text prediction + emoji suggestions (Super+Shift+S)${R}"
-echo -e "  ${S}  stoa-settings     → Fan & Performance — fan mode, speed, profiles, GPU (Super+I → Power → Fan)${R}"
+echo -e "  ${S}  stoa-settings     → Fan & Performance — fan mode, speed, profiles, GPU (Super+S → Power → Fan)${R}"
 echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
 echo -e "  ${S}  dfm               — Dotfile Manager GUI (Super+G)${R}"
 if [ -d /opt/damx ] || [ -f /etc/systemd/system/damx-daemon.service ]; then

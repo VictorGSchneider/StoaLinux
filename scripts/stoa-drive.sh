@@ -944,7 +944,7 @@ case "${1:-}" in
         _check_rclone || exit 1
         remotes=$(_list_remotes)
         if [ -z "$remotes" ]; then
-            echo "No accounts configured. Run: stoa-drive (or Super+I → Cloud Drive)"
+            echo "No accounts configured. Run: stoa-drive (or Super+S → Cloud Drive)"
             exit 0
         fi
         while IFS= read -r remote; do
