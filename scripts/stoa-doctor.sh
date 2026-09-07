@@ -123,7 +123,17 @@ _POLKIT_RULE="/etc/polkit-1/rules.d/50-stoa-wheel.rules"
 # for an unprivileged reader too, it just shows nothing, so the exit code
 # cannot be used to tell access apart from silence.
 if [ -n "$(journalctl -b -n1 --no-pager -q _PID=1 2>/dev/null)" ]; then
-    if journalctl -b _COMM=polkitd --no-pager -q 2>/dev/null \
+    # Only the running instance counts. Grepping the whole boot keeps
+    # reporting a failure that has already been fixed: install.sh repairs
+    # the rule, polkit is restarted and loads it cleanly, and the original
+    # complaint still sits in this boot's journal until the next reboot.
+    # polkitd prints "Started polkitd version N" on every start, so drop
+    # everything up to and including the last one. With no such marker the
+    # whole log is kept, which errs toward reporting.
+    if journalctl -b _COMM=polkitd --no-pager -q -o cat 2>/dev/null \
+            | awk '/Started polkitd version/ { out=""; next }
+                   { out = out $0 ORS }
+                   END { printf "%s", out }' \
             | grep -qF "Error loading script ${_POLKIT_RULE}"; then
         _fail "polkitd refused ${_POLKIT_RULE} — no wheel-group grant is in effect"
     else
