@@ -384,11 +384,35 @@ else
 fi
 
 # ── Polkit rules ──
+# Copied, not symlinked — the one exception to how everything else here is
+# installed. polkitd drops privileges to the unprivileged "polkitd" user
+# before reading /etc/polkit-1/rules.d, and that user cannot follow a link
+# into $HOME. Symlinked, the rule loads for nobody:
+#     polkitd[N]: Error loading script /etc/polkit-1/rules.d/50-stoa-wheel.rules
+# and it fails silently — the file is there, the agent answers, and not one
+# wheel-group grant applies, so polkit quietly asks for a password on
+# everything this rule means to allow. Confirmed on a real machine with
+#     sudo -u polkitd cat /etc/polkit-1/rules.d/50-stoa-wheel.rules
+#
+# The cost of copying is that editing the rule no longer takes effect on a
+# `git pull`; it needs another run of this script. stoa-doctor reports when
+# the installed copy has drifted from the repo, so that does not go unnoticed.
 POLKIT_RULES_DIR="/etc/polkit-1/rules.d"
+POLKIT_RULE_SRC="${STOA_DIR}/config/polkit/50-stoa-wheel.rules"
+POLKIT_RULE_DST="${POLKIT_RULES_DIR}/50-stoa-wheel.rules"
 if [ -d "$POLKIT_RULES_DIR" ] || sudo mkdir -p "$POLKIT_RULES_DIR" 2>/dev/null; then
-    _sudo_link "${STOA_DIR}/config/polkit/50-stoa-wheel.rules" \
-               "${POLKIT_RULES_DIR}/50-stoa-wheel.rules"
-    echo -e "  ${O}[+] Polkit wheel rules installed${R}"
+    # Remove first: `install` over a symlink would follow it and write
+    # straight back into the repo checkout.
+    if sudo test -L "$POLKIT_RULE_DST"; then
+        sudo rm -f "$POLKIT_RULE_DST"
+        echo -e "  ${S}[~] Replaced the polkit rule symlink — polkitd could not read it.${R}"
+    fi
+    if sudo cmp -s "$POLKIT_RULE_SRC" "$POLKIT_RULE_DST" 2>/dev/null; then
+        echo -e "  ${S}[~] Polkit wheel rules already current.${R}"
+    else
+        sudo install -m 0644 -o root -g root "$POLKIT_RULE_SRC" "$POLKIT_RULE_DST"
+        echo -e "  ${O}[+] Polkit wheel rules installed${R}"
+    fi
 else
     echo -e "  ${S}[!] Could not install polkit rules (need sudo)${R}"
 fi

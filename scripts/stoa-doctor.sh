@@ -143,7 +143,15 @@ else
     if [ -n "$_unreadable" ]; then
         _fail "polkitd cannot read ${_POLKIT_RULE} (blocked at ${_unreadable}) — rule not in effect"
     else
-        _ok "Stoa polkit rule loaded"
+        # install.sh copies this rule rather than symlinking it (polkitd
+        # cannot follow a link into $HOME), so unlike every other Stoa
+        # config it does not follow a `git pull`. Say so when it drifts.
+        _repo_rule="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")/config/polkit/50-stoa-wheel.rules"
+        if [ -f "$_repo_rule" ] && ! cmp -s "$_repo_rule" "$_POLKIT_RULE" 2>/dev/null; then
+            _warn "Installed polkit rule differs from the repo — run install.sh"
+        else
+            _ok "Stoa polkit rule loaded"
+        fi
     fi
 fi
 
