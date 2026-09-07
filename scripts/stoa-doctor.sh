@@ -111,15 +111,37 @@ fi
 # back to reproducing polkitd's own read — every directory on the resolved
 # path must be world-executable and the file world-readable.
 _POLKIT_RULE="/etc/polkit-1/rules.d/50-stoa-wheel.rules"
-if [ ! -e "$_POLKIT_RULE" ]; then
-    _warn "Stoa polkit rule not installed (${_POLKIT_RULE}) — run install.sh"
-elif journalctl -b _COMM=polkitd --no-pager -q 2>/dev/null \
-        | grep -qF "Error loading script ${_POLKIT_RULE}"; then
-    _fail "polkitd refused ${_POLKIT_RULE} — no wheel-group grant is in effect"
-else
+
+# /etc/polkit-1/rules.d is root:polkitd 0750 — polkit locks it down so that
+# ordinary users cannot read the rules. This script runs as the user, so
+# `[ -e ]` on anything inside it is false for a rule that is perfectly well
+# installed, and a naive presence test reports "not installed" for a healthy
+# machine. Ask the journal instead: polkitd names the file when it refuses
+# it, and members of wheel read the system journal through systemd's ACLs.
+#
+# Probe that access with an entry PID 1 always writes — journalctl exits 0
+# for an unprivileged reader too, it just shows nothing, so the exit code
+# cannot be used to tell access apart from silence.
+if [ -n "$(journalctl -b -n1 --no-pager -q _PID=1 2>/dev/null)" ]; then
+    if journalctl -b _COMM=polkitd --no-pager -q 2>/dev/null \
+            | grep -qF "Error loading script ${_POLKIT_RULE}"; then
+        _fail "polkitd refused ${_POLKIT_RULE} — no wheel-group grant is in effect"
+    else
+        # Deliberately worded as what was observed. polkitd says nothing when
+        # a rule loads, and says nothing when there is no rule at all, so a
+        # quiet journal cannot distinguish the two from here.
+        _ok "Stoa polkit rule — polkitd raised no complaint this boot"
+    fi
+elif [ -e "$_POLKIT_RULE" ]; then
+    # No journal access, but the rule is readable from here (a machine that
+    # loosened rules.d). Reproduce polkitd's own read: it drops privileges to
+    # the unprivileged "polkitd" user, so every directory on the resolved
+    # path must be world-executable and the file world-readable. That is
+    # exactly what install.sh's old symlink into $HOME failed.
+    #
     # stat -c %A renders the mode as drwxr-xr-x; the last three characters
-    # are the "other" triad, which is the one polkitd is subject to. A
-    # directory passes on x or t (sticky), a file on r.
+    # are the "other" triad. A directory passes on x or t (sticky), a file
+    # on r.
     _other_has() {   # _other_has <path> <r|x>
         local mode; mode="$(stat -c '%A' "$1" 2>/dev/null)" || return 0
         [ -z "$mode" ] && return 0
@@ -140,6 +162,7 @@ else
             _dir="$(dirname "$_dir")"
         done
     fi
+
     if [ -n "$_unreadable" ]; then
         _fail "polkitd cannot read ${_POLKIT_RULE} (blocked at ${_unreadable}) — rule not in effect"
     else
@@ -153,6 +176,10 @@ else
             _ok "Stoa polkit rule loaded"
         fi
     fi
+else
+    # Neither readable. Saying nothing beats claiming the rule is missing:
+    # rules.d being unreadable is the normal, correct state.
+    echo "[INFO] Stoa polkit rule: not verifiable from this session (no journal access, ${_POLKIT_RULE} not readable)" >> "$LOG"
 fi
 
 # ── Hyprland lua config installed? ──
