@@ -176,6 +176,7 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
   <tr><td><code>stoa-maintain</code></td><td>Backup, restore, cleanup (BRCS)</td><td></td><td></td></tr>
+  <tr><td><code>stoa-history</code></td><td>Prune shell history (secrets, noise, duplicates)</td><td></td><td></td></tr>
   <tr><td><code>stoa-pkg-snapshot</code></td><td>Package snapshot (pacman hook)</td><td></td><td></td></tr>
   <tr><td><code>dfm</code></td><td>Dotfile Manager (GTK4 GUI)</td><td></td><td></td></tr>
 </table>
@@ -350,6 +351,50 @@ matching the symlink semantics used for every other stoa-\* script. The
 XDG desktop entry (`data/dfm.desktop`) is symlinked into
 `~/.local/share/applications/` so the Noctalia launcher and other app grids pick it up.
 `stoa-doctor` flags a missing `dfm` binary on login.
+
+### Shell History
+
+`stoa-history` reads the history files themselves — bash and zsh natively,
+timestamps and multi-line commands included — and prunes what stopped
+earning its place. It never reorders: history is chronological, and
+Ctrl-R depends on it staying that way.
+
+```bash
+stoa-history                 # what is in there (read-only)
+stoa-history clean           # what a prune would remove (dry run)
+stoa-history clean --apply   # prune, after a backup
+stoa-history suggest         # aliases worth having, from what you type
+stoa-history restore         # put the last backup back
+```
+
+Five classes, each one switchable (`--no-secrets`, `--no-junk`,
+`--no-noise`, `--days 0`, `--no-dedupe`):
+
+- **secrets** — lines carrying a token, key or password. Your history file
+  is readable by anything running as you, and a credential that landed
+  there outlives the shell that typed it. They are reported redacted, and
+  removing the line is not revoking the key: rotate it.
+- **junk** — `/tmp` scratch, `./a.out`, `foo`/`bar`/`asdf` placeholders
+- **noise** — `ls`, `cd ..`, `clear`, `exit`: a keystroke to retype, never
+  a keystroke to search for. `--aggressive` extends this to every
+  `ls`/`cd`/`cat`/`echo`/`man` line.
+- **old** — timestamped entries past `--days` (365 by default). An entry
+  with no timestamp is never aged out, because nothing in the file says
+  how old it is.
+- **duplicates** — the most recent copy stays, so Ctrl-R keeps finding the
+  command where you last used it.
+
+Nothing is written without `--apply`, and every write is preceded by a copy
+under `~/.local/state/stoa/history-backups` (last 10 kept, `restore` puts
+one back). `~/.config/stoa/history-keep` holds one regex per line that is
+exempt from every pass.
+
+`--include-repl` adds the line-based REPL histories (python, node, mysql,
+psql, sqlite, redis) — those get the secret, age and duplicate passes only,
+since `ls` is not noise inside a python prompt. fish and atuin keep their
+history in their own database format: both are reported when present and
+never modified. Kitty has no command history of its own — its scrollback is
+this same file.
 
 ### Text Prediction
 
