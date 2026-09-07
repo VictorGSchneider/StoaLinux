@@ -6289,6 +6289,13 @@ _STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
 [ -r "$_STOA_LIB/stoa-paths.sh" ] && source "$_STOA_LIB/stoa-paths.sh" && stoa_paths_migrate
 _maintain_log="${STOA_LOG_DIR}/backup_$(date +%Y%m%d).log"
 
+# Boot-cleanup entries that must never live in the *user's* crontab: they
+# run unprivileged with no terminal, so every sudo inside is a PAM
+# "conversation failed" that pam_faillock counts, and three of those lock
+# the account out of the login screen for ten minutes. "stoa-maintain"
+# alone missed the BRCS.sh line this script's cleanup was derived from.
+_LEGACY_CRON_RE='stoa-maintain|BRCS\.sh|brcs-cleanup'
+
 _maintain_log_msg() {
     local level="$1"; shift
     local ts
@@ -6736,8 +6743,8 @@ _maintain_schedule() {
     # Check if already scheduled (crontab or systemd)
     local already_scheduled=0
     local method=""
-    if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup" \
-       || sudo -n crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
+    if crontab -l 2>/dev/null | grep -qE "${_LEGACY_CRON_RE}.*--cleanup" \
+       || sudo -n crontab -l 2>/dev/null | grep -qE "${_LEGACY_CRON_RE}.*--cleanup"; then
         already_scheduled=1
         method="crontab"
     elif systemctl is-enabled stoa-maintain-cleanup.timer &>/dev/null; then
@@ -6753,8 +6760,8 @@ _maintain_schedule() {
             "  Back")
         if [[ "$action" == *"Remove"* ]]; then
             if [ "$method" = "crontab" ]; then
-                crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
-                sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" | sudo crontab -
+                crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | crontab -
+                sudo crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | sudo crontab -
             else
                 sudo systemctl disable stoa-maintain-cleanup.timer 2>/dev/null
                 sudo rm -f /etc/systemd/system/stoa-maintain-cleanup.{service,timer} 2>/dev/null
@@ -6773,8 +6780,8 @@ _maintain_schedule() {
     # "conversation failed", and pam_faillock counts each one — three is
     # the Arch default and the account is then locked for ten minutes, at
     # the login screen, on the next boot. A root unit has nothing to ask.
-    crontab -l 2>/dev/null | grep -q "stoa-maintain" && \
-        crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+    crontab -l 2>/dev/null | grep -qE "$_LEGACY_CRON_RE" && \
+        crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | crontab -
     if command -v systemctl &>/dev/null; then
         local unit_dir="/etc/systemd/system"
         sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF

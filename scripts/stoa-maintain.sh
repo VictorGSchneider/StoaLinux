@@ -779,10 +779,21 @@ TMREOF
 
 # Older releases scheduled the cleanup in the *user's* crontab, where it
 # could never authenticate. Drop that entry wherever it is still installed.
+#
+# Matching on the literal string "stoa-maintain" was not enough: this
+# script is derived from BRCS.sh, which shipped the same @reboot line
+# naming *its own* path. A crontab carrying
+#   @reboot bash ~/StoaLinux/scripts/vendor/brcs/BRCS.sh --cleanup
+# is the same defect under a different filename, and grepping for
+# "stoa-maintain" walked straight past it — confirmed on a real machine,
+# where nine sudo calls per boot kept the login screen locked. Match the
+# whole family.
+_LEGACY_CRON_RE='stoa-maintain|BRCS\.sh|brcs-cleanup'
+
 _unschedule_user_crontab() {
     command -v crontab >/dev/null 2>&1 || return 0
-    crontab -l 2>/dev/null | grep -q "stoa-maintain" || return 0
-    crontab -l 2>/dev/null | grep -v "stoa-maintain" | crontab -
+    crontab -l 2>/dev/null | grep -qE "$_LEGACY_CRON_RE" || return 0
+    crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | crontab -
     log_msg INFO "Removed the legacy user-crontab cleanup entry (it could not authenticate)."
 }
 

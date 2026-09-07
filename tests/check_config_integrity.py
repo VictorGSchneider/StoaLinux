@@ -24,7 +24,9 @@ they went unnoticed:
       crontab. A @reboot line there runs unprivileged with no terminal,
       so every sudo inside it is a PAM auth attempt that cannot prompt —
       pam_faillock counts each as a failure and locks the account for ten
-      minutes, at the login screen, on the next boot.
+      minutes, at the login screen, on the next boot. Vendored scripts
+      are in scope for this one rule: the offender that proved it was
+      scripts/vendor/brcs/BRCS.sh.
 
   R5  the shipped Noctalia palette is still the Stoic one. Applying a
       custom palette writes StoaCustom.json beside it precisely so that
@@ -70,12 +72,15 @@ MIN_STOIC_ROLES = 6
 READERS = ("scripts", "setup", "shell", "config", "theme", "dotfiles")
 
 
-def reader_files() -> list[Path]:
+def reader_files(include_vendor: bool = False) -> list[Path]:
     out = []
     for d in READERS:
         base = ROOT / d
         if base.is_dir():
-            out += [p for p in base.rglob("*") if p.is_file() and "vendor" not in p.parts]
+            out += [
+                p for p in base.rglob("*")
+                if p.is_file() and (include_vendor or "vendor" not in p.parts)
+            ]
     if INSTALL.is_file():
         out.append(INSTALL)
     return out
@@ -249,9 +254,18 @@ def check_keybind_docs() -> list[str]:
 
 def check_user_crontab_writes() -> list[str]:
     """A pipeline that appends a line to the *user's* crontab schedules
-    something unprivileged. Removals (grep -v with no echo) are fine."""
+    something unprivileged. Removals (grep -v with no echo) are fine.
+
+    Scans vendored code too, unlike every other rule here. The rules about
+    our own options and keybinds have no business judging third-party
+    scripts, but this one is not about style: scripts/vendor/brcs/BRCS.sh
+    shipped `... | crontab -` with a @reboot cleanup line, a real machine
+    ran it, and nine sudo calls per boot kept pam_faillock holding the
+    login screen shut. The exclusion is what let that sit in the tree
+    while this check reported ok.
+    """
     problems = []
-    for f in reader_files():
+    for f in reader_files(include_vendor=True):
         if f.suffix not in {".sh", ""}:
             continue
         try:
