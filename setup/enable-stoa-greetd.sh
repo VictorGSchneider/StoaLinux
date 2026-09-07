@@ -18,8 +18,8 @@
 # ║    4. Stoa autologin drop-in removed (if present)            ║
 # ║    5. Hyprland exec-once = hyprlock commented out (boot-     ║
 # ║       lock is now greetd's job — uncommented on --disable).  ║
-# ║    6. greeter.toml [keyboard].numlock, mirroring the         ║
-# ║       session's input.numlock_by_default.                    ║
+# ║    6. greeter.toml [keyboard] layout/variant/numlock,        ║
+# ║       mirroring the session's own input settings.            ║
 # ║                                                              ║
 # ║  Idempotent. Re-run safely. Pass --disable to undo.          ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -372,27 +372,39 @@ _unwrite_greetd_gpu_dropin() {
     echo -e "  ${O}[✓] Greeter GPU pinning removed.${R}"
 }
 
-# ── Greeter Num Lock ──────────────────────────────────────────────────
+# ── Greeter keyboard ──────────────────────────────────────────────────
 #
-# hyprland.lua's input.numlock_by_default only reaches the Hyprland
-# session. The login screen is a different compositor
-# (noctalia-greeter-compositor), so it starts with whatever its own
-# config says — and upstream turns Num Lock on ONLY when greeter.toml
-# asks for it explicitly:
+# hyprland.lua's input table only reaches the Hyprland session. The login
+# screen is a different compositor (noctalia-greeter-compositor) reading
+# its own config, so two settings silently fail to cross over:
 #
-#     src/greeter/greeter_config_io.cpp   memset(out, 0, sizeof(*out));
-#                                         numlock=true → 1, false → -1
-#     src/compositor/noctalia_compositor.c   if (server->keyboard_numlock > 0)
+#   kb_layout / kb_variant  greetd starts the greeter with a minimal
+#                           environment, so there are no XKB_DEFAULT_*
+#                           to inherit either. compose_keyboard_keymap()
+#                           then calls xkb_keymap_new_from_names(ctx,
+#                           NULL, ...) and libxkbcommon falls back to its
+#                           compile-time default — "us". A br-abnt2 user
+#                           types their password on a US keymap.
 #
-# so an absent key leaves the field 0 and Num Lock off. (The shipped
-# docs and examples/greeter.toml both claim "default true if omitted";
-# the code disagrees, and the code is what runs.)
+#   numlock_by_default      upstream turns Num Lock on ONLY when
+#                           greeter.toml asks for it explicitly:
+#                           greeter_config_io.cpp memsets the struct to
+#                           zero and assigns keyboard_numlock only when
+#                           the key is present (true → 1, false → -1),
+#                           and the compositor gates on
+#                           `keyboard_numlock > 0`. An absent key leaves
+#                           it 0 and Num Lock off. (The shipped docs and
+#                           examples/greeter.toml both claim "default
+#                           true if omitted"; the code disagrees, and the
+#                           code is what runs.)
 #
-# greeter.toml is administrator-owned and survives Noctalia Sync — Sync
-# loads it and writes it back, so our key round-trips. Which is exactly
-# why this only ever rewrites the single numlock line and leaves every
-# other byte alone, unlike the appearance keys we deliberately never
-# pin here.
+# greeter.toml is administrator-owned — its own header says "UI and Sync
+# never write this" — so what we put there stays put. Which is exactly
+# why this only ever rewrites the three keys it owns and leaves every
+# other byte alone, unlike the appearance keys we deliberately never pin
+# here.
+
+# Bare-boolean lua value (numlock_by_default = true).
 _hypr_numlock_pref() {
     local f v
     for f in "$HYPR_CONF" "${STOA_DIR}/config/hypr/hyprland.lua"; do
@@ -403,65 +415,103 @@ _hypr_numlock_pref() {
     echo true
 }
 
-_write_greeter_numlock() {
+# Quoted lua string value (kb_layout = "br"). Empty when unset, which
+# leaves the greeter on its own default rather than inventing one.
+_hypr_kb_string() {
+    local key="$1" f v
+    for f in "$HYPR_CONF" "${STOA_DIR}/config/hypr/hyprland.lua"; do
+        [ -f "$f" ] || continue
+        v="$(sed -n "s/^[[:space:]]*${key}[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$f" | head -1)"
+        [ -n "$v" ] && { echo "$v"; return 0; }
+    done
+    echo ""
+}
+
+# Set one key inside [keyboard] on stdin, creating the table if needed.
+# Idempotent, so it composes: pipe once per key.
+_kb_set() {
+    awk -v key="$1" -v val="$2" '
+        function hdr(line,   s) { s = line; gsub(/[[:space:]]/, "", s); return s }
+        # Blank lines inside [keyboard] are held back so an appended key
+        # lands against the table, not after its trailing gap.
+        function flush(   i) { for (i = 1; i <= nblank; i++) print ""; nblank = 0 }
+        function emit() { print key " = " val }
+        # A table header closes the [keyboard] table we were in.
+        /^[[:space:]]*\[/ && /\][[:space:]]*$/ {
+            if (in_kb && !done) { emit(); done = 1 }
+            flush()
+            in_kb = (hdr($0) == "[keyboard]")
+            if (in_kb) seen = 1
+            print; next
+        }
+        in_kb && $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+            flush()
+            if (!done) { emit(); done = 1 }
+            next
+        }
+        in_kb && /^[[:space:]]*$/ { nblank++; next }
+        { flush(); print }
+        END {
+            if (in_kb && !done) { emit(); done = 1 }
+            flush()
+            if (!seen) {
+                if (NR > 0) print ""
+                print "[keyboard]"
+                emit()
+            }
+        }
+    '
+}
+
+_write_greeter_keyboard() {
     command -v noctalia-greeter >/dev/null 2>&1 || return 0
 
-    local want tmp
-    want="$(_hypr_numlock_pref)"
-    tmp="$(mktemp)" || return 0
+    local numlock layout variant body tmp existed=0
+    numlock="$(_hypr_numlock_pref)"
+    layout="$(_hypr_kb_string kb_layout)"
+    variant="$(_hypr_kb_string kb_variant)"
 
     if sudo test -f "$GREETER_TOML"; then
-        sudo cat "$GREETER_TOML" | awk -v want="$want" '
-            function hdr(line,   s) { s = line; gsub(/[[:space:]]/, "", s); return s }
-            # Blank lines inside [keyboard] are held back so an appended
-            # numlock lands against the table, not after its trailing gap.
-            function flush(   i) { for (i = 1; i <= nblank; i++) print ""; nblank = 0 }
-            # A table header closes the [keyboard] table we were in.
-            /^[[:space:]]*\[/ && /\][[:space:]]*$/ {
-                if (in_kb && !done) { print "numlock = " want; done = 1 }
-                flush()
-                in_kb = (hdr($0) == "[keyboard]")
-                if (in_kb) seen = 1
-                print; next
-            }
-            in_kb && /^[[:space:]]*numlock[[:space:]]*=/ {
-                flush()
-                if (!done) { print "numlock = " want; done = 1 }
-                next
-            }
-            in_kb && /^[[:space:]]*$/ { nblank++; next }
-            { flush(); print }
-            END {
-                if (in_kb && !done) { print "numlock = " want; done = 1 }
-                flush()
-                if (!seen) {
-                    if (NR > 0) print ""
-                    print "[keyboard]"
-                    print "numlock = " want
-                }
-            }
-        ' > "$tmp"
-        if sudo cmp -s "$tmp" "$GREETER_TOML"; then
-            rm -f "$tmp"
-            echo -e "  ${S}[~] Greeter Num Lock already ${want}.${R}"
-            return 0
+        existed=1
+        body="$(sudo cat "$GREETER_TOML")"
+    else
+        body="# Partly managed by StoaLinux — setup/enable-stoa-greetd.sh
+# Only the [keyboard] keys below are ours; every other key is yours to set."
+    fi
+
+    # A variant without a layout is dead config: the compositor tests
+    # keyboard_layout first and ignores everything else when it is empty.
+    if [ -n "$layout" ]; then
+        body="$(printf '%s\n' "$body" | _kb_set layout "\"${layout}\"")"
+        if [ -n "$variant" ]; then
+            body="$(printf '%s\n' "$body" | _kb_set variant "\"${variant}\"")"
         fi
+    fi
+    body="$(printf '%s\n' "$body" | _kb_set numlock "$numlock")"
+
+    tmp="$(mktemp)" || return 0
+    printf '%s\n' "$body" > "$tmp"
+
+    if [ "$existed" -eq 1 ] && sudo cmp -s "$tmp" "$GREETER_TOML"; then
+        rm -f "$tmp"
+        echo -e "  ${S}[~] Greeter keyboard already matches the session.${R}"
+        return 0
+    fi
+
+    if [ "$existed" -eq 1 ]; then
         # cp onto the existing file so its mode and owner are preserved.
         sudo cp "$tmp" "$GREETER_TOML"
     else
-        cat > "$tmp" <<EOF
-# Partly managed by StoaLinux — setup/enable-stoa-greetd.sh
-# Only [keyboard].numlock is ours; every other key is yours to set.
-
-[keyboard]
-numlock = ${want}
-EOF
         sudo mkdir -p "$GREETER_STATE_DIR"
         sudo install -m 0644 -o root -g root "$tmp" "$GREETER_TOML"
     fi
-
     rm -f "$tmp"
-    echo -e "  ${O}[✓] Greeter Num Lock set to ${want} (${GREETER_TOML}).${R}"
+
+    if [ -n "$layout" ]; then
+        echo -e "  ${O}[✓] Greeter keyboard: layout=${layout}${variant:+ variant=${variant}} numlock=${numlock}.${R}"
+    else
+        echo -e "  ${O}[✓] Greeter Num Lock set to ${numlock} (no kb_layout in hyprland.lua).${R}"
+    fi
 }
 
 _write_greetd_pam() {
@@ -566,7 +616,7 @@ if [ "$GREETER_CHOICE" = "noctalia" ]; then
 fi
 _write_greetd_pam
 _write_greetd_gpu_dropin
-_write_greeter_numlock
+_write_greeter_keyboard
 _fix_keyring_default
 _comment_hyprlock_exec_once
 
