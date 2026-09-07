@@ -56,6 +56,8 @@ GREETD_CONF="/etc/greetd/config.toml"
 GREETD_PAM="/etc/pam.d/greetd"
 DROPIN_FILE="/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf"
 DROPIN_DIR="/etc/systemd/system/getty@tty1.service.d"
+GREETD_DROPIN_DIR="/etc/systemd/system/greetd.service.d"
+GREETD_GPU_DROPIN="${GREETD_DROPIN_DIR}/10-stoa-gpu.conf"
 HYPR_CONF="${HOME}/.config/hypr/hyprland.lua"
 KEYRING_DEFAULT_FILE="${HOME}/.local/share/keyrings/default"
 NOCTALIA_CLIPBOARD_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/clipboard"
@@ -269,6 +271,103 @@ _fix_keyring_default() {
     fi
 }
 
+# ── Pin the greeter's compositor to the GPU that drives the panel ──
+#
+# stoa-gpu-setup writes WLR_DRM_DEVICES into hyprland.lua and stoa-env.sh.
+# Both are session-scoped, so the greeter — which runs before any session
+# and brings its own wlroots compositor — gets nothing and picks for
+# itself. On a hybrid laptop it picks both cards and builds a multi-GPU
+# renderer with the dGPU primary, and the modifier set it then advertises
+# to clients is not one the panel's display engine can scan out:
+#
+#   [backend/backend.c:248] Found 2 GPUs
+#   [backend/drm/renderer.c:17] Creating multi-GPU renderer
+#   [render/egl.c:523] Using EGL device /dev/dri/card1        (NVIDIA, primary)
+#   ...
+#   [backend/drm/fb.c:172] Buffer format 0x34325241 with modifier
+#                          0x20000001056BB03 cannot be scanned out
+#   [backend/drm/drm.c:792] connector eDP-1: Failed to import buffer
+#
+# — the greeter's own AR24 surface, failing once per frame, ~190 messages a
+# second, while the output swapchain (modifier ...10567B03) scans out fine.
+# Left alone that is ~59 MB of journal per boot, which on a stock journal
+# cap evicts every previous boot before anyone can read it.
+#
+# Naming one card makes the compositor single-GPU: renderer and KMS device
+# are then the same, so the modifiers it advertises are by construction the
+# ones the panel can take. Which card is not assumed — it is the one that
+# owns a connected eDP connector, read from sysfs.
+#
+# Only written on a machine that actually has more than one DRM card.
+# Pinning a single-GPU machine can only do harm if the detection is wrong.
+_panel_drm_node() {
+    local conn card
+    for conn in /sys/class/drm/card*-eDP-*; do
+        [ -e "${conn}/status" ] || continue
+        [ "$(cat "${conn}/status" 2>/dev/null)" = "connected" ] || continue
+        card="${conn##*/}"          # card2-eDP-1
+        card="${card%%-*}"          # card2
+        [ -e "/dev/dri/${card}" ] && { echo "/dev/dri/${card}"; return 0; }
+    done
+    return 1
+}
+
+# cardN numbering is not stable across boots; the udev symlinks that
+# stoa-gpu-setup installs match on PCI vendor and are. Prefer one when it
+# resolves to the same device.
+_stable_drm_alias() {
+    local node="$1" link
+    for link in /dev/dri/igpu-card /dev/dri/nvidia-card; do
+        [ -e "$link" ] || continue
+        if [ "$(readlink -f "$link")" = "$(readlink -f "$node")" ]; then
+            echo "$link"; return 0
+        fi
+    done
+    echo "$node"
+}
+
+_write_greetd_gpu_dropin() {
+    # Count DRM primary nodes, not /sys/class/drm entries: that directory
+    # also holds one entry per *connector* (card2-eDP-1), so globbing it
+    # counts a single-GPU laptop with two outputs as two GPUs.
+    local cards=(/dev/dri/card[0-9]*)
+    if [ "${#cards[@]}" -lt 2 ]; then
+        echo -e "  ${S}[~] Single GPU — no device pinning needed for the greeter.${R}"
+        return 0
+    fi
+
+    local node
+    if ! node="$(_panel_drm_node)"; then
+        echo -e "  ${S}[~] No connected eDP panel found — leaving the greeter's GPU choice alone.${R}"
+        return 0
+    fi
+
+    local dev
+    dev="$(_stable_drm_alias "$node")"
+
+    sudo mkdir -p "$GREETD_DROPIN_DIR"
+    sudo tee "$GREETD_GPU_DROPIN" >/dev/null <<EOF
+# Managed by StoaLinux — setup/enable-stoa-greetd.sh
+# Removed by: bash setup/enable-stoa-greetd.sh --disable
+#
+# One card only, so the greeter's compositor stays single-GPU and the
+# buffer modifiers it advertises are ones ${node##*/} can scan out.
+[Service]
+Environment=WLR_DRM_DEVICES=${dev}
+Environment=WLR_NO_HARDWARE_CURSORS=1
+EOF
+    sudo systemctl daemon-reload
+    echo -e "  ${O}[✓] Greeter pinned to ${dev} (drives $(basename "$node"), the panel).${R}"
+}
+
+_unwrite_greetd_gpu_dropin() {
+    sudo test -e "$GREETD_GPU_DROPIN" || return 0
+    sudo rm -f "$GREETD_GPU_DROPIN"
+    sudo rmdir "$GREETD_DROPIN_DIR" 2>/dev/null || true
+    sudo systemctl daemon-reload
+    echo -e "  ${O}[✓] Greeter GPU pinning removed.${R}"
+}
+
 _write_greetd_pam() {
     # Only inject if our marker isn't already present.
     if sudo grep -q "${PAM_MARK}" "$GREETD_PAM" 2>/dev/null; then
@@ -332,6 +431,7 @@ if [ "$DISABLE" -eq 1 ]; then
     sudo systemctl disable --now greetd.service 2>/dev/null || true
     echo -e "  ${O}[✓] greetd.service stopped and disabled.${R}"
     _unwrite_greetd_pam
+    _unwrite_greetd_gpu_dropin
     _uncomment_hyprlock_exec_once
     echo ""
     echo -e "  ${F}Note:${R} ${S}${GREETD_CONF} kept on disk for reference.${R}"
@@ -369,6 +469,7 @@ if [ "$GREETER_CHOICE" = "noctalia" ]; then
     _sync_greeter_appearance
 fi
 _write_greetd_pam
+_write_greetd_gpu_dropin
 _fix_keyring_default
 _comment_hyprlock_exec_once
 
