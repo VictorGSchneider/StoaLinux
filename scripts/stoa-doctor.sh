@@ -93,6 +93,68 @@ else
     echo "[WARN] No polkit authentication agent found" >> "$LOG"
 fi
 
+# ── Did the Stoa polkit rule actually load? ──
+# An agent being present says nothing about the rule being in effect, and
+# this failure is silent by construction: the file is installed, the agent
+# answers, every check reads green, and yet not one of the wheel-group
+# grants applies — polkit falls back to its defaults and asks for a
+# password on things Stoa means to allow.
+#
+# Seen in the wild: install.sh symlinks the rule into
+# /etc/polkit-1/rules.d/, and polkitd drops privileges to the unprivileged
+# "polkitd" user, which cannot follow that link into $HOME. polkitd says
+# so once, at boot, and then never again:
+#     polkitd[N]: Error loading script /etc/polkit-1/rules.d/50-stoa-wheel.rules
+#
+# The journal is authoritative, so ask it first. Members of wheel can read
+# the system journal through systemd's ACLs; where that is not true, fall
+# back to reproducing polkitd's own read — every directory on the resolved
+# path must be world-executable and the file world-readable.
+_POLKIT_RULE="/etc/polkit-1/rules.d/50-stoa-wheel.rules"
+if [ ! -e "$_POLKIT_RULE" ]; then
+    _warn "Stoa polkit rule not installed (${_POLKIT_RULE}) — run install.sh"
+elif journalctl -b _COMM=polkitd --no-pager -q 2>/dev/null \
+        | grep -qF "Error loading script ${_POLKIT_RULE}"; then
+    _fail "polkitd refused ${_POLKIT_RULE} — no wheel-group grant is in effect"
+else
+    # stat -c %A renders the mode as drwxr-xr-x; the last three characters
+    # are the "other" triad, which is the one polkitd is subject to. A
+    # directory passes on x or t (sticky), a file on r.
+    _other_has() {   # _other_has <path> <r|x>
+        local mode; mode="$(stat -c '%A' "$1" 2>/dev/null)" || return 0
+        [ -z "$mode" ] && return 0
+        case "$2" in
+            r) [ "${mode: -3:1}" = "r" ] ;;
+            x) case "${mode: -1}" in x|t) return 0 ;; *) return 1 ;; esac ;;
+        esac
+    }
+
+    _rule_target="$(readlink -f "$_POLKIT_RULE" 2>/dev/null || echo "$_POLKIT_RULE")"
+    _unreadable=""
+    if ! _other_has "$_rule_target" r; then
+        _unreadable="$_rule_target"
+    else
+        _dir="$(dirname "$_rule_target")"
+        while [ "$_dir" != "/" ] && [ -n "$_dir" ]; do
+            _other_has "$_dir" x || { _unreadable="$_dir"; break; }
+            _dir="$(dirname "$_dir")"
+        done
+    fi
+    if [ -n "$_unreadable" ]; then
+        _fail "polkitd cannot read ${_POLKIT_RULE} (blocked at ${_unreadable}) — rule not in effect"
+    else
+        # install.sh copies this rule rather than symlinking it (polkitd
+        # cannot follow a link into $HOME), so unlike every other Stoa
+        # config it does not follow a `git pull`. Say so when it drifts.
+        _repo_rule="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")/config/polkit/50-stoa-wheel.rules"
+        if [ -f "$_repo_rule" ] && ! cmp -s "$_repo_rule" "$_POLKIT_RULE" 2>/dev/null; then
+            _warn "Installed polkit rule differs from the repo — run install.sh"
+        else
+            _ok "Stoa polkit rule loaded"
+        fi
+    fi
+fi
+
 # ── Hyprland lua config installed? ──
 # Stoa ships hyprland.lua and install.sh symlinks it. Pulling the repo
 # past the lua migration without re-running install.sh leaves no

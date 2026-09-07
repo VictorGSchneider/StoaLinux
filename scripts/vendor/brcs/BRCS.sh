@@ -50,8 +50,23 @@ run_cmd() {
 }
 
 check_root() {
-    if [ "$(id -u)" -ne 0 ] && ! command -v sudo >/dev/null 2>&1; then
+    [ "$(id -u)" -eq 0 ] && return 0
+
+    if ! command -v sudo >/dev/null 2>&1; then
         log_msg WARN "Not running as root and sudo not found. Some operations may fail."
+        return 1
+    fi
+
+    # StoaLinux patch (diverges from upstream BRCS): refuse to continue
+    # unprivileged with no terminal. Every sudo below would be a PAM auth
+    # attempt with nothing to prompt on; PAM logs each as "conversation
+    # failed" and pam_faillock counts it. Three is the Arch default, and
+    # the account is then locked for ten minutes — at the login screen,
+    # on the next boot. This is not hypothetical: a @reboot line left in
+    # a user crontab by the scheduler below did exactly that.
+    if ! sudo -n true 2>/dev/null && [ ! -t 0 ]; then
+        log_msg ERROR "Needs root, but there is no terminal to ask for a password."
+        log_msg ERROR "Run it as root, or grant this user a NOPASSWD sudoers rule."
         return 1
     fi
     return 0
@@ -619,13 +634,17 @@ schedule_cleanup() {
     local script_path
     script_path="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
 
-    if command -v crontab >/dev/null 2>&1; then
-        local CRON_CMD="@reboot bash $script_path --cleanup"
-        (crontab -l 2>/dev/null | grep -v "$script_path" ; echo "$CRON_CMD") | crontab -
-        log_msg INFO "Cleanup scheduled at boot via crontab."
-    elif command -v systemctl >/dev/null 2>&1; then
+    _brcs_unschedule_user_crontab
+
+    # StoaLinux patch (diverges from upstream BRCS): systemd first, and
+    # the crontab fallback writes to *root's* crontab. Upstream put the
+    # @reboot line in the invoking user's crontab, where the job runs
+    # unprivileged with no terminal — see check_root above for what that
+    # costs. A root crontab entry is already privileged, so nothing has
+    # to ask for a password.
+    if command -v systemctl >/dev/null 2>&1; then
         local unit_dir="/etc/systemd/system"
-        check_root
+        check_root || return 1
 
         sudo tee "$unit_dir/brcs-cleanup.service" >/dev/null <<EOF
 [Unit]
@@ -651,10 +670,26 @@ EOF
         sudo systemctl daemon-reload
         sudo systemctl enable brcs-cleanup.timer
         log_msg INFO "Cleanup scheduled at boot via systemd timer."
+    elif command -v crontab >/dev/null 2>&1; then
+        # No systemd: root's crontab, so the job is already privileged.
+        local CRON_CMD="@reboot bash $script_path --cleanup"
+        (sudo crontab -l 2>/dev/null | grep -v "$script_path" ; echo "$CRON_CMD") \
+            | sudo crontab -
+        log_msg INFO "Cleanup scheduled at boot via root crontab."
     else
-        log_msg ERROR "Neither crontab nor systemctl found. Cannot schedule cleanup."
+        log_msg ERROR "Neither systemctl nor crontab found. Cannot schedule cleanup."
         return 1
     fi
+}
+
+# StoaLinux patch: older BRCS releases scheduled the cleanup in the
+# *invoking user's* crontab, where it could never authenticate. That entry
+# survives an upgrade, so drop it wherever it is still installed.
+_brcs_unschedule_user_crontab() {
+    command -v crontab >/dev/null 2>&1 || return 0
+    crontab -l 2>/dev/null | grep -qE 'BRCS\.sh|brcs-cleanup' || return 0
+    crontab -l 2>/dev/null | grep -vE 'BRCS\.sh|brcs-cleanup' | crontab -
+    log_msg INFO "Removed the legacy user-crontab cleanup entry (it could not authenticate)."
 }
 
 # --- Skip menu when sourced by tests or other scripts ---

@@ -384,11 +384,35 @@ else
 fi
 
 # ── Polkit rules ──
+# Copied, not symlinked — the one exception to how everything else here is
+# installed. polkitd drops privileges to the unprivileged "polkitd" user
+# before reading /etc/polkit-1/rules.d, and that user cannot follow a link
+# into $HOME. Symlinked, the rule loads for nobody:
+#     polkitd[N]: Error loading script /etc/polkit-1/rules.d/50-stoa-wheel.rules
+# and it fails silently — the file is there, the agent answers, and not one
+# wheel-group grant applies, so polkit quietly asks for a password on
+# everything this rule means to allow. Confirmed on a real machine with
+#     sudo -u polkitd cat /etc/polkit-1/rules.d/50-stoa-wheel.rules
+#
+# The cost of copying is that editing the rule no longer takes effect on a
+# `git pull`; it needs another run of this script. stoa-doctor reports when
+# the installed copy has drifted from the repo, so that does not go unnoticed.
 POLKIT_RULES_DIR="/etc/polkit-1/rules.d"
+POLKIT_RULE_SRC="${STOA_DIR}/config/polkit/50-stoa-wheel.rules"
+POLKIT_RULE_DST="${POLKIT_RULES_DIR}/50-stoa-wheel.rules"
 if [ -d "$POLKIT_RULES_DIR" ] || sudo mkdir -p "$POLKIT_RULES_DIR" 2>/dev/null; then
-    _sudo_link "${STOA_DIR}/config/polkit/50-stoa-wheel.rules" \
-               "${POLKIT_RULES_DIR}/50-stoa-wheel.rules"
-    echo -e "  ${O}[+] Polkit wheel rules installed${R}"
+    # Remove first: `install` over a symlink would follow it and write
+    # straight back into the repo checkout.
+    if sudo test -L "$POLKIT_RULE_DST"; then
+        sudo rm -f "$POLKIT_RULE_DST"
+        echo -e "  ${S}[~] Replaced the polkit rule symlink — polkitd could not read it.${R}"
+    fi
+    if sudo cmp -s "$POLKIT_RULE_SRC" "$POLKIT_RULE_DST" 2>/dev/null; then
+        echo -e "  ${S}[~] Polkit wheel rules already current.${R}"
+    else
+        sudo install -m 0644 -o root -g root "$POLKIT_RULE_SRC" "$POLKIT_RULE_DST"
+        echo -e "  ${O}[+] Polkit wheel rules installed${R}"
+    fi
 else
     echo -e "  ${S}[!] Could not install polkit rules (need sudo)${R}"
 fi
@@ -424,6 +448,38 @@ password    include      system-auth
 session     include      system-auth
 EOF
     echo -e "  ${O}[+] ${POLKIT_PAM} created (was missing — polkit auth was silently falling back to deny-all)${R}"
+fi
+
+# ── Repair: boot cleanup left in the user's crontab ──
+# A @reboot cleanup line in *this user's* crontab runs unprivileged with
+# no terminal attached. Every sudo inside it is then a PAM authentication
+# attempt with no way to prompt, which PAM logs as "conversation failed"
+# and pam_faillock counts as a failed login. Arch's default deny=3 with
+# unlock_time=600 means three of them lock the account for ten minutes —
+# and since they fire at boot, the lock is waiting at the login screen
+# before you have typed anything. Confirmed on a real machine: nine sudo
+# calls per boot, greetd answering pam_authenticate: AUTH_ERR.
+#
+# The scheduler in scripts/stoa-maintain.sh no longer writes such a line
+# (it installs a root systemd unit instead), but an entry written by an
+# older release — or by the vendored BRCS.sh this repo derives from,
+# which named its own path — survives every upgrade untouched. Strip it
+# here, where it costs one grep per install and heals a machine whose
+# owner has no reason to suspect their crontab.
+#
+# Deliberately narrow: only lines naming one of these three cleanup
+# entry points are removed, so anything else in the crontab is left
+# exactly as it was.
+LEGACY_CRON_RE='stoa-maintain|BRCS\.sh|brcs-cleanup'
+if command -v crontab >/dev/null 2>&1 \
+   && crontab -l 2>/dev/null | grep -qE "$LEGACY_CRON_RE"; then
+    crontab -l 2>/dev/null | grep -vE "$LEGACY_CRON_RE" | crontab -
+    echo -e "  ${O}[+] Removed a boot-cleanup entry from your crontab — it could not${R}"
+    echo -e "  ${O}    authenticate and was locking the login screen every boot.${R}"
+    if command -v faillock >/dev/null 2>&1; then
+        faillock --user "$(id -un)" --reset 2>/dev/null \
+            && echo -e "  ${O}[+] Cleared the pam_faillock counter it had run up.${R}"
+    fi
 fi
 
 # ── XDG MIME defaults ──
