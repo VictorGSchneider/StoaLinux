@@ -79,6 +79,15 @@ fork is **not** touched automatically. The helper will print a diff
 summary and tell you whether there are hunks you probably want to
 forward-port.
 
+**Patch the fork, not the vendored copy.** For a while `vendor/brcs`
+carried Stoa fixes of its own — the pam_faillock guard and the systemd-
+first scheduler — which made "the reference of the upstream" untrue and
+turned every future `git subtree pull` into a conflict. Those fixes are
+upstream as of BRCS 2.1.0 and the vendored copy is a byte-for-byte
+snapshot of it again. When a bug is found in vendored code, the fix goes
+upstream and comes back through a sync; anything Stoa-specific goes in
+`stoa-maintain.sh`.
+
 ### `scripts/vendor/dfm` ↔ `scripts/stoa-dfm/`
 
 `scripts/stoa-dfm/` is our customized fork of the DFM Python package —

@@ -23,7 +23,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-VERSION="2.0.0-stoa"
+VERSION="2.1.0-stoa"
 
 # ── Colors (Stoa palette) ──
 B='\033[38;2;196;154;92m'    # Bronze
@@ -126,6 +126,12 @@ check_root() {
         log_msg ERROR "Needs root and sudo is not installed."
         return 1
     fi
+
+    # --dry-run executes nothing, so there is no sudo to fail and no
+    # faillock counter to trip. Let a piped preview through: refusing it
+    # would make the one mode that is safe to run unattended the one mode
+    # you could not.
+    [ "$DRY_RUN" -eq 1 ] && return 0
 
     # Unattended and unprivileged is the dangerous combination. Every sudo
     # below would be a PAM auth attempt with no terminal to prompt on; PAM
@@ -765,10 +771,15 @@ TMREOF
         sudo systemctl daemon-reload
         sudo systemctl enable stoa-maintain-cleanup.timer
         log_msg INFO "Cleanup scheduled at boot via systemd timer."
+        log_msg INFO "To undo: sudo systemctl disable --now stoa-maintain-cleanup.timer"
     elif command -v crontab >/dev/null 2>&1; then
         # No systemd: root's crontab, so the job is already privileged.
+        # Filter on the whole family, not the literal "stoa-maintain" —
+        # a root entry left by BRCS.sh under its own name is the same
+        # duplicate, and grepping for our filename walked past it.
+        check_root || return 1
         local CRON_CMD="@reboot bash $script_path --cleanup --unattended"
-        (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$CRON_CMD") \
+        (sudo crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" ; echo "$CRON_CMD") \
             | sudo crontab -
         log_msg INFO "Cleanup scheduled at boot via root crontab."
     else
@@ -792,8 +803,13 @@ _LEGACY_CRON_RE='stoa-maintain|BRCS\.sh|brcs-cleanup'
 
 _unschedule_user_crontab() {
     command -v crontab >/dev/null 2>&1 || return 0
-    crontab -l 2>/dev/null | grep -qE "$_LEGACY_CRON_RE" || return 0
-    crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | crontab -
+    # Read it once. Reading it twice — once to test, once to rewrite —
+    # drops anything added in between, and it puts the read on the same
+    # pipeline as the write.
+    local current
+    current=$(crontab -l 2>/dev/null) || return 0
+    printf '%s\n' "$current" | grep -qE "$_LEGACY_CRON_RE" || return 0
+    printf '%s\n' "$current" | grep -vE "$_LEGACY_CRON_RE" | crontab -
     log_msg INFO "Removed the legacy user-crontab cleanup entry (it could not authenticate)."
 }
 
