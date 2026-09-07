@@ -23,7 +23,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-VERSION="2.2.0-stoa"
+VERSION="2.3.0-stoa"
 
 # ── Colors (Stoa palette) ──
 B='\033[38;2;196;154;92m'    # Bronze
@@ -122,9 +122,22 @@ run_cmd() {
 # developer's machine.
 STOA_TMP_DIRS="${STOA_TMP_DIRS:-/tmp /var/tmp}"
 
+# ── Stale caches ──
+# A cache directory nothing has touched in this long belongs to a program
+# you stopped using, or removed and whose cache outlived it. Age is the
+# only honest signal: a directory name under ~/.cache rarely matches a
+# binary name, so "is it still installed" cannot be asked reliably, but
+# "has anything written here since April" can.
+STOA_STALE_CACHE_DAYS="${STOA_STALE_CACHE_DAYS:-90}"
+
+# Regenerable but *expensive* — model weights, browser binaries, compiler
+# output. Age alone is not reason enough to throw away gigabytes of
+# re-download, the same reasoning that keeps the Go module cache out.
+_STALE_CACHE_KEEP=" huggingface torch ms-playwright pre-commit go-build bazel ccache "
+
 CLEANUP_SCOPE="full"
 _SAFE_STEPS=" clean flatpak journal stoa tmp "
-_USER_STEPS=" flatpak journal docker steam usercache stoa tmp "
+_USER_STEPS=" flatpak journal docker steam usercache stalecache stoa tmp "
 
 _step() {
     case "$CLEANUP_SCOPE" in
@@ -591,9 +604,11 @@ full_cleanup() {
     local steps
     case "$CLEANUP_SCOPE" in
         safe) steps=("clean" "flatpak" "journal" "stoa" "tmp") ;;
-        user) steps=("flatpak" "journal" "docker" "steam" "usercache" "stoa" "tmp") ;;
+        user) steps=("flatpak" "journal" "docker" "steam" "usercache" \
+                     "stalecache" "stoa" "tmp") ;;
         *)    steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" \
-                     "kernels" "docker" "steam" "usercache" "stoa" "tmp") ;;
+                     "kernels" "docker" "steam" "usercache" "stalecache" \
+                     "stoa" "tmp") ;;
     esac
     local total=${#steps[@]}
     local count=0
@@ -732,6 +747,41 @@ full_cleanup() {
         count=$((count+1)); progress_bar "$total" "$count"
     fi
 
+    # Whole caches belonging to programs you no longer use. Distinct from
+    # the step above, which trims the caches of tools you *do* use.
+    if _step stalecache; then
+        local swept_dirs=0 cdir cname csize
+        if [ -d "$HOME/.cache" ]; then
+            while IFS= read -r cdir; do
+                [ -n "$cdir" ] || continue
+                cname=$(basename "$cdir")
+                case "$_STALE_CACHE_KEEP" in *" $cname "*) continue ;; esac
+
+                # A directory's own mtime only moves when entries are added
+                # or removed at its top level — a cache written deep inside
+                # would look untouched for years. Ask whether anything
+                # anywhere underneath is recent, and stop at the first hit.
+                if find "$cdir" -newermt "-${STOA_STALE_CACHE_DAYS} days" \
+                        -print -quit 2>/dev/null | grep -q .; then
+                    continue
+                fi
+
+                csize=$(du -sh "$cdir" 2>/dev/null | cut -f1)
+                if [ "$DRY_RUN" -eq 0 ]; then
+                    rm -rf "$cdir" 2>/dev/null
+                    log_msg INFO "Stale cache removed: ~/.cache/$cname (${csize:-?})"
+                else
+                    log_msg INFO "[DRY-RUN] Would remove stale cache: ~/.cache/$cname (${csize:-?})"
+                fi
+                swept_dirs=$((swept_dirs + 1))
+            done < <(find "$HOME/.cache" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+        fi
+        if [ "$swept_dirs" -eq 0 ]; then
+            log_msg INFO "No caches idle for ${STOA_STALE_CACHE_DAYS}+ days."
+        fi
+        count=$((count+1)); progress_bar "$total" "$count"
+    fi
+
     # Leftovers: our own archives, and the .bak/.log debris that any tool
     # leaves behind. Everything here is age-gated at 30 days except the
     # archive pruning, which is count-gated — a file nothing has written to
@@ -836,10 +886,93 @@ full_cleanup() {
 
 # ── Schedule cleanup at boot ──
 
+# Schedule the unprivileged cleanup, with no root anywhere in the path.
+#
+# A systemd --user manager exists only once you have a session, so this
+# cannot key off boot the way the system timer does: it runs a few minutes
+# after you log in, then weekly. Surviving logout needs
+# `loginctl enable-linger`, which is privileged — the whole premise here is
+# that you do not have that, so it is mentioned and not attempted.
+_schedule_user_cleanup() {
+    local script_path="$1"
+
+    if command -v systemctl >/dev/null 2>&1 && \
+       systemctl --user show-environment >/dev/null 2>&1; then
+        local unit_dir="$HOME/.config/systemd/user"
+        mkdir -p "$unit_dir" || return 1
+
+        cat > "$unit_dir/stoa-maintain-cleanup.service" <<SVCEOF
+[Unit]
+Description=Stoa Maintain unprivileged cleanup
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash $script_path --cleanup --user
+SVCEOF
+
+        cat > "$unit_dir/stoa-maintain-cleanup.timer" <<TMREOF
+[Unit]
+Description=Run the Stoa Maintain unprivileged cleanup
+
+[Timer]
+OnStartupSec=5min
+OnUnitActiveSec=1w
+
+[Install]
+WantedBy=timers.target
+TMREOF
+
+        systemctl --user daemon-reload
+        systemctl --user enable --now stoa-maintain-cleanup.timer
+        log_msg INFO "Unprivileged cleanup scheduled via a systemd --user timer."
+        log_msg INFO "It runs 5 minutes after you log in, then weekly."
+        log_msg INFO "To undo: systemctl --user disable --now stoa-maintain-cleanup.timer"
+        log_msg INFO "To keep it running when logged out: loginctl enable-linger \$USER (needs an admin)."
+        return 0
+    fi
+
+    if command -v crontab >/dev/null 2>&1; then
+        # Your own crontab, and here that is the right place: this job
+        # calls no sudo at all, so there is nothing to authenticate and
+        # nothing for pam_faillock to count. That is exactly what made the
+        # privileged version of this line a bug and this one not.
+        local cron_line="@daily bash $script_path --cleanup --user"
+        local current
+        current=$(crontab -l 2>/dev/null)
+        printf '%s\n' "$current" \
+            | grep -vF -- "$script_path --cleanup --user" \
+            | grep -v '^$' \
+            | { cat; printf '%s\n' "$cron_line"; } \
+            | crontab -
+        log_msg INFO "Unprivileged cleanup scheduled daily via your own crontab."
+        log_msg INFO "To undo: crontab -e, and delete the --cleanup --user line."
+        return 0
+    fi
+
+    log_msg ERROR "Neither a systemd user manager nor crontab found. Cannot schedule."
+    return 1
+}
+
 schedule_cleanup() {
-    log_msg INFO "Scheduling cleanup at boot..."
     local script_path
     script_path="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        if _user_scope; then
+            log_msg INFO "[DRY-RUN] Would schedule '--cleanup --user' as a systemd --user timer (or your crontab)."
+        else
+            log_msg INFO "[DRY-RUN] Would schedule '--cleanup --unattended' as a root systemd timer (or root's crontab)."
+        fi
+        return 0
+    fi
+
+    log_msg INFO "Scheduling cleanup..."
+
+    if _user_scope; then
+        _unschedule_user_crontab
+        _schedule_user_cleanup "$script_path"
+        return $?
+    fi
 
     # systemd first, deliberately. The cleanup runs pacman, paccache and
     # journalctl: it needs root. A @reboot line in *this user's* crontab
@@ -850,7 +983,10 @@ schedule_cleanup() {
     _unschedule_user_crontab
     if command -v systemctl >/dev/null 2>&1; then
         local unit_dir="/etc/systemd/system"
-        check_root || return 1
+        if ! check_root; then
+            log_msg ERROR "To schedule it without root instead: --schedule --user"
+            return 1
+        fi
 
         sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
 [Unit]
@@ -906,15 +1042,30 @@ TMREOF
 # whole family.
 _LEGACY_CRON_RE='stoa-maintain|BRCS\.sh|brcs-cleanup'
 
+# ...but a line scheduling the *unprivileged* cleanup is not that defect.
+# --cleanup --user calls no sudo at all, so there is nothing to
+# authenticate and nothing for faillock to count: the user's crontab is
+# exactly where it belongs. Without this, --schedule --user would delete
+# its own entry on the next run.
+_LEGACY_CRON_KEEP='--user'
+
 _unschedule_user_crontab() {
     command -v crontab >/dev/null 2>&1 || return 0
     # Read it once. Reading it twice — once to test, once to rewrite —
     # drops anything added in between, and it puts the read on the same
     # pipeline as the write.
-    local current
+    local current stale
     current=$(crontab -l 2>/dev/null) || return 0
-    printf '%s\n' "$current" | grep -qE "$_LEGACY_CRON_RE" || return 0
-    printf '%s\n' "$current" | grep -vE "$_LEGACY_CRON_RE" | crontab -
+    stale=$(printf '%s\n' "$current" | grep -E "$_LEGACY_CRON_RE" \
+                | grep -vF -- "$_LEGACY_CRON_KEEP")
+    [ -n "$stale" ] || return 0
+    # Drop the ones that are ours *and* privileged, keep everything else
+    # exactly where it was. awk rather than a second grep: "matches A but
+    # not B" needs a negative lookahead, which is not portable.
+    printf '%s\n' "$current" | awk -v re="$_LEGACY_CRON_RE" -v keep="$_LEGACY_CRON_KEEP" '
+        $0 ~ re && index($0, keep) == 0 { next }
+        { print }
+    ' | crontab -
     log_msg INFO "Removed the legacy user-crontab cleanup entry (it could not authenticate)."
 }
 
