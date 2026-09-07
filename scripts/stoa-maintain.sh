@@ -23,7 +23,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-VERSION="2.1.0-stoa"
+VERSION="2.2.0-stoa"
 
 # ── Colors (Stoa palette) ──
 B='\033[38;2;196;154;92m'    # Bronze
@@ -110,13 +110,37 @@ run_cmd() {
 # prune (stopped containers are someone's work), and the Steam step —
 # the shader cache is regenerable, but rebuilding it costs a stuttering
 # first launch per game, so wiping it every boot is worse than useless.
+#
+# "user" is for a machine you do not administer: no sudo at all. Only the
+# steps that touch your own files, plus the per-user variants of the two
+# that have one — flatpak's user installation and your own journal. The
+# package manager, snap, the kernels and the system journal are not yours
+# to clean, so they are skipped rather than attempted.
+# The scratch directories the temp step sweeps. Overridable so the step
+# can be exercised against a sandbox: it deletes files, and a test suite
+# pointed at the real /tmp is one broken guard away from sweeping the
+# developer's machine.
+STOA_TMP_DIRS="${STOA_TMP_DIRS:-/tmp /var/tmp}"
+
 CLEANUP_SCOPE="full"
 _SAFE_STEPS=" clean flatpak journal stoa tmp "
+_USER_STEPS=" flatpak journal docker steam usercache stoa tmp "
 
 _step() {
-    [ "$CLEANUP_SCOPE" = "full" ] && return 0
-    case "$_SAFE_STEPS" in *" $1 "*) return 0 ;; esac
+    case "$CLEANUP_SCOPE" in
+        full) return 0 ;;
+        safe) case "$_SAFE_STEPS" in *" $1 "*) return 0 ;; esac ;;
+        user) case "$_USER_STEPS" in *" $1 "*) return 0 ;; esac ;;
+    esac
     return 1
+}
+
+# True when this run must not invoke sudo even once.
+_user_scope() { [ "$CLEANUP_SCOPE" = "user" ]; }
+
+_explain_user_scope() {
+    log_msg INFO "Unprivileged run: skipping the package manager, snap, old kernels"
+    log_msg INFO "and the system journal — those need root. Cleaning your own files."
 }
 
 check_root() {
@@ -156,11 +180,16 @@ _brcs_cleanup() {
 }
 
 collect_files() {
-    local dir="$1"
+    local dir="$1" owner="${2:-}"
     _collected_files=()
+    # With an owner, only that user's files. /tmp is shared: without root
+    # someone else's files are not ours to delete, and trying just prints
+    # a permission error per file.
+    local -a pred=(-type f)
+    [ -n "$owner" ] && pred+=(-user "$owner")
     while IFS= read -r -d '' f; do
         _collected_files+=("$f")
-    done < <(find "$dir" -type f -print0 2>/dev/null)
+    done < <(find "$dir" "${pred[@]}" -print0 2>/dev/null)
 }
 
 progress_bar() {
@@ -208,7 +237,11 @@ get_repo_patterns() {
 }
 
 get_disk_used_kb() {
-    df / | awk 'NR==2{print $3}'
+    # Measure the filesystem holding what we are about to clean. An
+    # unprivileged run only ever touches $HOME, which on a managed machine
+    # is very often a different mount from / — reporting on / there would
+    # have said "no measurable space freed" every time.
+    df "${1:-/}" 2>/dev/null | awk 'NR==2{print $3}'
 }
 
 # ── Backup ──
@@ -541,18 +574,27 @@ pkg_autoremove() {
 # ── Full cleanup ──
 
 full_cleanup() {
-    check_root || return 1
+    # An unprivileged run never calls sudo, so there is nothing to
+    # authenticate and nothing for pam_faillock to count.
+    if ! _user_scope; then
+        check_root || return 1
+    fi
     log_msg INFO "Starting ${CLEANUP_SCOPE} cleanup..."
+    _user_scope && _explain_user_scope
 
+    # Only $HOME is touched unprivileged, and it is often its own mount.
+    local measure="/"
+    _user_scope && measure="$HOME"
     local space_before
-    space_before=$(get_disk_used_kb)
+    space_before=$(get_disk_used_kb "$measure")
 
     local steps
-    if [ "$CLEANUP_SCOPE" = "safe" ]; then
-        steps=("clean" "flatpak" "journal" "stoa" "tmp")
-    else
-        steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" "kernels" "docker" "steam" "stoa" "tmp")
-    fi
+    case "$CLEANUP_SCOPE" in
+        safe) steps=("clean" "flatpak" "journal" "stoa" "tmp") ;;
+        user) steps=("flatpak" "journal" "docker" "steam" "usercache" "stoa" "tmp") ;;
+        *)    steps=("update" "clean" "autoremove" "snap" "flatpak" "journal" \
+                     "kernels" "docker" "steam" "usercache" "stoa" "tmp") ;;
+    esac
     local total=${#steps[@]}
     local count=0
 
@@ -587,15 +629,29 @@ full_cleanup() {
     fi
 
     if _step flatpak; then
-        command -v flatpak >/dev/null 2>&1 && \
-            run_cmd flatpak uninstall --unused -y 2>/dev/null
+        if command -v flatpak >/dev/null 2>&1; then
+            if _user_scope; then
+                # --user confines this to the per-user installation. Without
+                # it flatpak targets the system one and raises a polkit
+                # prompt there is nobody to answer.
+                run_cmd flatpak uninstall --user --unused -y 2>/dev/null
+            else
+                run_cmd flatpak uninstall --unused -y 2>/dev/null
+            fi
+        fi
         count=$((count+1)); progress_bar "$total" "$count"
     fi
 
     if _step journal; then
         if command -v journalctl >/dev/null 2>&1; then
-            run_cmd sudo journalctl --vacuum-time=7d 2>/dev/null
-            run_cmd sudo journalctl --vacuum-size=100M 2>/dev/null
+            if _user_scope; then
+                # Your own journal, which you own and may vacuum freely.
+                run_cmd journalctl --user --vacuum-time=7d 2>/dev/null
+                run_cmd journalctl --user --vacuum-size=100M 2>/dev/null
+            else
+                run_cmd sudo journalctl --vacuum-time=7d 2>/dev/null
+                run_cmd sudo journalctl --vacuum-size=100M 2>/dev/null
+            fi
         fi
         count=$((count+1)); progress_bar "$total" "$count"
     fi
@@ -635,6 +691,45 @@ full_cleanup() {
         fi
       fi
       count=$((count+1)); progress_bar "$total" "$count"
+    fi
+
+    # Regenerable caches under $HOME. Everything here comes back on its
+    # own the next time the tool that made it runs — the only cost of
+    # deleting it is the time to rebuild. Nothing here is a preference, a
+    # credential or a piece of work, which is why it can go without asking.
+    #
+    # Deliberately NOT here: ~/.cache wholesale (applications keep real
+    # state in there, not just cache), the trash (you may still want those
+    # files back), and the Go module cache (regenerable, but gigabytes of
+    # re-download, not seconds of rebuild).
+    if _step usercache; then
+        local freed_any=0
+
+        if [ -d "$HOME/.cache/thumbnails" ]; then
+            if [ "$DRY_RUN" -eq 0 ]; then
+                rm -rf "${HOME:?}/.cache/thumbnails/"* 2>/dev/null
+            else
+                log_msg INFO "[DRY-RUN] Would clear the thumbnail cache"
+            fi
+            freed_any=1
+        fi
+
+        if command -v pip >/dev/null 2>&1; then
+            run_cmd pip cache purge >/dev/null 2>&1 && freed_any=1
+        elif command -v pip3 >/dev/null 2>&1; then
+            run_cmd pip3 cache purge >/dev/null 2>&1 && freed_any=1
+        fi
+
+        if command -v npm >/dev/null 2>&1; then
+            run_cmd npm cache clean --force >/dev/null 2>&1 && freed_any=1
+        fi
+
+        if command -v yarn >/dev/null 2>&1; then
+            run_cmd yarn cache clean >/dev/null 2>&1 && freed_any=1
+        fi
+
+        [ "$freed_any" -eq 0 ] && log_msg INFO "No user caches found to clear."
+        count=$((count+1)); progress_bar "$total" "$count"
     fi
 
     # Leftovers: our own archives, and the .bak/.log debris that any tool
@@ -689,13 +784,23 @@ full_cleanup() {
         count=$((count + 1)); progress_bar "$total" "$count"
     fi
 
-    log_msg INFO "Cleaning temporary files in /tmp and /var/tmp..."
+    # Unprivileged, only your own files: /tmp is shared, and the rest is
+    # not ours to delete.
+    local tmp_owner=""
+    if _user_scope; then
+        tmp_owner=$(id -un 2>/dev/null)
+        log_msg INFO "Cleaning your own files in ${STOA_TMP_DIRS}..."
+    else
+        log_msg INFO "Cleaning temporary files in ${STOA_TMP_DIRS}..."
+    fi
     if [ "$DRY_RUN" -eq 0 ]; then
-        collect_files "/tmp"
-        local tmp1=("${_collected_files[@]}")
-        collect_files "/var/tmp"
-        local tmp2=("${_collected_files[@]}")
-        local tmp_files=("${tmp1[@]}" "${tmp2[@]}")
+        local tmp_files=() tmp_dir
+        # shellcheck disable=SC2086
+        for tmp_dir in $STOA_TMP_DIRS; do
+            [ -d "$tmp_dir" ] || continue
+            collect_files "$tmp_dir" "$tmp_owner"
+            tmp_files+=("${_collected_files[@]}")
+        done
         local total_tmp=${#tmp_files[@]}
 
         for file in "${tmp_files[@]}"; do
@@ -709,12 +814,12 @@ full_cleanup() {
         done
         [ "$total_tmp" -gt 0 ] && progress_bar "$total_tmp" "$total_tmp"
     else
-        log_msg INFO "[DRY-RUN] Would clean temporary files in /tmp and /var/tmp"
+        log_msg INFO "[DRY-RUN] Would clean temporary files in ${STOA_TMP_DIRS}"
     fi
     count=$((count+1)); progress_bar "$total" "$count"
 
     local space_after freed_kb
-    space_after=$(get_disk_used_kb)
+    space_after=$(get_disk_used_kb "$measure")
     freed_kb=$((space_before - space_after))
     if [ "$freed_kb" -gt 0 ] 2>/dev/null; then
         if command -v numfmt >/dev/null 2>&1; then
@@ -884,6 +989,16 @@ show_help() {
     echo -e "${S}        nothing else. No upgrade, no package removal, no Steam.${R}"
     echo -e "${S}        This is what the scheduled boot job runs.${R}"
     echo ""
+    echo -e "    ${F}--cleanup --user${R}"
+    echo -e "${S}        For a machine you do not administer: never calls sudo,${R}"
+    echo -e "${S}        not once. Runs only the seven steps that touch your own${R}"
+    echo -e "${S}        files — flatpak's per-user installation, your own${R}"
+    echo -e "${S}        journal, docker if you are in the group, the Steam${R}"
+    echo -e "${S}        shader cache, regenerable caches, leftovers, and the${R}"
+    echo -e "${S}        files you own in /tmp. The package manager, snap, old${R}"
+    echo -e "${S}        kernels and the system journal are skipped: they need${R}"
+    echo -e "${S}        root. Space freed is measured on \$HOME's filesystem.${R}"
+    echo ""
     echo -e "    ${F}--dry-run${R}"
     echo -e "${S}        Use with --cleanup. Prints each command it would run${R}"
     echo -e "${S}        instead of running it.${R}"
@@ -918,6 +1033,7 @@ while [ $# -gt 0 ]; do
         --schedule)             ACTION="schedule"; shift ;;
         --dry-run)              DRY_RUN=1; shift ;;
         --unattended)           CLEANUP_SCOPE="safe"; shift ;;
+        --user)                 CLEANUP_SCOPE="user"; shift ;;
         --help|-h)              show_help; exit 0 ;;
         *)
             echo -e "  ${T}Unknown option: $1${R}"
@@ -975,9 +1091,10 @@ while true; do
     echo -e "  ${S}2)${F} Restore configurations${R}"
     echo -e "  ${S}3)${F} Full system cleanup${R}"
     echo -e "  ${S}4)${F} Full system cleanup (dry-run)${R}"
-    echo -e "  ${S}5)${F} List backup contents${R}"
-    echo -e "  ${S}6)${F} Schedule cleanup at boot${R}"
-    echo -e "  ${S}7)${F} Exit${R}"
+    echo -e "  ${S}5)${F} Cleanup without sudo (your own files only)${R}"
+    echo -e "  ${S}6)${F} List backup contents${R}"
+    echo -e "  ${S}7)${F} Schedule cleanup at boot${R}"
+    echo -e "  ${S}8)${F} Exit${R}"
     echo -e "  ${S}Package manager: ${B}$PKG_MANAGER${R}"
     echo ""
     read -r -p "  Choose an option: " option
@@ -999,9 +1116,10 @@ while true; do
             ;;
         3) DRY_RUN=0; full_cleanup ;;
         4) DRY_RUN=1; full_cleanup; DRY_RUN=0 ;;
-        5) list_backup_contents ;;
-        6) schedule_cleanup ;;
-        7) echo -e "  ${O}\"The wise man prepares.\" — Seneca${R}"; exit 0 ;;
+        5) DRY_RUN=0; CLEANUP_SCOPE="user"; full_cleanup; CLEANUP_SCOPE="full" ;;
+        6) list_backup_contents ;;
+        7) schedule_cleanup ;;
+        8) echo -e "  ${O}\"The wise man prepares.\" — Seneca${R}"; exit 0 ;;
         *) log_msg ERROR "Invalid option." ;;
     esac
 done
