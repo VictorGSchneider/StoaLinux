@@ -253,35 +253,43 @@ def check_keybind_docs() -> list[str]:
 
 
 def check_user_crontab_writes() -> list[str]:
-    """A pipeline that installs a line into the *user's* crontab schedules
-    something unprivileged. A pipeline that only ever strips lines out is
-    fine, and that is what `grep -v` on the same line means.
+    """Scheduling a job that will need root in the *user's* crontab is the
+    bug. It runs with no terminal, so every sudo inside it is a PAM
+    "conversation failed" that pam_faillock counts, and three of those lock
+    the account at the login screen.
 
     Scans vendored code too, unlike every other rule here. The rules about
     our own options and keybinds have no business judging third-party
     scripts, but this one is not about style: scripts/vendor/brcs/BRCS.sh
     shipped `... | crontab -` with a @reboot cleanup line, a real machine
-    ran it, and nine sudo calls per boot kept pam_faillock holding the
-    login screen shut. The exclusion is what let that sit in the tree
-    while this check reported ok.
+    ran it, and nine sudo calls per boot kept the login screen shut.
 
-    The earlier form of this rule read "no echo or printf on the line" as
-    "a removal". That held only while removals happened to be written
-    `crontab -l | grep -v ... | crontab -`. Upstream BRCS now reads the
-    crontab once into a variable and replays it with printf — still a pure
-    removal, and the old heuristic called it a schedule.
+    Two earlier forms of this rule were too crude, each in its own way.
 
-    An emitter is not the tell, and neither is `grep -v` on its own: the
-    line that actually locked a machine had both,
+    "Has an echo or printf" read a pure removal as a schedule once upstream
+    started replaying the crontab with printf. Then "has grep -v and no `;`"
+    read *this* as a removal:
 
         (crontab -l | grep -v "$path" ; echo "$CRON_CMD") | crontab -
 
-    filtering the old entry out and appending a new one in the same
-    breath. What separates the two is the `;`. A pure removal is a single
-    pipeline, every byte of it passing through the filter; the moment a
-    command separator joins something else into the group, that something
-    else reaches the crontab unfiltered.
+    ...only because of the `;`, which is incidental. And both were blind to
+    a pipeline split across lines, where the line carrying `| crontab -` is
+    a bare continuation with no context at all.
+
+    So: reconstruct the whole statement, and ask what actually makes it
+    dangerous — does it emit a cron schedule, and will that job need root?
+    A filter emits no schedule. A job that is explicitly --user needs no
+    privileges, so the user's crontab is exactly where it belongs; BRCS
+    2.3.0's `--schedule --user` writes one deliberately.
     """
+    # @reboot and friends, a bare 5-field spec, or a variable holding one.
+    SCHEDULE = re.compile(
+        r"@(reboot|yearly|annually|monthly|weekly|daily|midnight|hourly)"
+        r"|CRON_CMD|cron_line"
+        r"|[\*\d][\*\d/,\-]*\s+[\*\d][\*\d/,\-]*\s+[\*\d][\*\d/,\-]*"
+        r"\s+[\*\d][\*\d/,\-]*\s+[\*\d][\*\d/,\-]*\s"
+    )
+
     problems = []
     for f in reader_files(include_vendor=True):
         if f.suffix not in {".sh", ""}:
@@ -291,19 +299,34 @@ def check_user_crontab_writes() -> list[str]:
         except OSError:
             continue
         for number, line in enumerate(lines, 1):
-            if "crontab -" not in line or "sudo crontab -" in line:
-                continue
             if not re.search(r"\|\s*crontab\s+-\s*$", line):
                 continue
-            filters = re.search(r"\bgrep\s+(-\w*\s+)*-\w*v", line)
-            # `;`, `&&` or `||` — but not the `&` of a 2>&1 redirect.
-            joins_a_command = re.search(r";|&&|\|\|", line)
-            if filters and not joins_a_command:
-                continue  # a pure removal pipeline, not a schedule
+
+            # Walk back to the start of the statement: a pipeline can span
+            # many lines, and the one holding `| crontab -` often carries
+            # nothing else. Stop at a blank line, a comment, or a line that
+            # clearly ended a previous statement.
+            first = number - 1
+            while first > 0:
+                prev = lines[first - 1].strip()
+                if (not prev or prev.startswith("#")
+                        or prev.endswith((";", "{", "}", "then", "do", "fi"))):
+                    break
+                first -= 1
+            statement = " ".join(lines[first - 1:number])
+
+            if "sudo crontab -" in statement:
+                continue  # root's crontab is privileged already
+            if "--user" in statement:
+                continue  # an unprivileged job; nothing inside it can fail auth
+            if not SCHEDULE.search(statement):
+                continue  # a filter, not a schedule
+
             problems.append(
-                f"{f.relative_to(ROOT)}:{number}: schedules a job in the user's "
-                "crontab — it runs with no terminal, so any sudo inside it trips "
-                "pam_faillock and locks the account out of the login screen"
+                f"{f.relative_to(ROOT)}:{number}: schedules a privileged job in "
+                "the user's crontab — it runs with no terminal, so any sudo "
+                "inside it trips pam_faillock and locks the account out of the "
+                "login screen"
             )
     return problems
 
