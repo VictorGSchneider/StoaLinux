@@ -253,8 +253,9 @@ def check_keybind_docs() -> list[str]:
 
 
 def check_user_crontab_writes() -> list[str]:
-    """A pipeline that appends a line to the *user's* crontab schedules
-    something unprivileged. Removals (grep -v with no echo) are fine.
+    """A pipeline that installs a line into the *user's* crontab schedules
+    something unprivileged. A pipeline that only ever strips lines out is
+    fine, and that is what `grep -v` on the same line means.
 
     Scans vendored code too, unlike every other rule here. The rules about
     our own options and keybinds have no business judging third-party
@@ -263,6 +264,23 @@ def check_user_crontab_writes() -> list[str]:
     ran it, and nine sudo calls per boot kept pam_faillock holding the
     login screen shut. The exclusion is what let that sit in the tree
     while this check reported ok.
+
+    The earlier form of this rule read "no echo or printf on the line" as
+    "a removal". That held only while removals happened to be written
+    `crontab -l | grep -v ... | crontab -`. Upstream BRCS now reads the
+    crontab once into a variable and replays it with printf — still a pure
+    removal, and the old heuristic called it a schedule.
+
+    An emitter is not the tell, and neither is `grep -v` on its own: the
+    line that actually locked a machine had both,
+
+        (crontab -l | grep -v "$path" ; echo "$CRON_CMD") | crontab -
+
+    filtering the old entry out and appending a new one in the same
+    breath. What separates the two is the `;`. A pure removal is a single
+    pipeline, every byte of it passing through the filter; the moment a
+    command separator joins something else into the group, that something
+    else reaches the crontab unfiltered.
     """
     problems = []
     for f in reader_files(include_vendor=True):
@@ -277,8 +295,11 @@ def check_user_crontab_writes() -> list[str]:
                 continue
             if not re.search(r"\|\s*crontab\s+-\s*$", line):
                 continue
-            if not re.search(r"\b(echo|printf)\b", line):
-                continue  # a removal, not a schedule
+            filters = re.search(r"\bgrep\s+(-\w*\s+)*-\w*v", line)
+            # `;`, `&&` or `||` — but not the `&` of a 2>&1 redirect.
+            joins_a_command = re.search(r";|&&|\|\|", line)
+            if filters and not joins_a_command:
+                continue  # a pure removal pipeline, not a schedule
             problems.append(
                 f"{f.relative_to(ROOT)}:{number}: schedules a job in the user's "
                 "crontab — it runs with no terminal, so any sudo inside it trips "
