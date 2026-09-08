@@ -27,6 +27,18 @@ WHAT IT PRUNES  (each class can be switched off: --no-secrets, --no-junk,
              that carry a timestamp: an undated line is never aged out
   duplicate  the same command typed before; the most recent copy stays,
              so Ctrl-R keeps finding it where you last used it
+  multiline  --drop-multiline only: entries that still span more than one
+             line after the paste trim below — a for loop, a heredoc
+
+PASTED COMMANDS
+  Copying a command out of a chat or a web page brings its trailing
+  newline along, so the shell records a two-line command whose second
+  line is empty: `cmd\` and a blank line. A history built by pasting is
+  then a third blank lines, and each of those commands shows up in
+  Ctrl-R with a phantom second line. `clean` trims that trailing escaped
+  newline back off — the one edit it makes to an entry it keeps, and the
+  command it leaves behind is the same command. --no-trim-pastes keeps
+  the file exactly as the shell wrote it.
 
 WHAT IT NEVER DOES
   Reorder. History is chronological and stays that way — "organising"
@@ -177,17 +189,19 @@ SHELL_WORDS = {
 # variable name in a python REPL, so the shell-shaped passes stay out of
 # REPL files rather than being tuned for them.
 KIND_PASSES = {
-    "bash": ("secret", "junk", "noise", "unknown", "old"),
-    "zsh": ("secret", "junk", "noise", "unknown", "old"),
+    "bash": ("secret", "junk", "noise", "unknown", "multiline", "old"),
+    "zsh": ("secret", "junk", "noise", "unknown", "multiline", "old"),
     "repl": ("secret", "old"),
 }
 
-REASON_ORDER = ["secret", "junk", "noise", "unknown", "old", "duplicate", "trimmed"]
+REASON_ORDER = ["secret", "junk", "noise", "unknown", "multiline", "old",
+                "duplicate", "trimmed"]
 REASON_LABEL = {
     "secret": "secret",
     "junk": "junk",
     "noise": "noise",
     "unknown": "unknown",
+    "multiline": "multi-line",
     "old": "old",
     "duplicate": "duplicate",
     "trimmed": "over cap",
@@ -208,6 +222,7 @@ class Entry:
     ts: int | None
     raw: str
     reason: str | None = None
+    trimmed: bool = False
 
 
 @dataclass
@@ -216,6 +231,7 @@ class HistoryFile:
     path: Path
     entries: list[Entry] = field(default_factory=list)
     size: int = 0
+    lines: int = 0
 
 
 # ── Parsing ──────────────────────────────────────────────────────────
@@ -324,7 +340,15 @@ def parse_zsh(content: str) -> list[Entry]:
         else:
             ts = None
             text = stripped
-        while _ends_open(text) and i + 1 < len(lines):
+        # A line ending in an unescaped backslash continues into the next
+        # one — unless that next line opens an entry of its own. A command
+        # whose text happens to end in a backslash would otherwise swallow
+        # the entry after it, and the swallowed entry is then never
+        # classified: it rides along inside a blob, invisible to every
+        # pass. On a real history that cascades, and the prune quietly
+        # stops finding anything.
+        while (_ends_open(text) and i + 1 < len(lines)
+               and not ZSH_LINE.match(lines[i + 1].rstrip("\n"))):
             i += 1
             raw.append(lines[i])
             text = text[:-1] + "\n" + lines[i].rstrip("\n")
@@ -341,6 +365,36 @@ def parse_plain(content: str) -> list[Entry]:
     ]
 
 
+def trim_paste(entry: Entry) -> bool:
+    """Turn `cmd\` + blank line back into `cmd`. True when it changed.
+
+    Pasting a command with a newline at the end — copying one out of a
+    chat or a web page, which is most of them — leaves the newline in the
+    buffer, so the shell records a two-line command whose second line is
+    empty. zsh stores that as the command, a backslash, and an empty
+    line: two lines in the file, one of them blank, for a command that is
+    one line long. A history full of pasted commands is then a third
+    blank, and every one of them shows up in Ctrl-R with a phantom second
+    line.
+
+    Dropping the trailing escaped newline is the one edit to a surviving
+    entry this tool makes, because the command it leaves behind is the
+    same command: same text, same timestamp, one line shorter.
+    """
+    if "\n" not in entry.text:
+        return False
+    head, rest = entry.text.split("\n", 1)
+    if rest.strip():
+        return False  # a real multi-line command, not a paste artefact
+    first = entry.raw.splitlines(keepends=True)[0].rstrip("\n")
+    if not first.endswith("\\"):
+        return False
+    entry.raw = first[:-1] + "\n"
+    entry.text = head
+    entry.trimmed = True
+    return True
+
+
 def load(kind: str, path: Path) -> HistoryFile:
     content = read_text(path)
     if kind == "zsh":
@@ -350,7 +404,8 @@ def load(kind: str, path: Path) -> HistoryFile:
     else:
         entries = parse_plain(content)
     return HistoryFile(kind=kind, path=path, entries=entries,
-                       size=path.stat().st_size)
+                       size=path.stat().st_size,
+                       lines=content.count("\n") + (0 if content.endswith("\n") else 1))
 
 
 # ── Classification ───────────────────────────────────────────────────
@@ -450,6 +505,9 @@ def classify(entry: Entry, kind: str, opts, now: float, extra_names: set[str]) -
         if not known_command(head_word(text), extra_names):
             return "unknown"
 
+    if "multiline" in passes and opts.drop_multiline and "\n" in entry.text:
+        return "multiline"
+
     if "old" in passes and opts.days > 0 and entry.ts:
         if entry.ts < now - opts.days * 86400:
             return "old"
@@ -466,6 +524,8 @@ def plan(hist: HistoryFile, opts, extra_names: set[str]) -> None:
     """
     now = time.time()
     for entry in hist.entries:
+        if opts.trim_pastes:
+            trim_paste(entry)
         entry.reason = classify(entry, hist.kind, opts, now, extra_names)
 
     if opts.dedupe:
@@ -552,8 +612,12 @@ def report_stats(hist: HistoryFile, opts, extra_names: set[str]) -> None:
     unique = len({e.text.strip() for e in hist.entries})
     counts = Counter(e.reason for e in hist.entries if e.reason)
 
+    # `wc -l` and this count disagree whenever the file holds multi-line
+    # commands, which is the first thing anyone checks when a prune looks
+    # too small — so say both rather than letting the gap look like loss.
+    span_lines = f" {S}in {hist.lines:,} lines{R}" if hist.lines > total else ""
     print(f"\n  {B}{tilde(hist.path)}{R}  {S}·{R}  {hist.kind}  {S}·{R}  "
-          f"{entries_word(total)}  {S}·{R}  {human(hist.size)}")
+          f"{entries_word(total)}{span_lines}  {S}·{R}  {human(hist.size)}")
     span = span_line(hist.entries)
     if span:
         print(f"    {S}span{R}       {span}")
@@ -562,6 +626,13 @@ def report_stats(hist: HistoryFile, opts, extra_names: set[str]) -> None:
               f"(age pass cannot run){R}")
     dup_pct = 0 if not total else round(100 * (total - unique) / total)
     print(f"    {S}unique{R}     {unique:,}  {S}({dup_pct}% of the file is a repeat){R}")
+    pastes = sum(1 for e in hist.entries if e.trimmed)
+    multi = sum(1 for e in hist.entries if "\n" in e.text)
+    if pastes:
+        print(f"    {S}pasted{R}     {pastes:,}  {S}(a blank line each, "
+              f"trimmed by `clean`){R}")
+    if multi:
+        print(f"    {S}multi-line{R} {multi:,}  {S}(--drop-multiline removes them){R}")
 
     for reason in REASON_ORDER:
         if counts.get(reason):
@@ -583,18 +654,49 @@ def report_stats(hist: HistoryFile, opts, extra_names: set[str]) -> None:
             print(f"      {n:>7,}  {F}{short(line, 52)}{R}")
 
 
-def report_clean(hist: HistoryFile, opts, extra_names: set[str]) -> tuple[int, int]:
+def _summary(hist: HistoryFile, total: int, keep: list[Entry],
+             new_size: int, new_lines: int) -> None:
+    """The bottom of a per-file clean report.
+
+    Lines, not just bytes: trimming the blank line off a pasted command
+    frees one byte and one line, so a file that visibly loses a third of
+    its lines in an editor barely moves in KiB — and the byte figure
+    alone reads like nothing happened.
+    """
+    pct = 0 if not total else round(100 * (total - len(keep)) / total)
+    drop = f"  {S}(−{pct}%){R}" if pct else ""
+    print(f"    {S}{'─' * 26}{R}")
+    print(f"    {S}keeping{R}    {O}{len(keep):,}{R} of {total:,}{drop}")
+    print(f"    {S}file       {hist.lines:,} → {new_lines:,} lines   "
+          f"{human(hist.size)} → {human(new_size)}{R}")
+
+
+def changed(hist: HistoryFile) -> bool:
+    """True when a rewrite of this file would differ from what is on disk."""
+    return any(e.reason is not None or e.trimmed for e in hist.entries)
+
+
+def report_clean(hist: HistoryFile, opts, extra_names: set[str]) -> bool:
     plan(hist, opts, extra_names)
     total = len(hist.entries)
     counts = Counter(e.reason for e in hist.entries if e.reason)
     keep = [e for e in hist.entries if e.reason is None]
-    new_size = len(raw_bytes("".join(e.raw for e in keep)))
+    trimmed = sum(1 for e in keep if e.trimmed)
+    new_raw = "".join(e.raw for e in keep)
+    new_size = len(raw_bytes(new_raw))
+    new_lines = new_raw.count("\n")
 
     print(f"\n  {B}{tilde(hist.path)}{R}  {S}·{R}  {hist.kind}  {S}·{R} "
           f"{entries_word(total)}")
+    if trimmed:
+        print(f"    {S}{'pasted':<10}{R} {F}{trimmed:>6,}{R}  "
+              f"{S}blank second line trimmed off, command kept{R}")
     if not counts:
-        print(f"    {O}nothing to prune{R}")
-        return total, len(keep)
+        if not trimmed:
+            print(f"    {O}nothing to prune{R}")
+            return False
+        _summary(hist, total, keep, new_size, new_lines)
+        return True
 
     for reason in REASON_ORDER:
         n = counts.get(reason, 0)
@@ -608,14 +710,11 @@ def report_clean(hist: HistoryFile, opts, extra_names: set[str]) -> tuple[int, i
                 body = redact(entry.text) if reason == "secret" else short(entry.text)
                 print(f"      {S}·{R} {S}{body}{R}")
 
-    pct = 0 if not total else round(100 * (total - len(keep)) / total)
-    print(f"    {S}{'─' * 26}{R}")
-    print(f"    {S}keeping{R}    {O}{len(keep):,}{R} of {total:,}  {S}(−{pct}%){R}   "
-          f"{S}{human(hist.size)} → {human(new_size)}{R}")
+    _summary(hist, total, keep, new_size, new_lines)
     if counts.get("secret"):
         print(f"    {T}a credential that reached this file is a credential to "
               f"rotate — removing the line is not revoking the key.{R}")
-    return total, len(keep)
+    return True
 
 
 # ── Backup / write ───────────────────────────────────────────────────
@@ -653,10 +752,16 @@ def backup(path: Path) -> Path:
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     dest = BACKUP_DIR / f"{slug(path)}.{stamp}.bak"
-    n = 2
+    # The suffix has to sort AFTER the unsuffixed name, because "newest"
+    # is decided by sorting these names: "-2" does not ("-" is below "."
+    # in ASCII), so the second backup of a second looked older than the
+    # first and `restore` handed back the wrong file. Zero-padded digits
+    # sort after "." and among themselves. Ordering by mtime is not an
+    # option: copy2 gives the backup the history file's own mtime.
+    n = 0
     while dest.exists():
-        dest = BACKUP_DIR / f"{slug(path)}.{stamp}-{n}.bak"
         n += 1
+        dest = BACKUP_DIR / f"{slug(path)}.{stamp}{n:03d}.bak"
     shutil.copy2(path, dest)
     # Prefix match rather than a glob: a history path may contain [ or *,
     # and a glob would then quietly match nothing and rotate nothing.
@@ -741,8 +846,7 @@ def cmd_clean(opts) -> int:
     loaded = [load(kind, path) for kind, path in files]
     removed_any = False
     for hist in loaded:
-        before, after = report_clean(hist, opts, extra)
-        removed_any = removed_any or before != after
+        removed_any = report_clean(hist, opts, extra) or removed_any
     report_foreign()
 
     if not removed_any:
@@ -760,7 +864,7 @@ def cmd_clean(opts) -> int:
 
     print()
     for hist in loaded:
-        if all(e.reason is None for e in hist.entries):
+        if not changed(hist):
             continue
         dest = apply_clean(hist)
         print(f"  {O}✓{R} {tilde(hist.path)}  {S}backup: {tilde(dest)}{R}")
@@ -897,6 +1001,13 @@ def build_parser() -> argparse.ArgumentParser:
                        help="keep lines carrying tokens and passwords")
         p.add_argument("--aggressive", action="store_true",
                        help="also treat every ls/cd/cat/echo/man line as noise")
+        p.add_argument("--drop-multiline", action="store_true",
+                       help="drop entries that still span more than one line "
+                            "after the paste trim (a for loop, a heredoc)")
+        p.add_argument("--no-trim-pastes", dest="trim_pastes",
+                       action="store_false",
+                       help="keep the blank second line a pasted command "
+                            "leaves behind")
         p.add_argument("--strip-unknown", action="store_true",
                        help="drop lines whose first word is no program on this "
                             "machine (typos, and anything you uninstalled)")
