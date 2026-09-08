@@ -383,10 +383,22 @@ Five classes, each one switchable (`--no-secrets`, `--no-junk`,
   how old it is.
 - **duplicates** — the most recent copy stays, so Ctrl-R keeps finding the
   command where you last used it.
+- **multi-line** — `--drop-multiline` only: entries still spanning more than
+  one line after the paste trim below (a `for` loop, a heredoc).
+
+Copying a command out of a chat or a web page brings its trailing newline
+along, so the shell records a two-line command whose second line is empty:
+`cmd\` plus a blank line. A history built by pasting is a third blank lines
+— on a real 1,487-line file, 279 of the entries were that, 323 lines of
+nothing. `clean` trims the trailing escaped newline back off, which is the
+one edit it makes to an entry it keeps: same command, same timestamp, one
+line shorter. `--no-trim-pastes` keeps the file exactly as the shell wrote
+it.
 
 Nothing is written without `--apply`, and every write is preceded by a copy
 under `~/.local/state/stoa/history-backups` (last 10 kept, `restore` puts
-one back). `~/.config/stoa/history-keep` holds one regex per line that is
+one back). Apart from the paste trim above, a surviving entry is written
+back from the exact bytes it occupied in the file. `~/.config/stoa/history-keep` holds one regex per line that is
 exempt from every pass.
 
 `--include-repl` adds the line-based REPL histories (python, node, mysql,

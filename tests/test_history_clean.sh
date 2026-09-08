@@ -15,6 +15,18 @@
 #       surrogates — encoding those back naively raises, and re-encoding
 #       them "helpfully" corrupts the line
 #   P4  restore puts the pre-clean file back
+#   P5  a zsh entry whose text ends in a backslash does not swallow the
+#       entry after it. The backslash is zsh's line continuation, but the
+#       next line opening `: <epoch>:<n>;` is a new entry, not a
+#       continuation of this one. Getting that wrong is silent: the
+#       swallowed entry rides along inside a blob, is never classified by
+#       any pass, and the prune quietly stops finding anything
+#   P6  a pasted command (`cmd\` + blank line, which is what a paste with
+#       a trailing newline leaves behind) is trimmed back to one line with
+#       its text and timestamp intact — and left alone under
+#       --no-trim-pastes
+#   P7  --drop-multiline removes a genuine multi-line entry and keeps the
+#       pasted one, which is a one-line command wearing two lines
 #
 # Everything runs under HOME=$TMP: the test must never read, and can never
 # write, the history of whoever is running it.
@@ -117,7 +129,82 @@ if ! od -An -c "$TMP/.zsh_history" | tr -d ' \n' | grep -q '203251'; then
     _fail "a non-UTF-8 (zsh-metafied) byte sequence did not survive the rewrite"
 fi
 
+# ── P5: a trailing backslash must not eat the next entry ─────────────
+# Pasting a command with a newline at the end is how a real history fills
+# up with backslash-terminated entries: zsh stores "cmd\" plus an empty
+# line. That one is a genuine continuation and must still join; an entry
+# header on the next line must not.
+cat > "$TMP/.zsh_history" <<ZSH
+: ${NOW}:0;grep -rn foo . \\
+: ${NOW}:0;clear
+: ${NOW}:0;sudo pacman -S qt6-wayland\\
+
+: ${NOW}:0;ls
+ZSH
+rm -f "$TMP/.bash_history" "$TMP/.python_history"
+out=$(_stoa clean --aggressive --days 0)
+case "$out" in
+    *"noise"*) ;;
+    *) _fail "the entry after a backslash-terminated one was swallowed:" \
+             "neither 'clear' nor 'ls' was classified as noise" ;;
+esac
+# Both noise entries have to be found — one after the backslash line, one
+# after the paste artifact.
+if ! printf '%s' "$out" | grep -qE 'noise +2'; then
+    _fail "expected 2 noise entries past the backslash lines, got: $(
+        printf '%s' "$out" | grep -E 'noise' || echo none)"
+fi
+# ... and the paste artifact itself still joins with its blank line, so the
+# file holds 4 entries, not 5.
+if ! printf '%s' "$out" | grep -q '4 entries'; then
+    _fail "the paste artifact (cmd\\ + blank line) was not read as one entry: $(
+        printf '%s' "$out" | grep -E 'entries' | head -1)"
+fi
+
+# ── P6 / P7: paste artefacts vs. genuine multi-line entries ──────────
+_multiline_fixture() {
+    rm -f "$TMP/.bash_history" "$TMP/.python_history"
+    cat > "$TMP/.zsh_history" <<ZSH
+: ${NOW}:0;sudo pacman -S qt6-wayland\\
+
+: ${NOW}:0;for i in 1 2; do\\
+echo \$i\\
+done
+: ${NOW}:0;git status
+ZSH
+}
+
+_multiline_fixture
+_stoa clean --apply --yes --days 0 --drop-multiline > /dev/null
+_kept "$TMP/.zsh_history" "sudo pacman -S qt6-wayland" "a pasted command"
+_gone "$TMP/.zsh_history" "for i in 1 2"  "a multi-line entry under --drop-multiline"
+if ! grep -qx ": ${NOW}:0;sudo pacman -S qt6-wayland" "$TMP/.zsh_history"; then
+    _fail "the trimmed paste lost its timestamp header or its text:" \
+          "$(grep -m1 pacman "$TMP/.zsh_history")"
+fi
+if grep -q '\\$' "$TMP/.zsh_history"; then
+    _fail "a trimmed paste still carries its continuation backslash"
+fi
+if [ "$(wc -l < "$TMP/.zsh_history")" != "2" ]; then
+    _fail "expected 2 lines after trimming one paste and dropping the loop," \
+          "got $(wc -l < "$TMP/.zsh_history")"
+fi
+
+# --no-trim-pastes leaves the artefact exactly as the shell wrote it.
+_multiline_fixture
+before_paste=$(md5sum < "$TMP/.zsh_history")
+_stoa clean --apply --yes --days 0 --no-trim-pastes > /dev/null
+if ! grep -q 'qt6-wayland\\$' "$TMP/.zsh_history"; then
+    _fail "--no-trim-pastes rewrote the paste artefact anyway"
+fi
+[ "$(md5sum < "$TMP/.zsh_history")" = "$before_paste" ] || \
+    _fail "--no-trim-pastes changed a file it had nothing to remove from"
+
 # ── P4: restore puts the file back ───────────────────────────────────
+_fixture
+before_bash=$(md5sum < "$TMP/.bash_history")
+before_zsh=$(md5sum < "$TMP/.zsh_history")
+_stoa clean --apply --yes > /dev/null
 _stoa restore --yes > /dev/null
 [ "$(md5sum < "$TMP/.bash_history")" = "$before_bash" ] || \
     _fail "restore did not reproduce the pre-clean ~/.bash_history"
