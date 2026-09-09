@@ -250,14 +250,17 @@ selected-ocr-lang = "eng, pt-br"
 
 [plugin_settings."kenn/keybind-cheatsheet"]
 cheatsheet_placement = "attached"
-columns = 2
+columns = 4
 
 [plugin_settings."stoa/drive"]
 manage_open_near_click = true
 poll_seconds = 15
 
+[plugin_settings."stoa/health"]
+manage_open_near_click = true
+
 [plugins]
-enabled = [ "stoa/drive", "alexander/screen-toolkit", "stoa/health", "kenn/keybind-cheatsheet" ]
+enabled = [ "stoa/drive", "alexander/screen-toolkit", "kenn/keybind-cheatsheet", "stoa/health" ]
 
 [shell]
 button_borders = false
@@ -343,13 +346,13 @@ wallpaper_scheme = "soft"
 enabled = true
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
 
 [wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
+path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
 
 [widget.Stoa-drive]
 type = "stoa/drive:pill"
@@ -374,9 +377,13 @@ title_scroll = "always"
 [widget.pill]
 type = "stoa/health:pill"
 
+    [widget.pill.actions]
+    right = "settings-open-plugin stoa-health"
+
 [widget.tray]
 detached_panel = true
 drawer_item_size = 20.0
+match_adjacent_spacing = true
 
 [widget.widget]
 type = "alexander/screen-toolkit:widget"
