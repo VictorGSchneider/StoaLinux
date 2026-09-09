@@ -13,10 +13,12 @@
 --      ok       none of the above
 --      unknown  stoa-vitals-status has not answered yet
 --
---  Left click opens the full menu (scripts/stoa-health.sh, replaces the v4
---  Panel's three tabs). Right click runs the doctor directly — the single
---  most common action, same shortcut the old right-click context menu led
---  with. Middle click opens the doctor log.
+--  Left click opens the native panel (panel.luau, entry id "manage") —
+--  Vitals / Snapshots / Maintenance, same three sections the yad menu in
+--  scripts/stoa-health.sh had, now as an attached panel like stoa-drive's.
+--  Right click runs the doctor directly — the single most common action,
+--  same shortcut the old right-click context menu led with. Middle click
+--  opens the doctor log.
 --
 --  Written in the Lua 5.4-compatible subset of Luau (no type annotations,
 --  no if-expressions) so the CI lua step can actually parse it — luac5.4
@@ -204,8 +206,10 @@ end
 -- port shipped with the wrong name (onActivate, a launcher-provider
 -- callback) and the click silently did nothing.
 function onClick()
-    -- Full menu: Vitals / Snapshots / Maintenance, replacing the v4 Panel.
-    noctalia.runAsync(HEALTH_BIN)
+    -- Opens the native panel (panel.luau, entry id "manage") attached
+    -- below this widget — Vitals / Snapshots / Maintenance all live there
+    -- now, same addressing scheme stoa-drive's onClick uses.
+    noctalia.togglePanel("stoa/health:manage")
 end
 
 function onRightClick()

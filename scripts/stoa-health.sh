@@ -192,14 +192,28 @@ menu_health() {
 }
 
 # ── CLI interface ──
-# The bar widget calls these directly instead of opening the full menu.
+# The bar widget and its native panel (theme/noctalia-plugins/stoa-health/
+# panel.luau) call these directly instead of opening the yad menu above —
+# same split as stoa-drive: business logic (incl. the pkexec/sudo-n
+# privilege choice) stays here, the panel is a thin dispatcher. The yad
+# menu itself is kept as a CLI fallback for anyone invoking stoa-health
+# bare outside Noctalia.
 
 case "${1:-}" in
-    doctor) "${BIN}/stoa-doctor" ;;
-    status) _status_json ;;
-    "")     menu_health ;;
+    doctor)          "${BIN}/stoa-doctor" ;;
+    status)           _status_json ;;
+    snapshot)         "${BIN}/stoa-pkg-snapshot" ;;
+    backup)           "${BIN}/stoa-maintain" --backup ;;
+    cleanup)          "${BIN}/stoa-maintain" --cleanup ;;
+    cleanup-dry-run)  "${BIN}/stoa-maintain" --cleanup --dry-run ;;
+    schedule)         eval "$(_sudo)${BIN}/stoa-maintain --schedule" ;;
+    update-all)       eval "$(_sudo)pacman -Syu --noconfirm && yay -Syu --noconfirm" ;;
+    update-system)    eval "$(_sudo)pacman -Syu --noconfirm" ;;
+    update-aur)       yay -Syu --noconfirm ;;
+    locksmith)        "${BIN}/stoa-locksmith" ;;
+    "")               menu_health ;;
     *)
-        echo "Usage: stoa-health [doctor|status]"
+        echo "Usage: stoa-health [doctor|status|snapshot|backup|cleanup|cleanup-dry-run|schedule|update-all|update-system|update-aur|locksmith]"
         exit 1
         ;;
 esac
