@@ -6,30 +6,46 @@
 #  Port of the v4 QML plugin that lived at theme/noctalia-plugins/
 #  stoa-health. The v4 widget opened an in-shell Panel.qml with three tabs
 #  (Vitals / Snapshots / Maintenance) built from a user-configurable action
-#  list. v5 plugins do have a declarative panel entry kind, but replicating
-#  a whole tabbed settings-driven UI in the Luau UI-tree DSL untested is a
-#  lot of surface to get wrong on a first port with no way to render it
-#  locally. Rather than risk that, the tab content moved to
-#  scripts/stoa-health.sh, a yad menu in the same spirit as the existing
-#  stoa-drive.sh — the bar widget just shows severity and opens it.
+#  list. The first v5 port punted on replicating that tabbed UI in the
+#  Luau UI-tree DSL untested and left the tabs as a yad menu
+#  (scripts/stoa-health.sh) instead — same stopgap stoa-drive started
+#  with. Now ported the rest of the way, same split stoa-drive settled on:
+#  panel.luau is a thin declarative front end with the same three views
+#  (Vitals / Snapshots / Maintenance), scripts/stoa-health.sh keeps the
+#  business logic (including the pkexec/sudo-n privilege choice for
+#  update/schedule actions) behind non-interactive CLI subcommands.
 #
 #  The data source is unchanged: scripts/stoa-vitals-status still emits the
 #  same JSON, so the shell side did not have to move.
 
 id          = "stoa/health"
 name        = "Stoa Health"
-version     = "1.0.0"
+version     = "1.1.0"
 author      = "stoa"
 description = "Doctor, sensors and pending updates — one icon, coloured by severity"
 
-# Oldest plugin API level this needs. Nothing here uses anything past the
-# level-3 surface: runAsync, json.decode, getConfig, setUpdateInterval and
-# barWidget.*.
-plugin_api = 3
+# Oldest plugin API level this needs. Noctalia v5 accepts 3..28. Level 3
+# covers the bar widget's own surface (runAsync, json.decode, getConfig,
+# setUpdateInterval, barWidget.*), but panel.luau's declarative tree hands
+# inline Lua closures as onClick prop values, not string handler names —
+# src/scripting/plugin_api.h names that kUiCallbackClosurePluginApiVersion
+# = 9, so 9 is the honest floor for the plugin as a whole now that it has
+# a panel entry too (see the stoa-drive port for how this was verified
+# directly against source rather than trusted from docs).
+plugin_api = 9
 
 [[widget]]
 id    = "pill"
 entry = "widget.luau"
+
+# Attached: opens anchored below the bar icon that toggled it, same as
+# stoa-drive's panel — not a floating window.
+[[panel]]
+id        = "manage"
+entry     = "panel.luau"
+placement = "attached"
+width     = 340
+height    = 460
 
 # Settings are an ARRAY of tables named `setting` (singular), each with an
 # explicit `key` — not [settings.<name>] sub-tables. `label_key` is
