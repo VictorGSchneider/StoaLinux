@@ -157,6 +157,30 @@ local function driveAction(action, name)
     end)
 end
 
+-- One button for both halves of "sync": the bisync vaults (sync-all,
+-- already-existing logic in _run_all_syncs) and the plain mounted
+-- remotes, which stream live via the VFS and so have nothing to bisync
+-- — "updating" them means forcing a fresh directory listing now instead
+-- of waiting out --poll-interval. `prewarm` (no argument) already walks
+-- every currently-mounted remote for exactly that reason (see its use
+-- right after a fresh mount in stoa-drive.sh); called with no arg here
+-- it re-walks whatever is mounted right now, mounted or not touched by
+-- any sync pair.
+local function syncNow()
+    noctalia.notify("Stoa Drive", "Running: Sync")
+    noctalia.runAsync(BIN .. " sync-all", function(syncResult)
+        noctalia.runAsync(BIN .. " prewarm", function(prewarmResult)
+            if syncResult.exitCode == 0 and prewarmResult.exitCode == 0 then
+                noctalia.notify("Stoa Drive", "Done: Sync")
+            else
+                noctalia.notifyError("Stoa Drive", "Sync finished with errors")
+            end
+            refreshStatus()
+            refreshSync()
+        end)
+    end)
+end
+
 local function openDrivePath(d)
     local path
     if d.mounted then
@@ -347,6 +371,10 @@ local function renderMain()
         sep({}),
         listArea,
         sep({}),
+        btn({
+            text = "Sync Now", controlSize = "sm",
+            onClick = syncNow,
+        }),
         rowN({ gap = 6 }, {
             btn({
                 text = "Mount All", flexGrow = 1, controlSize = "sm",
