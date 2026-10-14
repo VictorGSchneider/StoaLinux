@@ -14,30 +14,36 @@
 
 ---
 
-Marble, bronze, parchment, stone — colors from temples, statues, and manuscripts. EB Garamond as the serif. JetBrains Mono in the terminal. A Stoic quote every time you open a shell. A Memento Mori widget on the desktop reminding you that time is finite.
+## Why
 
-StoaLinux is a complete Arch Linux environment with automated installation, a unified dark theme across every app, a settings panel that replaces the need for any external configuration tool, and a collection of `stoa-*` scripts that handle everything from wallpapers to OCR to cloud drives.
+Most rices start from zero and pile things on until the desktop looks like the person who built it. StoaLinux started the other way: from a complete, working system, with everything not earning its place taken back out. That's the distinction the Stoics drew between the sculptor who adds clay and the one who removes marble — Michelangelo said the statue was already in the stone. A desktop built by subtraction carries fewer opinions than one built by accumulation, because every element that survived had to argue for itself first.
 
-This isn't minimalism for aesthetics. It's minimalism by principle: **only what serves, stays**.
+It's also a distinction the Stoics drew about a life. A cluttered desktop and a cluttered mind fail the same test: neither one asked, of each thing it kept, whether it served. **Minimalism here isn't an aesthetic — it's the dichotomy of control applied to a window manager.** You don't control what a distro ships by default. You do control what stays after you've looked at it honestly. Marble, bronze, parchment, stone: the palette isn't decoration either — it's what's left when you strip a color scheme down to what temples, statues, and manuscripts actually looked like, instead of what's trending on a theme repository this month.
 
-### Highlights
+The Memento Mori widget sitting on the desktop is the clearest expression of this. It's not a gimmick — it's *premeditatio malorum* rendered in eww: a quiet, constant reminder that the hours you're spending configuring a window manager are hours you don't get back, so configure it once, well, and then go do something that isn't configuring a window manager. The Stoic quote on every new shell serves the same purpose from a different angle — not decoration, a nudge, every single time you open a terminal, back toward why you're at the machine at all.
 
-- **Arch Linux** with automated installation (from live ISO or existing Arch); **CachyOS** supported via `post-install.sh` (keeps its repos, kernel and bootloader)
-- **Hyprland** (Wayland) as the compositor — Wayland-only, no Xorg fallback
-- **Noctalia v5** as the bar + launcher + control centre + notifications + OSD + clipboard history + wallpaper + lock screen, themed via the bundled **Stoa palette** (`config/noctalia/palettes/Stoa.json`)
-- **23-panel settings app** — a mix of native dialogs (yad) and standalone GUI apps (wdisplays, pwvucontrol, nm-connection-editor, blueman, gnome-disks, nwg-look) — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
-- **10 color presets** (Nord, Dracula, Gruvbox, Catppuccin...) + custom color editor applied system-wide
-- **Unified dark theme** across GTK, Qt, Steam, Calibre, YACReader, OnlyOffice, Betterbird, VS Code, Neovim
-- **Capture toolbar** (eww) — screenshot + recording with mode selection, toggle, and delay
-- **System resilience** — pacman pre-transaction snapshots, hyprctl version adapter, health check on boot
-- **Memento Mori widget** (eww), **Stoic quotes**, and a **living marble screensaver**
-- **DFM** (Dotfile Manager) — GTK4 GUI to edit dotfiles in-place with smart widgets, backups, and GitHub sync
-- **Text prediction popup** (eww) — system-wide word suggestions + emoji as you type, like Windows text suggestions
-- **stoa-\* scripts** for wallpapers, clipboard, OCR, paste, resize, firewall, WinApps, and more
+None of this makes StoaLinux a religious project. It's a tool built on the premise that a system which asks *why* before it asks *how* ends up smaller, calmer, and easier to actually live inside — and that a Stoic reading a good desktop the same way they'd read a good text: for its restraint, not its feature count.
+
+## What it is
+
+StoaLinux is a complete Arch Linux environment — automated installation, a unified dark theme across every app it touches, a settings panel built to make external configuration tools unnecessary, and a family of `stoa-*` scripts that exist because the alternative was five different tools each solving a fifth of the problem.
+
+Hyprland (Wayland) is the compositor, full stop — there's no Xorg fallback to maintain, because a fallback path nobody uses is not a feature, it's an unexamined habit. Noctalia handles the bar, launcher, control centre, notifications, clipboard history, wallpapers, and lock screen, themed through the bundled Stoa palette. A 23-panel settings app covers the rest — display, audio, network, VPN, firewall, Bluetooth, disks, system health — so nothing on the system asks you to open three unrelated apps to change one thing.
+
+**Highlights, briefly:**
+
+- Automated Arch installation, from live ISO or an existing system
+- Hyprland/Wayland only — one compositor, well maintained, instead of two maintained halfway
+- Noctalia as the shell layer, themed via the Stoa palette, with 10 built-in presets and a custom editor
+- A 23-panel settings app that replaces the usual pile of separate config tools
+- One dark theme, carried consistently into GTK, Qt, VS Code, Neovim, Steam, Calibre, and more
+- Pacman pre-transaction snapshots, a boot-time health check, and a Hyprland version adapter — resilience that doesn't wait for you to notice something broke
+- A DFM (Dotfile Manager) GUI for editing configs in place, with backups and rollback
+- A living marble screensaver, a Memento Mori widget, and Stoic quotes on every shell — the philosophy isn't bolted onto the system, it's rendered by it
 
 ## Palette
 
-The default palette is inspired by the ancient world — marble, bronze, parchment, stone. It can be changed entirely via `Super+S → Theme → Color Palette`, with **10 built-in presets** and a **custom color editor**.
+Marble, bronze, parchment, stone — colors chosen because they're what survives from the ancient world, not because they photograph well. Changeable entirely via `Super+S → Theme → Color Palette`, with 10 presets and a custom editor if the default doesn't suit you — the point was never that you keep it, only that you consider it first.
 
 <table>
   <tr>
@@ -57,9 +63,11 @@ The default palette is inspired by the ancient world — marble, bronze, parchme
   </tr>
 </table>
 
-**Available presets:** Stoic (default), Nord, Dracula, Gruvbox, Catppuccin Mocha, Tokyo Night, Solarized Dark, Rose Pine, GitHub Dark, Base16 Default
+**Presets:** Stoic (default), Nord, Dracula, Gruvbox, Catppuccin Mocha, Tokyo Night, Solarized Dark, Rose Pine, GitHub Dark, Base16 Default
 
 ## Install
+
+A system you didn't install yourself is a system you don't understand yet. These commands get you there; what you do with it afterward is the part that was always the point.
 
 **From live ISO:**
 ```bash
@@ -67,7 +75,7 @@ curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/setup
 chmod +x arch-install.sh && ./arch-install.sh
 ```
 
-**Existing Arch or CachyOS** (CachyOS: install it with its own installer, then run this — `arch-install.sh` is for the Arch ISO only):
+**Existing Arch:**
 ```bash
 git clone https://github.com/VictorGSchneider/StoaLinux.git
 cd StoaLinux && chmod +x setup/post-install.sh && ./setup/post-install.sh
@@ -79,23 +87,14 @@ git clone https://github.com/VictorGSchneider/StoaLinux.git
 cd StoaLinux && chmod +x install.sh && ./install.sh
 ```
 
-Shell — zsh is the Stoa default login shell; bash is kept as a fallback. The
-setup scripts (`arch-install.sh` / `post-install.sh`) seed both rc files and
-`chsh` into zsh automatically. On an existing system where the setup scripts
-weren't run, wire it up manually:
+zsh is the default login shell; bash stays as a fallback. The setup scripts wire up both automatically. On a system where they weren't run:
 ```bash
 echo 'source ~/StoaLinux/shell/.zshrc'  >> ~/.zshrc
 echo 'source ~/StoaLinux/shell/.bashrc' >> ~/.bashrc
 chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
 ```
 
-> `install.sh` deploys configs and `stoa-*` binaries as **symlinks** into the
-> repo, so a `git pull` propagates updates live — no need to re-run the
-> installer after every change. Keep the clone at a stable path
-> (e.g. `~/StoaLinux`); if you move it, run `install.sh` again to refresh
-> the link targets. Two files are deliberately copied instead of linked
-> (`stoa.conf` and OnlyOffice `settings.json`) because the apps write to
-> them and a symlink would push your edits back into the repo.
+`install.sh` deploys configs and `stoa-*` binaries as **symlinks**, so `git pull` propagates updates live — no re-installing after every change. Keep the clone at a stable path (e.g. `~/StoaLinux`). `stoa.conf` and the OnlyOffice `settings.json` are copied instead of linked, because those apps write back into their own config and a symlink would push that back into the repo.
 
 ## Keybinds
 
@@ -116,47 +115,28 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
   <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td><code>Print</code></td><td>Capture (screenshot/record)</td></tr>
 </table>
 
-> **Hyprland config is Lua.** Since Hyprland 0.55 the compositor reads
-> `~/.config/hypr/hyprland.lua` and hyprlang (`hyprland.conf`) is deprecated
-> upstream. Stoa ships `config/hypr/hyprland.lua` — binds are `hl.bind()`,
-> settings go through `hl.config()`, window rules are `hl.window_rule()`
-> tables, and autostart hangs off `hl.on("hyprland.start", ...)`. **Hyprland
-> 0.55 or newer is required**; `stoa-doctor` warns if the installed version
-> is older. `install.sh` removes the old `hyprland.conf` symlink on upgrade.
-> See the [Hyprland Lua docs](https://wiki.hypr.land/Configuring/Start/).
+> Hyprland config is Lua (0.55+ required). Stoa ships `config/hypr/hyprland.lua`; `stoa-doctor` will tell you if your Hyprland predates it.
 
 ## Settings Panel
 
-Everything is configured through `stoa-settings` (`Super+S`) — no external settings app needed.
+Everything is configured through `stoa-settings` (`Super+S`) on the theory that a setting you have to hunt for across five apps is a setting you'll never actually change. 23 panels, one place:
 
 <table>
-  <tr><th>Panel</th><th>Features</th></tr>
-  <tr><td><b>Display</b></td><td>Brightness, resolution, scale, rotation, multi-monitor (extend/mirror)</td></tr>
-  <tr><td><b>Audio</b></td><td>Volume, output/input devices (PipeWire)</td></tr>
-  <tr><td><b>Equalizer</b></td><td>8 built-in EQ presets + user presets via EasyEffects</td></tr>
-  <tr><td><b>Night Light</b></td><td>Blue light filter (2500K–6500K), schedule (manual/sunset/custom)</td></tr>
-  <tr><td><b>Keyboard</b></td><td>Layout (12 presets + custom), repeat rate, Caps Lock remap, NumLock, RGB lighting (color, mode, brightness via OpenRGB)</td></tr>
-  <tr><td><b>Mouse & Touchpad</b></td><td>Sensitivity, accel, scroll, tap-to-click, 12 configurable gestures, DPI (100–25600), polling rate, DPI profiles</td></tr>
-  <tr><td><b>Network</b></td><td>Wi-Fi, saved networks, network info (IP/DNS/gateway/signal)</td></tr>
-  <tr><td><b>VPN</b></td><td>ProtonVPN: connect by country, P2P, Secure Core, kill switch</td></tr>
-  <tr><td><b>Firewall</b></td><td>nftables: port list, allow/block, service toggle</td></tr>
-  <tr><td><b>Bluetooth</b></td><td>Scan, connect, saved devices, forget</td></tr>
-  <tr><td><b>Hardware</b></td><td>CPU, GPU, RAM, disks, battery, USB, PCI, sensors, cameras, input</td></tr>
-  <tr><td><b>Disks & Storage</b></td><td>Overview, usage analyzer (drill-down), mount/unmount, SMART, benchmark, format, fsck, fstab, cleanup</td></tr>
-  <tr><td><b>Printers</b></td><td>CUPS: add/remove printers, print queue, scanners (SANE)</td></tr>
+  <tr><th>Panel</th><th>Covers</th></tr>
+  <tr><td><b>Display / Audio / Equalizer / Night Light</b></td><td>Brightness, resolution, multi-monitor, volume, PipeWire devices, EQ presets, blue light schedule</td></tr>
+  <tr><td><b>Keyboard / Mouse & Touchpad</b></td><td>Layouts, repeat rate, RGB (OpenRGB); sensitivity, gestures, DPI profiles</td></tr>
+  <tr><td><b>Network / VPN / Firewall / Bluetooth</b></td><td>Wi-Fi, ProtonVPN, nftables rules, device pairing</td></tr>
+  <tr><td><b>Hardware / Disks & Storage / Printers</b></td><td>Sensors and components; mount, SMART, benchmark, fsck; CUPS + SANE</td></tr>
   <tr><td><b>Cloud Drive</b></td><td>Google Drive, OneDrive, Dropbox, S3 via rclone</td></tr>
-  <tr><td><b>Power Management</b></td><td>Power profiles, screen off timeout, auto suspend, battery info, fan & performance (NitroSense-like)</td></tr>
-  <tr><td><b>Fan & Performance</b></td><td>Fan mode (auto/turbo/silent), fan speed (manual PWM), performance profiles (Eco→Turbo), GPU mode, KB backlight timeout, boot sound, LCD override. Supports: Div Acer Manager Max, acer-predator kernel module, NBFC, generic hwmon</td></tr>
-  <tr><td><b>Date & Time</b></td><td>Timezone, NTP, manual time, 12/24h, language & locale</td></tr>
-  <tr><td><b>Accessibility</b></td><td>Cursor size, text scale, animations, gaps, opacity, border width</td></tr>
-  <tr><td><b>Screensaver</b></td><td>Living marble animation (plasma noise in Stoa palette), idle timeout</td></tr>
-  <tr><td><b>Wallpaper</b></td><td>Browse, generate, set custom</td></tr>
-  <tr><td><b>Theme</b></td><td>Color palette (10 presets + custom), GTK, icons, cursors, font size</td></tr>
-  <tr><td><b>System Health</b></td><td>Doctor report, services status, failed units, thermals, journal, updates, package snapshots (diff), security audit, config integrity</td></tr>
-  <tr><td><b>Maintenance</b></td><td>Backup configs, restore (interactive/bulk), full system cleanup (10-step), dry-run preview, schedule cleanup at boot</td></tr>
+  <tr><td><b>Power / Fan & Performance</b></td><td>Power profiles, fan curves, performance modes, GPU mode — NitroSense-like, for the hardware that needs it</td></tr>
+  <tr><td><b>Date & Time / Accessibility</b></td><td>Timezone, locale; cursor size, text scale, animation and opacity controls</td></tr>
+  <tr><td><b>Screensaver / Wallpaper / Theme</b></td><td>Living marble animation; wallpaper browser/generator; palette, GTK, icons, cursors, font size</td></tr>
+  <tr><td><b>System Health / Maintenance</b></td><td>Doctor report, failed units, security audit; backup, restore, 10-step cleanup, scheduled maintenance</td></tr>
 </table>
 
 ## Scripts & Stoatools
+
+A family of small, single-purpose `stoa-*` tools — each one exists because reaching for a general-purpose app to do one specific thing is its own kind of clutter.
 
 <table>
   <tr><th>Script</th><th>What it does</th><th>Stoatool</th><th>What it does</th></tr>
@@ -183,6 +163,8 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
 
 ## Apps
 
+The chosen ones — not the biggest name in each category, the one that does its job and gets out of the way.
+
 <table>
   <tr><th>App</th><th>Purpose</th><th>App</th><th>Purpose</th></tr>
   <tr><td>Brave</td><td>Browser</td><td>btop</td><td>Monitor</td></tr>
@@ -201,225 +183,22 @@ Everything is configured through `stoa-settings` (`Super+S`) — no external set
 
 ## Theme
 
-The Stoa theme is applied consistently across:
+A theme that stops at the terminal isn't a theme, it's a wallpaper. The Stoa palette is carried into every app it can reach — GTK 3/4, Qt (via qt5ct/qt6ct), VS Code, Neovim, Steam, OnlyOffice, Betterbird, Calibre, YACReader — because a system that looks like two different projects stitched together asks something of your attention that a coherent one doesn't. Icons are Colloid-dark, cursors Colloid, fonts EB Garamond for prose and JetBrains Mono for code.
 
-- **GTK 3/4** — `stoa-gtk.css` with dark palette + EB Garamond
-- **Qt 5/6** — Fusion dark via qt5ct/qt6ct
-- **VS Code** — full color theme (syntax + UI + terminal ANSI)
-- **Neovim** — `stoa.vim` colorscheme with treesitter support
-- **Steam** — CSS overlay (`libraryroot.custom.css`)
-- **OnlyOffice** — custom JSON theme (`stoa-onlyoffice.json`)
-- **Betterbird** — userChrome/userContent CSS (`stoa-betterbird.css`)
-- **Calibre** — dark reader with EB Garamond 18pt
-- **YACReader** — full Qt stylesheet
-- **Div Acer Manager Max** — Avalonia AXAML theme (bronze buttons, stone cards, marble text)
-- **Icons** — Colloid-dark
-- **Cursors** — Colloid
-- **Font** — EB Garamond (serif) + JetBrains Mono (mono)
+The whole palette is swappable from `Super+S → Theme → Color Palette` — 10 presets or a custom editor over 11 core colors — and it propagates to Kitty, eww, GTK, Hyprland, and Noctalia automatically. Reset to Stoic restores the original, untouched.
 
-### Color Palette Manager
+### Under the hood
 
-Change the entire color scheme from `Super+S → Theme → Color Palette`:
+A few things exist to keep the system honest with itself, without asking you to think about them day to day:
 
-- **Apply Preset** — pick from 10 palettes and apply with one click
-- **Edit Colors** — customize any of the 11 core colors individually via hex input
-- **View Current Palette** — see the active colors at a glance
-- **Reset to Stoic** — restore the default marble/bronze palette
-
-Changes propagate automatically to: Kitty, eww, GTK 3/4, Hyprland, hyprlock, `colors.sh`, and Noctalia Shell. Hyprland and Kitty reload live; other apps take effect on restart.
-
-Noctalia is the one target that is not rewritten in place. `~/.config/noctalia/palettes/Stoa.json` is the shipped palette and is what *Stoa* means, so a custom palette is written beside it as `StoaCustom.json` and Noctalia is pointed at that instead — via `stoa-custom.toml` (merged after `config.toml`) and the `custom_palette` key in `~/.local/state/noctalia/settings.toml`, which wins over both. **Reset to Stoic** deletes the generated palette and points Noctalia back at `Stoa.json`, untouched.
-
-### Stoa Greeter
-
-Boot straight into a hyprlock prompt themed exactly like `Super+Esc` — no
-display manager required. Enable it with:
-
-```bash
-bash setup/enable-stoa-greeter.sh           # enable
-bash setup/enable-stoa-greeter.sh --disable # undo
-```
-
-What it wires up:
-
-- **systemd autologin** on `tty1` via drop-in (`/etc/systemd/system/getty@tty1.service.d/stoa-autologin.conf`)
-- **`.zprofile` / `.bash_profile`** sourcing `shell/stoa-autostart-hyprland.sh` to `exec Hyprland` when the shell lands on `tty1`
-- **`hl.exec_cmd("hyprlock")`** as the first `hyprland.start` autostart call in `hyprland.lua`, so the lock page renders before anything else
-- **`grace = 0`** in `hyprlock.conf` (a non-zero grace would let any keypress in the first N seconds bypass the password — fine for a normal lock, fatal for a greeter)
-
-`post-install.sh` offers to run it interactively at the end.
-
-### Stoa Greetd (alternative — unlocks the keyring on login)
-
-Same idea as the Stoa Greeter, but using `greetd` + `tuigreet` themed in
-bronze on tty1. Because greetd opens a real PAM session,
-`pam_gnome_keyring` runs and unlocks the GNOME keyring with the login
-password — so Brave (and any other libsecret client) stops asking for
-the keyring password the first time it opens.
-
-```bash
-bash setup/enable-stoa-greetd.sh           # enable
-bash setup/enable-stoa-greetd.sh --disable # undo
-```
-
-What it wires up:
-
-- **`/etc/greetd/config.toml`** — `tuigreet --time --remember --asterisks --cmd Hyprland` themed in the Stoa palette
-- **`/etc/pam.d/greetd`** — `pam_gnome_keyring.so` in both `auth` and `session` so the keyring destrava sozinho on every login
-- **`greetd.service`** enabled on boot
-- **Stoa Greeter teardown** — autologin drop-in and `.zprofile` / `.bash_profile` hooks are removed automatically (the two flows are mutually exclusive)
-- **`hl.exec_cmd("hyprlock")`** in `hyprland.lua` is commented out (greetd already authenticated; locking again would force a double password). `--disable` restores it.
-
-Pick one or the other:
-
-| | Stoa Greeter (hyprlock) | Stoa Greetd (tuigreet) |
-|---|---|---|
-| Visual | hyprlock graphical lockscreen | TUI in tty1, bronze prompt |
-| PAM session | no (auth only) | yes |
-| Keyring unlocks on login | no | yes |
-| Boot weight | lighter (autologin + lock) | a touch heavier (greetd daemon) |
-
-### System Resilience
-
-- **Package snapshots** — pacman pre-transaction hook saves `pacman -Q` before every install/upgrade/remove (`~/.config/stoa/pkg-snapshots/`, last 20, auto-rotates). Compare snapshots with current state to see exactly what changed.
-- **Hyprland version adapter** — `stoa-doctor` detects `hyprctl` output format on boot and all 25+ settings calls adapt automatically via `_hyprctl_get()`.
-- **Health check** — `stoa-doctor` runs on login, verifies all binary dependencies and services, and notifies via Noctalia Shell (which owns `org.freedesktop.Notifications` — scripts call `notify-send`). Full log at `~/.config/stoa/doctor.log`.
-
-### Checks
-
-Everything CI runs lives in `tests/run.sh`, so the same command answers the
-same question on your machine:
-
-```bash
-bash tests/run.sh            # every group
-bash tests/run.sh shell      # shell | data | stoa
-bash tests/run.sh --list     # what each group covers
-```
-
-- **shell** — `bash -n` and shellcheck over every script shipped, including
-  the extensionless ones (`stoa-drive-pin`, the pacman hooks). The floor is
-  `warning` minus an explicit list of patterns this tree uses on purpose.
-- **data** — the formats where a typo fails *silently*: JSON, TOML (a broken
-  `plugin.toml` just makes Noctalia skip the widget), Lua/Luau, and Python
-  under `py_compile` plus the ruff rules that bite at runtime.
-- **stoa** — the invariants in `tests/check_*.py` and `tests/test_*.sh`:
-  menu labels that a dispatch pattern would swallow, the `A && B || C && D`
-  precedence trap, pacman hooks pointing at a program nothing installs,
-  `stoa.conf` options nothing reads, `Super+<key>` shortcuts nothing binds,
-  and the profile-unseeding that once ate the rest of `.zprofile`.
-
-A missing tool is reported as a skip locally and fails under `--strict`,
-which is how CI runs it.
-
-### Vendored upstreams
-
-Some `stoa-*` scripts are forks of standalone projects and live alongside a
-read-only copy of their upstream under `scripts/vendor/`. Pull new upstream
-commits with:
-
-```bash
-scripts/vendor/sync-upstream.sh brcs   # updates scripts/vendor/brcs/
-```
-
-The helper does a squashed `git subtree pull`, then prints a diffstat of
-the Stoa fork against the refreshed upstream so you can see which hunks
-are candidates to forward-port. Currently vendored:
-
-- **BRCS.sh** ([upstream](https://github.com/VictorGSchneider/BRCS.sh)) →
-  fork at `scripts/stoa-maintain.sh`
-- **DFM** ([upstream](https://github.com/VictorGSchneider/DFM)) →
-  directory-based fork at `scripts/stoa-dfm/`
-
-See `scripts/vendor/README.md` for the full arrangement and the one-time
-bootstrap command.
-
-### [DFM — Dotfile Manager](https://github.com/VictorGSchneider/DFM)
-
-A GTK4/libadwaita GUI for editing dotfiles in-place — no moving, no centralizing. Launch with `Super+G`, from the Noctalia launcher, or `dfm`.
-
-- **Smart widgets** — auto-generated toggles, sliders, color pickers, and path selectors based on config file content
-- **Versioned backups** — automatic snapshots before every edit, with rollback support
-- **Syntax validation** — JSON, TOML, YAML, INI, shell, Xresources, plus cross-file conflict detection
-- **GitHub sync** — push/pull dotfiles via `gh`, create repos, share as Gists
-- **80+ known configs** — shells, window managers, terminals, status bars, editors, and more
-- **Profile management** — switch between configuration sets and built-in templates
-
-`install.sh` installs the in-tree fork (`scripts/stoa-dfm/`) as an editable
-package — `pipx install --editable` when available, a user venv otherwise —
-so a `git pull` on StoaLinux propagates live to the running `dfm` binary,
-matching the symlink semantics used for every other stoa-\* script. The
-XDG desktop entry (`data/dfm.desktop`) is symlinked into
-`~/.local/share/applications/` so the Noctalia launcher and other app grids pick it up.
-`stoa-doctor` flags a missing `dfm` binary on login.
-
-### Shell History
-
-`stoa-history` reads the history files themselves — bash and zsh natively,
-timestamps and multi-line commands included — and prunes what stopped
-earning its place. It never reorders: history is chronological, and
-Ctrl-R depends on it staying that way.
-
-```bash
-stoa-history                 # what is in there (read-only)
-stoa-history clean           # what a prune would remove (dry run)
-stoa-history clean --apply   # prune, after a backup
-stoa-history suggest         # aliases worth having, from what you type
-stoa-history restore         # put the last backup back
-```
-
-Five classes, each one switchable (`--no-secrets`, `--no-junk`,
-`--no-noise`, `--days 0`, `--no-dedupe`):
-
-- **secrets** — lines carrying a token, key or password. Your history file
-  is readable by anything running as you, and a credential that landed
-  there outlives the shell that typed it. They are reported redacted, and
-  removing the line is not revoking the key: rotate it.
-- **junk** — `/tmp` scratch, `./a.out`, `foo`/`bar`/`asdf` placeholders
-- **noise** — `ls`, `cd ..`, `clear`, `exit`: a keystroke to retype, never
-  a keystroke to search for. `--aggressive` extends this to every
-  `ls`/`cd`/`cat`/`echo`/`man` line.
-- **old** — timestamped entries past `--days` (365 by default). An entry
-  with no timestamp is never aged out, because nothing in the file says
-  how old it is.
-- **duplicates** — the most recent copy stays, so Ctrl-R keeps finding the
-  command where you last used it.
-- **multi-line** — `--drop-multiline` only: entries still spanning more than
-  one line after the paste trim below (a `for` loop, a heredoc).
-
-Copying a command out of a chat or a web page brings its trailing newline
-along, so the shell records a two-line command whose second line is empty:
-`cmd\` plus a blank line. A history built by pasting is a third blank lines
-— on a real 1,487-line file, 279 of the entries were that, 323 lines of
-nothing. `clean` trims the trailing escaped newline back off, which is the
-one edit it makes to an entry it keeps: same command, same timestamp, one
-line shorter. `--no-trim-pastes` keeps the file exactly as the shell wrote
-it.
-
-Nothing is written without `--apply`, and every write is preceded by a copy
-under `~/.local/state/stoa/history-backups` (last 10 kept, `restore` puts
-one back). Apart from the paste trim above, a surviving entry is written
-back from the exact bytes it occupied in the file. `~/.config/stoa/history-keep` holds one regex per line that is
-exempt from every pass.
-
-`--include-repl` adds the line-based REPL histories (python, node, mysql,
-psql, sqlite, redis) — those get the secret, age and duplicate passes only,
-since `ls` is not noise inside a python prompt. fish and atuin keep their
-history in their own database format: both are reported when present and
-never modified. Kitty has no command history of its own — its scrollback is
-this same file.
-
-### Text Prediction
-
-System-wide word suggestions and emoji picker, similar to Windows text suggestions. Toggle with `Super+Shift+S`.
-
-- **Word completion** — as you type, a floating popup shows up to 5 dictionary-based suggestions (prefix match via `/usr/share/dict/words`)
-- **Emoji suggestions** — related emojis appear alongside word completions (120+ keyword mappings built-in, extensible via `~/.config/stoa/predict-emojis.json`)
-- **Click to insert** — selecting a suggestion erases the typed prefix and inserts the full word or emoji via `wtype`
-- **Modifier-aware** — ignores keystrokes with Ctrl/Alt/Super (shortcuts don't trigger suggestions)
-- **eww popup** — non-focusable overlay at bottom-center, styled with the Stoa palette
-- **Multi-keyboard** — auto-detects all keyboard devices via evdev
-
-Requires the user to be in the `input` group (handled automatically by `post-install.sh`).
+- **Package snapshots** — every pacman transaction is snapshotted first (`~/.config/stoa/pkg-snapshots/`, last 20), so "what changed" is always answerable.
+- **Health check** — `stoa-doctor` runs at login, checks dependencies and services, and notifies you only if something's actually wrong.
+- **Stoa Greeter / Greetd** — two optional boot paths straight into a themed lock prompt, no display manager. `setup/enable-stoa-greeter.sh` (lighter, hyprlock-based) or `setup/enable-stoa-greetd.sh` (heavier, also unlocks your keyring on login). Mutually exclusive; `post-install.sh` offers the first one interactively.
+- **`stoa-history`** — reads your shell history and prunes what stopped earning its place: leaked secrets, `/tmp` junk, `ls`/`cd` noise, stale duplicates. Nothing is written without `--apply`, and every pass is backed up first (`stoa-history restore` undoes it).
+- **Text prediction** (`Super+Shift+S`) — a small floating popup for word and emoji suggestions as you type, because a keystroke you don't have to make is a keystroke you don't have to make.
+- **DFM** (`Super+G`) — a GTK4 GUI for editing dotfiles in place, with versioned backups, validation, and GitHub sync, so "I broke my config" stops being a reason to dread editing it.
+- **Checks** — `bash tests/run.sh` runs the same checks CI does: shell linting, config-format validation, and a set of StoaLinux-specific invariants (dead keybinds, pacman hooks pointing nowhere, that kind of thing).
+- **Vendored upstreams** — a couple of `stoa-*` tools are forks of standalone projects, kept alongside a read-only copy of their upstream under `scripts/vendor/` so improvements can flow both ways. See `scripts/vendor/README.md`.
 
 ## License
 
