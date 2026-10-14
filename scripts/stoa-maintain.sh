@@ -284,7 +284,7 @@ backup_configs() {
     found_sh=$(search_files ".sh" | grep '\.sh$' | grep "$USER_DIR")
     [ -n "$found_sh" ] && all_files+="$found_sh"$'\n'
 
-    for sysfile in /etc/fstab /etc/default/grub /etc/hostname /etc/resolv.conf /etc/hosts /etc/locale.conf /etc/vconsole.conf /etc/environment; do
+    for sysfile in /etc/fstab /etc/default/grub /etc/default/limine /boot/limine.conf /boot/limine/limine.conf /boot/efi/limine.conf /boot/loader/loader.conf /efi/loader/loader.conf /etc/kernel/cmdline /etc/hostname /etc/resolv.conf /etc/hosts /etc/locale.conf /etc/vconsole.conf /etc/environment; do
         [ -f "$sysfile" ] && all_files+="$sysfile"$'\n'
     done
 
