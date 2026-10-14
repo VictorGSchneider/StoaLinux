@@ -22,7 +22,7 @@ This isn't minimalism for aesthetics. It's minimalism by principle: **only what 
 
 ### Highlights
 
-- **Arch Linux** with automated installation (from live ISO or existing Arch)
+- **Arch Linux** with automated installation (from live ISO or existing Arch); **CachyOS** supported via `post-install.sh` (keeps its repos, kernel and bootloader)
 - **Hyprland** (Wayland) as the compositor — Wayland-only, no Xorg fallback
 - **Noctalia v5** as the bar + launcher + control centre + notifications + OSD + clipboard history + wallpaper + lock screen, themed via the bundled **Stoa palette** (`config/noctalia/palettes/Stoa.json`)
 - **23-panel settings app** — a mix of native dialogs (yad) and standalone GUI apps (wdisplays, pwvucontrol, nm-connection-editor, blueman, gnome-disks, nwg-look) — display, audio, network, VPN, firewall, Bluetooth, disks, system health, and more
@@ -67,7 +67,7 @@ curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/setup
 chmod +x arch-install.sh && ./arch-install.sh
 ```
 
-**Existing Arch:**
+**Existing Arch or CachyOS** (CachyOS: install it with its own installer, then run this — `arch-install.sh` is for the Arch ISO only):
 ```bash
 git clone https://github.com/VictorGSchneider/StoaLinux.git
 cd StoaLinux && chmod +x setup/post-install.sh && ./setup/post-install.sh

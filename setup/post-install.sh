@@ -1,9 +1,9 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Post-Install (existing Arch)                   ║
+# ║  STOA LINUX — Post-Install (Arch / CachyOS)                  ║
 # ║  "Do not suffer before the time." — Seneca                   ║
 # ║                                                              ║
-# ║  Use this script on an existing Arch Linux to install        ║
+# ║  Use this script on Arch Linux or CachyOS to install         ║
 # ║  all StoaLinux packages and dotfiles.                        ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
@@ -30,10 +30,24 @@ echo -e "  ${B}║     Hyprland (Wayland) — Wayland only                ║${R
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
-# ── Check Arch Linux ──
-if [ ! -f /etc/arch-release ]; then
-    echo -e "  ${T}[!] This script is for Arch Linux.${R}"
-    exit 1
+# ── Check Arch Linux (or an Arch-based distro such as CachyOS) ──
+DISTRO_ID=""
+DISTRO_LIKE=""
+if [ -r /etc/os-release ]; then
+    DISTRO_ID=$(. /etc/os-release && echo "${ID:-}")
+    DISTRO_LIKE=$(. /etc/os-release && echo "${ID_LIKE:-}")
+fi
+case " $DISTRO_ID $DISTRO_LIKE " in
+    *" arch "*|*" cachyos "*|*" endeavouros "*) ;;
+    *)
+        if [ ! -f /etc/arch-release ]; then
+            echo -e "  ${T}[!] This script is for Arch Linux (or Arch-based: CachyOS, EndeavourOS).${R}"
+            exit 1
+        fi
+        ;;
+esac
+if [ "$DISTRO_ID" = "cachyos" ]; then
+    echo -e "  ${F}CachyOS detected — keeping its repositories, kernel and bootloader as they are.${R}"
 fi
 
 # ── Check that it is not root ──
