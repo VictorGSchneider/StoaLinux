@@ -465,6 +465,26 @@ else
     echo -e "  ${S}[~] Skipped. Enable later with: bash ${STOA_DIR}/setup/enable-stoa-greeter.sh${R}"
 fi
 
+# ── Boot snapshots (Limine + Btrfs + Snapper) ──
+# Only offered where it can work: Btrfs root and Limine as the bootloader.
+if [ "$(findmnt -no FSTYPE / 2>/dev/null)" = "btrfs" ] \
+    && { command -v limine &>/dev/null || pacman -Qq limine &>/dev/null; }; then
+    echo ""
+    if systemctl is-enabled limine-snapper-sync.service &>/dev/null; then
+        echo -e "  ${S}[~] Limine snapshot boot menu already enabled.${R}"
+    else
+        echo -e "  ${F}Boot snapshots — list every Btrfs snapshot in the Limine menu?${R}"
+        echo -e "  ${S}  Sets up Snapper + limine-snapper-sync, so a bad update is undone by booting the snapshot.${R}"
+        read -rp "  Enable now? [y/N]: " LSS_CHOICE
+        if [ "${LSS_CHOICE,,}" = "y" ] || [ "${LSS_CHOICE,,}" = "yes" ]; then
+            bash "${STOA_DIR}/setup/enable-limine-snapshots.sh" || \
+                echo -e "  ${T}[!] Snapshot setup stopped — see above. Re-run: bash ${STOA_DIR}/setup/enable-limine-snapshots.sh${R}"
+        else
+            echo -e "  ${S}[~] Skipped. Enable later with: bash ${STOA_DIR}/setup/enable-limine-snapshots.sh${R}"
+        fi
+    fi
+fi
+
 # ── Done ──
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
