@@ -26,7 +26,7 @@ R='\033[0m'
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     STOA LINUX — Post-Install                        ║${R}"
-echo -e "  ${B}║     Hyprland (Wayland) — Wayland only                ║${R}"
+echo -e "  ${B}║     Hyprland or niri (Wayland) — Wayland only        ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
@@ -56,12 +56,49 @@ if [ "$(id -u)" -eq 0 ]; then
     exit 1
 fi
 
+# ── Compositor ──
+# Stoa runs on Hyprland (tiling, dwindle) or niri (scrolling columns). Pick
+# one, or install both and choose at login. STOA_WM=hyprland|niri|both skips
+# the question (useful for unattended installs).
+_default_wm="hyprland"
+# Already running niri without Hyprland installed → keep it.
+if command -v niri >/dev/null 2>&1 && ! command -v Hyprland >/dev/null 2>&1; then
+    _default_wm="niri"
+fi
+WM_CHOICE="$(printf '%s' "${STOA_WM:-}" | tr '[:upper:]' '[:lower:]')"
+case "$WM_CHOICE" in
+    hyprland|niri|both) ;;
+    *)
+        echo -e "  ${F}Which compositor?${R}"
+        echo -e "  ${S}  1) Hyprland — dynamic tiling, blur, animations (default)${R}"
+        echo -e "  ${S}  2) niri     — scrollable tiling: windows in columns on an endless strip${R}"
+        echo -e "  ${S}  3) Both     — install both, pick one at login${R}"
+        read -rp "  Choice [1/2/3]: " _wm_pick
+        case "${_wm_pick:-}" in
+            2|niri)      WM_CHOICE="niri" ;;
+            3|both)      WM_CHOICE="both" ;;
+            1|hyprland)  WM_CHOICE="hyprland" ;;
+            *)           WM_CHOICE="$_default_wm" ;;
+        esac
+        ;;
+esac
+echo -e "  ${O}[✓] Compositor: ${WM_CHOICE}${R}"
+echo ""
+
 # ── Packages ──
 echo -e "  ${F}StoaLinux packages:${R}"
 echo ""
 
-# Hyprland (Wayland — primary)
-WAYLAND_PKGS="hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk"
+# Compositor packages. Portals: Hyprland has its own; niri needs the GNOME
+# one for screen sharing and gnome-keyring for the secret-service prompt.
+# wl-mirror is the only way to mirror an output under niri (stoa-display).
+HYPR_PKGS="hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk"
+NIRI_PKGS="niri xdg-desktop-portal-gnome xdg-desktop-portal-gtk gnome-keyring xwayland-satellite wl-mirror"
+case "$WM_CHOICE" in
+    hyprland) WAYLAND_PKGS="$HYPR_PKGS" ;;
+    niri)     WAYLAND_PKGS="$NIRI_PKGS" ;;
+    both)     WAYLAND_PKGS="$HYPR_PKGS $NIRI_PKGS" ;;
+esac
 
 # Notifications (libnotify ships notify-send; noctalia is the
 # notification daemon on the Hyprland/Wayland path).
@@ -114,8 +151,12 @@ CLOUD_PKGS="rclone"
 # App Store (Flatpak — Flathub access from Stoa Store)
 STORE_PKGS="flatpak"
 
-# Lock screen
-LOCK_PKGS="hyprlock"
+# Lock screen — Noctalia locks both compositors; hyprlock is only the
+# Hyprland greeter fallback.
+case "$WM_CHOICE" in
+    niri) LOCK_PKGS="" ;;
+    *)    LOCK_PKGS="hyprlock" ;;
+esac
 
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard"
@@ -239,7 +280,9 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur satty                  "Satty"                 satty
     _install_aur glslviewer             "glslViewer (GPU shaders)" glslViewer
     _install_aur eww                    "eww"                   eww
-    _install_aur hyprswitch             "Hyprswitch (Alt+Tab)"  hyprswitch
+    if [ "$WM_CHOICE" != "niri" ]; then
+        _install_aur hyprswitch         "Hyprswitch (Alt+Tab)"  hyprswitch
+    fi
     _install_aur enpass-bin             "Enpass"                enpass
     _install_aur yacreader              "YACReader"             YACReader
     _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
@@ -351,6 +394,15 @@ echo -e "  ${F}Installing dotfiles...${R}"
 echo ""
 
 STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Remember the compositor for stoa-wm, the greeter and tty autostart. With
+# "both", Hyprland is the default session; switch with `stoa-wm set niri`.
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
+case "$WM_CHOICE" in
+    niri) echo niri > "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/wm" ;;
+    *)    echo hyprland > "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/wm" ;;
+esac
+
 bash "${STOA_DIR}/install.sh"
 
 # ── Shell ──
@@ -400,11 +452,12 @@ case "$SHELL_CHOICE" in
         ;;
 esac
 
-# ── Stoa Greeter (autologin → Hyprland → hyprlock) ──
+# ── Stoa Greeter (autologin → compositor → lock screen) ──
 echo ""
-echo -e "  ${F}Stoa Greeter — boot straight into hyprlock as the login screen?${R}"
-echo -e "  ${S}  Configures tty1 autologin and exec's Hyprland from .zprofile/.bash_profile.${R}"
-echo -e "  ${S}  hyprlock runs as the first exec-once, so the password prompt is the greeter.${R}"
+echo -e "  ${F}Stoa Greeter — boot straight into the lock screen as the login screen?${R}"
+echo -e "  ${S}  Configures tty1 autologin and starts your compositor from .zprofile/.bash_profile.${R}"
+echo -e "  ${S}  Hyprland: hyprlock runs as the first exec-once, so the password prompt is the greeter.${R}"
+echo -e "  ${S}  niri:     autologin goes through niri-session; Noctalia's lock screen asks for the password.${R}"
 read -rp "  Enable now? [y/N]: " GREETER_CHOICE
 if [ "${GREETER_CHOICE,,}" = "y" ] || [ "${GREETER_CHOICE,,}" = "yes" ]; then
     bash "${STOA_DIR}/setup/enable-stoa-greeter.sh"
@@ -419,7 +472,12 @@ echo -e "  ${B}║     StoaLinux installed!                             ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 echo -e "  ${F}To start:${R}"
-echo -e "  ${B}  Hyprland (Wayland):   Hyprland${R}"
+case "$WM_CHOICE" in
+    hyprland|both) echo -e "  ${B}  Hyprland (Wayland):   start-hyprland${R}" ;;
+esac
+case "$WM_CHOICE" in
+    niri|both)     echo -e "  ${B}  niri (Wayland):       niri-session${R}" ;;
+esac
 echo ""
 echo -e "  ${F}Stoa commands:${R}"
 echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"

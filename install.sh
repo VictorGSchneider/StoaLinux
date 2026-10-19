@@ -20,7 +20,7 @@ R='\033[0m'
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     STOA LINUX — Installer               ║${R}"
-echo -e "  ${B}║     Stoic Dotfiles for Arch Linux         ║${R}"
+echo -e "  ${B}║     Stoic Dotfiles for Arch / CachyOS     ║${R}"
 echo -e "  ${B}╚══════════════════════════════════════════╝${R}"
 echo ""
 
@@ -97,6 +97,10 @@ echo ""
 # ── Window managers ──
 _link "${STOA_DIR}/config/hypr/hyprland.lua"    "${CONFIG_DIR}/hypr/hyprland.lua"
 _link "${STOA_DIR}/config/hypr/hyprlock.conf"   "${CONFIG_DIR}/hypr/hyprlock.conf"
+# niri: same desktop for the scrolling-layout compositor. Linking it is
+# harmless when niri is not installed; the session reads it only if started.
+_link "${STOA_DIR}/config/niri/config.kdl"       "${CONFIG_DIR}/niri/config.kdl"
+mkdir -p "${HOME}/Pictures/screenshots"
 # Hyprland 0.55 replaced hyprlang with lua. Hyprland prefers hyprland.lua
 # when both exist, but a leftover hyprland.conf symlink pointing at a file
 # we no longer ship would just be a dead link — and on a pre-0.55 binary it
@@ -297,6 +301,7 @@ _link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-fire
 _link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
 _link "${STOA_DIR}/scripts/stoa-winapps.sh"      "${HOME}/.local/bin/stoa-winapps"
 _link "${STOA_DIR}/scripts/stoa-capture.sh"       "${HOME}/.local/bin/stoa-capture"
+_link "${STOA_DIR}/scripts/stoa-wm.sh"            "${HOME}/.local/bin/stoa-wm"
 _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
 _link "${STOA_DIR}/scripts/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"
 _link "${STOA_DIR}/scripts/stoa-vitals-status"    "${HOME}/.local/bin/stoa-vitals-status"

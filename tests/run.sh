@@ -17,7 +17,7 @@
 #
 # GROUPS
 #   shell  syntax and shellcheck over every script we ship
-#   data   the formats a typo silently breaks: JSON, TOML, Lua/Luau, Python
+#   data   the formats a typo silently breaks: JSON, TOML, KDL, Lua/Luau, Python
 #   stoa   the repo-specific invariants under tests/check_*.py and test_*.sh
 
 set -uo pipefail
@@ -38,7 +38,7 @@ for arg in "$@"; do
         --strict) STRICT=1 ;;
         --list)
             printf '%s\n' "shell  bash -n, shellcheck" \
-                          "data   JSON, TOML, Lua/Luau, Python" \
+                          "data   JSON, TOML, KDL, Lua/Luau, Python" \
                           "stoa   menu dispatch, shell pitfalls, config integrity, profile unseed"
             exit 0 ;;
         -h|--help) sed -n '15,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -69,6 +69,7 @@ mapfile -t JSON_FILES < <(_ours -name '*.json' | sort)
 mapfile -t TOML_FILES < <(_ours -name '*.toml' | sort)
 mapfile -t LUA_FILES  < <(_ours \( -name '*.lua' -o -name '*.luau' \) | sort)
 mapfile -t PY_FILES   < <(_ours -name '*.py' | sort)
+mapfile -t KDL_FILES  < <(_ours -name '*.kdl' | sort)
 
 PASS=0; FAIL=0; SKIP=0; FAILED=()
 
@@ -135,8 +136,8 @@ group_shell() {
 
 # ── data ─────────────────────────────────────────────────────────────
 group_data() {
-    printf '\n%sdata%s %s(%d json, %d toml, %d lua, %d py)%s\n' "$B" "$R" "$S" \
-        "${#JSON_FILES[@]}" "${#TOML_FILES[@]}" "${#LUA_FILES[@]}" "${#PY_FILES[@]}" "$R"
+    printf '\n%sdata%s %s(%d json, %d toml, %d kdl, %d lua, %d py)%s\n' "$B" "$R" "$S" \
+        "${#JSON_FILES[@]}" "${#TOML_FILES[@]}" "${#KDL_FILES[@]}" "${#LUA_FILES[@]}" "${#PY_FILES[@]}" "$R"
 
     _run "json" python3 -c '
 import json, sys
@@ -153,6 +154,22 @@ for f in sys.argv[1:]:
     with open(f, "rb") as fh:
         tomllib.load(fh)
 ' "${TOML_FILES[@]}"
+
+    # config/niri/config.kdl is the niri config. niri refuses to load a file
+    # it cannot parse and falls back to its built-in defaults — no Stoa
+    # binds, no Noctalia — so a typo reads as "my desktop reverted". This
+    # only proves the KDL parses (the pure-Python kdl-py parser); `niri
+    # validate` in stoa-doctor checks it against niri's own schema.
+    if python3 -c 'import kdl' >/dev/null 2>&1; then
+        _run "kdl" python3 -c '
+import sys, kdl
+for f in sys.argv[1:]:
+    with open(f) as fh:
+        kdl.parse(fh.read())
+' "${KDL_FILES[@]}"
+    else
+        _report "kdl" skip "pip install kdl-py"
+    fi
 
     # config/hypr/hyprland.lua is the Hyprland config (0.55+ dropped
     # hyprlang for lua): a syntax error there and the compositor refuses to

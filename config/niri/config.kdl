@@ -1,0 +1,271 @@
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  STOA LINUX — niri                                           ║
+// ║  "Order is the first law of heaven." — Marcus Aurelius       ║
+// ╚══════════════════════════════════════════════════════════════╝
+//
+// Same desktop as config/hypr/hyprland.lua — same palette, same keybinds
+// wherever niri has an equivalent — written for niri's scrolling layout.
+// niri reloads this file when it is saved.
+// Reference: https://niri-wm.github.io/niri/Configuration:-Introduction
+//
+// Differences from the Hyprland session worth knowing:
+//   * Windows live in columns on an endless horizontal strip, so
+//     Super+H/L move between columns and Super+J/K between windows
+//     stacked in one column. Super+R cycles the column width.
+//   * There is no blur and no special "minimize" workspace.
+//   * Alt+Tab returns to the previous window; Super+Tab opens the overview.
+//   * Workspaces are dynamic and vertical; Super+1–0 jump by index.
+
+// ── Input ──
+input {
+    keyboard {
+        xkb {
+            layout "br"
+            variant "abnt2"
+        }
+        numlock
+    }
+
+    touchpad {
+        tap
+        natural-scroll
+    }
+
+    mouse {
+        // accel-profile "flat"
+    }
+
+    focus-follows-mouse max-scroll-amount="0%"
+}
+
+// ── Monitor ──
+// niri picks each output's preferred mode and places new ones to the right.
+// Pin one with e.g.:
+//   output "eDP-1" { scale 1; position x=0 y=0 }
+
+// ── Environment ──
+// niri-session already exports XDG_CURRENT_DESKTOP=niri and
+// XDG_SESSION_TYPE=wayland, so only the toolkit and theme variables go here.
+environment {
+    QT_QPA_PLATFORM "wayland"
+    // qt5ct is Qt5-only; Noctalia (Qt6) gets its icon theme from
+    // scripts/stoa-bar.sh — see the same note in hyprland.lua.
+    QT_QPA_PLATFORMTHEME "qt5ct"
+    QT_STYLE_OVERRIDE "Fusion"
+    QT_AUTO_SCREEN_SCALE_FACTOR "1"
+    GTK_THEME "Adwaita:dark"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+}
+
+cursor {
+    xcursor-theme "Colloid-cursors"
+    xcursor-size 24
+}
+
+// ── Appearance ──
+// Stoic palette. stoa-settings rewrites these "#RRGGBB" literals when the
+// theme colors change, so keep them spelled out.
+//   bg #211e19  bg_light #2d2921  fg #d4cfc4  fg_dim #a89f91
+//   bronze #c49a5c  gold #d4a84b  olive #8a9a6c  terracotta #b36b5a  stone #6e6a62
+layout {
+    gaps 6
+    center-focused-column "never"
+
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    default-column-width { proportion 0.5; }
+
+    // The border replaces the focus ring so the bronze frame hugs the window.
+    focus-ring { off; }
+
+    border {
+        width 2
+        active-color "#c49a5c"
+        inactive-color "#2d2921"
+        urgent-color "#b36b5a"
+    }
+
+    shadow {
+        on
+        softness 12
+        spread 3
+        offset x=-4 y=-4
+        color "#0a090880"
+    }
+}
+
+prefer-no-csd
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+screenshot-path "~/Pictures/screenshots/screenshot-%Y%m%d-%H%M%S.png"
+
+animations {
+    window-open {
+        duration-ms 150
+        curve "ease-out-expo"
+    }
+    window-close {
+        duration-ms 150
+        curve "ease-out-quad"
+    }
+}
+
+// ── Window rules ──
+// Rounded corners everywhere, dimmed when inactive …
+window-rule {
+    geometry-corner-radius 4
+    clip-to-geometry true
+}
+
+window-rule {
+    match is-active=false
+    opacity 0.90
+}
+
+// … except media, browsers and readers, which keep full opacity so the
+// inactive dimming never washes out video, art or text.
+window-rule {
+    match app-id=r#"^brave-browser$"#
+    match app-id=r#"^firefox$"#
+    match app-id=r#"^mpv$"#
+    match app-id=r#"^imv$"#
+    match app-id=r#"^org\.pwmt\.zathura$"#
+    match app-id=r#"^zathura$"#
+    match app-id=r#"^obsidian$"#
+    match app-id=r#"^steam$"#
+    match app-id=r#"^calibre"#
+    match app-id=r#"^YACReader"#
+    opacity 1.0
+}
+
+// Qalculate floats, centred, at a fixed size.
+window-rule {
+    match app-id=r#"^qalculate-gtk$"#
+    open-floating true
+    default-column-width { fixed 420; }
+    default-window-height { fixed 540; }
+}
+
+// Steam dialogs float; the main window stays tiled.
+window-rule {
+    match app-id=r#"^steam$"# title=r#"^Friends List$"#
+    match app-id=r#"^steam$"# title=r#"^Steam Settings$"#
+    open-floating true
+}
+
+// ── Autostart ──
+// Noctalia owns the bar, launcher, notifications, wallpaper, clipboard and
+// lock screen; stoa-bar starts it. Do NOT also start dunst or a second bar.
+spawn-sh-at-startup "~/.local/bin/stoa-bar"
+spawn-sh-at-startup "sleep 3; ~/.local/bin/stoa-drive mount-all"
+spawn-sh-at-startup "~/.local/bin/stoa-quotes-sync tick"
+
+// ── Keybinds ──
+// Mod is Super on a TTY session.
+binds {
+    // ── Core ──
+    Mod+Return { spawn "kitty"; }
+    Mod+Space { spawn-sh "noctalia msg panel-toggle launcher"; }
+    Mod+Q repeat=false { close-window; }
+    Mod+F { fullscreen-window; }
+    Mod+Shift+Space { toggle-window-floating; }
+    Mod+Ctrl+E { quit; }
+    Mod+Ctrl+R { spawn-sh "~/.local/bin/stoa-bar-toggle"; }
+
+    // Alt+Tab: back to the previous window. Super+Tab: the overview.
+    Alt+Tab { focus-window-previous; }
+    Mod+Tab repeat=false { toggle-overview; }
+
+    // ── Apps ──
+    Mod+A { spawn-sh "~/.local/bin/stoa-store"; }
+    Mod+B { spawn-sh "brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland"; }
+    Mod+C { spawn "qalculate-gtk"; }
+    Mod+Shift+E { spawn "kitty" "-e" "lf"; }
+    Mod+E { spawn "thunar"; }
+    Mod+N { spawn "kitty" "-e" "btop"; }
+    Mod+O { spawn "obsidian"; }
+    Mod+S { spawn-sh "~/.local/bin/stoa-settings"; }
+    Mod+W { spawn-sh "~/.local/bin/stoa-winapps"; }
+    Mod+G { spawn-sh "~/.local/bin/dfm"; }
+    Mod+Slash { spawn-sh "~/.local/bin/stoa-keybinds-toggle"; }
+
+    // ── Lock screen ──
+    Mod+Escape allow-inhibiting=false { spawn-sh "noctalia msg lock"; }
+
+    // ── Navigation (vim): columns left/right, windows up/down ──
+    Mod+H { focus-column-left; }
+    Mod+J { focus-window-down; }
+    Mod+K { focus-window-up; }
+    Mod+L { focus-column-right; }
+
+    Mod+Shift+H { move-column-left; }
+    Mod+Shift+J { move-window-down; }
+    Mod+Shift+K { move-window-up; }
+    Mod+Shift+L { move-column-right; }
+
+    // ── Column sizing (niri has no resize mode) ──
+    Mod+R { switch-preset-column-width; }
+    Mod+Minus { set-column-width "-10%"; }
+    Mod+Equal { set-column-width "+10%"; }
+    Mod+Ctrl+F { maximize-column; }
+
+    // ── Workspaces (I to X) ──
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+0 { focus-workspace 10; }
+    Mod+Shift+1 { move-window-to-workspace 1; }
+    Mod+Shift+2 { move-window-to-workspace 2; }
+    Mod+Shift+3 { move-window-to-workspace 3; }
+    Mod+Shift+4 { move-window-to-workspace 4; }
+    Mod+Shift+5 { move-window-to-workspace 5; }
+    Mod+Shift+6 { move-window-to-workspace 6; }
+    Mod+Shift+7 { move-window-to-workspace 7; }
+    Mod+Shift+8 { move-window-to-workspace 8; }
+    Mod+Shift+9 { move-window-to-workspace 9; }
+    Mod+Shift+0 { move-window-to-workspace 10; }
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
+
+    // ── Volume ──
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "noctalia msg volume-up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "noctalia msg volume-down"; }
+    XF86AudioMute        allow-when-locked=true { spawn-sh "noctalia msg volume-mute"; }
+
+    // ── Brightness ──
+    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "noctalia msg brightness-up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "noctalia msg brightness-down"; }
+
+    // ── Display toggle (laptop / extend / mirror) ──
+    // XF86Display = Fn+F7 on most Acer/ASUS laptops; Super+P is the
+    // Win+P-style fallback for laptops whose Fn key is dead in Linux.
+    XF86Display { spawn-sh "~/.local/bin/stoa-display"; }
+    Mod+P { spawn-sh "~/.local/bin/stoa-display"; }
+
+    // ── Capture ──
+    // Print is Noctalia's region overlay; Shift+Print keeps stoa-capture,
+    // which also records the screen and takes timed shots.
+    Print { spawn-sh "noctalia msg screenshot-region"; }
+    Shift+Print { spawn-sh "~/.local/bin/stoa-capture"; }
+
+    // ── Clipboard ──
+    Mod+V { spawn-sh "noctalia msg panel-toggle clipboard"; }
+    Mod+Shift+B { spawn-sh "noctalia msg clipboard-clear"; }
+
+    // ── Stoatools ──
+    Mod+Shift+T { spawn-sh "~/.local/bin/stoa-ocr"; }
+    Mod+Shift+P { spawn-sh "~/.local/bin/stoa-paste"; }
+    Mod+Shift+S { spawn-sh "~/.local/bin/stoa-predict toggle"; }
+}

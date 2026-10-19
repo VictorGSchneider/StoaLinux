@@ -15,6 +15,11 @@ if [ -f "$STOA_CONF" ]; then
     source "$STOA_CONF"
 fi
 
+# Compositor (Hyprland / niri) — a few navigation lines differ.
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+# shellcheck source=lib/stoa-wm.sh
+[ -r "$_STOA_LIB/stoa-wm.sh" ] && source "$_STOA_LIB/stoa-wm.sh"
+
 STOA_SHOW_KEYBINDS="${STOA_SHOW_KEYBINDS:-true}"
 MODE="${1:-bar}"
 
@@ -32,7 +37,7 @@ read -r -d '' TOOLTIP <<'EOF'
   Super+F              Fullscreen
   Super+Shift+Space    Toggle floating
   Super+Escape         Lock screen
-  Super+Ctrl+E         Exit Hyprland
+  Super+Ctrl+E         Exit the session
 
 ▸ Mouse
   Super+LeftDrag       Move window
@@ -77,6 +82,20 @@ read -r -d '' TOOLTIP <<'EOF'
 
 ╚═══════════════════════════════════════╝
 EOF
+
+# niri is a scrolling layout: columns instead of a dwindle tree, no resize
+# mode, no hyprswitch. Swap the lines that would otherwise be wrong there.
+if declare -F stoa_wm_is >/dev/null; then
+    if stoa_wm_is niri; then
+        TOOLTIP=${TOOLTIP//"  Super+H/J/K/L        Move focus"/"  Super+H/L            Focus column left / right
+  Super+J/K            Focus window down / up (in a column)
+  Alt+Tab              Previous window
+  Super+Tab            Overview"}
+        TOOLTIP=${TOOLTIP//"  Super+Shift+H/J/K/L  Move window"/"  Super+Shift+H/L      Move column left / right
+  Super+Shift+J/K      Move window down / up"}
+        TOOLTIP=${TOOLTIP//"  Super+R              Resize mode (HJKL, Esc to exit)"/"  Super+R              Cycle column width"}
+    fi
+fi
 
 # Escape for JSON: backslashes, quotes, then convert real newlines to \n
 escape_json() {

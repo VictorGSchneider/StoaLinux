@@ -11,9 +11,26 @@ STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 WALLDIR="${HOME}/.config/stoa/wallpapers"
 
+# ── Compositor abstraction (Hyprland / niri) ──
+# Resolved through the install-time symlink so ~/.local/bin/stoa-settings
+# still finds the in-tree lib.
+_STOA_WM_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-wm.sh"
+# shellcheck source=lib/stoa-wm.sh
+[ -r "$_STOA_WM_LIB" ] && source "$_STOA_WM_LIB"
+
 # ── Helpers ──
 
 _notify() { notify-send -t 2500 "Stoa Settings" "$1" 2>/dev/null; }
+
+# Live tweaks (gaps, opacity, border…) are Hyprland-only; say where the
+# equivalent setting lives otherwise.
+_wm_live_only() {
+    if stoa_wm_is niri; then
+        _notify "$1: edit ~/.config/niri/config.kdl (niri reloads it on save)"
+    else
+        _notify "$1 only available on Hyprland"
+    fi
+}
 
 # Break symlink before modifying: copies target content into a real file
 # so sed -i doesn't modify the repo source through the symlink
@@ -32,6 +49,10 @@ _deref() {
 _hyprctl_get() {
     local option="$1" type="${2:-int}"
     local output format
+
+    # Live option reads only exist on Hyprland; under niri these settings
+    # live in ~/.config/niri/config.kdl, which niri reloads on save.
+    stoa_wm_hypr_live || return 0
 
     format=$(cat "${STOA_DIR}/hyprctl-format" 2>/dev/null || echo "legacy")
     output=$(hyprctl getoption "$option" 2>/dev/null)
@@ -803,7 +824,7 @@ _theme_cursor() {
     local gtk3="${HOME}/.config/gtk-3.0/settings.ini"
     [ -f "$gtk3" ] && _deref "$gtk3" && sed -i "s/^gtk-cursor-theme-name\s*=.*/gtk-cursor-theme-name = ${choice}/" "$gtk3"
 
-    command -v hyprctl &>/dev/null && hyprctl setcursor "$choice" 24 &>/dev/null
+    stoa_wm_set_cursor "$choice" 24 &>/dev/null
 
     _notify "Cursor: $choice"
 }
@@ -971,6 +992,7 @@ _colors_apply() {
         "${HOME}/.config/eww/eww.scss"
         "${HOME}/.config/gtk-3.0/gtk.css"
         "${HOME}/.config/gtk-4.0/gtk.css"
+        "${HOME}/.config/niri/config.kdl"
     )
 
     for f in "${files[@]}"; do
@@ -1079,7 +1101,7 @@ _colors_apply() {
                  "$accent" "$accent2" "$green" "$red" "$blue" "$grey"
 
     # Reload live components
-    command -v hyprctl &>/dev/null && hyprctl reload &>/dev/null
+    stoa_wm_reload &>/dev/null
     pkill -USR1 kitty 2>/dev/null
     disown 2>/dev/null
 }
@@ -1952,7 +1974,7 @@ _hw_input() {
     done < <(grep "^N:" /proc/bus/input/devices 2>/dev/null)
 
     # Touchpad settings (libinput)
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         local tap nat_scroll speed
         tap=$(_hyprctl_get input:touchpad:tap int)
         nat_scroll=$(_hyprctl_get input:touchpad:natural_scroll int)
@@ -1968,7 +1990,7 @@ _hw_input() {
 
     # Keyboard layout
     local layout
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         layout=$(_hyprctl_get input:kb_layout str)
     else
         layout=$(setxkbmap -query 2>/dev/null | grep "layout:" | awk '{print $2}')
@@ -2059,6 +2081,7 @@ _input_get() {
 # ── Apply to Hyprland (live) ──
 _input_apply_hypr() {
     local key="$1" val="$2"
+    stoa_wm_hypr_live || return 0
     hyprctl keyword "$key" "$val" &>/dev/null
 }
 
@@ -2348,19 +2371,19 @@ _GESTURE_DEFAULTS=(
 _gesture_actions() {
     cat <<'ACTIONS'
 disabled|  Disabled|
-workspace_next|  Workspace next|hyprctl dispatch workspace e+1
-workspace_prev|  Workspace prev|hyprctl dispatch workspace e-1
-window_close|  Close window|hyprctl dispatch killactive
-window_fullscreen|  Toggle fullscreen|hyprctl dispatch fullscreen
-window_float|  Toggle floating|hyprctl dispatch togglefloating
-window_move_left|  Move window left|hyprctl dispatch movewindow l
-window_move_right|  Move window right|hyprctl dispatch movewindow r
-window_move_up|  Move window up|hyprctl dispatch movewindow u
-window_move_down|  Move window down|hyprctl dispatch movewindow d
-window_next|  Next window|hyprctl dispatch cyclenext
-window_prev|  Prev window|hyprctl dispatch cyclenext prev
-window_minimize|  Minimize|hyprctl dispatch movetospecialworkspace minimize
-overview|  Overview / App switcher|hyprswitch gui --mod-key ALT --key Tab --close mod-key-release --max-switch-offset 9 --hide-active-window-border && hyprswitch dispatch
+workspace_next|  Workspace next|stoa-wm action workspace-next
+workspace_prev|  Workspace prev|stoa-wm action workspace-prev
+window_close|  Close window|stoa-wm action close
+window_fullscreen|  Toggle fullscreen|stoa-wm action fullscreen
+window_float|  Toggle floating|stoa-wm action float
+window_move_left|  Move window left|stoa-wm action move-left
+window_move_right|  Move window right|stoa-wm action move-right
+window_move_up|  Move window up|stoa-wm action move-up
+window_move_down|  Move window down|stoa-wm action move-down
+window_next|  Next window|stoa-wm action focus-next
+window_prev|  Prev window|stoa-wm action focus-prev
+window_minimize|  Minimize|stoa-wm action minimize
+overview|  Overview / App switcher|stoa-wm action overview
 launcher|  App launcher|noctalia msg panel-toggle launcher
 volume_up|  Volume up|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0
 volume_down|  Volume down|wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
@@ -3026,7 +3049,7 @@ _power_set_profile() {
 
 _power_idle_timeout() {
     local current
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         current=$(_hyprctl_get misc:dpms_timeout int)
         [ -z "$current" ] || [ "$current" = "0" ] && current="off"
         [ "$current" != "off" ] && current="${current}s"
@@ -3057,7 +3080,7 @@ _power_idle_timeout() {
         *Never*)        seconds=0 ;;
     esac
 
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         hyprctl keyword misc:dpms_timeout "$seconds" &>/dev/null
         [ "$seconds" -eq 0 ] && _notify "Screen off: never" || _notify "Screen off: $((seconds / 60)) min"
     else
@@ -3857,7 +3880,7 @@ _menu_fan_perf() {
 # ══════════════════════════════════════════════════════════════
 
 _kb_current_layout() {
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         _hyprctl_get input:kb_layout str
     else
         setxkbmap -query 2>/dev/null | grep layout | awk '{print $2}'
@@ -3897,7 +3920,7 @@ _kb_layout() {
         layout=$(echo "$choice" | awk '{print $2}')
     fi
 
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         hyprctl keyword input:kb_layout "$layout" &>/dev/null
         _notify "Keyboard layout: $layout"
     else
@@ -3908,7 +3931,7 @@ _kb_layout() {
 
 _kb_repeat_rate() {
     local current_rate current_delay
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         current_rate=$(_hyprctl_get input:repeat_rate int)
         current_delay=$(_hyprctl_get input:repeat_delay int)
     else
@@ -3933,7 +3956,7 @@ _kb_repeat_rate() {
         *"Very fast"*) rate=50; delay=200 ;;
     esac
 
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         hyprctl keyword input:repeat_rate "$rate" &>/dev/null
         hyprctl keyword input:repeat_delay "$delay" &>/dev/null
     else
@@ -3963,7 +3986,7 @@ _kb_capslock_behavior() {
         *Disabled*)   opt="caps:none" ;;
     esac
 
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         hyprctl keyword input:kb_options "$opt" &>/dev/null
         _notify "Caps Lock: $(echo "$choice" | sed 's/^[[:space:]]*//' | sed 's/^[^ ]* //')"
     else
@@ -3988,7 +4011,7 @@ _kb_numlock() {
 
     case "$choice" in
         *On*)
-            if command -v hyprctl &>/dev/null; then
+            if stoa_wm_hypr_live; then
                 hyprctl keyword input:numlock_by_default true &>/dev/null
             else
                 numlockx on 2>/dev/null
@@ -3996,7 +4019,7 @@ _kb_numlock() {
             _notify "NumLock on boot: on"
             ;;
         *Off*)
-            if command -v hyprctl &>/dev/null; then
+            if stoa_wm_hypr_live; then
                 hyprctl keyword input:numlock_by_default false &>/dev/null
             else
                 numlockx off 2>/dev/null
@@ -4624,7 +4647,7 @@ _a11y_cursor_size() {
     size=$(echo "$choice" | grep -oP '\d+' | head -1)
 
     gsettings set org.gnome.desktop.interface cursor-size "$size" 2>/dev/null
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         hyprctl keyword env "XCURSOR_SIZE,$size" &>/dev/null
     fi
     _notify "Cursor size: ${size}px"
@@ -4653,7 +4676,7 @@ _a11y_text_scaling() {
 
 _a11y_animations() {
     local current="on"
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         local enabled
         enabled=$(_hyprctl_get animations:enabled int)
         [ "$enabled" = "0" ] && current="off"
@@ -4667,7 +4690,7 @@ _a11y_animations() {
         "  Back")
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
-    if command -v hyprctl &>/dev/null; then
+    if stoa_wm_hypr_live; then
         case "$choice" in
             *Enable*)
                 hyprctl keyword animations:enabled true &>/dev/null
@@ -4701,8 +4724,8 @@ _a11y_animations() {
 }
 
 _a11y_gaps() {
-    if ! command -v hyprctl &>/dev/null; then
-        _notify "Gaps only available on Hyprland"
+    if ! stoa_wm_hypr_live; then
+        _wm_live_only "Gaps"
         return
     fi
 
@@ -4735,8 +4758,8 @@ _a11y_gaps() {
 }
 
 _a11y_opacity() {
-    if ! command -v hyprctl &>/dev/null; then
-        _notify "Opacity only available on Hyprland"
+    if ! stoa_wm_hypr_live; then
+        _wm_live_only "Opacity"
         return
     fi
 
@@ -4769,8 +4792,8 @@ _a11y_opacity() {
 }
 
 _a11y_border_size() {
-    if ! command -v hyprctl &>/dev/null; then
-        _notify "Border size only available on Hyprland"
+    if ! stoa_wm_hypr_live; then
+        _wm_live_only "Border size"
         return
     fi
 
@@ -5948,9 +5971,10 @@ _health_system_info() {
     lines+=("")
 
     # WM info
-    local hypr_ver
-    hypr_ver=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/hyprland-version" 2>/dev/null || echo "?")
-    lines+=("  Session: Wayland (Hyprland $hypr_ver)")
+    local wm_name wm_ver
+    wm_name=$(stoa_wm_display_name 2>/dev/null || echo "Hyprland")
+    wm_ver=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/$(stoa_wm_name 2>/dev/null || echo hyprland)-version" 2>/dev/null || echo "?")
+    lines+=("  Session: Wayland ($wm_name $wm_ver)")
 
     # Shell
     lines+=("  Shell: $SHELL")

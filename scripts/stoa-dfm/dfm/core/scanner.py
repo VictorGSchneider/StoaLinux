@@ -38,6 +38,7 @@ KNOWN_CONFIG_DIRS = {
     "sway": "Sway",
     "hypr": "Hyprland",
     "hyprland": "Hyprland",
+    "niri": "niri",
     "waybar": "Waybar",
     "polybar": "Polybar",
     "rofi": "Rofi",
@@ -122,6 +123,7 @@ CONFIG_FILE_PATTERNS = [
 DIR_MAIN_FILES = {
     "hypr": ["hyprland.lua", "hyprland.conf"],
     "hyprland": ["hyprland.lua", "hyprland.conf"],
+    "niri": ["config.kdl"],
     "nvim": ["init.lua", "init.vim"],
     "neovim": ["init.lua", "init.vim"],
     "awesome": ["rc.lua"],
@@ -269,6 +271,7 @@ def _get_icon_for_config(dirname: str) -> str:
         "sway": "preferences-desktop-display-symbolic",
         "hypr": "preferences-desktop-display-symbolic",
         "hyprland": "preferences-desktop-display-symbolic",
+        "niri": "preferences-desktop-display-symbolic",
         "waybar": "preferences-desktop-display-symbolic",
         "polybar": "preferences-desktop-display-symbolic",
         "alacritty": "utilities-terminal-symbolic",
