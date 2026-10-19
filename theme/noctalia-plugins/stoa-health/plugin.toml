@@ -20,7 +20,7 @@
 
 id          = "stoa/health"
 name        = "Stoa Health"
-version     = "1.1.0"
+version     = "1.2.0"
 author      = "stoa"
 description = "Doctor, sensors and pending updates — one icon, coloured by severity"
 
@@ -45,7 +45,9 @@ id        = "manage"
 entry     = "panel.luau"
 placement = "attached"
 width     = 340
-height    = 460
+# 560: the Snapshots view now carries a System (Btrfs) section above the
+# package/config one.
+height    = 560
 
 # Settings are an ARRAY of tables named `setting` (singular), each with an
 # explicit `key` — not [settings.<name>] sub-tables. `label_key` is

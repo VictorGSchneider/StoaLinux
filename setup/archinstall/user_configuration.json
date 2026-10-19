@@ -3,7 +3,11 @@
     "audio_config": {
         "audio": "pipewire"
     },
-    "bootloader": "Refind",
+    "bootloader_config": {
+        "bootloader": "Limine",
+        "uki": false,
+        "removable": true
+    },
     "hostname": "stoa",
     "kernels": ["linux"],
     "locale_config": {

@@ -306,6 +306,13 @@ _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-docto
 _link "${STOA_DIR}/scripts/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"
 _link "${STOA_DIR}/scripts/stoa-vitals-status"    "${HOME}/.local/bin/stoa-vitals-status"
 _link "${STOA_DIR}/scripts/stoa-health.sh"        "${HOME}/.local/bin/stoa-health"
+_link "${STOA_DIR}/scripts/stoa-snapshot.sh"      "${HOME}/.local/bin/stoa-snapshot"
+# Snapshot browser (GTK4): what is inside each package snapshot and config
+# backup. Opened from the stoa-health panel; also in the app launcher.
+_link "${STOA_DIR}/scripts/stoa-snapshots/stoa-snapshots" "${HOME}/.local/bin/stoa-snapshots"
+mkdir -p "${HOME}/.local/share/applications"
+_link "${STOA_DIR}/scripts/stoa-snapshots/data/stoa-snapshots.desktop" \
+      "${HOME}/.local/share/applications/stoa-snapshots.desktop"
 _link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
 _link "${STOA_DIR}/scripts/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-setup"
 _link "${STOA_DIR}/scripts/stoa-display.sh"      "${HOME}/.local/bin/stoa-display"

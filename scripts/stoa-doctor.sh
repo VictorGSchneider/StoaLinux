@@ -279,6 +279,17 @@ else
     fi
 fi
 
+# ── Limine snapshot boot menu ──
+# Installed but not running means snapshots pile up while the boot menu
+# keeps showing the old list — the safety net looks present and is not.
+if pacman -Qq limine-snapper-sync &>/dev/null; then
+    if systemctl is-enabled limine-snapper-sync.service &>/dev/null; then
+        _ok "Limine snapshot sync (limine-snapper-sync.service)"
+    else
+        _warn "limine-snapper-sync is installed but its service is not enabled — run setup/enable-limine-snapshots.sh"
+    fi
+fi
+
 # ── Settings/Store standalone apps (replace the old rofi menus) ──
 _check_optional wdisplays           "Display layout (wdisplays)"
 _check_optional pwvucontrol         "Audio mixer (pwvucontrol)"
