@@ -58,8 +58,10 @@ jobs:
       # luac5.4 parses config/hypr/hyprland.lua and the Noctalia *.luau
       # plugins; ruff catches the runtime-only Python faults py_compile
       # cannot see (undefined names, a dict key written twice).
-      - name: Install lua + ruff
+      # kdl-py parses config/niri/config.kdl.
+      - name: Install lua + ruff + kdl-py
         run: |
+          pip install --user kdl-py
           command -v luac5.4 >/dev/null || {
             sudo apt-get update && sudo apt-get install -y lua5.4
           }

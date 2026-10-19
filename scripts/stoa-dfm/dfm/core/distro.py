@@ -254,6 +254,7 @@ class Proof:
 _PROOFS: dict[str, Proof] = {
     "i3-wm": Proof(binaries=("i3",)),
     "hyprland": Proof(binaries=("Hyprland", "hyprland")),
+    "niri": Proof(binaries=("niri",)),
     "neovim": Proof(binaries=("nvim",)),
     "nodejs": Proof(binaries=("node", "nodejs")),
     "ripgrep": Proof(binaries=("rg",)),

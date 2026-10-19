@@ -745,6 +745,14 @@ if $IS_NVIDIA; then
     echo -e "  ${O}[✓] hyprland.lua env block updated.${R}"
     [ -n "$NV_CARD_PATH" ] && echo -e "  ${S}      NVIDIA DRM card: ${NV_CARD_PATH}${R}"
 
+    # niri does not read AQ_/WLR_DRM_DEVICES (those are Aquamarine/wlroots).
+    # It takes its render GPU from `debug { render-drm-device … }` in
+    # config.kdl, which is machine-specific, so it is not written for you.
+    if [ -f "${STOA_DIR}/config/niri/config.kdl" ]; then
+        echo -e "  ${S}      niri: set debug { render-drm-device \"${NV_CARD_PATH:-/dev/dri/renderD128}\" } in${R}"
+        echo -e "  ${S}            ~/.config/niri/config.kdl if the wrong GPU drives the session.${R}"
+    fi
+
 elif [ "$GPU_VENDOR" = "amd" ]; then
     _uncomment_env LIBVA_DRIVER_NAME
     sed -i 's|^export LIBVA_DRIVER_NAME=.*|export LIBVA_DRIVER_NAME=radeonsi|' "$ENV_FILE"

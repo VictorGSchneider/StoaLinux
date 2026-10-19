@@ -15,6 +15,11 @@ date >> /tmp/stoa-capture-debug.log
 
 set -o pipefail
 
+# Compositor-neutral window geometry (Hyprland and niri).
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+# shellcheck source=lib/stoa-wm.sh
+[ -r "$_STOA_LIB/stoa-wm.sh" ] && source "$_STOA_LIB/stoa-wm.sh"
+
 SCREENSHOT_DIR="${HOME}/Pictures/screenshots"
 RECORD_DIR="${HOME}/Videos/recordings"
 PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/stoa-record.pid"
@@ -42,16 +47,9 @@ _stop_recording() {
 }
 
 _get_window_geom() {
-    local json
-    json=$(hyprctl activewindow -j 2>/dev/null)
-    if [ -n "$json" ]; then
-        local x y w h
-        x=$(echo "$json" | jq -r '.at[0]')
-        y=$(echo "$json" | jq -r '.at[1]')
-        w=$(echo "$json" | jq -r '.size[0]')
-        h=$(echo "$json" | jq -r '.size[1]')
-        echo "${x},${y} ${w}x${h}"
-    fi
+    # "X,Y WxH" for the focused window; empty when the compositor cannot
+    # place it (the caller then captures the whole screen).
+    stoa_wm_active_window_geom 2>/dev/null
 }
 
 _screenshot() {

@@ -15,7 +15,7 @@ they went unnoticed:
       stoa-bar.sh.
 
   R3  every Super+<key> shortcut written down anywhere in the tree is a
-      shortcut hyprland.lua actually binds. Docs drift the moment a bind
+      shortcut hyprland.lua or niri's config.kdl actually binds. Docs drift the moment a bind
       moves: the settings panel was advertised as Super+I in eight places
       long after the bind became Super+S, and the cheatsheet in the bar
       still offered a Super+M that was never bound at all.
@@ -50,6 +50,7 @@ CONF = ROOT / "stoa.conf"
 HOOK_DIR = ROOT / "theme" / "pacman-hooks"
 SETTINGS = ROOT / "scripts" / "stoa-settings.sh"
 HYPRLAND = ROOT / "config" / "hypr" / "hyprland.lua"
+NIRI = ROOT / "config" / "niri" / "config.kdl"
 
 # Spellings people use in prose for keys hyprland.lua names differently.
 KEY_ALIASES = {
@@ -200,6 +201,32 @@ def bound_shortcuts() -> set[str]:
     return out
 
 
+def niri_bound_shortcuts() -> set[str]:
+    """Every shortcut config/niri/config.kdl binds, normalised.
+
+    niri writes them as `Mod+Shift+H { … }` inside a `binds` block; Mod is
+    Super on a TTY session, which is the only one Stoa ships.
+    """
+    if not NIRI.is_file():
+        return set()
+    out = set()
+    in_binds = False
+    for line in NIRI.read_text(errors="replace").split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("//"):
+            continue
+        if re.match(r"binds\s*\{", stripped):
+            in_binds = True
+            continue
+        if not in_binds:
+            continue
+        m = re.match(r"([A-Za-z0-9_]+(?:\+[A-Za-z0-9_]+)*)(?:\s|\{)", stripped)
+        if m:
+            combo = m.group(1).replace("Mod+", "Super+")
+            out.add(_norm_combo(combo))
+    return out
+
+
 def documented_shortcuts() -> list[tuple[Path, int, str, str]]:
     """Every Super+<key> written in the tree, as (file, line, raw, normalised)."""
     # A trailing modifier alone ("Super+Shift+…") is prose, not a shortcut.
@@ -211,7 +238,7 @@ def documented_shortcuts() -> list[tuple[Path, int, str, str]]:
     )
     found = []
     for f in reader_files():
-        if f.suffix == ".lua" or f.name == HYPRLAND.name:
+        if f.suffix in {".lua", ".kdl"} or f.name == HYPRLAND.name:
             continue
         try:
             lines = f.read_text(errors="replace").split("\n")
@@ -235,6 +262,12 @@ def check_keybind_docs() -> list[str]:
     bound = bound_shortcuts()
     if len(bound) < 20:
         return [f"could not read the keybinds from {HYPRLAND.name}"]
+    # niri ships its own binds; a shortcut documented for either session is
+    # fine as long as one of the two configs really binds it.
+    niri_bound = niri_bound_shortcuts()
+    if NIRI.is_file() and len(niri_bound) < 20:
+        return [f"could not read the keybinds from {NIRI.parent.name}/{NIRI.name}"]
+    bound |= niri_bound
     problems = []
     for f, number, raw, combo in documented_shortcuts():
         if combo in bound:
@@ -245,9 +278,15 @@ def check_keybind_docs() -> list[str]:
             f"{head}+{c}" in bound for c in (tail[0], tail[2])
         ):
             continue
+        # "Super+H/L" style pairs: accept if every key in the run is bound
+        keys = tail.split("/")
+        if len(keys) > 1 and all(len(k) == 1 for k in keys) and all(
+            f"{head}+{k}" in bound for k in keys
+        ):
+            continue
         problems.append(
             f"{f.relative_to(ROOT)}:{number}: documents {raw!r}, which "
-            f"{HYPRLAND.name} does not bind"
+            f"neither {HYPRLAND.name} nor {NIRI.name} binds"
         )
     return problems
 

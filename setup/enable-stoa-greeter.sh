@@ -71,7 +71,7 @@ _seed_profile() {
         echo "    . \"${PROFILE_SRC}\""
         echo "else"
         echo "    echo \"StoaLinux: ${PROFILE_SRC} is missing —\" >&2"
-        echo "    echo \"  Hyprland will not autostart on tty1. Run install.sh to restore it.\" >&2"
+        echo "    echo \"  The compositor will not autostart on tty1. Run install.sh to restore it.\" >&2"
         echo "fi"
         echo "$PROFILE_MARK_END"
     } >> "$rc"

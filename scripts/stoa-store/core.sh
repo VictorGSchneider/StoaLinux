@@ -133,6 +133,12 @@ _apply_stoa_theme() {
         gsettings set org.gnome.desktop.interface font-name    "${f:-EB Garamond 11}"  2>/dev/null
         gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"           2>/dev/null
     fi
-    command -v hyprctl &>/dev/null && \
-        hyprctl setcursor "${c:-Colloid-cursors}" 24 &>/dev/null
+    # Hyprland: live `hyprctl setcursor`. niri: rewrites its cursor block.
+    local _wm_lib
+    _wm_lib="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-wm.sh"
+    if [ -r "$_wm_lib" ]; then
+        # shellcheck source=../lib/stoa-wm.sh
+        source "$_wm_lib"
+        stoa_wm_set_cursor "${c:-Colloid-cursors}" 24 &>/dev/null
+    fi
 }

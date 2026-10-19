@@ -2,10 +2,11 @@
 
 # StoaLinux
 
-**A Stoic desktop for Arch Linux — Hyprland (Wayland) and a unified dark theme inspired by the ancient world.**
+**A Stoic desktop for Arch Linux and CachyOS — Hyprland or niri (Wayland) and a unified dark theme inspired by the ancient world.**
 
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?style=flat-square&logo=wayland&logoColor=black)](https://hyprland.org)
+[![niri](https://img.shields.io/badge/niri-c49a5c?style=flat-square&logo=wayland&logoColor=black)](https://github.com/YaLTeR/niri)
 [![License](https://img.shields.io/badge/License-GPL--3.0-c49a5c?style=flat-square)](LICENSE)
 
 > *"The happiness of your life depends upon the quality of your thoughts."* — Marcus Aurelius
@@ -28,16 +29,16 @@ None of this makes StoaLinux a religious project. It's a tool built on the premi
 
 StoaLinux is a complete Arch Linux environment — automated installation, a unified dark theme across every app it touches, a settings panel built to make external configuration tools unnecessary, and a family of `stoa-*` scripts that exist because the alternative was five different tools each solving a fifth of the problem.
 
-Hyprland (Wayland) is the compositor, full stop — there's no Xorg fallback to maintain, because a fallback path nobody uses is not a feature, it's an unexamined habit. Noctalia handles the bar, launcher, control centre, notifications, clipboard history, wallpapers, and lock screen, themed through the bundled Stoa palette. A 23-panel settings app covers the rest — display, audio, network, VPN, firewall, Bluetooth, disks, system health — so nothing on the system asks you to open three unrelated apps to change one thing.
+Wayland is the only display server — there's no Xorg fallback to maintain, because a fallback path nobody uses is not a feature, it's an unexamined habit. The compositor is your choice of two, **Hyprland** (dynamic tiling) or **niri** (scrollable tiling), both driven through one small abstraction layer (`stoa-wm`) so the scripts are written once. Noctalia handles the bar, launcher, control centre, notifications, clipboard history, wallpapers, and lock screen, themed through the bundled Stoa palette. A 23-panel settings app covers the rest — display, audio, network, VPN, firewall, Bluetooth, disks, system health — so nothing on the system asks you to open three unrelated apps to change one thing.
 
 **Highlights, briefly:**
 
 - Automated Arch installation, from live ISO or an existing system
-- Hyprland/Wayland only — one compositor, well maintained, instead of two maintained halfway
+- Wayland only, with a choice of **Hyprland** or **niri** — the same palette, binds and `stoa-*` tools in both, behind a single `stoa-wm` layer instead of two forks
 - Noctalia as the shell layer, themed via the Stoa palette, with 10 built-in presets and a custom editor
 - A 23-panel settings app that replaces the usual pile of separate config tools
 - One dark theme, carried consistently into GTK, Qt, VS Code, Neovim, Steam, Calibre, and more
-- Pacman pre-transaction snapshots, a boot-time health check, and a Hyprland version adapter — resilience that doesn't wait for you to notice something broke
+- Pacman pre-transaction snapshots, a boot-time health check, and a compositor version adapter — resilience that doesn't wait for you to notice something broke
 - A DFM (Dotfile Manager) GUI for editing configs in place, with backups and rollback
 - A living marble screensaver, a Memento Mori widget, and Stoic quotes on every shell — the philosophy isn't bolted onto the system, it's rendered by it
 
@@ -75,7 +76,7 @@ curl -LO https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/setup
 chmod +x arch-install.sh && ./arch-install.sh
 ```
 
-**Existing Arch:**
+**Existing Arch or CachyOS** (CachyOS: install it with its own installer first; `arch-install.sh` is for the Arch ISO only):
 ```bash
 git clone https://github.com/VictorGSchneider/StoaLinux.git
 cd StoaLinux && chmod +x setup/post-install.sh && ./setup/post-install.sh
@@ -86,6 +87,8 @@ cd StoaLinux && chmod +x setup/post-install.sh && ./setup/post-install.sh
 git clone https://github.com/VictorGSchneider/StoaLinux.git
 cd StoaLinux && chmod +x install.sh && ./install.sh
 ```
+
+`post-install.sh` asks which compositor to install — Hyprland, niri, or both — and records the choice in `~/.config/stoa/wm`. Set `STOA_WM=hyprland|niri|both` to skip the question. With both installed, switch the default session any time with `stoa-wm set niri` (or `hyprland`).
 
 zsh is the default login shell; bash stays as a fallback. The setup scripts wire up both automatically. On a system where they weren't run:
 ```bash
@@ -116,6 +119,23 @@ chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
 </table>
 
 > Hyprland config is Lua (0.55+ required). Stoa ships `config/hypr/hyprland.lua`; `stoa-doctor` will tell you if your Hyprland predates it.
+
+### Hyprland or niri
+
+Same keys, same palette, same tools. What differs is the layout model:
+
+| | Hyprland | niri |
+|---|---|---|
+| Layout | dwindle tree | windows in columns on an endless strip |
+| `Super+H/L`, `Super+J/K` | focus left/right/down/up | focus column left/right, window down/up |
+| `Super+Shift+HJKL` | move window | move column (H/L) or window within it (J/K) |
+| `Super+R` | resize mode (HJKL) | cycle the column width |
+| `Alt+Tab` | visual switcher (hyprswitch) | previous window; `Super+Tab` opens the overview |
+| Blur, minimize | yes | no (niri has neither) |
+| Mirror a monitor (`Super+P`) | built in | needs `wl-mirror` (installed by `post-install.sh`) |
+| Config | `config/hypr/hyprland.lua` | `config/niri/config.kdl` (reloads on save) |
+
+Live tweaks in `stoa-settings` (gaps, opacity, pointer and keyboard options applied with `hyprctl keyword`) are Hyprland-only; under niri the panel points you at `config.kdl`. Cursor theme and the palette are applied to both. niri takes its render GPU from `debug { render-drm-device }` rather than the `AQ_DRM_DEVICES` that `stoa-gpu-setup` writes for Hyprland, so on a hybrid laptop set that line by hand.
 
 ## Settings Panel
 
@@ -153,6 +173,7 @@ A family of small, single-purpose `stoa-*` tools — each one exists because rea
   <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
   <tr><td><code>stoa-winapps</code></td><td>Windows apps (KVM/RDP)</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
+  <tr><td><code>stoa-wm</code></td><td>Compositor control (Hyprland / niri)</td><td></td><td></td></tr>
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
   <tr><td><code>stoa-gpu-setup</code></td><td>GPU + CPU drivers</td><td></td><td></td></tr>
   <tr><td><code>stoa-maintain</code></td><td>Backup, restore, cleanup (BRCS)</td><td></td><td></td></tr>
@@ -185,7 +206,7 @@ The chosen ones — not the biggest name in each category, the one that does its
 
 A theme that stops at the terminal isn't a theme, it's a wallpaper. The Stoa palette is carried into every app it can reach — GTK 3/4, Qt (via qt5ct/qt6ct), VS Code, Neovim, Steam, OnlyOffice, Betterbird, Calibre, YACReader — because a system that looks like two different projects stitched together asks something of your attention that a coherent one doesn't. Icons are Colloid-dark, cursors Colloid, fonts EB Garamond for prose and JetBrains Mono for code.
 
-The whole palette is swappable from `Super+S → Theme → Color Palette` — 10 presets or a custom editor over 11 core colors — and it propagates to Kitty, eww, GTK, Hyprland, and Noctalia automatically. Reset to Stoic restores the original, untouched.
+The whole palette is swappable from `Super+S → Theme → Color Palette` — 10 presets or a custom editor over 11 core colors — and it propagates to Kitty, eww, GTK, Hyprland, niri, and Noctalia automatically. Reset to Stoic restores the original, untouched.
 
 ### Under the hood
 
@@ -193,7 +214,7 @@ A few things exist to keep the system honest with itself, without asking you to 
 
 - **Package snapshots** — every pacman transaction is snapshotted first (`~/.config/stoa/pkg-snapshots/`, last 20), so "what changed" is always answerable.
 - **Health check** — `stoa-doctor` runs at login, checks dependencies and services, and notifies you only if something's actually wrong.
-- **Stoa Greeter / Greetd** — two optional boot paths straight into a themed lock prompt, no display manager. `setup/enable-stoa-greeter.sh` (lighter, hyprlock-based) or `setup/enable-stoa-greetd.sh` (heavier, also unlocks your keyring on login). Mutually exclusive; `post-install.sh` offers the first one interactively.
+- **Stoa Greeter / Greetd** — two optional boot paths straight into a themed lock prompt, no display manager. `setup/enable-stoa-greeter.sh` (lighter; hyprlock on Hyprland, Noctalia's lock screen on niri) or `setup/enable-stoa-greetd.sh` (heavier, also unlocks your keyring on login). Mutually exclusive; `post-install.sh` offers the first one interactively.
 - **`stoa-history`** — reads your shell history and prunes what stopped earning its place: leaked secrets, `/tmp` junk, `ls`/`cd` noise, stale duplicates. Nothing is written without `--apply`, and every pass is backed up first (`stoa-history restore` undoes it).
 - **Text prediction** (`Super+Shift+S`) — a small floating popup for word and emoji suggestions as you type, because a keystroke you don't have to make is a keystroke you don't have to make.
 - **DFM** (`Super+G`) — a GTK4 GUI for editing dotfiles in place, with versioned backups, validation, and GitHub sync, so "I broke my config" stops being a reason to dread editing it.
