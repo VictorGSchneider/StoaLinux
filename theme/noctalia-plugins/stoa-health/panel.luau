@@ -31,10 +31,9 @@
 
 local BIN         = "$HOME/.local/bin/stoa-health"
 local SNAP_BIN    = "$HOME/.local/bin/stoa-snapshot"
+local BROWSER_BIN = "$HOME/.local/bin/stoa-snapshots"
 local STATUS_BIN  = "$HOME/.local/bin/stoa-vitals-status"
 local DOCTOR_LOG  = "$HOME/.config/stoa/doctor.log"
-local SNAPSHOT_DIR = "$HOME/.config/stoa/pkg-snapshots"
-local BACKUP_DIR  = "$HOME/.local/state/stoa/backups"
 
 -- ── UI tree node builders ──
 -- A node is { type=..., props={...}, children={...} }; see luau_ui_render
@@ -85,6 +84,13 @@ local state = {
     sysReadable = false,
     sysCount = -1,
     sysLatest = "",
+
+    -- Package snapshots and config backups, from `stoa-snapshots summary`
+    -- (same numbers the snapshot browser shows). Also only while open.
+    pkgLatest = "",
+    pkgChanges = "",
+    cfgLatest = "",
+    cfgFiles = 0,
 }
 
 -- ── Data ──
@@ -147,6 +153,25 @@ local function refreshSystemSnapshots()
     end)
 end
 
+local function refreshSnapshotSummary()
+    noctalia.runAsync(BROWSER_BIN .. " summary", function(result)
+        if result.exitCode == 0 and result.stdout ~= "" then
+            local ok, parsed = pcall(noctalia.json.decode, result.stdout)
+            if ok and type(parsed) == "table" then
+                local p = parsed.packages or {}
+                local c = parsed.configs or {}
+                state.snapshots = p.count or state.snapshots
+                state.pkgLatest = p.latest or ""
+                state.pkgChanges = p.latestChanges or ""
+                state.backups = c.count or state.backups
+                state.cfgLatest = c.latest or ""
+                state.cfgFiles = c.latestFiles or 0
+            end
+        end
+        render()
+    end)
+end
+
 -- ── Actions ──
 
 local function runNotified(label, cmd, onDone)
@@ -170,7 +195,7 @@ local function openLog()
 end
 
 local function snapshotPackages()
-    runNotified("Package snapshot", BIN .. " snapshot", refreshStatus)
+    runNotified("Package snapshot", BIN .. " snapshot", refreshSnapshotSummary)
 end
 
 -- System snapshot: no password once setup granted ALLOW_USERS, otherwise
@@ -194,15 +219,17 @@ local function listSystemSnapshots()
 end
 
 local function backupConfigs()
-    runNotified("Backup configs", BIN .. " backup", refreshStatus)
+    runNotified("Backup configs", BIN .. " backup", refreshSnapshotSummary)
 end
 
-local function browseSnapshots()
-    noctalia.runAsync("xdg-open " .. SNAPSHOT_DIR)
+-- The snapshot browser (scripts/stoa-snapshots): what is in each package
+-- snapshot and config backup, diffs against now, single-file restore.
+local function openPackageSnapshots()
+    noctalia.runAsync(BROWSER_BIN .. " --show packages")
 end
 
-local function browseBackups()
-    noctalia.runAsync("xdg-open " .. BACKUP_DIR)
+local function openConfigBackups()
+    noctalia.runAsync(BROWSER_BIN .. " --show configs")
 end
 
 local function updateAll()
@@ -251,6 +278,7 @@ end
 local function goToSnapshots()
     state.view = "snapshots"
     refreshSystemSnapshots()
+    refreshSnapshotSummary()
     render()
 end
 
@@ -406,23 +434,48 @@ local function systemSnapshotSection()
     return col({ gap = 6 }, children)
 end
 
+-- "18 snapshots · latest today 14:02 · ↑12 +3" — taken automatically
+-- before every pacman transaction, so usually there is one already.
+local function packagesLine()
+    if state.snapshots <= 0 then return "none yet — taken before every pacman update" end
+    local label = "snapshots"
+    if state.snapshots == 1 then label = "snapshot" end
+    local line = string.format("%d %s", state.snapshots, label)
+    if state.pkgLatest ~= "" then line = line .. " · latest " .. state.pkgLatest end
+    if state.pkgChanges ~= "" then line = line .. " · " .. state.pkgChanges end
+    return line
+end
+
+local function configsLine()
+    if state.backups <= 0 then return "no backup yet" end
+    local label = "backups"
+    if state.backups == 1 then label = "backup" end
+    local line = string.format("%d %s", state.backups, label)
+    if state.cfgLatest ~= "" then line = line .. " · latest " .. state.cfgLatest end
+    if state.cfgFiles > 0 then line = line .. string.format(" · %d files", state.cfgFiles) end
+    return line
+end
+
+-- One block per kind: what is there, take a new one, look inside.
+local function snapshotListSection(title, line, takeLabel, onTake, onOpen)
+    return col({ gap = 6 }, {
+        lbl({ text = title, fontWeight = "bold", fontSize = 12 }),
+        lbl({ text = line, color = "on_surface_variant", fontSize = 12 }),
+        rowN({ gap = 6 }, {
+            btn({ text = takeLabel, flexGrow = 1, controlSize = "sm", variant = "outline", onClick = onTake }),
+            btn({ text = "See what's inside", flexGrow = 1, controlSize = "sm", onClick = onOpen }),
+        }),
+    })
+end
+
 local function renderSnapshots()
     return col({ flexGrow = 1, gap = 10, padding = 12 }, {
         header("Snapshots", goToMain),
         systemSnapshotSection(),
         sep({}),
-        lbl({ text = "Packages & configs", fontWeight = "bold", fontSize = 12 }),
-        lbl({
-            text = string.format("%d packages · %d configs", state.snapshots, state.backups),
-            color = "on_surface_variant", fontSize = 12,
-        }),
-        col({ flexGrow = 1, gap = 6 }, {
-            btn({ text = "Snapshot packages now", controlSize = "sm", onClick = snapshotPackages }),
-            btn({ text = "Backup configs now", controlSize = "sm", onClick = backupConfigs }),
-            sep({ opacity = 0.3 }),
-            btn({ text = "Browse snapshots", controlSize = "sm", variant = "outline", onClick = browseSnapshots }),
-            btn({ text = "Browse backups", controlSize = "sm", variant = "outline", onClick = browseBackups }),
-        }),
+        snapshotListSection("Packages", packagesLine(), "Snapshot now", snapshotPackages, openPackageSnapshots),
+        sep({ opacity = 0.3 }),
+        snapshotListSection("Configs", configsLine(), "Back up now", backupConfigs, openConfigBackups),
     })
 end
 

@@ -180,6 +180,7 @@ A family of small, single-purpose `stoa-*` tools — each one exists because rea
   <tr><td><code>stoa-history</code></td><td>Prune shell history (secrets, noise, duplicates)</td><td></td><td></td></tr>
   <tr><td><code>stoa-pkg-snapshot</code></td><td>Package snapshot (pacman hook)</td><td></td><td></td></tr>
   <tr><td><code>stoa-snapshot</code></td><td>System snapshots (Btrfs + Limine)</td><td></td><td></td></tr>
+  <tr><td><code>stoa-snapshots</code></td><td>Snapshot browser (packages + configs)</td><td></td><td></td></tr>
   <tr><td><code>dfm</code></td><td>Dotfile Manager (GTK4 GUI)</td><td></td><td></td></tr>
 </table>
 
@@ -214,6 +215,7 @@ The whole palette is swappable from `Super+S → Theme → Color Palette` — 10
 A few things exist to keep the system honest with itself, without asking you to think about them day to day:
 
 - **Package snapshots** — every pacman transaction is snapshotted first (`~/.config/stoa/pkg-snapshots/`, last 20), so "what changed" is always answerable.
+- **Snapshot browser** — `stoa-snapshots` (Stoa Health → Snapshots → *See what's inside*) shows each package snapshot as what was upgraded, downgraded, installed and removed — since that snapshot or since the one before — and each config backup as its files, marked *same*, *changed* or *gone* compared with today. Open a file to see the diff or the saved copy, and restore just that one (the current file is kept as a *before restore* backup first).
 - **Health check** — `stoa-doctor` runs at login, checks dependencies and services, and notifies you only if something's actually wrong.
 - **Boot snapshots** — `setup/enable-limine-snapshots.sh` lists every Snapper snapshot of `/` in the Limine boot menu ([limine-snapper-sync](https://gitlab.com/Zesko/limine-snapper-sync)), so a bad update is undone by booting the snapshot and running `limine-snapper-restore`. Needs a Btrfs root and Limine (the default bootloader of `arch-install.sh`); a 4 GiB boot partition holds several snapshots. It checks all of that before changing anything, backs up each file it edits as `*.stoa-bak-<date>`, and `post-install.sh` offers it when the machine qualifies. CachyOS ships this preconfigured, and the script notices. Day to day it lives in the **Stoa Health** panel (bar icon → Snapshots → System): *Enable boot snapshots* when it is not set up yet, then *Create system snapshot* (no password once you let your user snapshot), *Restore…* and *List*. The same actions are on the command line as `stoa-snapshot status|create|setup|restore|list`.
 - **Stoa Greeter / Greetd** — two optional boot paths straight into a themed lock prompt, no display manager. `setup/enable-stoa-greeter.sh` (lighter; hyprlock on Hyprland, Noctalia's lock screen on niri) or `setup/enable-stoa-greetd.sh` (heavier, also unlocks your keyring on login). Mutually exclusive; `post-install.sh` offers the first one interactively.

@@ -11,7 +11,6 @@
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 DOCTOR_LOG="${STOA_DIR}/doctor.log"
-SNAPSHOT_DIR="${STOA_DIR}/pkg-snapshots"
 BIN="${HOME}/.local/bin"
 
 # ── Privilege for update/schedule actions ──
@@ -143,8 +142,7 @@ _snapshots_menu() {
         "${sys_entries[@]}" \
         "  Snapshot packages now" \
         "  Backup configs now" \
-        "  Browse snapshots" \
-        "  Browse backups" \
+        "  See what's inside (snapshot browser)" \
         "  Back")
     case "$choice" in
         *"Create system snapshot"*)  "${BIN}/stoa-snapshot" create "stoa: manual snapshot" & disown ;;
@@ -152,8 +150,7 @@ _snapshots_menu() {
         *"Enable boot snapshots"*)   "${BIN}/stoa-snapshot" setup ;;
         *"Snapshot packages"*) _run_bg "Package snapshot" "${BIN}/stoa-pkg-snapshot" ;;
         *"Backup configs"*)    _run_bg "Backup configs" "${BIN}/stoa-maintain --backup" ;;
-        *"Browse snapshots"*)  xdg-open "$SNAPSHOT_DIR" & disown ;;
-        *"Browse backups"*)    xdg-open "$HOME" & disown ;;
+        *"snapshot browser"*)  "${BIN}/stoa-snapshots" & disown ;;
     esac
 }
 

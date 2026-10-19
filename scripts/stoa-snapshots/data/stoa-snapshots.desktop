@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Snapshots
+GenericName=Snapshot Browser
+Comment=See what changed in your packages and config files, and restore single files
+Exec=stoa-snapshots
+Icon=document-open-recent
+Terminal=false
+Categories=Utility;Settings;System;GTK;
+StartupNotify=true
+StartupWMClass=org.stoa.Snapshots
+Keywords=snapshot;backup;restore;packages;pacman;config;
