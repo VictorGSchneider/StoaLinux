@@ -125,14 +125,31 @@ _snapshots_menu() {
     snapshots=$(_jq_or '.snapshots' "$json" "0")
     backups=$(_jq_or '.backups' "$json" "0")
 
+    # System (Btrfs) entries depend on what this machine can do — see
+    # stoa-snapshot status.
+    local sys sys_entries=()
+    sys=$("${BIN}/stoa-snapshot" status 2>/dev/null)
+    if [ "$(_jq_or '.available' "$sys" "false")" = "true" ]; then
+        if [ "$(_jq_or '.configured' "$sys" "false")" = "true" ]; then
+            sys_entries+=("  Create system snapshot" "  Restore system snapshot")
+            [ "$(_jq_or '.bootMenu' "$sys" "false")" = "true" ] || sys_entries+=("  Enable boot snapshots")
+        else
+            sys_entries+=("  Enable boot snapshots")
+        fi
+    fi
+
     local choice
     choice=$(_yad_select "  Snapshots (${snapshots} packages · ${backups} configs)" \
+        "${sys_entries[@]}" \
         "  Snapshot packages now" \
         "  Backup configs now" \
         "  Browse snapshots" \
         "  Browse backups" \
         "  Back")
     case "$choice" in
+        *"Create system snapshot"*)  "${BIN}/stoa-snapshot" create "stoa: manual snapshot" & disown ;;
+        *"Restore system snapshot"*) "${BIN}/stoa-snapshot" restore ;;
+        *"Enable boot snapshots"*)   "${BIN}/stoa-snapshot" setup ;;
         *"Snapshot packages"*) _run_bg "Package snapshot" "${BIN}/stoa-pkg-snapshot" ;;
         *"Backup configs"*)    _run_bg "Backup configs" "${BIN}/stoa-maintain --backup" ;;
         *"Browse snapshots"*)  xdg-open "$SNAPSHOT_DIR" & disown ;;

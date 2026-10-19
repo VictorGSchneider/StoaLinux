@@ -73,7 +73,7 @@ _case "L3 no limine"          1 "Limine is not installed"  FAKE_LIMINE=no
 _case "L4 no FAT32 ESP"       1 "No FAT32 boot partition"  FAKE_BOOT_FS=ext4
 _case "L5 ESP almost full"    1 "needs at least 1 GiB"     FAKE_ESP_FREE=200
 _case "L6 user says no"       0 "Nothing was changed"
-_case "L7 already enabled"    0 "nothing to do"            FAKE_LSS_ENABLED=yes
+_case "L7 already enabled"    0 "Nothing else to do"            FAKE_LSS_ENABLED=yes
 _case "L8 run as root"        1 "Do not run as root"       FAKE_UID=0
 
 [ "$FAILS" -eq 0 ] || { echo "$FAILS check(s) failed"; exit 1; }

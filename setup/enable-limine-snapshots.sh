@@ -64,13 +64,38 @@ echo -e "  ${B}║     STOA LINUX — Limine snapshot boot menu           ║${R
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
+# Let this user list and create snapshots of / without a password, through
+# snapper's own ALLOW_USERS (SYNC_ACL makes /.snapshots readable to them).
+# This is what lets the "Create snapshot" button in the stoa-health panel
+# work without a prompt. Asks first; no-op when already granted.
+_grant_snapper_user() {
+    local user="${USER:-$(id -un)}" cfg=/etc/snapper/configs/root
+    [ -f "$cfg" ] || return 0
+    if grep -qE "^ALLOW_USERS=\"([^\"]* )?${user}( [^\"]*)?\"" "$cfg" 2>/dev/null; then
+        _skip "${user} may already create snapshots without a password."
+        return 0
+    fi
+    read -rp "  Let ${user} create snapshots without a password (snapper ALLOW_USERS)? [Y/n]: " _allow
+    case "${_allow,,}" in
+        n|no) _skip "Not granted — creating a snapshot from the panel will ask for your password." ;;
+        *)
+            local current
+            current=$(sed -nE 's/^ALLOW_USERS="(.*)"/\1/p' "$cfg" 2>/dev/null)
+            sudo snapper -c root set-config "ALLOW_USERS=${current:+$current }${user}" "SYNC_ACL=yes"
+            _ok "${user} may now list and create snapshots without a password"
+            ;;
+    esac
+}
+
 # ══════════════════════════════════════════════════════════════
 # Preflight — nothing below changes the system
 # ══════════════════════════════════════════════════════════════
 
 # Already done (CachyOS ships this preconfigured when you pick Limine + Btrfs).
 if systemctl is-enabled limine-snapper-sync.service &>/dev/null; then
-    _ok "limine-snapper-sync is already set up and enabled — nothing to do."
+    _ok "limine-snapper-sync is already set up and enabled."
+    _grant_snapper_user
+    _ok "Nothing else to do."
     exit 0
 fi
 
@@ -139,7 +164,7 @@ echo ""
 _info "This will:"
 echo -e "  ${S}  • install snapper, btrfs-progs, inotify-tools (pacman)${R}"
 echo -e "  ${S}  • install ${HOOK_PKG} and limine-snapper-sync (AUR)${R}"
-echo -e "  ${S}  • create a Snapper config for / if there is none${R}"
+echo -e "  ${S}  • create a Snapper config for / if there is none (and, if you agree, let you snapshot without a password)${R}"
 echo -e "  ${S}  • write ESP_PATH=${ESP_PATH} to /etc/default/limine and, if missing, /etc/kernel/cmdline${R}"
 [ "$INITRAMFS" = "mkinitcpio" ] && \
 echo -e "  ${S}  • add the btrfs-overlayfs hook to ${MKINITCPIO_CONF}${R}"
@@ -200,6 +225,7 @@ else
     _ok "Snapper config 'root' created"
 fi
 sudo systemctl enable --now snapper-cleanup.timer &>/dev/null || true
+_grant_snapper_user
 
 # ── 3. Kernel command line and ESP path for limine-entry-tool ──
 if [ ! -s /etc/kernel/cmdline ]; then

@@ -11,7 +11,8 @@
 --  same JSON status endpoint the bar widget already polls and dispatches
 --  to the script's non-interactive CLI subcommands (doctor/snapshot/
 --  backup/cleanup/cleanup-dry-run/schedule/update-all/update-system/
---  update-aur/locksmith).
+--  update-aur/locksmith). System (Btrfs) snapshots go through
+--  scripts/stoa-snapshot.sh the same way (status/create/setup/restore/list).
 --
 --  Three views, same split as the old yad tabs: Vitals (main) / Snapshots
 --  / Maintenance.
@@ -29,6 +30,7 @@
 --  keeps the same string-safe style as the drive panel throughout.
 
 local BIN         = "$HOME/.local/bin/stoa-health"
+local SNAP_BIN    = "$HOME/.local/bin/stoa-snapshot"
 local STATUS_BIN  = "$HOME/.local/bin/stoa-vitals-status"
 local DOCTOR_LOG  = "$HOME/.config/stoa/doctor.log"
 local SNAPSHOT_DIR = "$HOME/.config/stoa/pkg-snapshots"
@@ -71,6 +73,18 @@ local state = {
     snapshots = 0,
     backups = 0,
     scheduled = false,
+
+    -- System (Btrfs) snapshots, from `stoa-snapshot status`. Fetched only
+    -- while the Snapshots view is open: snapper is too slow for the bar's
+    -- 30 s poll and the main view does not show it.
+    sysLoaded = false,
+    sysAvailable = false,
+    sysReason = "",
+    sysConfigured = false,
+    sysBootMenu = false,
+    sysReadable = false,
+    sysCount = -1,
+    sysLatest = "",
 }
 
 -- ── Data ──
@@ -114,6 +128,25 @@ local function refreshStatus()
     end)
 end
 
+local function refreshSystemSnapshots()
+    noctalia.runAsync(SNAP_BIN .. " status", function(result)
+        state.sysLoaded = true
+        if result.exitCode == 0 and result.stdout ~= "" then
+            local ok, parsed = pcall(noctalia.json.decode, result.stdout)
+            if ok and type(parsed) == "table" then
+                state.sysAvailable = parsed.available == true
+                state.sysReason = parsed.reason or ""
+                state.sysConfigured = parsed.configured == true
+                state.sysBootMenu = parsed.bootMenu == true
+                state.sysReadable = parsed.readable == true
+                state.sysCount = parsed.count or -1
+                state.sysLatest = parsed.latest or ""
+            end
+        end
+        render()
+    end)
+end
+
 -- ── Actions ──
 
 local function runNotified(label, cmd, onDone)
@@ -138,6 +171,26 @@ end
 
 local function snapshotPackages()
     runNotified("Package snapshot", BIN .. " snapshot", refreshStatus)
+end
+
+-- System snapshot: no password once setup granted ALLOW_USERS, otherwise
+-- stoa-snapshot falls back to the same pkexec prompt as the update buttons.
+local function createSystemSnapshot()
+    runNotified("System snapshot", SNAP_BIN .. " create stoa: snapshot from panel", refreshSystemSnapshots)
+end
+
+-- These three need a terminal (sudo prompt, confirmations, restore's
+-- picker), so they open one and return — no notify wrapper.
+local function setupSystemSnapshots()
+    noctalia.runAsync(SNAP_BIN .. " setup")
+end
+
+local function restoreSystemSnapshot()
+    noctalia.runAsync(SNAP_BIN .. " restore")
+end
+
+local function listSystemSnapshots()
+    noctalia.runAsync(SNAP_BIN .. " list")
 end
 
 local function backupConfigs()
@@ -197,6 +250,7 @@ end
 
 local function goToSnapshots()
     state.view = "snapshots"
+    refreshSystemSnapshots()
     render()
 end
 
@@ -311,14 +365,57 @@ local function renderMain()
     })
 end
 
+-- What the system section says and offers, by how far this machine is
+-- along: cannot → not set up → set up (boot menu on or off).
+local function systemSnapshotSection()
+    local children = {
+        lbl({ text = "System (Btrfs)", fontWeight = "bold", fontSize = 12 }),
+    }
+    local function add(n) children[#children + 1] = n end
+
+    if not state.sysLoaded then
+        add(lbl({ text = "…", color = "on_surface_variant", fontSize = 12 }))
+    elseif not state.sysAvailable then
+        add(lbl({ text = "Unavailable: " .. state.sysReason, color = "on_surface_variant", fontSize = 12 }))
+    elseif not state.sysConfigured then
+        add(lbl({ text = "Not set up — boot into any snapshot from Limine", color = "on_surface_variant", fontSize = 12 }))
+        add(btn({ text = "Enable boot snapshots", controlSize = "sm", onClick = setupSystemSnapshots }))
+    else
+        local summary
+        if state.sysReadable then
+            summary = string.format("%d snapshots", state.sysCount)
+            if state.sysLatest ~= "" then summary = summary .. " · latest " .. state.sysLatest end
+        else
+            summary = "Set up (list needs your password)"
+        end
+        local menuText, menuColor = "boot menu on", "secondary"
+        if not state.sysBootMenu then menuText, menuColor = "boot menu off", "tertiary" end
+        add(rowN({ align = "center", gap = 8 }, {
+            lbl({ text = summary, color = "on_surface_variant", fontSize = 12, flexGrow = 1 }),
+            lbl({ text = menuText, color = menuColor, fontSize = 12 }),
+        }))
+        add(btn({ text = "Create system snapshot", controlSize = "sm", onClick = createSystemSnapshot }))
+        add(rowN({ gap = 6 }, {
+            btn({ text = "Restore…", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = restoreSystemSnapshot }),
+            btn({ text = "List", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = listSystemSnapshots }),
+        }))
+        if not state.sysBootMenu then
+            add(btn({ text = "Enable boot menu", controlSize = "sm", variant = "outline", onClick = setupSystemSnapshots }))
+        end
+    end
+    return col({ gap = 6 }, children)
+end
+
 local function renderSnapshots()
     return col({ flexGrow = 1, gap = 10, padding = 12 }, {
         header("Snapshots", goToMain),
+        systemSnapshotSection(),
+        sep({}),
+        lbl({ text = "Packages & configs", fontWeight = "bold", fontSize = 12 }),
         lbl({
             text = string.format("%d packages · %d configs", state.snapshots, state.backups),
             color = "on_surface_variant", fontSize = 12,
         }),
-        sep({}),
         col({ flexGrow = 1, gap = 6 }, {
             btn({ text = "Snapshot packages now", controlSize = "sm", onClick = snapshotPackages }),
             btn({ text = "Backup configs now", controlSize = "sm", onClick = backupConfigs }),
