@@ -139,20 +139,44 @@ if [ "${1:-}" = "--disable" ]; then
     exit 0
 fi
 
+# Which compositor tty1 starts (the profile hook asks ~/.config/stoa/wm too).
+# shellcheck source=../scripts/lib/stoa-wm.sh
+[ -r "${STOA_DIR}/scripts/lib/stoa-wm.sh" ] && source "${STOA_DIR}/scripts/lib/stoa-wm.sh"
+SESSION_WM="$(stoa_wm_name 2>/dev/null || echo hyprland)"
+
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     Enabling Stoa Greeter                           ║${R}"
+if [ "$SESSION_WM" = "niri" ]; then
+echo -e "  ${B}║     autologin → niri                                 ║${R}"
+else
 echo -e "  ${B}║     autologin → Hyprland → hyprlock                  ║${R}"
+fi
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
-if ! command -v Hyprland >/dev/null 2>&1; then
-    echo -e "  ${T}[!] Hyprland not found in PATH. Install it before enabling the greeter.${R}"
-    exit 1
-fi
-if ! command -v hyprlock >/dev/null 2>&1; then
-    echo -e "  ${T}[!] hyprlock not found in PATH. Install it before enabling the greeter.${R}"
-    exit 1
+if [ "$SESSION_WM" = "niri" ]; then
+    if ! command -v niri-session >/dev/null 2>&1; then
+        echo -e "  ${T}[!] niri-session not found in PATH. Install niri before enabling the greeter.${R}"
+        exit 1
+    fi
+    # Hyprland locks itself first (hyprlock is its first autostart), so
+    # there the lock page is the login. niri has no such step: this boots
+    # straight into an unlocked desktop.
+    echo -e "  ${T}[!] On niri this logs in with NO password — nothing locks the session at boot.${R}"
+    echo -e "  ${S}    For a password prompt use the login screen instead:${R}"
+    echo -e "  ${S}    ${F}bash ${STOA_DIR}/setup/enable-stoa-greetd.sh${R}"
+    read -rp "  Enable passwordless autologin anyway? [y/N]: " _go
+    case "${_go,,}" in y|yes) ;; *) echo -e "  ${S}[~] Nothing changed.${R}"; exit 0 ;; esac
+else
+    if ! command -v Hyprland >/dev/null 2>&1; then
+        echo -e "  ${T}[!] Hyprland not found in PATH. Install it before enabling the greeter.${R}"
+        exit 1
+    fi
+    if ! command -v hyprlock >/dev/null 2>&1; then
+        echo -e "  ${T}[!] hyprlock not found in PATH. Install it before enabling the greeter.${R}"
+        exit 1
+    fi
 fi
 
 _enable_autologin
@@ -162,8 +186,12 @@ _seed_profile "$HOME/.bash_profile"
 echo ""
 echo -e "  ${F}Done. On next boot:${R}"
 echo -e "    ${S}1. tty1 logs in as ${TARGET_USER} without prompting${R}"
+if [ "$SESSION_WM" = "niri" ]; then
+echo -e "    ${S}2. the login shell starts niri (niri-session)${R}"
+else
 echo -e "    ${S}2. the login shell exec's Hyprland${R}"
 echo -e "    ${S}3. hyprlock renders immediately — type your password to enter${R}"
+fi
 echo ""
 echo -e "  ${S}To undo: ${F}bash ${STOA_DIR}/setup/enable-stoa-greeter.sh --disable${R}"
 echo ""

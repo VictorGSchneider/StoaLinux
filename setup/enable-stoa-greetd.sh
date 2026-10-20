@@ -5,14 +5,16 @@
 # ║                                                              ║
 # ║  Replaces the hyprlock-as-greeter flow with a real PAM       ║
 # ║  login via greetd. Greeter is picked automatically:          ║
-# ║    noctalia-greeter → matches the Noctalia v5 shell          ║
-# ║    tuigreet         → TUI fallback, Stoa bronze theme        ║
+# ║    noctalia-greeter → matches the Noctalia v5 shell (default;║
+# ║                       installed from the AUR via yay/paru)   ║
+# ║    tuigreet         → TUI fallback when no AUR helper exists ║
 # ║  Force one with --greeter=noctalia | --greeter=tuigreet.     ║
 # ║  Side effect: pam_gnome_keyring runs inside the PAM session, ║
 # ║  so the keyring (browser passwords, etc.) destrava sozinho.  ║
 # ║                                                              ║
 # ║  Wires:                                                      ║
-# ║    1. /etc/greetd/config.toml — greeter + Hyprland session   ║
+# ║    1. /etc/greetd/config.toml — greeter + session (Hyprland  ║
+# ║       or niri, whichever ~/.config/stoa/wm / stoa-wm picks)  ║
 # ║    2. /etc/pam.d/greetd — pam_gnome_keyring auth + session   ║
 # ║    3. greetd.service enabled                                 ║
 # ║    4. Stoa autologin drop-in removed (if present)            ║
@@ -21,12 +23,21 @@
 # ║    6. greeter.toml [keyboard] layout/variant/numlock,        ║
 # ║       mirroring the session's own input settings.            ║
 # ║                                                              ║
+# ║  Another display manager (SDDM, GDM, ly…) is disabled first, ║
+# ║  after asking — systemd allows only one.                     ║
+# ║                                                              ║
 # ║  Idempotent. Re-run safely. Pass --disable to undo.          ║
+# ║  --wm=hyprland|niri forces the session.                      ║
 # ╚══════════════════════════════════════════════════════════════╝
 
 set -e
 
 STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Which compositor the greeter starts: --wm=, else stoa-wm's own choice
+# (~/.config/stoa/wm, then whatever is installed).
+# shellcheck source=../scripts/lib/stoa-wm.sh
+[ -r "${STOA_DIR}/scripts/lib/stoa-wm.sh" ] && source "${STOA_DIR}/scripts/lib/stoa-wm.sh"
 
 # Colors
 B='\033[38;2;196;154;92m'
@@ -63,6 +74,7 @@ GREETD_GPU_DROPIN="${GREETD_DROPIN_DIR}/10-stoa-gpu.conf"
 GREETER_STATE_DIR="/var/lib/noctalia-greeter"
 GREETER_TOML="${GREETER_STATE_DIR}/greeter.toml"
 HYPR_CONF="${HOME}/.config/hypr/hyprland.lua"
+NIRI_CONF="${HOME}/.config/niri/config.kdl"
 KEYRING_DEFAULT_FILE="${HOME}/.local/share/keyrings/default"
 NOCTALIA_CLIPBOARD_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/clipboard"
 PROFILE_MARK="# StoaLinux: autostart Hyprland on tty1"
@@ -129,7 +141,12 @@ _detect_greeter() {
         echo "$GREETER"
         return 0
     fi
-    if command -v noctalia-greeter-session >/dev/null 2>&1; then
+    # Noctalia's own greeter by default — it matches the shell (palette,
+    # wallpaper, font via greeter-sync). It is in the AUR, so it is only a
+    # sane default when it is installed or yay/paru can install it; with
+    # neither, fall back to tuigreet rather than stopping.
+    if command -v noctalia-greeter-session >/dev/null 2>&1 \
+        || command -v yay >/dev/null 2>&1 || command -v paru >/dev/null 2>&1; then
         echo noctalia
     else
         echo tuigreet
@@ -172,7 +189,14 @@ _install_pkgs() {
 
 _write_greetd_conf() {
     local greeter="$1"
-    local command
+    local command session_name session_cmd
+
+    # --session takes the desktop entry's Name; tuigreet's --cmd the
+    # command. niri ships niri.desktop as Name=Niri, Exec=niri-session.
+    case "$SESSION_WM" in
+        niri) session_name="Niri";     session_cmd="niri-session" ;;
+        *)    session_name="Hyprland"; session_cmd="Hyprland" ;;
+    esac
 
     if [ "$greeter" = "noctalia" ]; then
         # noctalia-greeter-session starts the bundled wlroots compositor and
@@ -182,16 +206,16 @@ _write_greetd_conf() {
         # `noctalia-greeter sessions` lists the valid names.
         local bin
         bin="$(command -v noctalia-greeter-session)"
-        command="${bin} -- --session Hyprland"
+        command="${bin} -- --session ${session_name}"
     else
         local theme="border=${BRONZE};text=${MARBLE};prompt=${BRONZE};time=${GOLD};container=${BG};greet=${MARBLE};input=${MARBLE};action=${GOLD};button=${BRONZE}"
-        command="tuigreet --time --remember --remember-session --asterisks --greeting 'Memento Mori.' --cmd Hyprland --theme '${theme}'"
+        command="tuigreet --time --remember --remember-session --asterisks --greeting 'Memento Mori.' --cmd ${session_cmd} --theme '${theme}'"
     fi
 
     sudo mkdir -p "$(dirname "$GREETD_CONF")"
     sudo tee "$GREETD_CONF" >/dev/null <<EOF
 # Managed by StoaLinux — setup/enable-stoa-greetd.sh
-# Greeter: ${greeter}
+# Greeter: ${greeter} · session: ${SESSION_WM}
 # Reverting to autologin: run setup/enable-stoa-greetd.sh --disable
 
 [terminal]
@@ -404,6 +428,28 @@ _unwrite_greetd_gpu_dropin() {
 # other byte alone, unlike the appearance keys we deliberately never pin
 # here.
 
+# niri's config.kdl: `layout "br"` / `variant "abnt2"` inside xkb { }, and
+# a bare `numlock` line inside keyboard { } (present = on).
+_niri_kb_string() {
+    local key="$1" f v
+    for f in "$NIRI_CONF" "${STOA_DIR}/config/niri/config.kdl"; do
+        [ -f "$f" ] || continue
+        v="$(sed -n "s/^[[:space:]]*${key}[[:space:]]\{1,\}\"\([^\"]*\)\".*/\1/p" "$f" | head -1)"
+        [ -n "$v" ] && { echo "$v"; return 0; }
+    done
+    echo ""
+}
+
+_niri_numlock_pref() {
+    local f
+    for f in "$NIRI_CONF" "${STOA_DIR}/config/niri/config.kdl"; do
+        [ -f "$f" ] || continue
+        if grep -qE '^[[:space:]]*numlock[[:space:]]*$' "$f"; then echo true; else echo false; fi
+        return 0
+    done
+    echo true
+}
+
 # Bare-boolean lua value (numlock_by_default = true).
 _hypr_numlock_pref() {
     local f v
@@ -467,9 +513,15 @@ _write_greeter_keyboard() {
     command -v noctalia-greeter >/dev/null 2>&1 || return 0
 
     local numlock layout variant body tmp existed=0
-    numlock="$(_hypr_numlock_pref)"
-    layout="$(_hypr_kb_string kb_layout)"
-    variant="$(_hypr_kb_string kb_variant)"
+    if [ "$SESSION_WM" = "niri" ]; then
+        numlock="$(_niri_numlock_pref)"
+        layout="$(_niri_kb_string layout)"
+        variant="$(_niri_kb_string variant)"
+    else
+        numlock="$(_hypr_numlock_pref)"
+        layout="$(_hypr_kb_string kb_layout)"
+        variant="$(_hypr_kb_string kb_variant)"
+    fi
 
     if sudo test -f "$GREETER_TOML"; then
         existed=1
@@ -510,7 +562,7 @@ _write_greeter_keyboard() {
     if [ -n "$layout" ]; then
         echo -e "  ${O}[✓] Greeter keyboard: layout=${layout}${variant:+ variant=${variant}} numlock=${numlock}.${R}"
     else
-        echo -e "  ${O}[✓] Greeter Num Lock set to ${numlock} (no kb_layout in hyprland.lua).${R}"
+        echo -e "  ${O}[✓] Greeter Num Lock set to ${numlock} (no keyboard layout in the ${SESSION_WM} config).${R}"
     fi
 }
 
@@ -560,6 +612,11 @@ for arg in "$@"; do
     case "$arg" in
         --disable) DISABLE=1 ;;
         --greeter=noctalia|--greeter=tuigreet) GREETER="${arg#--greeter=}" ;;
+        --wm=hyprland|--wm=niri) SESSION_WM="${arg#--wm=}" ;;
+        --wm=*)
+            echo -e "  ${T}[!] Unknown compositor: ${arg#--wm=} (use hyprland or niri)${R}" >&2
+            exit 1
+            ;;
         --greeter=*)
             echo -e "  ${T}[!] Unknown greeter: ${arg#--greeter=} (use noctalia or tuigreet)${R}" >&2
             exit 1
@@ -588,16 +645,47 @@ if [ "$DISABLE" -eq 1 ]; then
     exit 0
 fi
 
+[ -n "${SESSION_WM:-}" ] || SESSION_WM="$(stoa_wm_name 2>/dev/null || echo hyprland)"
+case "$SESSION_WM" in
+    niri) SESSION_LABEL="niri";     SESSION_BIN="niri-session" ;;
+    *)    SESSION_WM="hyprland"; SESSION_LABEL="Hyprland"; SESSION_BIN="Hyprland" ;;
+esac
+
 echo ""
 echo -e "  ${B}╔══════════════════════════════════════════════════════╗${R}"
 echo -e "  ${B}║     Enabling Stoa Greetd                            ║${R}"
-echo -e "  ${B}║     greetd → greeter → PAM → Hyprland                ║${R}"
+printf "  ${B}║     %-49s║${R}\n" "greetd → greeter → PAM → ${SESSION_LABEL}"
 echo -e "  ${B}╚══════════════════════════════════════════════════════╝${R}"
 echo ""
 
-if ! command -v Hyprland >/dev/null 2>&1; then
-    echo -e "  ${T}[!] Hyprland not found in PATH. Install it before enabling greetd.${R}"
+if ! command -v "$SESSION_BIN" >/dev/null 2>&1; then
+    echo -e "  ${T}[!] ${SESSION_BIN} not found in PATH. Install ${SESSION_LABEL} before enabling greetd,${R}"
+    echo -e "  ${T}    or pick the other compositor with --wm=hyprland / --wm=niri.${R}"
     exit 1
+fi
+echo -e "  ${F}Session:${R} ${SESSION_LABEL}"
+
+# systemd allows one display manager: display-manager.service is an alias
+# owned by whichever is enabled, and `systemctl enable greetd` fails while
+# another one holds it. Ask before taking it over.
+_current_dm() {
+    local link
+    link="$(readlink /etc/systemd/system/display-manager.service 2>/dev/null)" || return 1
+    basename "$link"
+}
+if _dm="$(_current_dm)" && [ "$_dm" != "greetd.service" ]; then
+    echo -e "  ${T}[!] ${_dm} is the current display manager.${R}"
+    read -rp "  Disable it so greetd can take over the login screen? [y/N]: " _dm_ok
+    case "${_dm_ok,,}" in
+        y|yes)
+            sudo systemctl disable "$_dm"
+            echo -e "  ${O}[✓] ${_dm} disabled (re-enable with: sudo systemctl enable ${_dm}).${R}"
+            ;;
+        *)
+            echo -e "  ${S}[~] Left ${_dm} alone — nothing was changed.${R}"
+            exit 0
+            ;;
+    esac
 fi
 
 GREETER_CHOICE="$(_detect_greeter)"
@@ -628,7 +716,7 @@ echo -e "  ${F}Done. On next boot:${R}"
 echo -e "    ${S}1. greetd renders ${GREETER_CHOICE} on tty1${R}"
 echo -e "    ${S}2. you type your password — PAM authenticates the session${R}"
 echo -e "    ${S}3. pam_gnome_keyring unlocks the keyring with that password${R}"
-echo -e "    ${S}4. Hyprland starts; browsers stop asking for the keyring${R}"
+echo -e "    ${S}4. ${SESSION_LABEL} starts; browsers stop asking for the keyring${R}"
 echo ""
 echo -e "  ${S}To undo: ${F}bash ${STOA_DIR}/setup/enable-stoa-greetd.sh --disable${R}"
 echo ""

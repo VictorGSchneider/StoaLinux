@@ -452,17 +452,42 @@ case "$SHELL_CHOICE" in
         ;;
 esac
 
-# ── Stoa Greeter (autologin → compositor → lock screen) ──
+# ── Login screen ──
+# Two ways in, mutually exclusive (both own tty1):
+#   greetd  — a real login screen (noctalia-greeter or tuigreet): password,
+#             then the session; PAM also unlocks the keyring. Works for
+#             Hyprland and niri, and is the only one that asks for a
+#             password on niri.
+#   tty1    — autologin straight into the compositor. On Hyprland,
+#             hyprlock runs first and is the password prompt; niri has no
+#             equivalent, so there it is autologin with no password.
+# Without either, the machine boots to a text login and you start the
+# compositor by hand.
 echo ""
-echo -e "  ${F}Stoa Greeter — boot straight into the lock screen as the login screen?${R}"
-echo -e "  ${S}  Configures tty1 autologin and starts your compositor from .zprofile/.bash_profile.${R}"
-echo -e "  ${S}  Hyprland: hyprlock runs as the first exec-once, so the password prompt is the greeter.${R}"
-echo -e "  ${S}  niri:     autologin goes through niri-session; Noctalia's lock screen asks for the password.${R}"
-read -rp "  Enable now? [y/N]: " GREETER_CHOICE
-if [ "${GREETER_CHOICE,,}" = "y" ] || [ "${GREETER_CHOICE,,}" = "yes" ]; then
-    bash "${STOA_DIR}/setup/enable-stoa-greeter.sh"
+if systemctl is-enabled greetd.service &>/dev/null; then
+    echo -e "  ${S}[~] Login screen (greetd) already enabled.${R}"
 else
-    echo -e "  ${S}[~] Skipped. Enable later with: bash ${STOA_DIR}/setup/enable-stoa-greeter.sh${R}"
+    echo -e "  ${F}Login screen — how should this machine start?${R}"
+    echo -e "  ${S}  1) Login screen: type your password, then the desktop starts (recommended)${R}"
+    echo -e "  ${S}  2) Autologin on tty1 straight into the desktop${R}"
+    if [ "$WM_CHOICE" = "niri" ]; then
+        echo -e "  ${S}     (on niri this means no password at all)${R}"
+    fi
+    echo -e "  ${S}  3) Neither — text login, start the desktop yourself${R}"
+    read -rp "  Choice [1/2/3] (1): " LOGIN_CHOICE
+    case "${LOGIN_CHOICE:-1}" in
+        1)
+            bash "${STOA_DIR}/setup/enable-stoa-greetd.sh" || \
+                echo -e "  ${T}[!] Login screen setup stopped — see above. Re-run: bash ${STOA_DIR}/setup/enable-stoa-greetd.sh${R}"
+            ;;
+        2)
+            bash "${STOA_DIR}/setup/enable-stoa-greeter.sh"
+            ;;
+        *)
+            echo -e "  ${S}[~] Skipped. Later: bash ${STOA_DIR}/setup/enable-stoa-greetd.sh (login screen)${R}"
+            echo -e "  ${S}             or bash ${STOA_DIR}/setup/enable-stoa-greeter.sh (autologin)${R}"
+            ;;
+    esac
 fi
 
 # ── Boot snapshots (Limine + Btrfs + Snapper) ──
