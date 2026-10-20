@@ -11,7 +11,10 @@
 // Differences from the Hyprland session worth knowing:
 //   * Windows live in columns on an endless horizontal strip, so
 //     Super+H/L move between columns and Super+J/K between windows
-//     stacked in one column. Super+R cycles the column width.
+//     stacked in one column. Super+R cycles the column width,
+//     Super+Shift+R the window height, Super+Ctrl+H/J/K/L nudge both.
+//   * The mouse side buttons scroll the strip one column at a time
+//     (Back = left, Forward = right); hold Super to drag the column along.
 //   * There is no blur and no special "minimize" workspace.
 //   * Alt+Tab returns to the previous window; Super+Tab opens the overview.
 //   * Workspaces are dynamic and vertical; Super+1–0 jump by index.
@@ -69,14 +72,29 @@ cursor {
 //   bronze #c49a5c  gold #d4a84b  olive #8a9a6c  terracotta #b36b5a  stone #6e6a62
 layout {
     gaps 6
-    center-focused-column "never"
+    // Scroll only as far as needed to show the focused column, but centre
+    // it when it would not fit beside its neighbour anyway — wide windows
+    // land in the middle instead of hugging a screen edge.
+    center-focused-column "on-overflow"
+    // A lone window on a workspace sits in the middle, not at the left edge.
+    always-center-single-column
 
+    // Super+R cycles these, Super+Shift+R the heights below.
     preset-column-widths {
+        proportion 0.25
         proportion 0.33333
         proportion 0.5
         proportion 0.66667
+        proportion 0.75
     }
     default-column-width { proportion 0.5; }
+
+    preset-window-heights {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        proportion 1.0
+    }
 
     // The border replaces the focus ring so the bronze frame hugs the window.
     focus-ring { off; }
@@ -209,11 +227,49 @@ binds {
     Mod+Shift+K { move-window-up; }
     Mod+Shift+L { move-column-right; }
 
-    // ── Column sizing (niri has no resize mode) ──
+    // ── Mouse: side buttons scroll the strip ──
+    // Back/Forward step one column left/right; with Super held they carry
+    // the focused column along. Bare side buttons belong to niri now, so
+    // browsers lose them as history back/forward — use Alt+Left/Right
+    // there, or prefix these two with Mod+ to give them back.
+    MouseBack    { focus-column-left; }
+    MouseForward { focus-column-right; }
+    Mod+MouseBack    { move-column-left; }
+    Mod+MouseForward { move-column-right; }
+
+    // Wheel: Super scrolls workspaces (below), Super+Shift scrolls columns,
+    // Super+Ctrl drags the focused column. Tilt wheels scroll columns too.
+    Mod+Shift+WheelScrollDown cooldown-ms=100 { focus-column-right; }
+    Mod+Shift+WheelScrollUp   cooldown-ms=100 { focus-column-left; }
+    Mod+Ctrl+WheelScrollDown  cooldown-ms=150 { move-column-right; }
+    Mod+Ctrl+WheelScrollUp    cooldown-ms=150 { move-column-left; }
+    Mod+WheelScrollRight { focus-column-right; }
+    Mod+WheelScrollLeft  { focus-column-left; }
+
+    // ── Sizing (niri has no resize mode; Super+RightDrag resizes too) ──
+    // Width belongs to the column, height to each window inside it.
     Mod+R { switch-preset-column-width; }
+    Mod+Shift+R { switch-preset-window-height; }
     Mod+Minus { set-column-width "-10%"; }
     Mod+Equal { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Equal { set-window-height "+10%"; }
+    // The Hyprland resize-mode keys, held with Ctrl instead of a submap.
+    Mod+Ctrl+H { set-column-width "-5%"; }
+    Mod+Ctrl+L { set-column-width "+5%"; }
+    Mod+Ctrl+J { set-window-height "+5%"; }
+    Mod+Ctrl+K { set-window-height "-5%"; }
     Mod+Ctrl+F { maximize-column; }
+    Mod+X { expand-column-to-available-width; }
+    Mod+Ctrl+C { center-column; }
+    Mod+Shift+F { reset-window-height; }
+
+    // ── Columns: stack windows, or split them back out ──
+    Mod+BracketLeft  { consume-or-expel-window-left; }
+    Mod+BracketRight { consume-or-expel-window-right; }
+    Mod+Comma  { consume-window-into-column; }
+    Mod+Period { expel-window-from-column; }
+    Mod+T { toggle-column-tabbed-display; }
 
     // ── Workspaces (I to X) ──
     Mod+1 { focus-workspace 1; }

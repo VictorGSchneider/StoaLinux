@@ -93,7 +93,30 @@ if declare -F stoa_wm_is >/dev/null; then
   Super+Tab            Overview"}
         TOOLTIP=${TOOLTIP//"  Super+Shift+H/J/K/L  Move window"/"  Super+Shift+H/L      Move column left / right
   Super+Shift+J/K      Move window down / up"}
-        TOOLTIP=${TOOLTIP//"  Super+R              Resize mode (HJKL, Esc to exit)"/"  Super+R              Cycle column width"}
+        TOOLTIP=${TOOLTIP//"  Super+R              Resize mode (HJKL, Esc to exit)"/"  Super+R              Cycle column width
+  Super+Shift+R        Cycle window height
+  Super+Ctrl+H/L       Narrower / wider column
+  Super+Ctrl+J/K       Taller / shorter window
+  Super+Minus          Column width -10%
+  Super+Equal          Column width +10%
+  Super+Shift+Minus    Window height -10%
+  Super+Shift+Equal    Window height +10%
+  Super+Shift+F        Reset window height
+  Super+Ctrl+F         Maximize column
+  Super+X              Fill the free width
+  Super+Ctrl+C         Center column
+  Super+Comma          Pull window into column
+  Super+Period         Push window out of column
+  Super+T              Tabbed column"}
+        TOOLTIP=${TOOLTIP//"  Super+RightDrag      Resize window"/"  Super+RightDrag      Resize window
+  MouseBack            Scroll to the column on the left
+  MouseForward         Scroll to the column on the right
+  Super+MouseBack      Carry the column left
+  Super+MouseForward   Carry the column right
+  Super+Shift+WheelScrollUp    Scroll columns left
+  Super+Shift+WheelScrollDown  Scroll columns right
+  Super+Ctrl+WheelScrollUp     Move column left
+  Super+Ctrl+WheelScrollDown   Move column right"}
     fi
 fi
 

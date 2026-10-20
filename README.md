@@ -131,7 +131,8 @@ Same keys, same palette, same tools. What differs is the layout model:
 | Layout | dwindle tree | windows in columns on an endless strip |
 | `Super+H/L`, `Super+J/K` | focus left/right/down/up | focus column left/right, window down/up |
 | `Super+Shift+HJKL` | move window | move column (H/L) or window within it (J/K) |
-| `Super+R` | resize mode (HJKL) | cycle the column width |
+| `Super+R` | resize mode (HJKL) | cycle the column width; `Super+Shift+R` the window height; `Super+Ctrl+HJKL` nudge both |
+| Mouse side buttons | app default (browser back/forward) | scroll the strip one column left/right |
 | `Alt+Tab` | visual switcher (hyprswitch) | previous window; `Super+Tab` opens the overview |
 | Blur, minimize | yes | no (niri has neither) |
 | Mirror a monitor (`Super+P`) | built in | needs `wl-mirror` (installed by `post-install.sh`) |
