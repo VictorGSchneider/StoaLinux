@@ -1,108 +1,42 @@
-config_version = 14
+config_version = 15
 
-[accessibility]
-ui_scale = 1.2000000104308128
+[backdrop]
+enabled = true
 
 [bar.default]
-background_opacity = 0.0
-capsule = true
-capsule_fill = "on_primary"
-center = [ "group:g3" ]
-contact_shadow = true
-end = [ "tray", "clipboard", "Stoa-drive", "group:g2", "keybinds" ]
-font_family = "EB Garamond Medium"
-layer = "overlay"
-margin_edge = 5
-margin_ends = 20
-padding = 15
-radius = 80
-scale = 1.1500000096857548
-start = [ "group:g4" ]
-thickness = 40
-widget_spacing = 8
+end = [
+    "media",
+    "tray",
+    "notifications",
+    "clipboard",
+    "stoa/drive:pill",
+    "sysmon",
+    "network",
+    "bluetooth",
+    "volume",
+    "brightness",
+    "battery",
+    "control-center",
+    "session"
+]
+start = [ "launcher", "workspaces", "taskbar", "stoa/health:pill" ]
 
-    [bar.default.dead_zone.actions]
-    scroll_down = "volume-down"
-    scroll_up = "volume-up"
-
-    [[bar.default.capsule_group]]
-    accordion = false
-    accordion_direction = "end"
-    enabled = true
-    fill = "on_primary"
-    id = "g2"
-    members = [ "network", "bluetooth", "volume", "brightness", "battery", "session" ]
-    opacity = 0.89999997615814209
-    padding = 10.0
-    widget_spacing = 15
-
-    [[bar.default.capsule_group]]
-    accordion = false
-    accordion_direction = "end"
-    enabled = true
-    fill = "on_primary"
-    id = "g3"
-    members = [ "launcher", "clock", "notifications", "workspaces" ]
-    opacity = 0.89999997615814209
-    padding = 12.0
-    widget_spacing = 20
-
-    [[bar.default.capsule_group]]
-    accordion = false
-    accordion_direction = "end"
-    enabled = true
-    fill = "on_primary"
-    id = "g4"
-    members = [ "pill", "sysmon", "widget" ]
-    opacity = 0.89999997615814209
-    padding = 10.0
-    widget_spacing = 15
+[brightness]
+sync_all_monitors = true
 
 [calendar]
+dedupe_events = true
 enabled = true
-event_time_format = "%H:%M:%S"
 
-[control_center]
-sidebar_section = "none"
-width = 600
-
-    [control_center.calendar]
-    show_week_numbers = true
-
-[desktop_widgets]
-schema_version = 2
-widget_order = []
-
-    [desktop_widgets.grid]
-    cell_size = 16
-    major_interval = 4
-    visible = true
-
-    [desktop_widgets.widget]
+[control_center.calendar]
+show_week_numbers = true
 
 [dock]
-background_opacity = 0.0
-cross_axis_padding = 12
 enabled = true
-icon_size = 54
-item_spacing = 0
-launcher_icon = "columns"
-launcher_position = "start"
-main_axis_padding = 12
-margin_edge = 20
-pinned = [ "brave-browser" ]
-radius = 80
+layer = "overlay"
 reserve_space = false
-shadow = false
 show_dots = true
 smart_auto_hide = true
-
-[hooks]
-logging_out = "~/.local/bin/stoa-doctor"
-rebooting = "~/.local/bin/stoa-doctor"
-session_locked = "~/.local/bin/stoa-doctor"
-session_unlocked = "~/.local/bin/stoa-doctor"
-shutting_down = "~/.local/bin/stoa-doctor"
 
 [location]
 auto_locate = true
@@ -110,24 +44,18 @@ auto_locate = true
 [lockscreen_widgets]
 enabled = true
 schema_version = 2
-widget_order = [
-    "lockscreen-login-box@eDP-1",
-    "lockscreen-widget-0000000000000002",
-    "lockscreen-widget-0000000000000003",
-    "lockscreen-widget-0000000000000004",
-    "lockscreen-widget-0000000000000005"
-]
+widget_order = [ "lockscreen-login-box@eDP-1" ]
 
     [lockscreen_widgets.grid]
-    cell_size = 8
+    cell_size = 16
     major_interval = 4
     visible = true
 
     [lockscreen_widgets.widget."lockscreen-login-box@eDP-1"]
     box_height = 196.0
-    box_width = 752.0
-    cx = 920.0
-    cy = 884.0
+    box_width = 810.0
+    cx = 960.0
+    cy = 898.0
     output = "eDP-1"
     placement_height = 1080.0
     placement_width = 1920.0
@@ -135,259 +63,54 @@ widget_order = [
     type = "login_box"
 
         [lockscreen_widgets.widget."lockscreen-login-box@eDP-1".settings]
-        background_color = "on_primary"
-        background_opacity = 0.5
-        background_radius = 10.0
-        center_password_text = true
-        input_opacity = 0.59999999999999998
-        input_radius = 32.0
+        background_color = "surface_variant"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
         layout = "regular"
         show_caps_lock = true
         show_keyboard_layout = true
         show_login_button = true
         show_media = true
+        show_password_reveal = true
         show_session_buttons = true
         show_unlock_hint = true
         show_weather = true
 
-    [lockscreen_widgets.widget.lockscreen-widget-0000000000000002]
-    box_height = 304.0
-    box_width = 440.0
-    cx = 764.0
-    cy = 556.0
-    output = "eDP-1"
-    placement_height = 1080.0
-    placement_width = 1920.0
-    rotation = 0.0
-    type = "calendar"
-
-        [lockscreen_widgets.widget.lockscreen-widget-0000000000000002.settings]
-        background_opacity = 0.5
-        background_padding = 18
-        background_radius = 15
-        show_week_numbers = true
-
-    [lockscreen_widgets.widget.lockscreen-widget-0000000000000003]
-    box_height = 176.0
-    box_width = 440.0
-    cx = 764.0
-    cy = 292.0
-    output = "eDP-1"
-    placement_height = 1080.0
-    placement_width = 1920.0
-    rotation = 0.0
-    type = "clock"
-
-        [lockscreen_widgets.widget.lockscreen-widget-0000000000000003.settings]
-        background = true
-        background_color = "on_primary"
-        background_opacity = 0.5
-        background_padding = 18
-        background_radius = 12
-        center_text = true
-        clock_style = "digital"
-        format = "{:%H:%M:%S}"
-        shadow = true
-
-    [lockscreen_widgets.widget.lockscreen-widget-0000000000000004]
-    box_height = 176.0
-    box_width = 256.0
-    cx = 1152.0
-    cy = 292.0
-    output = "eDP-1"
-    placement_height = 1080.0
-    placement_width = 1920.0
-    rotation = 0.0
-    type = "fancy_audio_visualizer"
-
-        [lockscreen_widgets.widget.lockscreen-widget-0000000000000004.settings]
-        background = true
-        background_color = "surface"
-        background_opacity = 0.5
-        background_padding = 14
-        background_radius = 12
-        bar_width = 0.60000000000000009
-        bloom_intensity = 1.0
-        fade_when_idle = true
-        inner_diameter = 1.0
-        primary_color = "primary"
-        ring_opacity = 1.0
-        rotation_speed = 0.90000000000000002
-        secondary_color = "secondary"
-        sensitivity = 2.0
-        visualization_mode = "all"
-        wave_thickness = 0.80000000000000004
-
-    [lockscreen_widgets.widget.lockscreen-widget-0000000000000005]
-    box_height = 304.0
-    box_width = 264.0
-    cx = 1156.0
-    cy = 556.0
-    output = "eDP-1"
-    placement_height = 1080.0
-    placement_width = 1920.0
-    rotation = 0.0
-    type = "weather"
-
-        [lockscreen_widgets.widget.lockscreen-widget-0000000000000005.settings]
-        background_color = "on_primary"
-        background_opacity = 0.5
-        background_padding = 12
-        background_radius = 15
-        forecast_days = 6
-        show_forecast = true
-
 [nightlight]
 enabled = true
-
-[plugin_settings."alexander/screen-toolkit"]
-hide-cursor = false
-panel-legacy_position = "top_center"
-panel_position = "top_center"
-result_placement = "attached"
-search-engine-url = "https://search.brave.com/search?q="
-selected-ocr-lang = "eng, pt-br"
-
-[plugin_settings."kenn/keybind-cheatsheet"]
-cheatsheet_placement = "attached"
-columns = 4
-
-[plugin_settings."stoa/drive"]
-manage_open_near_click = true
-poll_seconds = 15
-
-[plugin_settings."stoa/health"]
-manage_open_near_click = true
+temperature_day = 4800
+temperature_night = 2800
 
 [plugins]
-enabled = [ "stoa/drive", "alexander/screen-toolkit", "kenn/keybind-cheatsheet", "stoa/health" ]
+enabled = [ "stoa/drive", "stoa/health" ]
 
 [shell]
-button_borders = false
-card_borders = false
-corner_radius_scale = 2.0
 external_ip_enabled = true
-font_family = "EB Garamond"
-lang = "en"
 password_style = "random"
-polkit_agent = true
-popup_borders = false
 screen_time_enabled = true
 settings_window_translucent = true
 telemetry_enabled = true
 
-    [shell.launcher]
-    app_grid = true
-    compact = true
-    pinned = [
-        "enpass",
-        "onlyoffice-desktopeditors",
-        "eu.betterbird.Betterbird",
-        "com.stremio.Stremio",
-        "steam",
-        "org.godotengine.Godot",
-        "code",
-        "LinuxToys",
-        "obsidian",
-        "qalculate-gtk",
-        "brave-browser",
-        "org.inkscape.Inkscape",
-        "kitty",
-        "com.anthropic.Claude",
-        "dfm"
-    ]
-
-        [shell.launcher.providers.emoji]
-        global = true
-
-        [shell.launcher.providers.session]
-        global = true
-
-        [shell.launcher.providers.wallpaper]
-        global = true
-
-        [shell.launcher.providers.windows]
-        global = true
-
     [shell.panel]
-    borders = false
-    floating_layer = "top"
-    launcher_placement = "attached"
-    list_item_background = true
-    open_near_click_control_center = true
-    open_near_click_wallpaper = true
     session_placement = "floating"
     session_position = "center"
-    transparency_mode = "glass"
-    wallpaper_position = "center_left"
 
     [shell.screenshot]
+    annotate = true
     confirm_region = true
-    directory = "/home/zeno/Pictures/screenshots"
     remember_last_region = true
+    save_to_file = false
     show_cursor = true
 
     [shell.session]
     grid = true
-
-[theme]
-builtin = "Noctalia"
-community_palette = "Zenbones"
-custom_palette = "Stoa"
-mode = "dark"
-source = "custom"
-wallpaper_scheme = "soft"
-
-    [theme.templates]
-    builtin_ids = [ "btop", "gtk3", "hyprland", "kitty", "qt" ]
-    community_ids = [ "darktable", "gimp", "inkscape", "obsidian", "vscode", "steam", "rofi", "fastfetch", "zathura", "hyprtoolkit" ]
-
-[wallpaper.automation]
-enabled = true
+    show_shortcuts = false
 
 [wallpaper.default]
-path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
+path = "/usr/share/noctalia/assets/noctalia-wallpaper.png"
 
 [wallpaper.last]
-path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
-
-[wallpaper.monitors.eDP-1]
-path = "/home/zeno/.config/stoa/wallpapers/quote-0ae33464-marble.png"
-
-[widget.Stoa-drive]
-type = "stoa/drive:pill"
-
-[widget.clipboard]
-anchor = true
-
-[widget.clock]
-format = "{:%H:%M:%S}"
-
-[widget.control-center]
-glyph = "settings-2"
-
-[widget.keybinds]
-type = "kenn/keybind-cheatsheet:keybinds"
-
-[widget.media]
-art_size = 19
-hide_when_no_media = true
-title_scroll = "always"
-
-[widget.pill]
-type = "stoa/health:pill"
-
-    [widget.pill.actions]
-    right = "settings-open-plugin stoa-health"
-
-[widget.tray]
-detached_panel = true
-drawer_item_size = 20.0
-match_adjacent_spacing = true
-
-[widget.widget]
-type = "alexander/screen-toolkit:widget"
-
-[widget.workspaces]
-hide_when_empty = true
-labels_only_when_occupied = true
+path = "/usr/share/noctalia/assets/noctalia-wallpaper.png"
