@@ -30,9 +30,17 @@ if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
         fi
     fi
 
-    case "$_stoa_wm_pick" in
-        hyprland) unset _stoa_wm_pick; exec start-hyprland ;;
-        niri)     unset _stoa_wm_pick; exec niri-session ;;
-    esac
+    # niri-session re-runs itself through `$SHELL -l`, and a login shell
+    # sources this profile again — still on tty1, still no WAYLAND_DISPLAY
+    # — so a plain `exec niri-session` here loops forever. `-l` tells it we
+    # already are that login shell; the guard covers anything else that
+    # re-enters the profile before the compositor is up.
+    if [ -z "${STOA_AUTOSTART:-}" ]; then
+        export STOA_AUTOSTART=1
+        case "$_stoa_wm_pick" in
+            hyprland) unset _stoa_wm_pick; exec start-hyprland ;;
+            niri)     unset _stoa_wm_pick; exec niri-session -l ;;
+        esac
+    fi
     unset _stoa_wm_pick
 fi
