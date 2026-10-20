@@ -28,7 +28,28 @@ export FILE_MANAGER="thunar"
 export PAGER="less"
 
 # ── XDG ──
-export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-Hyprland}"
+# Inside a session the compositor sets XDG_CURRENT_DESKTOP itself (niri:
+# "niri", Hyprland: "Hyprland" via hyprland.lua). This fallback only covers
+# shells started outside one — a TTY login, which tty1 autostart then hands
+# to the compositor — so it follows the compositor Stoa starts there:
+# ~/.config/stoa/wm (post-install.sh / `stoa-wm set`), else whichever is
+# installed, Hyprland first, the same pick as stoa-autostart-hyprland.sh.
+# A wrong value here makes xdg-desktop-portal pick the other compositor's
+# backend (screen sharing, file pickers).
+if [ -z "${XDG_CURRENT_DESKTOP:-}" ]; then
+    _stoa_wm_env=$(head -n1 "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/wm" 2>/dev/null | tr -d '[:space:]')
+    case "$_stoa_wm_env" in
+        niri|hyprland) ;;
+        *) if ! command -v Hyprland >/dev/null 2>&1 && command -v niri >/dev/null 2>&1; then
+               _stoa_wm_env=niri
+           fi ;;
+    esac
+    case "$_stoa_wm_env" in
+        niri) export XDG_CURRENT_DESKTOP="niri" ;;
+        *)    export XDG_CURRENT_DESKTOP="Hyprland" ;;
+    esac
+    unset _stoa_wm_env
+fi
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
