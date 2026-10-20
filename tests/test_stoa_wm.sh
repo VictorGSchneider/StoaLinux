@@ -18,6 +18,8 @@
 #   W6  actions map to the right command, an unknown one returns 2, and
 #       `minimize` returns 3 on niri (no such thing there)
 #   W7  mirror is refused on niri without wl-mirror
+#   W8  shell/stoa-env.sh's XDG_CURRENT_DESKTOP fallback follows the
+#       recorded choice / installed compositor, and never overrides a session
 
 cd "$(dirname "$0")/.." || exit 1
 
@@ -124,6 +126,23 @@ _check "W6 niri has no minimize" "3" "$(_wm STOA_WM=niri | tail -n1)"
 SNIPPET='stoa_wm_can_mirror && echo yes || echo no'
 _check "W7 niri without wl-mirror" "no"  "$(_wm STOA_WM=niri)"
 _check "W7 hyprland mirrors"       "yes" "$(_wm STOA_WM=hyprland)"
+
+# ── W8 stoa-env.sh fallback ──
+_env() { # <env assignments...>: XDG_CURRENT_DESKTOP after sourcing stoa-env.sh
+    env -i PATH="$BIN:/usr/bin:/bin" HOME="$TMP/home" "$@" \
+        bash -c "source '$PWD/shell/stoa-env.sh'; printf '%s' \"\$XDG_CURRENT_DESKTOP\""
+}
+_check "W8 session value kept"   "Hyprland" "$(_env XDG_CURRENT_DESKTOP=Hyprland)"
+_check "W8 only niri installed"  "niri"     "$(_env)"
+echo hyprland > "$TMP/home/.config/stoa/wm"
+_check "W8 recorded hyprland"    "Hyprland" "$(_env)"
+echo niri > "$TMP/home/.config/stoa/wm"
+_check "W8 recorded niri"        "niri"     "$(_env)"
+printf '#!/bin/sh\n' > "$BIN/Hyprland"; chmod +x "$BIN/Hyprland"
+_check "W8 file beats binaries"  "niri"     "$(_env)"
+rm -f "$TMP/home/.config/stoa/wm"
+_check "W8 both installed"       "Hyprland" "$(_env)"
+rm -f "$BIN/Hyprland"
 
 [ "$FAILS" -eq 0 ] || { echo "$FAILS check(s) failed"; exit 1; }
 echo "stoa-wm: all checks passed"
