@@ -97,6 +97,8 @@ echo 'source ~/StoaLinux/shell/.bashrc' >> ~/.bashrc
 chsh -s /bin/zsh   # switch to /bin/bash anytime to fall back
 ```
 
+To push your own changes back with `stoa-sync`, connect the machine to GitHub once: `bash setup/connect-github.sh` (logs `gh` in through the browser, makes git use that login, sets your commit name and e-mail, and makes this clone pull with rebase; `post-install.sh` offers it).
+
 `install.sh` deploys configs and `stoa-*` binaries as **symlinks**, so `git pull` propagates updates live — no re-installing after every change. Keep the clone at a stable path (e.g. `~/StoaLinux`). `stoa.conf` and the OnlyOffice `settings.json` are copied instead of linked, because those apps write back into their own config and a symlink would push that back into the repo.
 
 ## Keybinds

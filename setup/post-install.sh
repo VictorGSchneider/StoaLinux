@@ -490,6 +490,21 @@ else
     esac
 fi
 
+# ── GitHub (stoa-sync pushes this clone) ──
+echo ""
+if command -v gh &>/dev/null && gh auth status --hostname github.com &>/dev/null; then
+    echo -e "  ${S}[~] Already connected to GitHub.${R}"
+else
+    echo -e "  ${F}Connect this machine to GitHub? (stoa-sync needs it to push your changes)${R}"
+    read -rp "  Connect now? [y/N]: " GH_CHOICE
+    if [ "${GH_CHOICE,,}" = "y" ] || [ "${GH_CHOICE,,}" = "yes" ]; then
+        bash "${STOA_DIR}/setup/connect-github.sh" || \
+            echo -e "  ${T}[!] Not connected — re-run: bash ${STOA_DIR}/setup/connect-github.sh${R}"
+    else
+        echo -e "  ${S}[~] Skipped. Later: bash ${STOA_DIR}/setup/connect-github.sh${R}"
+    fi
+fi
+
 # ── Boot snapshots (Limine + Btrfs + Snapper) ──
 # Only offered where it can work: Btrfs root and Limine as the bootloader.
 if [ "$(findmnt -no FSTYPE / 2>/dev/null)" = "btrfs" ] \

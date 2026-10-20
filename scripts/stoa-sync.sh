@@ -4,7 +4,7 @@
 # ║  Used by the `sync-stoa` shell alias.                       ║
 # ║                                                              ║
 # ║  Flow:                                                       ║
-# ║    1. git pull --autostash                                  ║
+# ║    1. git pull --rebase --autostash                         ║
 # ║    2. Mirror live Noctalia state (curated paths).           ║
 # ║    3. Mirror anything listed in ~/.config/stoa/sync.list    ║
 # ║       into dotfiles/<rel-path>.                              ║
@@ -51,7 +51,29 @@ with open(sys.argv[1], "rb") as fh:
     cp "$src" "$dst"
 }
 
-git pull --autostash
+# Pull with an explicit strategy. Plain `git pull` refuses to pick one when
+# this clone and GitHub both have commits ("divergent branches") — which is
+# exactly what happens when a sync commit was made here but its push was
+# rejected because main had moved on (merged PRs). Rebasing replays the
+# local sync commits on top, keeping history linear. A real conflict is
+# rolled back rather than left half-done in the repo the desktop runs from.
+_pull() {
+    if git pull --rebase --autostash; then
+        return 0
+    fi
+    if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+        git rebase --abort 2>/dev/null || true
+    fi
+    echo "" >&2
+    echo "stoa-sync: your local changes conflict with what is on GitHub." >&2
+    echo "  Nothing was changed. Local commits not on GitHub yet:" >&2
+    git log --oneline "@{upstream}..HEAD" >&2 2>/dev/null || true
+    echo "  Resolve by hand:  cd $STOA_DIR && git pull --rebase --autostash" >&2
+    echo "  (fix the files it names, git add them, git rebase --continue)" >&2
+    exit 1
+}
+
+_pull
 
 # ── Noctalia v5 GUI state (snapshot only) ──
 # v5 writes GUI-managed overrides to ~/.local/state/noctalia/settings.toml,
@@ -125,4 +147,13 @@ fi
 git commit -m "$(printf 'chore: sync %s\n\nChanges:\n%s' \
     "$(date '+%Y-%m-%d %H:%M')" \
     "$(git diff --cached --name-status)")"
-git push
+# Rejected because main moved while we were copying? Pull again, retry once.
+if ! git push; then
+    echo "stoa-sync: push rejected — pulling the new commits and retrying..." >&2
+    _pull
+    if ! git push; then
+        echo "stoa-sync: push failed. If GitHub asked for a login or refused it, connect this" >&2
+        echo "  machine once with: bash $STOA_DIR/setup/connect-github.sh" >&2
+        exit 1
+    fi
+fi
