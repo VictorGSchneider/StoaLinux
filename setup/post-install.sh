@@ -184,7 +184,7 @@ FIREWALL_PKGS="nftables"
 BLUETOOTH_PKGS="bluez bluez-utils"
 
 # XDG + hardware utils
-XDG_PKGS="xdg-utils v4l-utils"
+XDG_PKGS="xdg-utils xdg-terminal-exec v4l-utils"
 
 # Night light (blue light filter — Wayland)
 NIGHTLIGHT_PKGS="gammastep"
@@ -212,7 +212,7 @@ DEV_PKGS="github-cli gnupg"
 
 # Shell and extras — zsh is the Stoa default login shell; bash stays available
 # as a fallback (and is already pulled in by `base`, but listed here for intent).
-SHELL_PKGS="zsh bash git base-devel"
+SHELL_PKGS="zsh zsh-autosuggestions zsh-syntax-highlighting zsh-history-substring-search zsh-completions bash git base-devel"
 
 ALL_PKGS="$WAYLAND_PKGS $UI_PKGS $SETTINGS_APP_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS $SHELL_PKGS_QS"
 

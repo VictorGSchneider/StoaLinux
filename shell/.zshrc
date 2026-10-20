@@ -42,6 +42,43 @@ zstyle ':completion:*:options' description 'yes'
 bindkey -v
 export KEYTIMEOUT=1
 
+# ── Fish-style helpers ──
+# What fish does out of the box: suggestions from history as you type
+# (→ / End accepts), commands coloured as valid/invalid while typing, and
+# ↑/↓ searching history for what is already typed. Arch packages, sourced
+# only when installed (post-install.sh installs them); syntax-highlighting
+# must come after every other widget and history-substring-search after it.
+_stoa_zsh_plugins=/usr/share/zsh/plugins
+if [ -r "$_stoa_zsh_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
+    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6e6a62'
+    ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+    source "$_stoa_zsh_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+if [ -r "$_stoa_zsh_plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
+    source "$_stoa_zsh_plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    # Stoic palette: valid = olive, unknown = terracotta, paths underlined.
+    typeset -gA ZSH_HIGHLIGHT_STYLES
+    ZSH_HIGHLIGHT_STYLES[command]='fg=#8a9a6c'
+    ZSH_HIGHLIGHT_STYLES[builtin]='fg=#8a9a6c'
+    ZSH_HIGHLIGHT_STYLES[alias]='fg=#8a9a6c'
+    ZSH_HIGHLIGHT_STYLES[function]='fg=#8a9a6c'
+    ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#b36b5a'
+    ZSH_HIGHLIGHT_STYLES[path]='underline'
+    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#c4b08a'
+    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#c4b08a'
+fi
+if [ -r "$_stoa_zsh_plugins/zsh-history-substring-search/zsh-history-substring-search.zsh" ]; then
+    source "$_stoa_zsh_plugins/zsh-history-substring-search/zsh-history-substring-search.zsh"
+    HISTORY_SUBSTRING_SEARCH_HIGHLIGHT_FOUND='fg=#c49a5c,bold'
+    bindkey '^[[A' history-substring-search-up      # ↑
+    bindkey '^[[B' history-substring-search-down    # ↓
+    bindkey '^[OA' history-substring-search-up
+    bindkey '^[OB' history-substring-search-down
+    bindkey -M vicmd 'k' history-substring-search-up
+    bindkey -M vicmd 'j' history-substring-search-down
+fi
+unset _stoa_zsh_plugins
+
 # ── Stoic Prompt ──
 # Symbol: Greek column (Ι) in bronze
 autoload -Uz vcs_info
@@ -80,7 +117,7 @@ alias sync-stoa='stoa-sync'
 
 # ── Functions ──
 commit-all() {
-    git pull --autostash
+    git pull --rebase --autostash
     git add -A
     git commit -m "$(printf 'chore: sync %s\n\nChanges:\n%s' "$(date '+%Y-%m-%d %H:%M')" "$(git diff --cached --name-status)")"
     git push

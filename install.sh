@@ -495,6 +495,17 @@ if command -v crontab >/dev/null 2>&1 \
     fi
 fi
 
+# ── Default terminal for "Terminal=true" apps ──
+# Opening a text file from Thunar picks an editor through GIO; when that is
+# a terminal app (nvim), GIO needs a terminal and only knows a fixed list
+# that has no kitty — hence "Unable to find terminal required for
+# application". GIO asks xdg-terminal-exec first, and this file tells it to
+# use kitty. Left alone when it already exists.
+if [ ! -f "${CONFIG_DIR}/xdg-terminals.list" ]; then
+    echo "kitty.desktop" > "${CONFIG_DIR}/xdg-terminals.list"
+    echo -e "  ${O}[+] xdg-terminals.list (kitty)${R}"
+fi
+
 # ── XDG MIME defaults ──
 MIME_DIR="${HOME}/.local/share/applications"
 mkdir -p "$MIME_DIR"
