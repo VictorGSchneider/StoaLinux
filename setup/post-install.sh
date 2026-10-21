@@ -116,8 +116,13 @@ NOTES_PKGS="obsidian"
 # Office (AUR)
 OFFICE_PKGS="onlyoffice-bin"
 
-# Editor / IDE (official repo: the binary is zeditor)
+# Editor / IDE (official repo: the binary is zeditor). Zed's own installer
+# (curl https://zed.dev/install.sh | sh) puts a self-updating copy in
+# ~/.local/zed.app with the same dev.zed.Zed.desktop; keep that one rather
+# than adding a second, pacman-managed copy beside it.
 IDE_PKGS="zed"
+ZED_SELF_INSTALLED="${HOME}/.local/zed.app/bin/zed"
+[ -x "$ZED_SELF_INSTALLED" ] && IDE_PKGS=""
 
 # Email (AUR)
 EMAIL_PKGS="betterbird-bin"
@@ -221,7 +226,7 @@ echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Settings:   ${SETTINGS_APP_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
-echo -e "  ${S}IDE:        ${IDE_PKGS}${R}"
+echo -e "  ${S}IDE:        ${IDE_PKGS:-zed (already installed from zed.dev)}${R}"
 echo -e "  ${S}Office:     ${OFFICE_PKGS} (AUR)${R}"
 echo -e "  ${S}Email:      ${EMAIL_PKGS} (AUR)${R}"
 echo -e "  ${S}VPN:        ${VPN_PKGS} (AUR)${R}"
