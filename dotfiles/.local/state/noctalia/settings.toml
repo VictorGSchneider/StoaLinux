@@ -4,22 +4,41 @@ config_version = 15
 enabled = true
 
 [bar.default]
-end = [
-    "media",
-    "tray",
-    "notifications",
-    "clipboard",
-    "stoa/drive:pill",
-    "sysmon",
-    "network",
-    "bluetooth",
-    "volume",
-    "brightness",
-    "battery",
-    "control-center",
-    "session"
-]
-start = [ "launcher", "workspaces", "taskbar", "stoa/health:pill" ]
+background_opacity = 0.0
+capsule = true
+capsule_border = "on_primary"
+capsule_border_width = 0.0
+capsule_fill = "on_primary"
+capsule_foreground = "primary"
+capsule_opacity = 0.65999998524785042
+center = [ "clock", "taskbar", "launcher", "workspaces", "widget" ]
+contact_shadow = true
+end = [ "tray", "notifications", "clipboard", "stoa/drive:pill", "group:g1", "session" ]
+font_scale = 1.0499999839812517
+layer = "overlay"
+margin_ends = 15
+padding = 0
+scale = 1.0500000081956387
+start = [ "sysmon", "stoa/health:pill", "media" ]
+thickness = 40
+
+    [bar.default.dead_zone.actions]
+    middle = "volume-mute"
+    scroll_down = "volume-down 1"
+    scroll_up = "volume-up 1"
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    border = "on_primary"
+    border_width = 1.0
+    enabled = true
+    fill = "on_primary"
+    foreground = "primary"
+    id = "g1"
+    members = [ "network", "bluetooth", "volume", "brightness", "battery" ]
+    opacity = 1.0
+    padding = 6.0
 
 [brightness]
 sync_all_monitors = true
@@ -28,8 +47,12 @@ sync_all_monitors = true
 dedupe_events = true
 enabled = true
 
-[control_center.calendar]
-show_week_numbers = true
+[control_center]
+sidebar_section = "none"
+width = 800
+
+    [control_center.calendar]
+    show_week_numbers = true
 
 [dock]
 enabled = true
@@ -85,19 +108,61 @@ temperature_day = 4800
 temperature_night = 2800
 
 [plugins]
-enabled = [ "stoa/drive", "stoa/health" ]
+enabled = [ "stoa/drive", "stoa/health", "alexander/screen-toolkit" ]
 
 [shell]
 external_ip_enabled = true
 niri_overview_type_to_launch_enabled = true
+panel_anchor_bar = "default"
 password_style = "random"
 screen_time_enabled = true
 settings_window_translucent = true
 telemetry_enabled = true
 
+    [shell.launcher]
+    app_grid = true
+    category_icons_only = true
+    default_view = "pinned"
+    pinned = [
+        "brave-browser",
+        "steam",
+        "eu.betterbird.Betterbird",
+        "onlyoffice-desktopeditors",
+        "obsidian",
+        "calibre-gui",
+        "kitty",
+        "thunar",
+        "enpass",
+        "stoa-snapshots",
+        "dfm",
+        "dev.zed.Zed",
+        "qalculate-gtk"
+    ]
+    search_position = "top"
+    show_app_actions = true
+    show_session_button = false
+    show_settings_button = false
+
+        [shell.launcher.providers.session]
+        global = true
+
+        [shell.launcher.providers.wallpaper]
+        global = true
+
+        [shell.launcher.providers.windows]
+        global = true
+
     [shell.panel]
+    borders = false
+    clipboard_placement = "attached"
+    launcher_placement = "attached"
+    open_near_click_clipboard = true
+    open_near_click_control_center = true
+    open_near_click_launcher = true
+    open_near_click_wallpaper = true
     session_placement = "floating"
     session_position = "center"
+    transparency_mode = "glass"
 
     [shell.screenshot]
     annotate = true
@@ -120,15 +185,27 @@ wallpaper_scheme = "m3-content"
 
 [wallpaper]
 fill_mode = "fit"
+transition = [ "disc", "fade", "honeycomb", "stripes", "wipe", "zoom" ]
+transition_on_startup = true
 
     [wallpaper.automation]
     enabled = true
 
     [wallpaper.default]
-    path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-c3e1d841-columns.png"
 
     [wallpaper.last]
-    path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-c3e1d841-columns.png"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-c3e1d841-columns.png"
+
+[widget.launcher]
+capsule_foreground = "primary"
+glyph = "columns"
+
+[widget.tray]
+match_adjacent_spacing = true
+
+[widget.widget]
+type = "alexander/screen-toolkit:widget"
