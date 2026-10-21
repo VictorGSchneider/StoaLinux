@@ -109,15 +109,11 @@ local function render()
         })
     end
 
-    desktopWidget.render(ui.column({
-        gap = 8,
-        padding = 20,
-        width = 380,
-        fill = "surface/0.85",
-        radius = 12,
-        border = "outline",
-        borderWidth = 1,
-    }, children))
+    -- No fill or border of our own: Noctalia draws every desktop widget's
+    -- rounded background itself (the `background`, `background_color` and
+    -- `background_opacity` widget settings), and a second box inside it
+    -- showed as a double frame.
+    desktopWidget.render(ui.column({ gap = 8, padding = 8, width = 364 }, children))
 end
 
 local function refresh()
