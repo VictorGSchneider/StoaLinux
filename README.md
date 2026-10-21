@@ -37,7 +37,7 @@ Wayland is the only display server — there's no Xorg fallback to maintain, bec
 - Wayland only, with a choice of **Hyprland** or **niri** — the same palette, binds and `stoa-*` tools in both, behind a single `stoa-wm` layer instead of two forks
 - Noctalia as the shell layer, themed via the Stoa palette, with 10 built-in presets and a custom editor
 - A 23-panel settings app that replaces the usual pile of separate config tools
-- One dark theme, carried consistently into GTK, Qt, VS Code, Neovim, Steam, Calibre, and more
+- One dark theme, carried consistently into GTK, Qt, Zed, Neovim, Steam, Calibre, and more
 - Pacman pre-transaction snapshots, a boot-time health check, and a compositor version adapter — resilience that doesn't wait for you to notice something broke
 - A DFM (Dotfile Manager) GUI for editing configs in place, with backups and rollback
 - A living marble screensaver, a Memento Mori widget, and Stoic quotes on every shell — the philosophy isn't bolted onto the system, it's rendered by it
@@ -196,7 +196,7 @@ The chosen ones — not the biggest name in each category, the one that does its
   <tr><td>Brave</td><td>Browser</td><td>btop</td><td>Monitor</td></tr>
   <tr><td>Obsidian</td><td>Notes</td><td>Qalculate</td><td>Calculator</td></tr>
   <tr><td>Kitty</td><td>Terminal</td><td>eww</td><td>Widgets</td></tr>
-  <tr><td>VS Code</td><td>IDE</td><td>Neovim</td><td>Editor</td></tr>
+  <tr><td>Zed</td><td>Code editor</td><td>Neovim</td><td>Editor</td></tr>
   <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
   <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>
   <tr><td>OnlyOffice</td><td>Office suite</td><td>Enpass</td><td>Passwords</td></tr>
@@ -209,7 +209,7 @@ The chosen ones — not the biggest name in each category, the one that does its
 
 ## Theme
 
-A theme that stops at the terminal isn't a theme, it's a wallpaper. The Stoa palette is carried into every app it can reach — GTK 3/4, Qt (via qt5ct/qt6ct), VS Code, Neovim, Steam, OnlyOffice, Betterbird, Calibre, YACReader — because a system that looks like two different projects stitched together asks something of your attention that a coherent one doesn't. Icons are Colloid-dark, cursors Colloid, fonts EB Garamond for prose and JetBrains Mono for code.
+A theme that stops at the terminal isn't a theme, it's a wallpaper. The Stoa palette is carried into every app it can reach — GTK 3/4, Qt (via qt5ct/qt6ct), Zed, Neovim, Steam, OnlyOffice, Betterbird, Calibre, YACReader — because a system that looks like two different projects stitched together asks something of your attention that a coherent one doesn't. Icons are Colloid-dark, cursors Colloid, fonts EB Garamond for prose and JetBrains Mono for code.
 
 The whole palette is swappable from `Super+S → Theme → Color Palette` — 10 presets or a custom editor over 11 core colors — and it propagates to Kitty, eww, GTK, Hyprland, niri, and Noctalia automatically. Reset to Stoic restores the original, untouched.
 

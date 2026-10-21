@@ -116,8 +116,8 @@ NOTES_PKGS="obsidian"
 # Office (AUR)
 OFFICE_PKGS="onlyoffice-bin"
 
-# IDE (AUR)
-IDE_PKGS="visual-studio-code-bin"
+# Editor / IDE (official repo: the binary is zeditor)
+IDE_PKGS="zed"
 
 # Email (AUR)
 EMAIL_PKGS="betterbird-bin"
@@ -214,14 +214,14 @@ DEV_PKGS="github-cli gnupg"
 # as a fallback (and is already pulled in by `base`, but listed here for intent).
 SHELL_PKGS="zsh zsh-autosuggestions zsh-syntax-highlighting zsh-history-substring-search zsh-completions bash git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $UI_PKGS $SETTINGS_APP_PKGS $APP_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS $SHELL_PKGS_QS"
+ALL_PKGS="$WAYLAND_PKGS $UI_PKGS $SETTINGS_APP_PKGS $APP_PKGS $IDE_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS $SHELL_PKGS_QS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
 echo -e "  ${S}Settings:   ${SETTINGS_APP_PKGS}${R}"
 echo -e "  ${S}Browser:    ${BROWSER_PKGS} (AUR)${R}"
 echo -e "  ${S}Notes:      ${NOTES_PKGS} (AUR)${R}"
-echo -e "  ${S}IDE:        ${IDE_PKGS} (AUR)${R}"
+echo -e "  ${S}IDE:        ${IDE_PKGS}${R}"
 echo -e "  ${S}Office:     ${OFFICE_PKGS} (AUR)${R}"
 echo -e "  ${S}Email:      ${EMAIL_PKGS} (AUR)${R}"
 echo -e "  ${S}VPN:        ${VPN_PKGS} (AUR)${R}"
@@ -287,7 +287,6 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur yacreader              "YACReader"             YACReader
     _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
     _install_aur betterbird-bin         "Betterbird"            betterbird
-    _install_aur visual-studio-code-bin "Visual Studio Code"    code
     _install_aur libinput-gestures      "libinput-gestures"     libinput-gestures
     _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
     if [ "$_aur_fresh" = 1 ]; then
