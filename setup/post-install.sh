@@ -280,32 +280,32 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     echo -e "  ${O}[✓] Official packages installed.${R}"
 
     # ── AUR packages (common pattern) ──
-    _install_aur brave-bin              "Brave Browser"         brave
-    _install_aur obsidian               "Obsidian"              obsidian
-    _install_aur satty                  "Satty"                 satty
-    _install_aur glslviewer             "glslViewer (GPU shaders)" glslViewer
-    _install_aur eww                    "eww"                   eww
+    _install_aur brave-bin              "Brave Browser"         brave || true
+    _install_aur obsidian               "Obsidian"              obsidian || true
+    _install_aur satty                  "Satty"                 satty || true
+    _install_aur glslviewer             "glslViewer (GPU shaders)" glslViewer || true
+    _install_aur eww                    "eww"                   eww || true
     if [ "$WM_CHOICE" != "niri" ]; then
-        _install_aur hyprswitch         "Hyprswitch (Alt+Tab)"  hyprswitch
+        _install_aur hyprswitch         "Hyprswitch (Alt+Tab)"  hyprswitch || true
     fi
-    _install_aur enpass-bin             "Enpass"                enpass
-    _install_aur yacreader              "YACReader"             YACReader
-    _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors
-    _install_aur betterbird-bin         "Betterbird"            betterbird
-    _install_aur libinput-gestures      "libinput-gestures"     libinput-gestures
-    _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli
+    _install_aur enpass-bin             "Enpass"                enpass || true
+    _install_aur yacreader              "YACReader"             YACReader || true
+    _install_aur onlyoffice-bin         "OnlyOffice"            desktopeditors || true
+    _install_aur betterbird-bin         "Betterbird"            betterbird || true
+    _install_aur libinput-gestures      "libinput-gestures"     libinput-gestures || true
+    _install_aur protonvpn-cli          "ProtonVPN CLI"         protonvpn-cli || true
     if [ "$_aur_fresh" = 1 ]; then
         echo -e "  ${S}    To login: protonvpn-cli login <username>${R}"
         echo -e "  ${S}    Or use: Super+S → VPN${R}"
     fi
-    _install_aur bauh                   "Bauh (package manager GUI)" bauh
-    _install_aur nwg-look               "nwg-look (GTK theme editor)" nwg-look
+    _install_aur bauh                   "Bauh (package manager GUI)" bauh || true
+    _install_aur nwg-look               "nwg-look (GTK theme editor)" nwg-look || true
 
     # ── AUR packages with custom already-installed checks ──
 
     # EB Garamond — font, no binary to probe
     if ! fc-list | grep -qi "EB Garamond" 2>/dev/null; then
-        _install_aur otf-eb-garamond "EB Garamond font"
+        _install_aur otf-eb-garamond "EB Garamond font" || true
     else
         echo ""
         echo -e "  ${S}[~] EB Garamond already installed.${R}"
@@ -313,16 +313,22 @@ if [ "$INSTALL_PKGS" = "y" ]; then
 
     # Colloid icons + cursors — identified by directory presence
     if [ ! -d /usr/share/icons/Colloid-dark ] && [ ! -d "$HOME/.local/share/icons/Colloid-dark" ]; then
-        _install_aur colloid-icon-theme-git "Colloid icon theme"
+        _install_aur colloid-icon-theme-git "Colloid icon theme" || true
     else
         echo ""
         echo -e "  ${S}[~] Colloid icons already installed.${R}"
     fi
     if [ ! -d /usr/share/icons/Colloid-cursors ] && [ ! -d "$HOME/.local/share/icons/Colloid-cursors" ]; then
-        _install_aur colloid-cursors-git "Colloid cursors"
+        _install_aur colloid-cursors-git "Colloid cursors" || true
     else
         echo ""
         echo -e "  ${S}[~] Colloid cursors already installed.${R}"
+    fi
+
+    if [ ${#_aur_failed[@]} -gt 0 ]; then
+        echo ""
+        echo -e "  ${T}[!] Some AUR packages failed: ${_aur_failed[*]}${R}"
+        echo -e "  ${S}    Retry later: yay -S ${_aur_failed[*]}${R}"
     fi
 
     # ── Div Acer Manager Max (DAMX) — only on Acer hardware ──
