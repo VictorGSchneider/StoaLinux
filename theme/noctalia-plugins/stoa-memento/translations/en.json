@@ -1,0 +1,6 @@
+{
+  "settings.poll_seconds.label": "Refresh every (seconds)",
+  "settings.poll_seconds.description": "How often the bars are recomputed. The day bar moves about 0.07% a minute.",
+  "settings.show_quote.label": "Show Stoic quote",
+  "settings.show_quote.description": "Draw a rotating quote under the bars."
+}

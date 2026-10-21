@@ -11,7 +11,7 @@
 # ║    4. git add -A, commit + push if anything changed.        ║
 # ║                                                              ║
 # ║  Files that are already symlinked into the repo (kitty,     ║
-# ║  hyprland, eww, waybar, etc.) are caught by                 ║
+# ║  hyprland, noctalia, etc.) are caught by                    ║
 # ║  `git add -A` automatically — don't add them to sync.list.  ║
 # ╚══════════════════════════════════════════════════════════════╝
 

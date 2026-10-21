@@ -4,14 +4,18 @@
 # ║  "Words have power." — Marcus Aurelius                      ║
 # ║                                                              ║
 # ║  Toggle, select, and manage the prediction daemon.           ║
-# ║  Requires: python-evdev, eww, wtype                          ║
+# ║  The popup is the Noctalia stoa/predict plugin; its service   ║
+# ║  runs `stoa-predict run` and reads suggestions from stdout.   ║
+# ║  Requires: python-evdev, wtype                               ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Usage:
-#   stoa-predict toggle              — start/stop daemon + popup
+#   stoa-predict toggle              — start/stop prediction (Super+Shift+S)
+#   stoa-predict start | stop        — same, one direction
 #   stoa-predict select <index>      — accept suggestion at index (0-4)
 #   stoa-predict select-emoji <idx>  — accept emoji at index
-#   stoa-predict stop                — stop daemon
+#   stoa-predict run                 — the daemon itself; started by the plugin
+#   stoa-predict kill                — stop the daemon; used by the plugin
 
 # Prefer the per-user XDG_RUNTIME_DIR (typically /run/user/$UID) over
 # world-writable /tmp. Falls back to /tmp only when unset (non-systemd).
@@ -21,50 +25,54 @@ SUGGEST_FILE="${_STOA_RUNTIME}/stoa-predict.json"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 PREDICT_PY="${SCRIPT_DIR}/stoa-predict.py"
 
+PLUGIN_SERVICE="stoa/predict:service"
+
 _notify() { notify-send -t 2500 "Text Predict" "$1" 2>/dev/null; }
+
+# start/stop/toggle are owned by the plugin service: it is the process that
+# reads the daemon's stdout, so it has to be the one that launches it.
+_plugin() {
+    if ! command -v noctalia &>/dev/null; then
+        _notify "Text prediction needs the Noctalia shell (stoa/predict plugin)."
+        return 1
+    fi
+    noctalia msg plugin "$PLUGIN_SERVICE" all "$1"
+}
 
 _is_running() {
     [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null
 }
 
-_start() {
-    if _is_running; then
-        _notify "Already running"
-        return
-    fi
-
-    # Check input group
+# Run by the plugin service through noctalia.runStream: stdout carries one
+# JSON object per line. A failed precondition is reported the same way, as
+# {"error": "..."}, so the service can show it.
+_run() {
+    # The service is the daemon's only owner. One still alive here was
+    # orphaned (the shell restarted under it), and nothing reads its stdout.
+    _kill
     if ! groups 2>/dev/null | grep -qw input; then
-        _notify "Add yourself to input group:\nsudo usermod -aG input \$USER\nThen log out and back in."
+        echo '{"error":"Add yourself to the input group: sudo usermod -aG input $USER, then log out and back in."}'
         return 1
     fi
-
-    # Check python-evdev
     if ! python3 -c "import evdev" 2>/dev/null; then
-        _notify "python-evdev not installed:\nsudo pacman -S python-evdev"
+        echo '{"error":"python-evdev is not installed: sudo pacman -S python-evdev"}'
         return 1
     fi
-
-    python3 "$PREDICT_PY" &
-    disown
-    _notify "Text prediction ON"
+    exec python3 "$PREDICT_PY"
 }
 
-_stop() {
+# Called by the plugin service when prediction is switched off.
+_kill() {
     if _is_running; then
         kill "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null
-        rm -f "$PIDFILE" "$SUGGEST_FILE"
-        eww close predict 2>/dev/null
-        _notify "Text prediction OFF"
     fi
+    rm -f "$PIDFILE" "$SUGGEST_FILE"
 }
 
-_toggle() {
-    if _is_running; then
-        _stop
-    else
-        _start
-    fi
+# The suggestion was typed with wtype, which evdev never sees: tell the
+# daemon to drop the prefix (it answers with an empty, hidden update).
+_reset_daemon() {
+    _is_running && kill -USR1 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null
 }
 
 _select() {
@@ -95,8 +103,7 @@ _select() {
         wtype "${wtype_args[@]}"
     fi
 
-    # Clear suggestions
-    eww update 'predict-data={"prefix":"","words":[],"emojis":[],"visible":false}' 2>/dev/null
+    _reset_daemon
 }
 
 _select_emoji() {
@@ -116,18 +123,17 @@ _select_emoji() {
         wtype -- "$emoji"
     fi
 
-    # Clear suggestions
-    eww update 'predict-data={"prefix":"","words":[],"emojis":[],"visible":false}' 2>/dev/null
+    _reset_daemon
 }
 
 case "${1:-}" in
-    toggle)       _toggle ;;
-    start)        _start ;;
-    stop)         _stop ;;
+    toggle|start|stop) _plugin "$1" ;;
+    run)          _run ;;
+    kill)         _kill ;;
     select)       _select "${2:-0}" ;;
     select-emoji) _select_emoji "${2:-0}" ;;
     *)
-        echo "Usage: stoa-predict {toggle|start|stop|select N|select-emoji N}"
+        echo "Usage: stoa-predict {toggle|start|stop|select N|select-emoji N|run|kill}"
         exit 1
         ;;
 esac

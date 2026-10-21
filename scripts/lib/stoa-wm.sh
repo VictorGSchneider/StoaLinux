@@ -3,7 +3,7 @@
 # ║  "Choose not to be harmed — and you won't feel harmed."      ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Sourced by stoa-wm, stoa-display, stoa-capture, stoa-doctor, stoa-settings
+# Sourced by stoa-wm, stoa-display, stoa-doctor, stoa-settings
 # and stoa-store. Stoa supports two Wayland compositors, Hyprland and niri;
 # anything that has to talk to "the compositor" goes through the stoa_wm_*
 # functions below instead of calling hyprctl / niri msg directly, so a script

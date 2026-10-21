@@ -79,7 +79,6 @@ _check_bin_at() {
 
 _check_bin notify-send  "Notifications (libnotify)"
 _check_bin jq           "JSON parser (jq)"
-_check_bin eww          "Widgets (eww)"
 _check_bin noctalia     "Shell (Noctalia)"
 
 # ── Display / WM (Stoa is Wayland-only — Hyprland or niri) ──

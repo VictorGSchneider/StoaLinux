@@ -1,0 +1,51 @@
+#  ╔══════════════════════════════════════════════════════════════╗
+#  ║  STOA LINUX — Memento Mori (Noctalia v5 plugin)                ║
+#  ║  "Remember that you will die." — Stoic tradition               ║
+#  ╚══════════════════════════════════════════════════════════════╝
+#
+#  Port of the v4 QML desktop widget (DesktopWidget.qml + manifest.json)
+#  and of the eww `memento` window it replaced. Same five bars — day,
+#  week, month, year, life — and the rotating Stoic quote, drawn as a
+#  declarative ui.* tree on Noctalia's desktop layer.
+#
+#  Data still comes from ~/.local/bin/stoa-memento-data, which reads
+#  ~/.config/stoa/memento.conf (NAME / BIRTH / LIFE_YEARS), so the shell
+#  side did not move.
+#
+#  config/noctalia/config.toml places one instance on the desktop
+#  ([desktop_widgets.widget.stoa_memento]); move or resize it in the
+#  desktop-widgets editor (noctalia msg desktop-widgets-edit).
+
+id          = "stoa/memento"
+name        = "Stoa Memento Mori"
+version     = "2.0.0"
+author      = "stoa"
+icon        = "hourglass"
+description = "Day, week, month, year and life elapsed — a desktop reminder of time"
+tags        = ["desktop", "stoic", "time"]
+dependencies = ["jq"]
+
+# Level 9 is the floor for passing Luau closures as ui.* callbacks; the
+# widget itself only needs desktopWidget.render and runAsync, which are
+# older, but 9 matches stoa-drive / stoa-health and costs nothing.
+plugin_api = 9
+
+[[desktop_widget]]
+id    = "desktop"
+entry = "desktop.luau"
+
+  [[desktop_widget.setting]]
+  key       = "poll_seconds"
+  type      = "int"
+  default   = 60
+  min       = 15
+  max       = 3600
+  label_key = "settings.poll_seconds.label"
+  description_key = "settings.poll_seconds.description"
+
+  [[desktop_widget.setting]]
+  key       = "show_quote"
+  type      = "bool"
+  default   = true
+  label_key = "settings.show_quote.label"
+  description_key = "settings.show_quote.description"

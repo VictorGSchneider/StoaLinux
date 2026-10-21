@@ -5,8 +5,8 @@
 # ║                                                              ║
 # ║  Emits JSON describing how much of each natural cycle has    ║
 # ║  elapsed and how much remains — day, week, month, year, and  ║
-# ║  the configured life span. Consumed by the eww overlay and   ║
-# ║  the Noctalia stoa-memento desktop widget.                   ║
+# ║  the configured life span. Consumed by the Noctalia          ║
+# ║  stoa/memento desktop widget.                                ║
 # ║                                                              ║
 # ║  Reads ~/.config/stoa/memento.conf (NAME / BIRTH /           ║
 # ║  LIFE_YEARS).                                                ║

@@ -21,7 +21,7 @@ Most rices start from zero and pile things on until the desktop looks like the p
 
 It's also a distinction the Stoics drew about a life. A cluttered desktop and a cluttered mind fail the same test: neither one asked, of each thing it kept, whether it served. **Minimalism here isn't an aesthetic — it's the dichotomy of control applied to a window manager.** You don't control what a distro ships by default. You do control what stays after you've looked at it honestly. Marble, bronze, parchment, stone: the palette isn't decoration either — it's what's left when you strip a color scheme down to what temples, statues, and manuscripts actually looked like, instead of what's trending on a theme repository this month.
 
-The Memento Mori widget sitting on the desktop is the clearest expression of this. It's not a gimmick — it's *premeditatio malorum* rendered in eww: a quiet, constant reminder that the hours you're spending configuring a window manager are hours you don't get back, so configure it once, well, and then go do something that isn't configuring a window manager. The Stoic quote on every new shell serves the same purpose from a different angle — not decoration, a nudge, every single time you open a terminal, back toward why you're at the machine at all.
+The Memento Mori widget sitting on the desktop is the clearest expression of this. It's not a gimmick — it's *premeditatio malorum* rendered as a Noctalia desktop widget: a quiet, constant reminder that the hours you're spending configuring a window manager are hours you don't get back, so configure it once, well, and then go do something that isn't configuring a window manager. The Stoic quote on every new shell serves the same purpose from a different angle — not decoration, a nudge, every single time you open a terminal, back toward why you're at the machine at all.
 
 None of this makes StoaLinux a religious project. It's a tool built on the premise that a system which asks *why* before it asks *how* ends up smaller, calmer, and easier to actually live inside — and that a Stoic reading a good desktop the same way they'd read a good text: for its restraint, not its feature count.
 
@@ -167,10 +167,9 @@ A family of small, single-purpose `stoa-*` tools — each one exists because rea
   <tr><td><code>stoa-store</code></td><td>Package manager</td><td><code>stoa-paste</code></td><td>Paste as UPPER/lower/etc</td></tr>
   <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
   <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
-  <tr><td><code>stoa-memento</code></td><td>Memento Mori widget</td><td><code>stoa-locksmith</code></td><td>Find + end what's locking a file/folder</td></tr>
-  <tr><td><code>stoa-doctor</code></td><td>System health check</td><td><code>stoa-predict</code></td><td>Text prediction + emoji suggestions</td></tr>
-  <tr><td><code>stoa-capture</code></td><td>Screenshot + recording (eww)</td><td><code>stoa-archive</code></td><td>Compress selection / extract archives</td></tr>
-  <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td></td><td></td></tr>
+  <tr><td><code>stoa-memento-data</code></td><td>Memento Mori data (desktop widget)</td><td><code>stoa-locksmith</code></td><td>Find + end what's locking a file/folder</td></tr>
+  <tr><td><code>stoa-doctor</code></td><td>System health check</td><td><code>stoa-predict</code></td><td>Text prediction + emoji suggestions (Noctalia panel)</td></tr>
+  <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td><code>stoa-archive</code></td><td>Compress selection / extract archives</td></tr>
   <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
   <tr><td><code>stoa-drive</code></td><td>Cloud drive (rclone)</td><td></td><td></td></tr>
   <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
@@ -195,7 +194,7 @@ The chosen ones — not the biggest name in each category, the one that does its
   <tr><th>App</th><th>Purpose</th><th>App</th><th>Purpose</th></tr>
   <tr><td>Brave</td><td>Browser</td><td>btop</td><td>Monitor</td></tr>
   <tr><td>Obsidian</td><td>Notes</td><td>Qalculate</td><td>Calculator</td></tr>
-  <tr><td>Kitty</td><td>Terminal</td><td>eww</td><td>Widgets</td></tr>
+  <tr><td>Kitty</td><td>Terminal</td><td>Noctalia</td><td>Shell, widgets</td></tr>
   <tr><td>Zed</td><td>Code editor</td><td>Neovim</td><td>Editor</td></tr>
   <tr><td>Zathura</td><td>PDF</td><td>Calibre</td><td>eBooks</td></tr>
   <tr><td>mpv</td><td>Video/audio</td><td>YACReader</td><td>Comics</td></tr>
@@ -211,7 +210,7 @@ The chosen ones — not the biggest name in each category, the one that does its
 
 A theme that stops at the terminal isn't a theme, it's a wallpaper. The Stoa palette is carried into every app it can reach — GTK 3/4, Qt (via qt5ct/qt6ct), Zed, Neovim, Steam, OnlyOffice, Betterbird, Calibre, YACReader — because a system that looks like two different projects stitched together asks something of your attention that a coherent one doesn't. Icons are Colloid-dark, cursors Colloid, fonts EB Garamond for prose and JetBrains Mono for code.
 
-The whole palette is swappable from `Super+S → Theme → Color Palette` — 10 presets or a custom editor over 11 core colors — and it propagates to Kitty, eww, GTK, Hyprland, niri, and Noctalia automatically. Reset to Stoic restores the original, untouched.
+The whole palette is swappable from `Super+S → Theme → Color Palette` — 10 presets or a custom editor over 11 core colors — and it propagates to Kitty, GTK, Hyprland, niri, and Noctalia automatically. Reset to Stoic restores the original, untouched.
 
 ### Under the hood
 

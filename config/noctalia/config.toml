@@ -235,3 +235,34 @@ type = "session"
 
 [hooks]
 started = "~/.local/bin/stoa-doctor"
+
+# ── Plugins ───────────────────────────────────────────────────────────
+# Stoa's local plugins live in theme/noctalia-plugins/ and are symlinked
+# into ~/.local/share/noctalia/plugins by install.sh:
+#   stoa/drive, stoa/health   bar pills (see [bar.default] above)
+#   stoa/memento              Memento Mori desktop widget (below)
+#   stoa/predict              text-prediction popup (Super+Shift+S)
+# alexander/screen-toolkit comes from the built-in community source: screen
+# recording, OCR, colour picker — Shift+Print opens it.
+#
+# Installed is not enabled, so they are listed here. A [plugins].enabled
+# in settings.toml (the GUI writes one the first time a plugin is toggled)
+# replaces this list rather than adding to it; install.sh enables the same
+# plugins over IPC so an existing install picks up new ones too.
+
+[plugins]
+enabled = ["stoa/drive", "stoa/health", "stoa/memento", "stoa/predict", "alexander/screen-toolkit"]
+
+# ── Desktop widgets ───────────────────────────────────────────────────
+# One Memento Mori tile. No `output`: Noctalia puts it on the focused
+# monitor and clamps cx/cy to that monitor's bounds. Move or resize it with
+# `noctalia msg desktop-widgets-edit`; the editor saves the new layout to
+# settings.toml, which then wins over this.
+
+[desktop_widgets]
+enabled = true
+
+[desktop_widgets.widget.stoa_memento]
+type = "stoa/memento:desktop"
+cx   = 1640.0
+cy   = 360.0

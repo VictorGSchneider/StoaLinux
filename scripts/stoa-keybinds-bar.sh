@@ -74,7 +74,7 @@ read -r -d '' TOOLTIP <<'EOF'
   Super+Shift+P        Advanced paste
   Super+Shift+S        Predict toggle
   Print                Screenshot (region)
-  Shift+Print          Screenshot / recording (advanced)
+  Shift+Print          Screen toolkit (record, OCR, colour)
 
 ▸ Shell
   Super+/              This cheatsheet

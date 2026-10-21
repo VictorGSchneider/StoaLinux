@@ -311,10 +311,10 @@ binds {
     Mod+P { spawn-sh "~/.local/bin/stoa-display"; }
 
     // ── Capture ──
-    // Print is Noctalia's region overlay; Shift+Print keeps stoa-capture,
-    // which also records the screen and takes timed shots.
+    // Print is Noctalia's region overlay; Shift+Print opens the Screen
+    // Toolkit plugin (recording, OCR, colour picker), and stops a recording.
     Print { spawn-sh "noctalia msg screenshot-region"; }
-    Shift+Print { spawn-sh "~/.local/bin/stoa-capture"; }
+    Shift+Print { spawn-sh "noctalia msg plugin alexander/screen-toolkit:service all toggle"; }
 
     // ── Clipboard ──
     Mod+V { spawn-sh "noctalia msg panel-toggle clipboard"; }

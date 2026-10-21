@@ -1,0 +1,53 @@
+#  ╔══════════════════════════════════════════════════════════════╗
+#  ║  STOA LINUX — Text prediction (Noctalia v5 plugin)             ║
+#  ║  "Choose your words with care." — Epictetus                    ║
+#  ╚══════════════════════════════════════════════════════════════╝
+#
+#  Replaces the eww `predict` window. The word engine is unchanged
+#  (scripts/stoa-predict.py reads evdev and looks words up); only the
+#  popup moved into the shell:
+#
+#    service.luau  runs `stoa-predict run` with noctalia.runStream and
+#                  reads one JSON object per stdout line — no process per
+#                  keystroke, where the eww popup forked `eww update`.
+#                  Opens the popup while there are suggestions.
+#    panel.luau    the popup: word and emoji buttons at the bottom of the
+#                  screen. A click runs `stoa-predict select N`, which
+#                  types the word with wtype.
+#
+#  Super+Shift+S runs `stoa-predict toggle`, which sends `toggle` to the
+#  service over IPC:  noctalia msg plugin stoa/predict:service all toggle
+
+id          = "stoa/predict"
+name        = "Stoa Text Prediction"
+version     = "1.0.0"
+author      = "stoa"
+icon        = "keyboard"
+description = "System-wide word and emoji suggestions while you type"
+tags        = ["input", "typing"]
+dependencies = ["python-evdev", "wtype"]
+
+# 30 = the `layer` panel option (v5.0.1), the newest thing used here.
+# The popup also needs keyboard_focus (10), persistent (11) and the
+# argv form of runAsync (24); all older than 30.
+plugin_api = 30
+
+[[service]]
+id    = "service"
+entry = "service.luau"
+
+# The popup must never take the keyboard: the user is typing in another
+# window and a click on a suggestion has to land there. keyboard_focus =
+# "none" requires dismiss_on_outside_click = false; persistent keeps the
+# popup up when another shell panel opens. Overlay stays above
+# fullscreen windows, as the eww window's :stacking "overlay" did.
+[[panel]]
+id                       = "popup"
+entry                    = "panel.luau"
+width                    = 560
+height                   = 56
+position                 = "bottom_center"
+layer                    = "overlay"
+keyboard_focus           = "none"
+dismiss_on_outside_click = false
+persistent               = true
