@@ -1,4 +1,21 @@
 {
+    "proxy": "",
+    "redact_private_values": true,
+    "vim_mode": false,
+    "session": {
+        "trust_all_worktrees": true
+    },
+    "agent_servers": {
+        "claude-acp": {
+            "type": "registry"
+        }
+    },
+    "icon_theme": {
+        "mode": "dark",
+        "light": "Zed (Default)",
+        "dark": "Zed (Default)"
+    },
+    "base_keymap": "VSCode",
     "theme": {
         "mode": "dark",
         "light": "Stoa",
@@ -19,7 +36,8 @@
         "show": "always"
     },
     "telemetry": {
-        "diagnostics": false,
-        "metrics": false
+        "anthropic_retention": true,
+        "diagnostics": true,
+        "metrics": true
     }
 }

@@ -89,6 +89,7 @@ enabled = [ "stoa/drive", "stoa/health" ]
 
 [shell]
 external_ip_enabled = true
+niri_overview_type_to_launch_enabled = true
 password_style = "random"
 screen_time_enabled = true
 settings_window_translucent = true
@@ -109,8 +110,25 @@ telemetry_enabled = true
     grid = true
     show_shortcuts = false
 
-[wallpaper.default]
-path = "/usr/share/noctalia/assets/noctalia-wallpaper.png"
+[theme]
+builtin = "Noctalia"
+community_palette = "Oxocarbon"
+custom_palette = "Stoa"
+mode = "dark"
+source = "custom"
+wallpaper_scheme = "m3-content"
 
-[wallpaper.last]
-path = "/usr/share/noctalia/assets/noctalia-wallpaper.png"
+[wallpaper]
+fill_mode = "fit"
+
+    [wallpaper.automation]
+    enabled = true
+
+    [wallpaper.default]
+    path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+
+    [wallpaper.last]
+    path = "/home/zeno/.config/stoa/wallpapers/columns.png"
+
+    [wallpaper.monitors.eDP-1]
+    path = "/home/zeno/.config/stoa/wallpapers/columns.png"
