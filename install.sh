@@ -119,6 +119,18 @@ for stale in "${CONFIG_DIR}/i3/config" "${CONFIG_DIR}/i3/i3status.conf" \
         echo -e "  ${S}[~] Removed stale ${stale} symlink (i3/Xorg/rofi support dropped).${R}"
     fi
 done
+# eww is gone: the Memento Mori widget and the text-prediction popup are
+# Noctalia plugins now, and Shift+Print opens the Screen Toolkit plugin
+# instead of stoa-capture. Drop the links we made for them; anything that
+# is not our symlink is left alone.
+for stale in "${CONFIG_DIR}/eww/eww.yuck" "${CONFIG_DIR}/eww/eww.scss" \
+             "${HOME}/.local/bin/stoa-capture" "${HOME}/.local/bin/stoa-memento"; do
+    if [ -L "$stale" ] && [[ "$(readlink "$stale")" == "${STOA_DIR}/"* ]]; then
+        rm -f "$stale"
+        echo -e "  ${S}[~] Removed stale ${stale} symlink (eww support dropped).${R}"
+    fi
+done
+rmdir "${CONFIG_DIR}/eww" 2>/dev/null || true
 # ── Noctalia v5 ──
 # v5 is configured from ~/.config/noctalia/*.toml (all merged, hot-reloaded)
 # plus palettes/<name>.json. Both are symlinked so a `git pull` propagates,
@@ -138,6 +150,23 @@ _link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive" \
       "${NOCTALIA_PLUGINS}/stoa-drive"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-health" \
       "${NOCTALIA_PLUGINS}/stoa-health"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-memento" \
+      "${NOCTALIA_PLUGINS}/stoa-memento"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-predict" \
+      "${NOCTALIA_PLUGINS}/stoa-predict"
+
+# config/noctalia/config.toml lists these under [plugins].enabled, but a
+# list in settings.toml (written the first time a plugin is toggled in the
+# GUI) replaces that one wholesale — Noctalia merges arrays by overwriting.
+# On a live shell, enable each through IPC instead; it appends to whatever
+# the user already has and is a no-op for one already enabled.
+if command -v noctalia &>/dev/null && noctalia msg plugins list &>/dev/null; then
+    for plugin in stoa/drive stoa/health stoa/memento stoa/predict alexander/screen-toolkit; do
+        noctalia msg plugins enable "$plugin" &>/dev/null || \
+            echo -e "  ${S}[~] Could not enable ${plugin} (enable it in Settings → Plugins).${R}"
+    done
+    echo -e "  ${O}[+] Noctalia plugins enabled${R}"
+fi
 
 # ── Apps ──
 _link "${STOA_DIR}/config/kitty/kitty.conf" "${CONFIG_DIR}/kitty/kitty.conf"
@@ -149,8 +178,6 @@ _link "${STOA_DIR}/config/btop/btop.conf"           "${CONFIG_DIR}/btop/btop.con
 _link "${STOA_DIR}/config/lf/lfrc"                  "${CONFIG_DIR}/lf/lfrc"
 _link "${STOA_DIR}/config/imv/config"               "${CONFIG_DIR}/imv/config"
 _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xml"
-_link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
-_link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
 _link "${STOA_DIR}/config/zed/settings.json"        "${CONFIG_DIR}/zed/settings.json"
 _link "${STOA_DIR}/config/fastfetch/config.jsonc"      "${CONFIG_DIR}/fastfetch/config.jsonc"
 _link "${STOA_DIR}/config/fastfetch/stoa-temple.txt"   "${CONFIG_DIR}/fastfetch/stoa-temple.txt"
@@ -285,7 +312,6 @@ fi
 mkdir -p "${HOME}/.local/bin"
 _link "${STOA_DIR}/scripts/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"
 _link "${STOA_DIR}/scripts/stoa-walls.sh"           "${HOME}/.local/bin/stoa-walls"
-_link "${STOA_DIR}/scripts/stoa-memento.sh"         "${HOME}/.local/bin/stoa-memento"
 _link "${STOA_DIR}/scripts/stoa-memento-data.sh"    "${HOME}/.local/bin/stoa-memento-data"
 _link "${STOA_DIR}/scripts/stoa-keybinds-bar.sh"    "${HOME}/.local/bin/stoa-keybinds-bar"
 _link "${STOA_DIR}/scripts/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-keybinds-toggle"
@@ -308,7 +334,6 @@ _link "${STOA_DIR}/scripts/stoa-drive-emblems"     "${HOME}/.local/bin/stoa-driv
 _link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-firewall"
 _link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
 _link "${STOA_DIR}/scripts/stoa-winapps.sh"      "${HOME}/.local/bin/stoa-winapps"
-_link "${STOA_DIR}/scripts/stoa-capture.sh"       "${HOME}/.local/bin/stoa-capture"
 _link "${STOA_DIR}/scripts/stoa-wm.sh"            "${HOME}/.local/bin/stoa-wm"
 _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
 _link "${STOA_DIR}/scripts/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"

@@ -3,8 +3,9 @@
 # ║  STOA LINUX — Text Prediction Daemon                        ║
 # ║  "Choose your words with care." — Epictetus                 ║
 # ║                                                              ║
-# ║  System-wide word suggestions via evdev + eww.               ║
-# ║  Requires: python-evdev, eww, wtype                          ║
+# ║  System-wide word suggestions via evdev, shown by the        ║
+# ║  Noctalia stoa/predict plugin.                               ║
+# ║  Requires: python-evdev, wtype                               ║
 # ║  User must be in the 'input' group.                          ║
 # ╚══════════════════════════════════════════════════════════════╝
 
@@ -81,7 +82,7 @@ class EmojiIndex:
             try:
                 data = json.loads(emoji_path.read_text(encoding="utf-8"))
                 self.keyword_map = data
-                print(f"[predict] Loaded {len(self.keyword_map)} emoji keywords")
+                print(f"[predict] Loaded {len(self.keyword_map)} emoji keywords", file=sys.stderr)
                 return
             except Exception:
                 pass
@@ -223,7 +224,7 @@ class EmojiIndex:
             "windows": [{"emoji": "🪟", "name": "window"}],
             "apple": [{"emoji": "🍎", "name": "red apple"}, {"emoji": "🍏", "name": "green apple"}],
         }
-        print(f"[predict] Loaded {len(self.keyword_map)} built-in emoji keywords")
+        print(f"[predict] Loaded {len(self.keyword_map)} built-in emoji keywords", file=sys.stderr)
 
     def search(self, word: str, limit: int = 3) -> list[dict]:
         """Return emojis related to the given word."""
@@ -268,10 +269,10 @@ class WordDictionary:
                         for w in [line.strip()]
                         if w and w.isalpha() and len(w) >= 2 and "'" not in w
                     })
-                    print(f"[predict] Loaded {len(self.words)} words from {path}")
+                    print(f"[predict] Loaded {len(self.words)} words from {path}", file=sys.stderr)
                     return
                 except Exception as e:
-                    print(f"[predict] Error loading {path}: {e}")
+                    print(f"[predict] Error loading {path}: {e}", file=sys.stderr)
 
         # Fallback: generate from aspell
         try:
@@ -286,12 +287,12 @@ class WordDictionary:
                     for w in [line.strip()]
                     if w and w.isalpha() and len(w) >= 2
                 })
-                print(f"[predict] Loaded {len(self.words)} words from aspell")
+                print(f"[predict] Loaded {len(self.words)} words from aspell", file=sys.stderr)
                 return
         except Exception:
             pass
 
-        print("[predict] WARNING: No word list found. Install 'words' package.")
+        print("[predict] WARNING: No word list found. Install 'words' package.", file=sys.stderr)
         self.words = []
 
     def search(self, prefix: str, limit: int = MAX_SUGGESTIONS) -> list[str]:
@@ -315,7 +316,12 @@ class WordDictionary:
 
 
 class PredictDaemon:
-    """Main daemon: reads evdev input, emits suggestions to eww."""
+    """Main daemon: reads evdev input, emits suggestions on stdout.
+
+    Protocol (read by theme/noctalia-plugins/stoa-predict/service.luau):
+    one JSON object per line, {"prefix", "words", "emojis", "visible"},
+    written whenever the suggestions change. Diagnostics go to stderr.
+    """
 
     def __init__(self):
         self.dictionary = WordDictionary()
@@ -338,20 +344,20 @@ class PredictDaemon:
                     # Must have letter keys to be a keyboard
                     if ecodes.KEY_A in key_caps and ecodes.KEY_Z in key_caps:
                         keyboards.append(dev)
-                        print(f"[predict] Found keyboard: {dev.name} ({dev.path})")
+                        print(f"[predict] Found keyboard: {dev.name} ({dev.path})", file=sys.stderr)
             except Exception:
                 continue
 
         if not keyboards:
-            print("[predict] ERROR: No keyboard devices found.")
-            print("[predict] Make sure you are in the 'input' group:")
-            print("[predict]   sudo usermod -aG input $USER")
-            print("[predict]   (then log out and back in)")
+            print("[predict] ERROR: No keyboard devices found.", file=sys.stderr)
+            print("[predict] Make sure you are in the 'input' group:", file=sys.stderr)
+            print("[predict]   sudo usermod -aG input $USER", file=sys.stderr)
+            print("[predict]   (then log out and back in)", file=sys.stderr)
         return keyboards
 
-    def update_eww(self, suggestions: list[str]):
-        """Send suggestion data to eww."""
-        if suggestions == self.last_suggestions:
+    def emit(self, suggestions: list[str], force: bool = False):
+        """Publish suggestion data to the plugin (stdout) and SUGGEST_FILE."""
+        if suggestions == self.last_suggestions and not force:
             return
         self.last_suggestions = suggestions
 
@@ -365,22 +371,21 @@ class PredictDaemon:
             "visible": len(suggestions) > 0 or len(emojis) > 0,
         })
 
-        # Write to file for eww defpoll fallback
+        # `stoa-predict select N` reads the prefix and words back from here.
         try:
             with open(SUGGEST_FILE, "w") as f:
                 f.write(data)
         except Exception:
             pass
 
-        # Update eww variable directly
-        try:
-            subprocess.Popen(
-                ["eww", "update", f"predict-data={data}"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except Exception:
-            pass
+        print(data, flush=True)
+
+    def reset(self):
+        """Forget the typed word. `stoa-predict select` sends SIGUSR1 after
+        typing a suggestion with wtype — virtual-keyboard input never reaches
+        evdev, so the daemon would otherwise keep the old prefix."""
+        self.buffer = ""
+        self.emit([], force=True)
 
     def process_key(self, keycode: int, key_state: int):
         """Process a single key event."""
@@ -411,7 +416,7 @@ class PredictDaemon:
         if self.ctrl_held or self.alt_held or self.meta_held:
             # Ctrl+A, Ctrl+C, etc. — reset buffer
             self.buffer = ""
-            self.update_eww([])
+            self.emit([])
             return
 
         # Skip other modifier keys
@@ -424,15 +429,15 @@ class PredictDaemon:
                 self.buffer = self.buffer[:-1]
                 if len(self.buffer) >= MIN_PREFIX:
                     suggestions = self.dictionary.search(self.buffer)
-                    self.update_eww(suggestions)
+                    self.emit(suggestions)
                 else:
-                    self.update_eww([])
+                    self.emit([])
             return
 
         # Reset keys (space, enter, punctuation, arrows)
         if keycode in RESET_KEYS:
             self.buffer = ""
-            self.update_eww([])
+            self.emit([])
             return
 
         # Letter keys
@@ -441,15 +446,15 @@ class PredictDaemon:
             self.buffer += char
             if len(self.buffer) >= MIN_PREFIX:
                 suggestions = self.dictionary.search(self.buffer)
-                self.update_eww(suggestions)
+                self.emit(suggestions)
             else:
-                self.update_eww([])
+                self.emit([])
             return
 
         # Number keys or unknown — reset
         if ecodes.KEY_1 <= keycode <= ecodes.KEY_0:
             self.buffer = ""
-            self.update_eww([])
+            self.emit([])
 
     async def listen_device(self, device: evdev.InputDevice):
         """Async listener for a single keyboard device."""
@@ -458,32 +463,27 @@ class PredictDaemon:
                 if event.type == ecodes.EV_KEY:
                     self.process_key(event.code, event.value)
         except Exception as e:
-            print(f"[predict] Device {device.name} disconnected: {e}")
+            print(f"[predict] Device {device.name} disconnected: {e}", file=sys.stderr)
 
     async def run(self):
         """Start listening on all keyboards."""
         keyboards = self.find_keyboards()
         if not keyboards:
+            print(json.dumps({"error": "No keyboard found. Are you in the input group? "
+                                       "sudo usermod -aG input $USER, then log out and back in."}),
+                  flush=True)
             sys.exit(1)
 
         # Write PID file
         with open(PIDFILE, "w") as f:
             f.write(str(os.getpid()))
 
-        print(f"[predict] Daemon started (PID {os.getpid()})")
+        print(f"[predict] Daemon started (PID {os.getpid()})", file=sys.stderr)
 
-        # Open eww predict window
-        try:
-            subprocess.Popen(
-                ["eww", "open", "predict"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except Exception:
-            pass
+        asyncio.get_running_loop().add_signal_handler(signal.SIGUSR1, self.reset)
 
         # Initialize with empty state
-        self.update_eww([])
+        self.emit([], force=True)
 
         # Listen on all keyboards concurrently
         tasks = [self.listen_device(kb) for kb in keyboards]
@@ -495,15 +495,6 @@ def cleanup(_sig=None, _frame=None):
     try:
         os.remove(PIDFILE)
     except FileNotFoundError:
-        pass
-    try:
-        subprocess.run(
-            ["eww", "close", "predict"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=3,
-        )
-    except Exception:
         pass
     try:
         os.remove(SUGGEST_FILE)

@@ -989,7 +989,6 @@ _colors_apply() {
     # Files to update
     local -a files=(
         "${HOME}/.config/kitty/kitty.conf"
-        "${HOME}/.config/eww/eww.scss"
         "${HOME}/.config/gtk-3.0/gtk.css"
         "${HOME}/.config/gtk-4.0/gtk.css"
         "${HOME}/.config/niri/config.kdl"
@@ -6031,7 +6030,7 @@ _health_services() {
     lines+=("")
     lines+=("─── Stoa Processes ───")
 
-    local stoa_procs=("noctalia" "eww" "gammastep")
+    local stoa_procs=("noctalia" "gammastep")
     for proc in "${stoa_procs[@]}"; do
         if pgrep -x "$proc" &>/dev/null; then
             lines+=("  ● running    $proc")
@@ -6238,8 +6237,6 @@ _health_config_check() {
         "${HOME}/.config/hypr/hyprland.lua:Hyprland config"
         "${HOME}/.config/noctalia/config.toml:Noctalia config"
         "${HOME}/.config/kitty/kitty.conf:Kitty config"
-        "${HOME}/.config/eww/eww.yuck:EWW widgets"
-        "${HOME}/.config/eww/eww.scss:EWW styles"
         "${HOME}/.config/stoa/stoa.conf:Stoa config"
     )
 

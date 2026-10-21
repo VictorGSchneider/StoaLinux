@@ -223,10 +223,11 @@ hl.bind(mod .. " + P", hl.dsp.exec_cmd("~/.local/bin/stoa-display"))
 -- ── Capture (screenshot + recording) ──
 -- Print goes to Noctalia's own region-capture overlay — the same action the
 -- bar's screenshot widget fires on left click.
--- Shift+Print keeps stoa-capture, which Noctalia does not replace: it also
--- does screen recording, timed delays and whole-window mode.
+-- Shift+Print opens the Screen Toolkit plugin (alexander/screen-toolkit):
+-- recording, OCR, colour picker and annotation; pressed again while
+-- recording, it stops the recording.
 hl.bind("Print", hl.dsp.exec_cmd("noctalia msg screenshot-region"))
-hl.bind("SHIFT + Print", hl.dsp.exec_cmd("~/.local/bin/stoa-capture"))
+hl.bind("SHIFT + Print", hl.dsp.exec_cmd("noctalia msg plugin alexander/screen-toolkit:service all toggle"))
 
 -- ── Clipboard ──
 hl.bind(mod .. " + V", hl.dsp.exec_cmd("noctalia msg panel-toggle clipboard"))

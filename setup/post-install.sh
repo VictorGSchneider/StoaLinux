@@ -166,8 +166,6 @@ esac
 # Clipboard — Wayland
 CLIPBOARD_PKGS="wl-clipboard"
 
-# Widgets (eww — AUR, Wayland)
-WIDGET_PKGS="eww"
 
 # Shell engine — Noctalia v5. A native Wayland/OpenGL binary in the
 # official repos (it replaced the AUR noctalia-shell + noctalia-qs pair,
@@ -254,7 +252,6 @@ echo -e "  ${S}Equalizer:  ${EQUALIZER_PKGS}${R}"
 echo -e "  ${S}WinApps:    ${WINAPPS_PKGS}${R}"
 echo -e "  ${S}DFM:        ${DFM_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
-echo -e "  ${S}Widgets:    ${WIDGET_PKGS} (AUR)${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS_QS}${R}"
 echo -e "  ${S}Dev:        ${DEV_PKGS}${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS}${R}"
@@ -284,7 +281,6 @@ if [ "$INSTALL_PKGS" = "y" ]; then
     _install_aur obsidian               "Obsidian"              obsidian || true
     _install_aur satty                  "Satty"                 satty || true
     _install_aur glslviewer             "glslViewer (GPU shaders)" glslViewer || true
-    _install_aur eww                    "eww"                   eww || true
     if [ "$WM_CHOICE" != "niri" ]; then
         _install_aur hyprswitch         "Hyprswitch (Alt+Tab)"  hyprswitch || true
     fi
@@ -552,7 +548,6 @@ echo ""
 echo -e "  ${F}Stoa commands:${R}"
 echo -e "  ${S}  stoa-fetch        — Stoic system fetch${R}"
 echo -e "  ${S}  stoa-walls        — Generate wallpapers${R}"
-echo -e "  ${S}  stoa-memento      — Memento Mori widget${R}"
 echo -e "  ${S}  stoa-quotes-sync  — Fetch Stoic quotes from the internet${R}"
 echo -e "  ${S}  stoa-settings     — Settings panel (Super+S)${R}"
 echo -e "  ${S}  stoa-settings     → VPN — ProtonVPN quick connect/country/P2P${R}"
