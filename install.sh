@@ -151,11 +151,11 @@ _link "${STOA_DIR}/config/imv/config"               "${CONFIG_DIR}/imv/config"
 _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xml"
 _link "${STOA_DIR}/config/eww/eww.yuck"             "${CONFIG_DIR}/eww/eww.yuck"
 _link "${STOA_DIR}/config/eww/eww.scss"             "${CONFIG_DIR}/eww/eww.scss"
-_link "${STOA_DIR}/config/Code/User/settings.json"  "${CONFIG_DIR}/Code/User/settings.json"
+_link "${STOA_DIR}/config/zed/settings.json"        "${CONFIG_DIR}/zed/settings.json"
 _link "${STOA_DIR}/config/fastfetch/config.jsonc"      "${CONFIG_DIR}/fastfetch/config.jsonc"
 _link "${STOA_DIR}/config/fastfetch/stoa-temple.txt"   "${CONFIG_DIR}/fastfetch/stoa-temple.txt"
 
-# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird + VS Code) ──
+# ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird + Zed) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"
 _link "${STOA_DIR}/theme/gtk-3.0/stoa-gtk.css"  "${CONFIG_DIR}/gtk-3.0/gtk.css"
 _link "${STOA_DIR}/theme/gtk-4.0/settings.ini"  "${CONFIG_DIR}/gtk-4.0/settings.ini"
@@ -238,14 +238,22 @@ if ! sudo test -d /etc/pacman.d/hooks; then
         echo -e "  ${S}[~] Pacman hook skipped (no sudo)${R}"
 fi
 
-# VS Code — install Stoa theme as extension (via symlinks)
-VSCODE_EXT_DIR="${HOME}/.vscode/extensions/stoa-theme"
-_link "${STOA_DIR}/theme/vscode/package.json" \
-      "${VSCODE_EXT_DIR}/package.json"
-_link "${STOA_DIR}/theme/vscode/themes/stoa-color-theme.json" \
-      "${VSCODE_EXT_DIR}/themes/stoa-color-theme.json"
-echo -e "  ${O}[+] VS Code Stoa theme installed${R}"
-echo -e "  ${S}    To activate: Ctrl+K Ctrl+T → Stoa${R}"
+# Zed — the Stoa theme is a theme family file Zed loads from its themes
+# dir; settings.json (linked above) already selects it.
+_link "${STOA_DIR}/theme/zed/stoa.json" "${CONFIG_DIR}/zed/themes/stoa.json"
+echo -e "  ${O}[+] Zed Stoa theme installed${R}"
+
+# VS Code was the editor before Zed. Its Stoa links point at files that no
+# longer exist, so drop them; anything VS Code itself wrote stays.
+for _old in "${HOME}/.vscode/extensions/stoa-theme/package.json" \
+            "${HOME}/.vscode/extensions/stoa-theme/themes/stoa-color-theme.json" \
+            "${CONFIG_DIR}/Code/User/settings.json"; do
+    if [ -L "$_old" ] && [[ "$(readlink "$_old")" == "${STOA_DIR}/"* ]]; then
+        rm -f "$_old"
+    fi
+done
+rmdir "${HOME}/.vscode/extensions/stoa-theme/themes" \
+      "${HOME}/.vscode/extensions/stoa-theme" 2>/dev/null || true
 
 # ── Stoa data dirs ──
 mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
@@ -519,21 +527,21 @@ x-scheme-handler/about=brave-browser.desktop
 x-scheme-handler/unknown=brave-browser.desktop
 x-scheme-handler/mailto=betterbird.desktop
 message/rfc822=betterbird.desktop
-text/plain=code.desktop
-text/x-python=code.desktop
-text/x-csrc=code.desktop
-text/x-chdr=code.desktop
-text/x-c++src=code.desktop
-text/x-java=code.desktop
-text/x-shellscript=code.desktop
-text/x-script.python=code.desktop
-application/javascript=code.desktop
-application/json=code.desktop
-application/x-yaml=code.desktop
-application/xml=code.desktop
-application/toml=code.desktop
-text/x-rust=code.desktop
-text/x-go=code.desktop
+text/plain=dev.zed.Zed.desktop
+text/x-python=dev.zed.Zed.desktop
+text/x-csrc=dev.zed.Zed.desktop
+text/x-chdr=dev.zed.Zed.desktop
+text/x-c++src=dev.zed.Zed.desktop
+text/x-java=dev.zed.Zed.desktop
+text/x-shellscript=dev.zed.Zed.desktop
+text/x-script.python=dev.zed.Zed.desktop
+application/javascript=dev.zed.Zed.desktop
+application/json=dev.zed.Zed.desktop
+application/x-yaml=dev.zed.Zed.desktop
+application/xml=dev.zed.Zed.desktop
+application/toml=dev.zed.Zed.desktop
+text/x-rust=dev.zed.Zed.desktop
+text/x-go=dev.zed.Zed.desktop
 text/markdown=obsidian.desktop
 application/vnd.openxmlformats-officedocument.wordprocessingml.document=onlyoffice-desktopeditors.desktop
 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=onlyoffice-desktopeditors.desktop
@@ -567,6 +575,16 @@ inode/directory=thunar.desktop
 MIME
     echo -e "  ${O}[+] mimeapps.list${R}"
 fi
+
+# Zed replaced VS Code as the code editor. A mimeapps.list written before
+# that still sends source files to code.desktop; repoint just those entries.
+# ~/.config/mimeapps.list wins over the one above, so fix it too.
+for _mime in "${MIME_DIR}/mimeapps.list" "${CONFIG_DIR}/mimeapps.list"; do
+    if [ -f "$_mime" ] && grep -qE '(=|;)code\.desktop(;|$)' "$_mime"; then
+        sed -i -E 's/(=|;)code\.desktop(;|$)/\1dev.zed.Zed.desktop\2/g' "$_mime"
+        echo -e "  ${O}[+] ${_mime/#$HOME/\~}: code files now open in Zed${R}"
+    fi
+done
 
 # Brave override — bypass libsecret/gnome-keyring so the browser never
 # prompts for the keyring password. The local override shadows the system

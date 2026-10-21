@@ -26,9 +26,9 @@
 # ── SSH (config only — never list the private keys) ──
 # ~/.ssh/config
 
-# ── VS Code (settings.json is already Stoa-symlinked) ──
-# ~/.config/Code/User/keybindings.json
-# ~/.config/Code/User/snippets
+# ── Zed (settings.json and the Stoa theme are already Stoa-symlinked) ──
+# ~/.config/zed/keymap.json
+# ~/.config/zed/snippets
 
 # ── Tmux ──
 # ~/.tmux.conf
