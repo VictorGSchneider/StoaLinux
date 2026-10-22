@@ -150,6 +150,18 @@ enabled = true
 temperature_day = 4800
 temperature_night = 2800
 
+[plugin_settings."alexander/screen-toolkit"]
+panel-legacy_layer = "overlay"
+panel-legacy_open_near_click = true
+panel-legacy_position = "auto"
+panel-mode = "legacy"
+panel_open_near_click = true
+panel_placement = "attached"
+record-copy-to-clipboard = true
+result_layer = "overlay"
+search-engine-url = "https://search.brave.com/search?q="
+selected-ocr-lang = "eng+pt-br"
+
 [plugin_settings."stoa/drive"]
 manage_open_near_click = true
 
@@ -247,13 +259,13 @@ transition_on_startup = true
     enabled = true
 
     [wallpaper.default]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-91db2fa2-marble.png"
 
     [wallpaper.last]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-91db2fa2-marble.png"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-91db2fa2-marble.png"
 
 [widget.launcher]
 capsule_foreground = "primary"
