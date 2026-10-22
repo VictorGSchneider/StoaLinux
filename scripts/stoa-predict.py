@@ -900,20 +900,19 @@ class InputMethod:
     def accept(self, index: int):
         kind, text = self.items[index]
         prefix = self.prefix()
-        if kind == "word":
-            if self.surrounding_known:
-                self.im.delete_surrounding_text(len(prefix.encode("utf-8")), 0)
-            else:
-                # Terminals and other apps without surrounding text: erase
-                # the typed prefix with real BackSpaces first.
-                now = int(time.monotonic() * 1000) & 0xFFFFFFFF
-                backspace = self.xkb.key_for(XK_BACKSPACE, KEY_BACKSPACE)
-                for _ in prefix:
-                    self._forward(now, backspace, KEY_PRESSED)
-                    self._forward(now, backspace, KEY_RELEASED)
-            self.im.commit_string(text + " ")
+        # Both kinds replace the typed prefix: "ke" + 🔑 gives "🔑", not "ke🔑".
+        if self.surrounding_known:
+            self.im.delete_surrounding_text(len(prefix.encode("utf-8")), 0)
         else:
-            self.im.commit_string(text)
+            # Terminals and other apps without surrounding text: erase
+            # the typed prefix with real BackSpaces first.
+            now = int(time.monotonic() * 1000) & 0xFFFFFFFF
+            backspace = self.xkb.key_for(XK_BACKSPACE, KEY_BACKSPACE)
+            for _ in prefix:
+                self._forward(now, backspace, KEY_PRESSED)
+                self._forward(now, backspace, KEY_RELEASED)
+        # A word ends with a space so typing goes on; an emoji does not.
+        self.im.commit_string(text + " " if kind == "word" else text)
         self.im.commit(self.serial)
         self.typed = ""
         self.before_cursor = ""
