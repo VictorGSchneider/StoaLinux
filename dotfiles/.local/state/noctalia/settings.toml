@@ -244,13 +244,13 @@ transition_on_startup = true
     enabled = true
 
     [wallpaper.default]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-parchment.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-columns.png"
 
     [wallpaper.last]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-parchment.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-columns.png"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-parchment.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-columns.png"
 
 [widget.launcher]
 capsule_foreground = "primary"
