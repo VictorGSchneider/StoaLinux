@@ -283,19 +283,19 @@ _fix_keyring_default() {
     echo -e "  ${O}[✓] Default keyring: '${current}' -> 'login' (the one pam_gnome_keyring actually unlocks).${R}"
 
     # Any encrypted Noctalia clipboard history on disk was sealed with a
-    # storage key stored under the OLD default collection — now
-    # unreachable, since that collection is no longer what "default" means.
-    # Noctalia's storage_key_provider refuses to mint a replacement key
-    # while it sees encrypted data it can't decrypt (a corruption guard),
-    # so persistence stays permanently broken until that stale state is
-    # out of the way. Moved aside rather than deleted; whatever was pinned
-    # under the old broken default was never actually persisted anyway
-    # (the collection was locked the whole time), so there is nothing
-    # recoverable in it — this is just being cautious with someone else's
-    # files rather than assuming that.
+    # storage key stored under the OLD default collection, which is no
+    # longer what "default" means. Noctalia's storage_key_provider refuses
+    # to mint a replacement key while it sees encrypted data it can't
+    # decrypt (a corruption guard), so persistence stays broken until that
+    # state is out of the way. Moved aside, not deleted: if the old
+    # collection was unlocked in the session (it usually was — it was the
+    # default), the pins in it were really saved, and the backup together
+    # with that keyring file is what it takes to get them back.
     if [ -d "$NOCTALIA_CLIPBOARD_STATE" ]; then
         mv "$NOCTALIA_CLIPBOARD_STATE" "${NOCTALIA_CLIPBOARD_STATE}.bak-$(date +%s)"
-        echo -e "  ${O}[✓] Cleared orphaned encrypted clipboard state so Noctalia can mint a fresh key.${R}"
+        echo -e "  ${O}[✓] Moved the old encrypted clipboard state aside so Noctalia can mint a fresh key.${R}"
+        echo -e "  ${S}    Pins pinned before now are in ${NOCTALIA_CLIPBOARD_STATE}.bak-*,${R}"
+        echo -e "  ${S}    sealed with a key in the '${current}' keyring — keep both to recover them.${R}"
     fi
 }
 

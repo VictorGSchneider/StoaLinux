@@ -201,6 +201,69 @@ else
     echo "[INFO] Stoa polkit rule: not verifiable from this session (no journal access, ${_POLKIT_RULE} not readable)" >> "$LOG"
 fi
 
+# ── Account locked by pam_faillock? ──
+# Every PAM authentication that fails — a wrong password, or a sudo/pkexec
+# with no way to prompt — counts against the account, and at `deny` of
+# them (Arch default 3) pam_faillock refuses even the right password for
+# unlock_time. sudo, polkit, the lock screen and the login screen all fail
+# together, and nothing says why. `faillock` lists the counted ("V") ones;
+# a user may read their own record.
+if command -v faillock &>/dev/null; then
+    _fl_deny="$(awk -F= '/^[[:space:]]*deny[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2 }' \
+        /etc/security/faillock.conf 2>/dev/null | tail -n1)"
+    _fl_deny="${_fl_deny:-3}"
+    if _fl_out="$(faillock --user "$(id -un)" 2>/dev/null)"; then
+        _fl_count="$(printf '%s\n' "$_fl_out" | awk '$NF == "V"' | wc -l)"
+        if [ "$_fl_count" -ge "$_fl_deny" ]; then
+            _fail "Account locked by pam_faillock (${_fl_count} failed attempts) — run: faillock --user $(id -un) --reset"
+        elif [ "$_fl_count" -gt 0 ]; then
+            _warn "pam_faillock counted ${_fl_count} of ${_fl_deny} failed logins — at ${_fl_deny} sudo/polkit/login stop accepting the password"
+        else
+            _ok "pam_faillock: no failed attempts counted"
+        fi
+    fi
+fi
+
+# ── Login keyring unlocked? ──
+# Noctalia keeps clipboard pins encrypted, with the key in the Secret
+# Service's default collection. pam_gnome_keyring (greetd login) unlocks
+# only the collection named "login"; if that one is locked, or another one
+# is the default, pins are dropped at the next restart without an error.
+_KR_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/keyrings"
+if [ -f "${_KR_DIR}/default" ] && [ "$(cat "${_KR_DIR}/default" 2>/dev/null)" != "login" ]; then
+    _warn "Default keyring is '$(cat "${_KR_DIR}/default")', not 'login' — the login screen does not unlock it, so clipboard pins cannot persist"
+fi
+if command -v busctl &>/dev/null; then
+    _kr_locked="$(busctl --user get-property org.freedesktop.secrets \
+        /org/freedesktop/secrets/collection/login \
+        org.freedesktop.Secret.Collection Locked 2>/dev/null)"
+    case "$_kr_locked" in
+        "b false") _ok "Login keyring unlocked" ;;
+        "b true")  _warn "Login keyring is locked — its password differs from yours, or you did not log in through greetd; clipboard pins will not persist" ;;
+    esac
+fi
+if systemctl is-enabled greetd.service &>/dev/null \
+        && [ -r /etc/pam.d/greetd ] \
+        && ! grep -q '^[^#]*pam_gnome_keyring' /etc/pam.d/greetd; then
+    _warn "/etc/pam.d/greetd does not load pam_gnome_keyring — re-run setup/enable-stoa-greetd.sh"
+fi
+
+# ── Greeter sync on every change? ──
+# config.toml sets [shell.greeter_sync] auto_sync = false because each sync
+# escalates through pkexec — one polkit password box per wallpaper rotation.
+# The GUI toggle writes ~/.local/state/noctalia/settings.toml, which wins
+# over config.toml, so turning it on there brings the prompts back.
+_NOC_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/settings.toml"
+# Parsed as TOML: the GUI may write it as a table or as an inline value.
+if [ -f "$_NOC_STATE" ] && python3 -c '
+import sys, tomllib
+with open(sys.argv[1], "rb") as f:
+    s = tomllib.load(f)
+sys.exit(0 if s.get("shell", {}).get("greeter_sync", {}).get("auto_sync") is True else 1)
+' "$_NOC_STATE" 2>/dev/null; then
+    _warn "Greeter auto-sync is on in ${_NOC_STATE} — polkit asks for a password on every wallpaper change (Settings → Security → Noctalia Greeter)"
+fi
+
 if [ "$STOA_WM_NAME" = "niri" ]; then
     # ── niri config installed? ──
     # niri falls back to its built-in default config (no Stoa binds, no
