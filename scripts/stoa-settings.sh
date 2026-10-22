@@ -4267,6 +4267,7 @@ menu_keyboard() {
             "  Caps Lock behavior" \
             "  NumLock on boot" \
             "  RGB lighting" \
+            "  Text prediction" \
             "  Back")
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
@@ -4276,6 +4277,71 @@ menu_keyboard() {
             *Caps*)       _kb_capslock_behavior ;;
             *NumLock*)    _kb_numlock ;;
             *RGB*)        _menu_rgb ;;
+            *prediction*) menu_predict ;;
+        esac
+    done
+}
+
+# ══════════════════════════════════════════════════════════════
+#   TEXT PREDICTION (stoa-predict input method)
+# ══════════════════════════════════════════════════════════════
+
+_predict_running() {
+    local pid
+    pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/stoa-predict.pid" 2>/dev/null)
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+# Tick the languages to suggest words from. stoa-predict downloads a
+# missing word list (~600 KB, FrequencyWords) before saving the choice and
+# restarts prediction if it is on, so the change applies at once.
+_predict_languages() {
+    local -a rows=() codes=() utf8=()
+    local code name enabled downloaded status picked err
+    while IFS=$'\t' read -r code name enabled downloaded; do
+        if [ "$enabled" = yes ]; then rows+=(TRUE); else rows+=(FALSE); fi
+        if [ "$downloaded" = yes ]; then status="downloaded"; else status="downloads ~600 KB"; fi
+        rows+=("$code" "$name" "$status")
+    done < <(stoa-predict languages)
+
+    # Language names are not ASCII. GTK rejects them in argv ("Invalid byte
+    # sequence") unless the locale is UTF-8, and a session started without
+    # LANG has none, so borrow C.UTF-8 for this one dialog.
+    [ "$(locale charmap 2>/dev/null)" = "UTF-8" ] || utf8=(env LC_ALL=C.UTF-8)
+    picked=$("${utf8[@]}" yad --list --checklist --title="  Prediction languages" \
+        --text="Words come from every language ticked here, the most common first." \
+        --column="":CHK --column="Code" --column="Language" --column="Word list" \
+        --print-column=2 --separator='' --width=520 --height=560 \
+        "${rows[@]}") || return
+    mapfile -t codes < <(printf '%s\n' "$picked" | sed '/^[[:space:]]*$/d')
+    if [ "${#codes[@]}" -eq 0 ]; then
+        _notify "Pick at least one language"
+        return
+    fi
+
+    _notify "Saving prediction languages..."
+    if err=$(stoa-predict set-languages "${codes[@]}" 2>&1); then
+        _notify "Prediction languages: ${codes[*]}"
+    else
+        _notify "${err:-Could not save the prediction languages}"
+    fi
+}
+
+menu_predict() {
+    while true; do
+        local state langs choice
+        if _predict_running; then state="on"; else state="off"; fi
+        langs=$(stoa-predict languages | awk -F'\t' '$3 == "yes" { printf "%s%s", sep, $2; sep = ", " }')
+
+        choice=$(_yad_select "  Text prediction" \
+            "  Prediction ($state) - Super+Shift+S" \
+            "  Languages (${langs:-none})" \
+            "  Back")
+        [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
+
+        case "$choice" in
+            *Prediction*) stoa-predict toggle >/dev/null; sleep 1 ;;
+            *Languages*)  _predict_languages ;;
         esac
     done
 }

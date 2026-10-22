@@ -227,6 +227,8 @@ A few things exist to keep the system honest with itself, without asking you to 
 - **Checks** — `bash tests/run.sh` runs the same checks CI does: shell linting, config-format validation, and a set of StoaLinux-specific invariants (dead keybinds, pacman hooks pointing nowhere, that kind of thing).
 - **Vendored upstreams** — a couple of `stoa-*` tools are forks of standalone projects, kept alongside a read-only copy of their upstream under `scripts/vendor/` so improvements can flow both ways. See `scripts/vendor/README.md`.
 
+- **Text prediction** (`Super+Shift+S`) — word and emoji suggestions in a popup at the text cursor (↓ to enter, ←/→ to pick, Enter to accept). Languages are ticked in `Super+S → Keyboard → Text prediction`; their word lists are [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (OpenSubtitles 2018, CC BY-SA 4.0), downloaded on demand and ranked by how often each word is used.
+
 ## License
 
 GPL-3.0

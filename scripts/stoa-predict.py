@@ -22,14 +22,15 @@
 # registered, or {"error": "..."} before exiting. Logs go to stderr.
 
 import ctypes
+import heapq
 import json
 import mmap
 import os
 import re
 import signal
-import subprocess
 import sys
 import time
+import unicodedata
 from bisect import bisect_left
 from pathlib import Path
 
@@ -37,11 +38,12 @@ from pathlib import Path
 MAX_SUGGESTIONS = 5
 MAX_EMOJIS = 3
 MIN_PREFIX = 2
-DICT_PATHS = [
-    Path.home() / ".config/stoa/predict-words.txt",
-    Path("/usr/share/dict/words"),
-    Path("/usr/share/dict/american-english"),
-]
+_CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+_DATA_HOME = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+LANGUAGES_FILE = _CONFIG_HOME / "stoa/predict-languages"   # written by stoa-predict set-languages
+LANGUAGE_DIR = _DATA_HOME / "stoa/predict"                 # <code>.txt frequency lists
+CUSTOM_WORDS = _CONFIG_HOME / "stoa/predict-words.txt"
+FALLBACK_DICTS = [Path("/usr/share/dict/words"), Path("/usr/share/dict/american-english")]
 _RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
 PIDFILE = f"{_RUNTIME_DIR}/stoa-predict.pid"
 PROTOCOL_DIR = Path(__file__).resolve().parent / "stoa-predict-protocols"
@@ -50,6 +52,23 @@ WAYLAND_XML = Path("/usr/share/wayland/wayland.xml")
 # The last word before the cursor: a run of letters (any script, so
 # "ação" and "über" count; digits and "_" end it).
 WORD_BEFORE_CURSOR = re.compile(r"[^\W\d_]+$")
+# U+0080–U+00BF inside a word is UTF-8 read as Latin-1 ("vocãª"), never a
+# real spelling; the frequency lists have a few of those.
+MOJIBAKE = re.compile("[\u0080-\u00bf]")
+
+
+def fold(text: str) -> str:
+    """Lowercase without accents, for lookup: "Ação" -> "acao"."""
+    decomposed = unicodedata.normalize("NFD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def enabled_languages() -> list[str]:
+    try:
+        lines = LANGUAGES_FILE.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ["en"]
+    return [line.strip() for line in lines if line.strip() and not line.startswith("#")]
 
 
 def say(**payload):
@@ -273,69 +292,98 @@ class EmojiIndex:
 
 
 class WordDictionary:
-    """Sorted word list with fast prefix search via bisect."""
+    """Word suggestions for the enabled languages, most frequent first.
 
-    def __init__(self):
-        self.words = []
-        self._load()
+    Each language is a frequency list (`word count` per line, from
+    FrequencyWords — OpenSubtitles 2018, CC BY-SA 4.0) that
+    `stoa-predict set-languages` downloads into LANGUAGE_DIR; the choice is
+    in LANGUAGES_FILE (one code per line). Languages are merged by relative
+    frequency, so a common Portuguese word and a common English one rank
+    alike. Lookup ignores case and accents: "acao" finds "ação"."""
 
-    def _load(self):
-        """Load word list from first available source."""
-        for path in DICT_PATHS:
-            if path.exists():
-                try:
-                    raw = path.read_text(encoding="utf-8", errors="ignore")
-                    # Filter to lowercase words, 2+ chars, no possessives
-                    self.words = sorted({
-                        w.lower()
-                        for line in raw.splitlines()
-                        for w in [line.strip()]
-                        if w and w.isalpha() and len(w) >= 2 and "'" not in w
-                    })
-                    print(f"[predict] Loaded {len(self.words)} words from {path}", file=sys.stderr)
-                    return
-                except Exception as e:
-                    print(f"[predict] Error loading {path}: {e}", file=sys.stderr)
+    def __init__(self, languages: list[str] | None = None):
+        self.languages = enabled_languages() if languages is None else languages
+        scores: dict[str, float] = {}
+        for code in self.languages:
+            self._load_language(code, scores)
+        if not scores:
+            self._load_fallback(scores)
+        scores = self._drop_rare_variants(scores)
+        self._load_custom(scores)
+        self.index = sorted((fold(w), -score, w) for w, score in scores.items())
+        self.keys = [key for key, _score, _word in self.index]
 
-        # Fallback: generate from aspell
+    def _load_language(self, code: str, scores: dict):
+        path = LANGUAGE_DIR / f"{code}.txt"
         try:
-            result = subprocess.run(
-                ["aspell", "-d", "en", "dump", "master"],
-                capture_output=True, text=True, timeout=10
-            )
-            if result.returncode == 0:
-                self.words = sorted({
-                    w.lower()
-                    for line in result.stdout.splitlines()
-                    for w in [line.strip()]
-                    if w and w.isalpha() and len(w) >= 2
-                })
-                print(f"[predict] Loaded {len(self.words)} words from aspell", file=sys.stderr)
-                return
-        except Exception:
-            pass
+            lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        except OSError:
+            log(f"language '{code}' is enabled but {path} is missing — re-add it in Stoa Settings")
+            return
+        counts = {}
+        for line in lines:
+            parts = line.split()
+            if not parts:
+                continue
+            word = parts[0].lower()
+            if len(word) < MIN_PREFIX or not WORD_BEFORE_CURSOR.fullmatch(word) or MOJIBAKE.search(word):
+                continue
+            count = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+            counts[word] = counts.get(word, 0) + count
+        total = sum(counts.values()) or 1
+        for word, count in counts.items():
+            scores[word] = max(scores.get(word, 0.0), count / total)
+        log(f"Loaded {len(counts)} words for '{code}'")
 
-        print("[predict] WARNING: No word list found. Install 'words' package.", file=sys.stderr)
-        self.words = []
+    @staticmethod
+    def _drop_rare_variants(scores: dict) -> dict:
+        """Subtitle lists carry typos that differ only in accents ("nâo",
+        "näo" next to "não"). Keep a spelling only if it is at least 5% as
+        frequent as the commonest word that folds the same way, which still
+        keeps real pairs such as "esta"/"está"."""
+        best: dict[str, float] = {}
+        for word, score in scores.items():
+            key = fold(word)
+            best[key] = max(best.get(key, 0.0), score)
+        return {w: sc for w, sc in scores.items() if sc >= 0.05 * best[fold(w)]}
+
+    def _load_fallback(self, scores: dict):
+        """No language downloaded yet: the system word list, unranked."""
+        for path in FALLBACK_DICTS:
+            try:
+                raw = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            for line in raw.splitlines():
+                word = line.strip().lower()
+                if len(word) >= MIN_PREFIX and WORD_BEFORE_CURSOR.fullmatch(word):
+                    scores.setdefault(word, 0.0)
+            log(f"Loaded {len(scores)} words from {path} (no prediction language downloaded)")
+            return
+        log("WARNING: no word list — add a language in Stoa Settings → Keyboard → Text prediction")
+
+    def _load_custom(self, scores: dict):
+        """~/.config/stoa/predict-words.txt: your own words, ranked first."""
+        try:
+            raw = CUSTOM_WORDS.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return
+        for line in raw.splitlines():
+            word = line.strip()
+            if len(word) >= MIN_PREFIX and WORD_BEFORE_CURSOR.fullmatch(word):
+                scores[word] = 1.0
 
     def search(self, prefix: str, limit: int = MAX_SUGGESTIONS) -> list[str]:
-        """Return up to `limit` words starting with `prefix`."""
-        if not prefix or len(prefix) < MIN_PREFIX or not self.words:
+        """Up to `limit` words starting with `prefix`, most frequent first."""
+        if len(prefix) < MIN_PREFIX or not self.index:
             return []
-
-        prefix = prefix.lower()
-        idx = bisect_left(self.words, prefix)
-        results = []
-        while idx < len(self.words) and len(results) < limit:
-            word = self.words[idx]
-            if word.startswith(prefix):
-                # Don't suggest the exact typed prefix
-                if word != prefix:
-                    results.append(word)
-            else:
-                break
-            idx += 1
-        return results
+        key = fold(prefix)
+        lo = bisect_left(self.keys, key)
+        hi = bisect_left(self.keys, key + "\U0010ffff", lo)
+        typed = prefix.lower()
+        matches = (entry for entry in self.index[lo:hi] if entry[2] != typed)
+        best = heapq.nsmallest(limit, matches, key=lambda entry: entry[1])  # entry[1] = -score
+        return [word for _key, _score, word in best]
 
 
 
