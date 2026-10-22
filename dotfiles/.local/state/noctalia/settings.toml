@@ -156,6 +156,9 @@ manage_open_near_click = true
 [plugin_settings."stoa/health"]
 manage_open_near_click = true
 
+[plugin_settings."stoa/predict"]
+popup_placement = "attached"
+
 [plugins]
 enabled = [ "stoa/drive", "stoa/health", "alexander/screen-toolkit", "stoa/memento", "stoa/predict" ]
 
@@ -244,13 +247,13 @@ transition_on_startup = true
     enabled = true
 
     [wallpaper.default]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-d822a474-marble.png"
 
     [wallpaper.last]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-d822a474-marble.png"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-0ab31a8d-columns.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-d822a474-marble.png"
 
 [widget.launcher]
 capsule_foreground = "primary"
