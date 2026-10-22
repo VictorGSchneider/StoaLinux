@@ -177,8 +177,10 @@ SHELL_PKGS_QS="noctalia"
 # Fonts and theme
 FONT_PKGS="ttf-jetbrains-mono ttf-font-awesome"
 
-# Toolkit unification (Qt = GTK appearance)
-THEME_PKGS="qt5ct qt6ct"
+# Toolkit unification (Qt = GTK appearance). qt5-wayland/qt6-wayland are
+# the Qt platform plugins for a Wayland session; without qt5-wayland a
+# Qt5 app (bauh, via PyQt5) aborts on start under QT_QPA_PLATFORM=wayland.
+THEME_PKGS="qt5ct qt6ct qt5-wayland qt6-wayland"
 
 # Firewall
 FIREWALL_PKGS="nftables"
