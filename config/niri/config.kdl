@@ -50,7 +50,9 @@ input {
 // niri-session already exports XDG_CURRENT_DESKTOP=niri and
 // XDG_SESSION_TYPE=wayland, so only the toolkit and theme variables go here.
 environment {
-    QT_QPA_PLATFORM "wayland"
+    // xcb (through xwayland-satellite) is the fallback for a Qt app whose
+    // wayland plugin is not installed: with "wayland" alone Qt aborts.
+    QT_QPA_PLATFORM "wayland;xcb"
     // qt5ct is Qt5-only; Noctalia (Qt6) gets its icon theme from
     // scripts/stoa-bar.sh — see the same note in hyprland.lua.
     QT_QPA_PLATFORMTHEME "qt5ct"

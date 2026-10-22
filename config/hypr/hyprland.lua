@@ -19,7 +19,9 @@ hl.monitor({
 -- ── Environment Variables ──
 hl.env("XCURSOR_SIZE", "24")
 hl.env("XCURSOR_THEME", "Colloid-cursors")
-hl.env("QT_QPA_PLATFORM", "wayland")
+-- xcb is the fallback for a Qt app whose wayland plugin is not installed
+-- (qt5-wayland for Qt5): with "wayland" alone Qt aborts instead.
+hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 -- qt5ct is a Qt5-only platform theme plugin: Qt6 apps (Quickshell, and so
 -- Noctalia) never load it and end up on "hicolor" for icons. Noctalia's icon
 -- theme is therefore pinned separately via QS_ICON_THEME in scripts/stoa-bar.sh,
