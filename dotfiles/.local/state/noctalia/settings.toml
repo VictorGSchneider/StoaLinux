@@ -56,18 +56,39 @@ width = 800
 
 [desktop_widgets]
 schema_version = 2
-widget_order = [ "stoa_memento" ]
+widget_order = [ "stoa_memento", "desktop-widget-0000000000000001" ]
 
     [desktop_widgets.grid]
     cell_size = 16
     major_interval = 4
     visible = true
 
+    [desktop_widgets.widget.desktop-widget-0000000000000001]
+    box_height = 192.0
+    box_width = 528.0
+    cx = 328.0
+    cy = 252.0
+    output = "eDP-1"
+    placement_height = 1080.0
+    placement_width = 1920.0
+    rotation = 0.0
+    type = "clock"
+
+        [desktop_widgets.widget.desktop-widget-0000000000000001.settings]
+        background = true
+        background_color = "on_primary"
+        background_opacity = 0.29999999999999999
+        background_padding = 7
+        background_radius = 15
+        clock_style = "digital"
+        color = "primary"
+        format = "{:%H:%M:%S}"
+
     [desktop_widgets.widget.stoa_memento]
-    box_height = 0.0
-    box_width = 0.0
-    cx = 1640.0
-    cy = 360.0
+    box_height = 432.0
+    box_width = 464.0
+    cx = 1624.0
+    cy = 308.0
     output = "eDP-1"
     placement_height = 1080.0
     placement_width = 1920.0
@@ -75,8 +96,10 @@ widget_order = [ "stoa_memento" ]
     type = "stoa/memento:desktop"
 
 [dock]
+background_opacity = 0.0
 enabled = true
 layer = "overlay"
+pinned = [ "brave-browser" ]
 reserve_space = false
 show_dots = true
 smart_auto_hide = true
@@ -126,6 +149,12 @@ widget_order = [ "lockscreen-login-box@eDP-1" ]
 enabled = true
 temperature_day = 4800
 temperature_night = 2800
+
+[plugin_settings."stoa/drive"]
+manage_open_near_click = true
+
+[plugin_settings."stoa/health"]
+manage_open_near_click = true
 
 [plugins]
 enabled = [ "stoa/drive", "stoa/health", "alexander/screen-toolkit", "stoa/memento", "stoa/predict" ]
@@ -215,13 +244,13 @@ transition_on_startup = true
     enabled = true
 
     [wallpaper.default]
-    path = "/home/zeno/.config/stoa/wallpapers/marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-d822a474-parchment.png"
 
     [wallpaper.last]
-    path = "/home/zeno/.config/stoa/wallpapers/marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-d822a474-parchment.png"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/zeno/.config/stoa/wallpapers/marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-d822a474-parchment.png"
 
 [widget.launcher]
 capsule_foreground = "primary"
