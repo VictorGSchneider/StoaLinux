@@ -629,7 +629,7 @@ Version=1.0
 Name=Brave Web Browser
 GenericName=Web Browser
 Comment=Access the Internet
-Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland %U
+Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-wayland-ime --wayland-text-input-version=3 %U
 StartupNotify=true
 Terminal=false
 Icon=brave-desktop
@@ -640,13 +640,23 @@ Actions=new-window;new-private-window;
 
 [Desktop Action new-window]
 Name=New Window
-Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland
+Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-wayland-ime --wayland-text-input-version=3
 
 [Desktop Action new-private-window]
 Name=New Incognito Window
-Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland --incognito
+Exec=brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-wayland-ime --wayland-text-input-version=3 --incognito
 BRAVE
 echo -e "  ${O}[+] brave-browser.desktop (--password-store=basic)${R}"
+# --enable-wayland-ime --wayland-text-input-version=3 (above, and in the
+# Super+B binds): Chromium only talks to a Wayland input method through
+# text-input-v3 with these, and stoa-predict is one. Obsidian is Electron;
+# Arch's launcher appends ~/.config/obsidian/user-flags.conf to its argv.
+OBSIDIAN_FLAGS="${CONFIG_DIR}/obsidian/user-flags.conf"
+if ! grep -qs -- "--enable-wayland-ime" "$OBSIDIAN_FLAGS"; then
+    mkdir -p "$(dirname "$OBSIDIAN_FLAGS")"
+    printf '%s\n' "--enable-wayland-ime" "--wayland-text-input-version=3" >> "$OBSIDIAN_FLAGS"
+    echo -e "  ${O}[+] obsidian user-flags.conf (Wayland input method)${R}"
+fi
 
 echo ""
 echo -e "${F}Shell configuration:${R}"

@@ -153,7 +153,7 @@ hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd(
 -- ── Apps ──
 hl.bind(mod .. " + A", hl.dsp.exec_cmd("~/.local/bin/stoa-store"))
 hl.bind(mod .. " + B", hl.dsp.exec_cmd(
-    "brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland"))
+    "brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-wayland-ime --wayland-text-input-version=3"))
 hl.bind(mod .. " + C", hl.dsp.exec_cmd("qalculate-gtk"))
 hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd("kitty -e lf"))
 hl.bind(mod .. " + E", hl.dsp.exec_cmd("thunar"))

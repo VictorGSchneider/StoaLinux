@@ -1,28 +1,41 @@
 #!/usr/bin/env python3
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  STOA LINUX — Text Prediction Daemon                        ║
+# ║  STOA LINUX — Text Prediction (Wayland input method)        ║
 # ║  "Choose your words with care." — Epictetus                 ║
 # ║                                                              ║
-# ║  System-wide word suggestions via evdev, shown by the        ║
-# ║  Noctalia stoa/predict plugin.                               ║
-# ║  Requires: python-evdev, wtype                               ║
-# ║  User must be in the 'input' group.                          ║
+# ║  Word and emoji suggestions in a popup next to the text      ║
+# ║  cursor. Runs as a Wayland input method (input-method-v2,    ║
+# ║  the protocol fcitx uses), started and stopped by the        ║
+# ║  Noctalia stoa/predict plugin (Super+Shift+S).               ║
+# ║                                                              ║
+# ║    ↓ / ↑      enter the popup (and leave it again)           ║
+# ║    ← / →      move between suggestions                       ║
+# ║    Enter/Tab  accept       Esc  dismiss       click  accept  ║
+# ║                                                              ║
+# ║  Requires: python-pywayland, python-cairo, python-gobject    ║
+# ║  (Pango). Apps need text-input-v3: GTK, Qt, kitty, foot,     ║
+# ║  Zed, Firefox; Chromium/Electron with --enable-wayland-ime.  ║
 # ╚══════════════════════════════════════════════════════════════╝
+#
+# stdout is read by theme/noctalia-plugins/stoa-predict/service.luau: one
+# JSON object per line, {"ready": true} once the input method is
+# registered, or {"error": "..."} before exiting. Logs go to stderr.
 
-import asyncio
+import ctypes
 import json
+import mmap
 import os
+import re
 import signal
 import subprocess
 import sys
+import time
 from bisect import bisect_left
 from pathlib import Path
 
-import evdev
-from evdev import ecodes
-
 # ── Configuration ──
 MAX_SUGGESTIONS = 5
+MAX_EMOJIS = 3
 MIN_PREFIX = 2
 DICT_PATHS = [
     Path.home() / ".config/stoa/predict-words.txt",
@@ -31,41 +44,51 @@ DICT_PATHS = [
 ]
 _RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
 PIDFILE = f"{_RUNTIME_DIR}/stoa-predict.pid"
-SUGGEST_FILE = f"{_RUNTIME_DIR}/stoa-predict.json"
+PROTOCOL_DIR = Path(__file__).resolve().parent / "stoa-predict-protocols"
+WAYLAND_XML = Path("/usr/share/wayland/wayland.xml")
 
-# ── Keycode to character mapping (US/BR base — lowercase) ──
-KEY_MAP = {
-    ecodes.KEY_A: "a", ecodes.KEY_B: "b", ecodes.KEY_C: "c",
-    ecodes.KEY_D: "d", ecodes.KEY_E: "e", ecodes.KEY_F: "f",
-    ecodes.KEY_G: "g", ecodes.KEY_H: "h", ecodes.KEY_I: "i",
-    ecodes.KEY_J: "j", ecodes.KEY_K: "k", ecodes.KEY_L: "l",
-    ecodes.KEY_M: "m", ecodes.KEY_N: "n", ecodes.KEY_O: "o",
-    ecodes.KEY_P: "p", ecodes.KEY_Q: "q", ecodes.KEY_R: "r",
-    ecodes.KEY_S: "s", ecodes.KEY_T: "t", ecodes.KEY_U: "u",
-    ecodes.KEY_V: "v", ecodes.KEY_W: "w", ecodes.KEY_X: "x",
-    ecodes.KEY_Y: "y", ecodes.KEY_Z: "z",
-}
+# The last word before the cursor: a run of letters (any script, so
+# "ação" and "über" count; digits and "_" end it).
+WORD_BEFORE_CURSOR = re.compile(r"[^\W\d_]+$")
 
-# Keys that reset the word buffer
-RESET_KEYS = {
-    ecodes.KEY_SPACE, ecodes.KEY_ENTER, ecodes.KEY_TAB,
-    ecodes.KEY_ESC, ecodes.KEY_DOT, ecodes.KEY_COMMA,
-    ecodes.KEY_SEMICOLON, ecodes.KEY_APOSTROPHE,
-    ecodes.KEY_SLASH, ecodes.KEY_MINUS, ecodes.KEY_EQUAL,
-    ecodes.KEY_LEFTBRACE, ecodes.KEY_RIGHTBRACE,
-    ecodes.KEY_GRAVE, ecodes.KEY_BACKSLASH,
-    ecodes.KEY_HOME, ecodes.KEY_END,
-    ecodes.KEY_LEFT, ecodes.KEY_RIGHT, ecodes.KEY_UP, ecodes.KEY_DOWN,
-}
 
-# Modifier keys to ignore
-MODIFIER_KEYS = {
-    ecodes.KEY_LEFTSHIFT, ecodes.KEY_RIGHTSHIFT,
-    ecodes.KEY_LEFTCTRL, ecodes.KEY_RIGHTCTRL,
-    ecodes.KEY_LEFTALT, ecodes.KEY_RIGHTALT,
-    ecodes.KEY_LEFTMETA, ecodes.KEY_RIGHTMETA,
-    ecodes.KEY_CAPSLOCK, ecodes.KEY_NUMLOCK,
-}
+def say(**payload):
+    """One protocol line for the Noctalia service."""
+    print(json.dumps(payload), flush=True)
+
+
+def log(message: str):
+    print(f"[predict] {message}", file=sys.stderr, flush=True)
+
+
+DEBUG = bool(os.environ.get("STOA_PREDICT_DEBUG"))
+
+
+def debug(message: str):
+    if DEBUG:
+        log(message)
+
+
+def remove_pidfile():
+    """Only ours: a second instance that lost the input-method slot must not
+    delete the file pointing at the one that holds it."""
+    try:
+        if Path(PIDFILE).read_text().strip() == str(os.getpid()):
+            os.remove(PIDFILE)
+    except OSError:
+        pass
+
+
+def quit_now(code: int = 0):
+    """Exit from anywhere, including a Wayland callback. pywayland runs
+    callbacks through cffi, which swallows SystemExit ("Exception ignored
+    from cffi callback"), so sys.exit() there would leave the daemon
+    running. Closing the connection is all the cleanup the compositor needs:
+    it drops the keyboard grab and the popup with it."""
+    remove_pidfile()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)
 
 
 class EmojiIndex:
@@ -315,204 +338,628 @@ class WordDictionary:
         return results
 
 
-class PredictDaemon:
-    """Main daemon: reads evdev input, emits suggestions on stdout.
 
-    Protocol (read by theme/noctalia-plugins/stoa-predict/service.luau):
-    one JSON object per line, {"prefix", "words", "emojis", "visible"},
-    written whenever the suggestions change. Diagnostics go to stderr.
-    """
+# ── Wayland protocol bindings ──
+# pywayland ships the core protocol only. input-method-v2 and
+# virtual-keyboard-v1 are wlroots protocols that no Arch package installs,
+# so their XML lives next to this script and the bindings are generated
+# once into ~/.cache (keyed by the XML and pywayland version). The core
+# protocol is generated into the same package because the generated code
+# imports it relatively (`from .wayland import WlSeat`).
+def load_protocols():
+    import hashlib
+    import importlib
+    import shutil
+
+    import pywayland
+    from pywayland.scanner.protocol import Protocol
+
+    xmls = [
+        WAYLAND_XML,
+        PROTOCOL_DIR / "input-method-unstable-v2.xml",
+        PROTOCOL_DIR / "virtual-keyboard-unstable-v1.xml",
+    ]
+    digest = hashlib.sha256(
+        b"".join(p.read_bytes() for p in xmls) + pywayland.__version__.encode()
+    ).hexdigest()[:16]
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
+    root = cache / "stoa" / "predict-protocols" / digest
+    package = root / "stoa_wl"
+    if not (package / "__init__.py").exists():
+        staging = root.with_name(f"{digest}.tmp{os.getpid()}")
+        shutil.rmtree(staging, ignore_errors=True)
+        (staging / "stoa_wl").mkdir(parents=True)  # Protocol.output uses a plain os.mkdir
+        protocols = [Protocol.parse_file(str(p)) for p in xmls]
+        imports = {i.name: p.name for p in protocols for i in p.interface}
+        for protocol in protocols:
+            protocol.output(str(staging / "stoa_wl"), imports)
+        (staging / "stoa_wl" / "__init__.py").touch()
+        shutil.rmtree(root, ignore_errors=True)
+        os.replace(staging, root)
+    sys.path.insert(0, str(root))
+    return (
+        importlib.import_module("stoa_wl.wayland"),
+        importlib.import_module("stoa_wl.input_method_unstable_v2"),
+        importlib.import_module("stoa_wl.virtual_keyboard_unstable_v1"),
+    )
+
+
+# ── xkbcommon (ctypes; libxkbcommon is already on every Wayland system) ──
+class Xkb:
+    """Turns the grab's keycodes into keysyms and text, for the arrow keys
+    and for following the typed word in apps that send no surrounding text
+    (terminals)."""
 
     def __init__(self):
-        self.dictionary = WordDictionary()
-        self.emoji_index = EmojiIndex()
-        self.buffer = ""
-        self.last_suggestions: list[str] = []
-        self.ctrl_held = False
-        self.alt_held = False
-        self.meta_held = False
+        lib = ctypes.CDLL("libxkbcommon.so.0")
+        lib.xkb_context_new.restype = ctypes.c_void_p
+        lib.xkb_context_new.argtypes = [ctypes.c_int]
+        lib.xkb_keymap_new_from_string.restype = ctypes.c_void_p
+        lib.xkb_keymap_new_from_string.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+        lib.xkb_keymap_unref.argtypes = [ctypes.c_void_p]
+        lib.xkb_state_new.restype = ctypes.c_void_p
+        lib.xkb_state_new.argtypes = [ctypes.c_void_p]
+        lib.xkb_state_unref.argtypes = [ctypes.c_void_p]
+        lib.xkb_state_update_mask.argtypes = [ctypes.c_void_p] + [ctypes.c_uint32] * 6
+        lib.xkb_state_key_get_one_sym.restype = ctypes.c_uint32
+        lib.xkb_state_key_get_one_sym.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        lib.xkb_keymap_min_keycode.restype = ctypes.c_uint32
+        lib.xkb_keymap_min_keycode.argtypes = [ctypes.c_void_p]
+        lib.xkb_keymap_max_keycode.restype = ctypes.c_uint32
+        lib.xkb_keymap_max_keycode.argtypes = [ctypes.c_void_p]
+        lib.xkb_state_key_get_utf8.restype = ctypes.c_int
+        lib.xkb_state_key_get_utf8.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_size_t]
+        self.lib = lib
+        self.context = lib.xkb_context_new(0)
+        self.keymap = None
+        self.state = None
 
-    def find_keyboards(self) -> list[evdev.InputDevice]:
-        """Find all keyboard input devices."""
-        keyboards = []
-        for path in evdev.list_devices():
-            try:
-                dev = evdev.InputDevice(path)
-                caps = dev.capabilities(verbose=False)
-                if ecodes.EV_KEY in caps:
-                    key_caps = caps[ecodes.EV_KEY]
-                    # Must have letter keys to be a keyboard
-                    if ecodes.KEY_A in key_caps and ecodes.KEY_Z in key_caps:
-                        keyboards.append(dev)
-                        print(f"[predict] Found keyboard: {dev.name} ({dev.path})", file=sys.stderr)
-            except Exception:
-                continue
-
-        if not keyboards:
-            print("[predict] ERROR: No keyboard devices found.", file=sys.stderr)
-            print("[predict] Make sure you are in the 'input' group:", file=sys.stderr)
-            print("[predict]   sudo usermod -aG input $USER", file=sys.stderr)
-            print("[predict]   (then log out and back in)", file=sys.stderr)
-        return keyboards
-
-    def emit(self, suggestions: list[str], force: bool = False):
-        """Publish suggestion data to the plugin (stdout) and SUGGEST_FILE."""
-        if suggestions == self.last_suggestions and not force:
+    def set_keymap(self, text: bytes):
+        keymap = self.lib.xkb_keymap_new_from_string(self.context, text, 1, 0)
+        if not keymap:
+            log("could not compile the grab keymap")
             return
-        self.last_suggestions = suggestions
+        if self.state:
+            self.lib.xkb_state_unref(self.state)
+            self.lib.xkb_keymap_unref(self.keymap)
+        self.keymap = keymap
+        self.state = self.lib.xkb_state_new(keymap)
 
-        # Get related emojis for the current buffer
-        emojis = self.emoji_index.search(self.buffer) if self.buffer else []
+    def update(self, depressed, latched, locked, group):
+        if self.state:
+            self.lib.xkb_state_update_mask(self.state, depressed, latched, locked, 0, 0, group)
 
-        data = json.dumps({
-            "prefix": self.buffer,
-            "words": suggestions,
-            "emojis": emojis,
-            "visible": len(suggestions) > 0 or len(emojis) > 0,
-        })
+    def keysym(self, key: int) -> int:
+        return self.lib.xkb_state_key_get_one_sym(self.state, key + 8) if self.state else 0
 
-        # `stoa-predict select N` reads the prefix and words back from here.
+    def key_for(self, sym: int, fallback: int) -> int:
+        """The evdev code that produces `sym` in the current keymap. The
+        grab's keymap is whatever the keyboard sends, so do not assume the
+        US/evdev code for BackSpace."""
+        if self.state:
+            first = self.lib.xkb_keymap_min_keycode(self.keymap)
+            last = self.lib.xkb_keymap_max_keycode(self.keymap)
+            for code in range(first, last + 1):
+                if self.lib.xkb_state_key_get_one_sym(self.state, code) == sym:
+                    return code - 8
+        return fallback
+
+    def text(self, key: int) -> str:
+        if not self.state:
+            return ""
+        buf = ctypes.create_string_buffer(16)
+        n = self.lib.xkb_state_key_get_utf8(self.state, key + 8, buf, 16)
+        return buf.raw[:n].decode("utf-8", "replace") if n > 0 else ""
+
+
+XK_BACKSPACE, XK_TAB, XK_RETURN, XK_ESCAPE = 0xFF08, 0xFF09, 0xFF0D, 0xFF1B
+XK_LEFT, XK_UP, XK_RIGHT, XK_DOWN = 0xFF51, 0xFF52, 0xFF53, 0xFF54
+XK_KP_ENTER = 0xFF8D
+# Keys that move the caret or end the word without typing text.
+XK_WORD_BREAKERS = {XK_TAB, XK_RETURN, XK_ESCAPE, XK_LEFT, XK_UP, XK_RIGHT, XK_DOWN, XK_KP_ENTER,
+                    0xFF50, 0xFF57, 0xFF55, 0xFF56, 0xFFFF}  # Home End PgUp PgDn Delete
+KEY_BACKSPACE = 14  # evdev BackSpace; the fallback when the keymap has none
+KEY_PRESSED, KEY_RELEASED = 1, 0
+
+
+def match_case(word: str, typed: str) -> str:
+    """Suggestions come from a lowercase list; follow the case of what was typed."""
+    if len(typed) > 1 and typed.isupper():
+        return word.upper()
+    if typed[:1].isupper():
+        return word[:1].upper() + word[1:]
+    return word
+
+
+def load_palette() -> dict:
+    """Colours of the active Stoa palette (Super+S → Theme writes StoaCustom)."""
+    colours = {
+        "mSurface": "#211e19", "mOnSurface": "#d4cfc4", "mOnSurfaceVariant": "#a89f91",
+        "mPrimary": "#c49a5c", "mOnPrimary": "#211e19", "mOutline": "#6e6a62",
+        "mSurfaceVariant": "#2d2921",
+    }
+    palettes = Path.home() / ".config/noctalia/palettes"
+    for name in ("StoaCustom.json", "Stoa.json"):
         try:
-            with open(SUGGEST_FILE, "w") as f:
-                f.write(data)
-        except Exception:
-            pass
+            data = json.loads((palettes / name).read_text(encoding="utf-8"))
+            colours.update({k: v for k, v in data.get("dark", {}).items() if isinstance(v, str)})
+            break
+        except (OSError, ValueError):
+            continue
+    return colours
 
-        print(data, flush=True)
 
-    def reset(self):
-        """Forget the typed word. `stoa-predict select` sends SIGUSR1 after
-        typing a suggestion with wtype — virtual-keyboard input never reaches
-        evdev, so the daemon would otherwise keep the old prefix."""
-        self.buffer = ""
-        self.emit([], force=True)
+def rgb(hex_colour: str, alpha: float = 1.0):
+    h = hex_colour.lstrip("#")
+    return (int(h[0:2], 16) / 255, int(h[2:4], 16) / 255, int(h[4:6], 16) / 255, alpha)
 
-    def process_key(self, keycode: int, key_state: int):
-        """Process a single key event."""
-        # Only handle key-down events
-        if key_state != 1:
-            # Track modifier releases
-            if key_state == 0:
-                if keycode in (ecodes.KEY_LEFTCTRL, ecodes.KEY_RIGHTCTRL):
-                    self.ctrl_held = False
-                elif keycode in (ecodes.KEY_LEFTALT, ecodes.KEY_RIGHTALT):
-                    self.alt_held = False
-                elif keycode in (ecodes.KEY_LEFTMETA, ecodes.KEY_RIGHTMETA):
-                    self.meta_held = False
-            return
 
-        # Track modifiers
-        if keycode in (ecodes.KEY_LEFTCTRL, ecodes.KEY_RIGHTCTRL):
-            self.ctrl_held = True
-            return
-        if keycode in (ecodes.KEY_LEFTALT, ecodes.KEY_RIGHTALT):
-            self.alt_held = True
-            return
-        if keycode in (ecodes.KEY_LEFTMETA, ecodes.KEY_RIGHTMETA):
-            self.meta_held = True
-            return
+class Popup:
+    """The suggestion strip: an input-method popup surface, which the
+    compositor places next to the text cursor (below it, or above when
+    there is no room), drawn with cairo + Pango into shm buffers."""
 
-        # Ignore keystrokes with modifiers (shortcuts, not typing)
-        if self.ctrl_held or self.alt_held or self.meta_held:
-            # Ctrl+A, Ctrl+C, etc. — reset buffer
-            self.buffer = ""
-            self.emit([])
-            return
+    PAD, GAP, CHIP_PAD_X, CHIP_PAD_Y, RADIUS = 5, 3, 9, 4, 7
+    FONT = "Sans 10.5"
 
-        # Skip other modifier keys
-        if keycode in MODIFIER_KEYS:
-            return
+    def __init__(self, app):
+        import cairo
+        import gi
+        gi.require_version("Pango", "1.0")
+        gi.require_version("PangoCairo", "1.0")
+        from gi.repository import Pango, PangoCairo
+        self.cairo, self.Pango, self.PangoCairo = cairo, Pango, PangoCairo
+        self.app = app
+        self.surface = app.compositor.create_surface()
+        self.popup = app.im.get_input_popup_surface(self.surface)
+        self.visible = False
+        self.chips = []          # (x0, x1) in surface coordinates, per item
+        self.buffers = []        # live (buffer, pool, mmap, fd)
+        self.palette = load_palette()
 
-        # Backspace: remove last char
-        if keycode == ecodes.KEY_BACKSPACE:
-            if self.buffer:
-                self.buffer = self.buffer[:-1]
-                if len(self.buffer) >= MIN_PREFIX:
-                    suggestions = self.dictionary.search(self.buffer)
-                    self.emit(suggestions)
-                else:
-                    self.emit([])
-            return
+    def _buffer(self, width, height):
+        stride = width * 4
+        size = stride * height
+        fd = os.memfd_create("stoa-predict", os.MFD_CLOEXEC)
+        os.ftruncate(fd, size)
+        data = mmap.mmap(fd, size)
+        pool = self.app.shm.create_pool(fd, size)
+        buffer = pool.create_buffer(0, width, height, stride, self.app.wl.WlShm.format.argb8888.value)
+        entry = (buffer, pool, data, fd)
+        self.buffers.append(entry)
 
-        # Reset keys (space, enter, punctuation, arrows)
-        if keycode in RESET_KEYS:
-            self.buffer = ""
-            self.emit([])
-            return
+        def released(_buffer):
+            buffer.destroy()
+            pool.destroy()
+            data.close()
+            os.close(fd)
+            if entry in self.buffers:
+                self.buffers.remove(entry)
 
-        # Letter keys
-        char = KEY_MAP.get(keycode)
-        if char:
-            self.buffer += char
-            if len(self.buffer) >= MIN_PREFIX:
-                suggestions = self.dictionary.search(self.buffer)
-                self.emit(suggestions)
+        buffer.dispatcher["release"] = released
+        return buffer, data, stride
+
+    def show(self, items, selected):
+        cairo, Pango, PangoCairo = self.cairo, self.Pango, self.PangoCairo
+        scale = self.app.scale
+        font = Pango.FontDescription.from_string(self.FONT)
+
+        # Measure on a scratch surface first.
+        scratch = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1))
+        layouts = []
+        for _kind, text in items:
+            layout = PangoCairo.create_layout(scratch)
+            layout.set_font_description(font)
+            layout.set_text(text, -1)
+            layouts.append((layout, *layout.get_pixel_size()))
+        hint = PangoCairo.create_layout(scratch)
+        hint.set_font_description(font)
+        hint.set_text("↓", -1)
+        hint_w, hint_h = hint.get_pixel_size()
+
+        text_h = max([h for _l, _w, h in layouts] + [hint_h])
+        chip_h = text_h + 2 * self.CHIP_PAD_Y
+        width = self.PAD
+        self.chips = []
+        for _layout, w, _h in layouts:
+            self.chips.append((width, width + w + 2 * self.CHIP_PAD_X))
+            width += w + 2 * self.CHIP_PAD_X + self.GAP
+        if selected is None:
+            width += hint_w + self.CHIP_PAD_X
+        width += self.PAD - self.GAP
+        height = chip_h + 2 * self.PAD
+
+        buffer, data, stride = self._buffer(width * scale, height * scale)
+        image = cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, width * scale, height * scale, stride)
+        cr = cairo.Context(image)
+        cr.scale(scale, scale)
+        p = self.palette
+
+        def rounded(cr, x, y, w, h, r):
+            cr.new_sub_path()
+            cr.arc(x + w - r, y + r, r, -1.5708, 0)
+            cr.arc(x + w - r, y + h - r, r, 0, 1.5708)
+            cr.arc(x + r, y + h - r, r, 1.5708, 3.1416)
+            cr.arc(x + r, y + r, r, 3.1416, 4.7124)
+            cr.close_path()
+
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        cr.set_source_rgba(0, 0, 0, 0)
+        cr.paint()
+        cr.set_operator(cairo.OPERATOR_OVER)
+        rounded(cr, 0.5, 0.5, width - 1, height - 1, self.RADIUS + 2)
+        cr.set_source_rgba(*rgb(p["mSurface"], 0.97))
+        cr.fill_preserve()
+        cr.set_source_rgba(*rgb(p["mOutline"], 0.8))
+        cr.set_line_width(1)
+        cr.stroke()
+
+        for i, ((layout, w, h), (x0, x1)) in enumerate(zip(layouts, self.chips)):
+            kind = items[i][0]
+            if i == selected:
+                rounded(cr, x0, self.PAD, x1 - x0, chip_h, self.RADIUS)
+                cr.set_source_rgba(*rgb(p["mPrimary"]))
+                cr.fill()
+                colour = p["mOnPrimary"]
+            elif kind == "emoji":
+                colour = p["mOnSurface"]
             else:
-                self.emit([])
-            return
+                colour = p["mPrimary"] if (selected is None and i == 0) else p["mOnSurface"]
+            cr.set_source_rgba(*rgb(colour))
+            cr.move_to(x0 + self.CHIP_PAD_X, self.PAD + (chip_h - h) / 2)
+            PangoCairo.show_layout(cr, layout)
+        if selected is None:
+            cr.set_source_rgba(*rgb(p["mOnSurfaceVariant"], 0.8))
+            cr.move_to(width - self.PAD - hint_w - self.CHIP_PAD_X / 2, self.PAD + (chip_h - hint_h) / 2)
+            PangoCairo.show_layout(cr, hint)
+        image.flush()
 
-        # Number keys or unknown — reset
-        if ecodes.KEY_1 <= keycode <= ecodes.KEY_0:
-            self.buffer = ""
-            self.emit([])
+        self.surface.set_buffer_scale(scale)
+        self.surface.attach(buffer, 0, 0)
+        self.surface.damage_buffer(0, 0, width * scale, height * scale)
+        self.surface.commit()
+        self.visible = True
 
-    async def listen_device(self, device: evdev.InputDevice):
-        """Async listener for a single keyboard device."""
-        try:
-            async for event in device.async_read_loop():
-                if event.type == ecodes.EV_KEY:
-                    self.process_key(event.code, event.value)
-        except Exception as e:
-            print(f"[predict] Device {device.name} disconnected: {e}", file=sys.stderr)
+    def hide(self):
+        if self.visible:
+            self.surface.attach(None, 0, 0)
+            self.surface.commit()
+            self.visible = False
+            self.chips = []
 
-    async def run(self):
-        """Start listening on all keyboards."""
-        keyboards = self.find_keyboards()
-        if not keyboards:
-            print(json.dumps({"error": "No keyboard found. Are you in the input group? "
-                                       "sudo usermod -aG input $USER, then log out and back in."}),
-                  flush=True)
+    def hit(self, x: float) -> int | None:
+        for i, (x0, x1) in enumerate(self.chips):
+            if x0 <= x < x1:
+                return i
+        return None
+
+
+class InputMethod:
+    def __init__(self, words, emojis):
+        from pywayland.client import Display
+
+        self.wl, self.imp, self.vkp = load_protocols()
+        self.words, self.emojis = words, emojis
+        self.display = Display()
+        self.display.connect()
+        self.compositor = self.shm = self.seat = self.im_manager = self.vk_manager = None
+        self.output_scales = {}
+        registry = self.display.get_registry()
+        registry.dispatcher["global"] = self._global
+        self.display.roundtrip()
+        self.display.roundtrip()  # wl_output scale / seat capabilities
+
+        missing = [n for n, v in (("wl_compositor", self.compositor), ("wl_shm", self.shm), ("wl_seat", self.seat),
+                                  ("zwp_input_method_manager_v2", self.im_manager),
+                                  ("zwp_virtual_keyboard_manager_v1", self.vk_manager)) if v is None]
+        if missing:
+            say(error="This compositor does not offer " + ", ".join(missing) + " — text prediction needs a Wayland input method.")
             sys.exit(1)
 
-        # Write PID file
-        with open(PIDFILE, "w") as f:
-            f.write(str(os.getpid()))
+        self.im = self.im_manager.get_input_method(self.seat)
+        self.vk = self.vk_manager.create_virtual_keyboard(self.seat)
+        self.xkb = Xkb()
+        self.keymap_sent = False
+        self.grab = None
+        self.serial = 0
 
-        print(f"[predict] Daemon started (PID {os.getpid()})", file=sys.stderr)
+        # Pending state (applied on `done`) and current state.
+        self.pending_active = False
+        self.pending_surrounding = None
+        self.active = False
+        self.surrounding_known = False
+        self.before_cursor = ""
+        self.typed = ""                 # fallback for apps without surrounding text
+        self.items = []
+        self.selected = None            # None = popup shown but not entered
+        self.dismissed_prefix = None    # Esc hides the popup until the word changes
+        self.consumed = set()           # keys whose press we kept from the app
 
-        asyncio.get_running_loop().add_signal_handler(signal.SIGUSR1, self.reset)
+        for event in ("activate", "deactivate", "surrounding_text", "done", "unavailable"):
+            self.im.dispatcher[event] = getattr(self, f"_im_{event}")
+        self.im.dispatcher["text_change_cause"] = lambda *_: None
+        self.im.dispatcher["content_type"] = lambda *_: None
 
-        # Initialize with empty state
-        self.emit([], force=True)
+        self.popup = Popup(self)
+        self.popup.popup.dispatcher["text_input_rectangle"] = lambda *_: None
 
-        # Listen on all keyboards concurrently
-        tasks = [self.listen_device(kb) for kb in keyboards]
-        await asyncio.gather(*tasks)
+        self.pointer = None
+        self.pointer_x = None
+        self.display.roundtrip()
 
+    @property
+    def scale(self) -> int:
+        return max(self.output_scales.values(), default=1)
 
-def cleanup(_sig=None, _frame=None):
-    """Clean up on exit."""
-    try:
-        os.remove(PIDFILE)
-    except FileNotFoundError:
-        pass
-    try:
-        os.remove(SUGGEST_FILE)
-    except FileNotFoundError:
-        pass
-    sys.exit(0)
+    # ── registry ──
+    def _global(self, registry, name, interface, version):
+        wl = self.wl
+        if interface == "wl_compositor":
+            self.compositor = registry.bind(name, wl.WlCompositor, min(version, 4))
+        elif interface == "wl_shm":
+            self.shm = registry.bind(name, wl.WlShm, 1)
+        elif interface == "wl_seat" and self.seat is None:
+            self.seat = registry.bind(name, wl.WlSeat, min(version, 5))
+            self.seat.dispatcher["capabilities"] = self._seat_capabilities
+            self.seat.dispatcher["name"] = lambda *_: None
+        elif interface == "wl_output":
+            output = registry.bind(name, wl.WlOutput, min(version, 2))
+            self.output_scales[name] = 1
+
+            def scale(_output, factor, key=name):
+                self.output_scales[key] = factor
+
+            output.dispatcher["scale"] = scale
+            for event in ("geometry", "mode", "done"):
+                output.dispatcher[event] = lambda *_: None
+        elif interface == "zwp_input_method_manager_v2":
+            self.im_manager = registry.bind(name, self.imp.ZwpInputMethodManagerV2, 1)
+        elif interface == "zwp_virtual_keyboard_manager_v1":
+            self.vk_manager = registry.bind(name, self.vkp.ZwpVirtualKeyboardManagerV1, 1)
+
+    def _seat_capabilities(self, seat, caps):
+        has_pointer = bool(caps & self.wl.WlSeat.capability.pointer.value)
+        if has_pointer and self.pointer is None:
+            self.pointer = seat.get_pointer()
+            self.pointer.dispatcher["enter"] = self._pointer_enter
+            self.pointer.dispatcher["leave"] = lambda *_: setattr(self, "pointer_x", None)
+            self.pointer.dispatcher["motion"] = lambda _p, _t, x, _y: setattr(self, "pointer_x", x) if self.pointer_x is not None else None
+            self.pointer.dispatcher["button"] = self._pointer_button
+            for event in ("axis", "frame", "axis_source", "axis_stop", "axis_discrete"):
+                self.pointer.dispatcher[event] = lambda *_: None
+
+    # ── pointer: click a suggestion ──
+    def _pointer_enter(self, _pointer, _serial, surface, x, _y):
+        self.pointer_x = x if surface == self.popup.surface else None
+
+    def _pointer_button(self, _pointer, _serial, _time, _button, state):
+        if state == 1 and self.pointer_x is not None and self.popup.visible:
+            index = self.popup.hit(self.pointer_x)
+            if index is not None:
+                self.accept(index)
+
+    # ── input method state ──
+    def _im_activate(self, _im):
+        self.pending_active = True
+        self.pending_surrounding = None
+
+    def _im_deactivate(self, _im):
+        self.pending_active = False
+
+    def _im_surrounding_text(self, _im, text, cursor, _anchor):
+        self.pending_surrounding = (text, cursor)
+
+    def _im_unavailable(self, _im):
+        say(error="Another input method (fcitx, ibus…) is already running; stop it to use Stoa text prediction.")
+        quit_now(1)
+
+    def _im_done(self, _im):
+        self.serial += 1
+        debug(f"done #{self.serial}: active={self.pending_active} surrounding={self.pending_surrounding!r}")
+        was_active = self.active
+        self.active = self.pending_active
+        if self.active and not was_active:
+            self.surrounding_known = False
+            self.before_cursor = ""
+            self.typed = ""
+            self.dismissed_prefix = None
+            self._grab_keyboard()
+        elif was_active and not self.active:
+            self._release_keyboard()
+            self.selected = None
+            self.popup.hide()
+            return
+        if self.pending_surrounding is not None:
+            text, cursor = self.pending_surrounding
+            self.pending_surrounding = None
+            self.surrounding_known = True
+            self.before_cursor = text.encode("utf-8")[:cursor].decode("utf-8", "ignore")
+        self.refresh()
+
+    # ── keyboard grab ──
+    def _grab_keyboard(self):
+        if self.grab is not None:
+            return
+        self.grab = self.im.grab_keyboard()
+        self.grab.dispatcher["keymap"] = self._grab_keymap
+        self.grab.dispatcher["key"] = self._grab_key
+        self.grab.dispatcher["modifiers"] = self._grab_modifiers
+        self.grab.dispatcher["repeat_info"] = lambda *_: None
+
+    def _release_keyboard(self):
+        if self.grab is not None:
+            self.grab.release()
+            self.grab = None
+        self.consumed.clear()
+
+    def _grab_keymap(self, _grab, fmt, fd, size):
+        try:
+            with mmap.mmap(fd, size, prot=mmap.PROT_READ) as data:
+                self.xkb.set_keymap(data[:].rstrip(b"\0"))
+            self.vk.keymap(fmt, fd, size)
+            self.keymap_sent = True
+        finally:
+            os.close(fd)
+
+    def _grab_modifiers(self, _grab, _serial, depressed, latched, locked, group):
+        self.xkb.update(depressed, latched, locked, group)
+        if self.keymap_sent:
+            self.vk.modifiers(depressed, latched, locked, group)
+
+    def _forward(self, time_ms, key, state):
+        if self.keymap_sent:
+            self.vk.key(time_ms, key, state)
+
+    def _grab_key(self, _grab, _serial, time_ms, key, state):
+        debug(f"key {key} {'down' if state else 'up'} sym={self.xkb.keysym(key):#x}")
+        if state == KEY_RELEASED:
+            if key in self.consumed:
+                self.consumed.discard(key)
+            else:
+                self._forward(time_ms, key, state)
+            return
+
+        sym = self.xkb.keysym(key)
+        if self.popup.visible and self.navigate(sym):
+            self.consumed.add(key)
+            return
+        self._forward(time_ms, key, state)
+
+        # Follow the word ourselves for apps that send no surrounding text.
+        if sym == XK_BACKSPACE:
+            self.typed = self.typed[:-1]
+        else:
+            text = self.xkb.text(key)
+            if text and WORD_BEFORE_CURSOR.fullmatch(text):
+                self.typed += text
+            elif text or sym in XK_WORD_BREAKERS:
+                self.typed = ""
+        if not self.surrounding_known:
+            self.refresh()
+
+    # ── suggestions ──
+    def prefix(self) -> str:
+        if self.surrounding_known:
+            match = WORD_BEFORE_CURSOR.search(self.before_cursor)
+            return match.group(0) if match else ""
+        return self.typed
+
+    def refresh(self):
+        prefix = self.prefix()
+        debug(f"prefix={prefix!r}")
+        if self.dismissed_prefix is not None and prefix != self.dismissed_prefix:
+            self.dismissed_prefix = None
+        items = []
+        if len(prefix) >= MIN_PREFIX and self.dismissed_prefix is None:
+            items = [("word", match_case(w, prefix)) for w in self.words.search(prefix)]
+            items += [("emoji", e["emoji"]) for e in self.emojis.search(prefix, MAX_EMOJIS)]
+        if items != self.items:
+            self.items = items
+            self.selected = None
+        if self.items:
+            self.popup.show(self.items, self.selected)
+        else:
+            self.popup.hide()
+
+    def navigate(self, sym) -> bool:
+        """Arrow-key handling while the popup is up. True = key consumed."""
+        if self.selected is None:
+            if sym in (XK_DOWN, XK_UP):
+                self.selected = 0
+                self.popup.show(self.items, self.selected)
+                return True
+            if sym == XK_ESCAPE:           # let the app see Esc too (vim…)
+                self.dismiss()
+            return False
+        if sym in (XK_LEFT, XK_RIGHT):
+            step = -1 if sym == XK_LEFT else 1
+            self.selected = (self.selected + step) % len(self.items)
+            self.popup.show(self.items, self.selected)
+            return True
+        if sym in (XK_DOWN, XK_UP):
+            self.selected = None
+            self.popup.show(self.items, self.selected)
+            return True
+        if sym in (XK_RETURN, XK_KP_ENTER, XK_TAB):
+            self.accept(self.selected)
+            return True
+        if sym == XK_ESCAPE:
+            self.dismiss()
+            return True
+        # Any other key leaves the popup and reaches the app.
+        self.selected = None
+        self.popup.show(self.items, self.selected)
+        return False
+
+    def dismiss(self):
+        self.dismissed_prefix = self.prefix()
+        self.selected = None
+        self.items = []
+        self.popup.hide()
+
+    def accept(self, index: int):
+        kind, text = self.items[index]
+        prefix = self.prefix()
+        if kind == "word":
+            if self.surrounding_known:
+                self.im.delete_surrounding_text(len(prefix.encode("utf-8")), 0)
+            else:
+                # Terminals and other apps without surrounding text: erase
+                # the typed prefix with real BackSpaces first.
+                now = int(time.monotonic() * 1000) & 0xFFFFFFFF
+                backspace = self.xkb.key_for(XK_BACKSPACE, KEY_BACKSPACE)
+                for _ in prefix:
+                    self._forward(now, backspace, KEY_PRESSED)
+                    self._forward(now, backspace, KEY_RELEASED)
+            self.im.commit_string(text + " ")
+        else:
+            self.im.commit_string(text)
+        self.im.commit(self.serial)
+        self.typed = ""
+        self.before_cursor = ""
+        self.selected = None
+        self.items = []
+        self.popup.hide()
+
+    def run(self):
+        # The pidfile is written only once the compositor has handed us the
+        # input method (an `unavailable` would have arrived during the
+        # roundtrips in __init__), so it always names the instance holding it.
+        Path(PIDFILE).write_text(str(os.getpid()))
+        say(ready=True)
+        while self.display.dispatch(block=True) != -1:
+            pass
 
 
 def main():
-    signal.signal(signal.SIGTERM, cleanup)
-    signal.signal(signal.SIGINT, cleanup)
-
-    daemon = PredictDaemon()
     try:
-        asyncio.run(daemon.run())
-    except KeyboardInterrupt:
-        cleanup()
+        import cairo  # noqa: F401
+        import gi
+        gi.require_version("Pango", "1.0")
+        gi.require_version("PangoCairo", "1.0")
+        import pywayland  # noqa: F401
+    except (ImportError, ValueError) as err:
+        say(error=f"Missing dependency ({err}): sudo pacman -S python-pywayland python-cairo python-gobject pango")
+        sys.exit(1)
+    if not os.environ.get("WAYLAND_DISPLAY"):
+        say(error="No Wayland session (WAYLAND_DISPLAY is unset).")
+        sys.exit(1)
+
+    try:
+        ime = InputMethod(WordDictionary(), EmojiIndex())
+        ime.run()
+    finally:
+        remove_pidfile()
 
 
 if __name__ == "__main__":
+    # Default (kernel) action for SIGTERM/SIGINT, deliberately. While idle
+    # the daemon sits inside libwayland's poll(), which restarts on EINTR,
+    # so a Python-level handler would not run until the next Wayland event:
+    # `stoa-predict kill` would wait in vain and the next start would be
+    # refused as "unavailable". Nothing needs cleaning up on the way out —
+    # the compositor drops the grab and the popup when the connection
+    # closes, and `stoa-predict kill` removes the pidfile.
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     main()
