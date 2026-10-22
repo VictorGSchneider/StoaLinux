@@ -143,7 +143,7 @@ GAMING_PKGS="steam lib32-vulkan-icd-loader vulkan-icd-loader lib32-mesa"
 SCREENSHOT_PKGS="grim slurp wf-recorder"
 
 # Stoatools (OCR, paste, resize, rename, locksmith, archive)
-STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-evdev words yad"
+STOATOOLS_PKGS="tesseract tesseract-data-eng tesseract-data-por lsof wtype python-pywayland python-cairo python-gobject words yad"
 
 # Touchpad gestures + mouse DPI/polling + RGB
 # GESTURE_PKGS="libinput-gestures"
@@ -367,9 +367,9 @@ else
     echo -e "  ${S}[~] Packages skipped.${R}"
 fi
 echo ""
-# ── Input group (required for stoa-predict) ──
+# ── Input group (required for libinput-gestures, which reads /dev/input) ──
 if ! groups 2>/dev/null | grep -qw input; then
-    echo -e "  ${F}Adding user to 'input' group (for text prediction)...${R}"
+    echo -e "  ${F}Adding user to 'input' group (for touchpad gestures)...${R}"
     sudo usermod -aG input "$(whoami)"
     echo -e "  ${O}[✓] Added to input group (takes effect after next login).${R}"
 else

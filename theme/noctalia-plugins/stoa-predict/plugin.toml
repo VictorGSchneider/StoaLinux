@@ -3,51 +3,33 @@
 #  ║  "Choose your words with care." — Epictetus                    ║
 #  ╚══════════════════════════════════════════════════════════════╝
 #
-#  Replaces the eww `predict` window. The word engine is unchanged
-#  (scripts/stoa-predict.py reads evdev and looks words up); only the
-#  popup moved into the shell:
+#  Owns the prediction input method (scripts/stoa-predict.py). The
+#  daemon is a Wayland input method (input-method-v2, like fcitx): it
+#  draws its own popup next to the text cursor, takes ↑/↓/←/→/Enter while
+#  the popup is up and types the chosen word through the text-input
+#  protocol, so the shell only has to start it, stop it and report.
 #
-#    service.luau  runs `stoa-predict run` with noctalia.runStream and
-#                  reads one JSON object per stdout line — no process per
-#                  keystroke, where the eww popup forked `eww update`.
-#                  Opens the popup while there are suggestions.
-#    panel.luau    the popup: word and emoji buttons at the bottom of the
-#                  screen. A click runs `stoa-predict select N`, which
-#                  types the word with wtype.
+#  This plugin used to draw the suggestions itself, in a panel at the
+#  bottom of the screen fed by an evdev daemon. A shell panel cannot be
+#  placed at another app's text cursor nor take the arrow keys without
+#  stealing focus, which is why the popup moved into the input method.
 #
 #  Super+Shift+S runs `stoa-predict toggle`, which sends `toggle` to the
 #  service over IPC:  noctalia msg plugin stoa/predict:service all toggle
 
 id          = "stoa/predict"
 name        = "Stoa Text Prediction"
-version     = "1.0.0"
+version     = "2.0.0"
 author      = "stoa"
 icon        = "keyboard"
-description = "System-wide word and emoji suggestions while you type"
+description = "Word and emoji suggestions next to the text cursor while you type"
 tags        = ["input", "typing"]
-dependencies = ["python-evdev", "wtype"]
+dependencies = ["python-pywayland", "python-cairo", "python-gobject"]
 
-# 30 = the `layer` panel option (v5.0.1), the newest thing used here.
-# The popup also needs keyboard_focus (10), persistent (11) and the
-# argv form of runAsync (24); all older than 30.
-plugin_api = 30
+# The service only needs runStream, runAsync, notify and json, all older
+# than 9; 9 matches the other Stoa plugins.
+plugin_api = 9
 
 [[service]]
 id    = "service"
 entry = "service.luau"
-
-# The popup must never take the keyboard: the user is typing in another
-# window and a click on a suggestion has to land there. keyboard_focus =
-# "none" requires dismiss_on_outside_click = false; persistent keeps the
-# popup up when another shell panel opens. Overlay stays above
-# fullscreen windows, as the eww window's :stacking "overlay" did.
-[[panel]]
-id                       = "popup"
-entry                    = "panel.luau"
-width                    = 560
-height                   = 56
-position                 = "bottom_center"
-layer                    = "overlay"
-keyboard_focus           = "none"
-dismiss_on_outside_click = false
-persistent               = true

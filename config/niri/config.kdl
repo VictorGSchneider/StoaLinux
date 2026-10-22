@@ -204,7 +204,7 @@ binds {
 
     // ── Apps ──
     Mod+A { spawn-sh "~/.local/bin/stoa-store"; }
-    Mod+B { spawn-sh "brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland"; }
+    Mod+B { spawn-sh "brave --password-store=basic --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-wayland-ime --wayland-text-input-version=3"; }
     Mod+C { spawn "qalculate-gtk"; }
     Mod+Shift+E { spawn "kitty" "-e" "lf"; }
     Mod+E { spawn "thunar"; }
