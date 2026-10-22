@@ -356,6 +356,17 @@ _link "${STOA_DIR}/scripts/stoa-bar-toggle.sh"   "${HOME}/.local/bin/stoa-bar-to
 _link "${STOA_DIR}/scripts/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
 _link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
+# Text prediction languages: start with Brazilian Portuguese and English
+# (the keyboard is br/abnt2) unless a choice was already made in Stoa
+# Settings. Offline, nothing is saved and prediction falls back to the
+# system word list until a language is added there.
+if [ ! -f "${CONFIG_DIR}/stoa/predict-languages" ]; then
+    if "${STOA_DIR}/scripts/stoa-predict.sh" set-languages pt_br en 2>/dev/null; then
+        echo -e "  ${O}[+] Text prediction languages: pt_br en${R}"
+    else
+        echo -e "  ${S}[~] Text prediction languages skipped (offline) — add them in Super+S → Keyboard${R}"
+    fi
+fi
 _link "${STOA_DIR}/scripts/stoa-bauh.py"          "${HOME}/.local/bin/stoa-bauh"
 # Also shadow the plain `bauh` command: ~/.local/bin precedes /usr/bin in
 # PATH (see shell/.zshrc, shell/.bashrc), so anyone typing `bauh` directly
