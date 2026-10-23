@@ -19,7 +19,7 @@ layer = "overlay"
 margin_ends = 15
 padding = 0
 scale = 1.0500000081956387
-start = [ "sysmon", "stoa/health:pill", "media" ]
+start = [ "sysmon", "weather", "stoa/health:pill", "media" ]
 thickness = 40
 
     [bar.default.dead_zone.actions]
@@ -259,20 +259,31 @@ transition_on_startup = true
     enabled = true
 
     [wallpaper.default]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-91db2fa2-marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
 
     [wallpaper.last]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-91db2fa2-marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-91db2fa2-marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/parchment.png"
 
 [widget.launcher]
 capsule_foreground = "primary"
 glyph = "columns"
 
+[widget.lock_keys]
+hide_when_off = true
+show_scroll_lock = true
+
+[widget.media]
+rotate_album_art = true
+title_scroll = "always"
+
 [widget.tray]
 match_adjacent_spacing = true
+
+[widget.weather]
+max_length = 180
 
 [widget.widget]
 type = "alexander/screen-toolkit:widget"
