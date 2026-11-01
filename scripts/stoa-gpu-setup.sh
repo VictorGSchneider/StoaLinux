@@ -444,7 +444,27 @@ echo ""
 # [3/5] mkinitcpio — NVIDIA early KMS modules (NVIDIA only)
 # ══════════════════════════════════════════════════════════════
 
-if $IS_NVIDIA; then
+_CHWD_INITCPIO="/etc/mkinitcpio.conf.d/10-chwd.conf"
+
+if $IS_NVIDIA && grep -qs 'nvidia' "$_CHWD_INITCPIO"; then
+    # CachyOS's chwd owns the early-KMS list (it writes ${_CHWD_INITCPIO}
+    # from the hardware profile it installed, and tunes it better than we
+    # would). Adding our own copy to /etc/mkinitcpio.conf would only
+    # duplicate it, and editing or removing a file marked "do not edit"
+    # would be overridden the next time chwd runs. Leave it entirely alone.
+    echo -e "  ${S}[3/5] mkinitcpio — early KMS is managed by CachyOS chwd, leaving it as is.${R}"
+elif $IS_NVIDIA && $IS_HYBRID; then
+    # Early KMS exists to get the *panel's* GPU up before userspace. On a
+    # hybrid laptop that is the iGPU, which the mkinitcpio kms hook already
+    # pulls in: the dGPU drives no panel ("nvidia-drm: Cannot find any crtc
+    # or sizes"), so putting it in the initramfs buys nothing visible and
+    # costs a lot — its modules drag ~110 MB of firmware along, the
+    # initramfs grows from ~165 MB to ~260 MB, and Limine and the initrd
+    # read and unpack all of it. It loads fine from userspace, and HDMI on
+    # its port does not need it earlier. (Where chwd is present, the branch
+    # above defers to chwd instead.)
+    echo -e "  ${S}[3/5] mkinitcpio — hybrid laptop: NVIDIA stays out of the initramfs.${R}"
+elif $IS_NVIDIA; then
     echo -e "  ${F}[3/5] Configuring mkinitcpio (early KMS)${R}"
 
     MKINITCPIO="/etc/mkinitcpio.conf"
@@ -498,7 +518,16 @@ if $IS_NVIDIA; then
         NV_MODPROBE_CHANGED=true
     fi
 
-    MODPROBE_CONF="/etc/modprobe.d/nvidia.conf"
+    # CachyOS's GPU settings outrank ours, so two things about the name.
+    # modprobe.d resolves by file name: an /etc file masks the /usr/lib one of
+    # the same name *entirely* — cachyos-settings ships
+    # /usr/lib/modprobe.d/nvidia.conf, and writing /etc/modprobe.d/nvidia.conf
+    # would silently switch its options off. And files are read in name order
+    # with the last value of a parameter winning, so ours must sort BEFORE
+    # theirs ("10-" < "nvidia"): where both set one, CachyOS's value applies
+    # and ours only fills what they leave unset.
+    MODPROBE_CONF="/etc/modprobe.d/10-stoa-nvidia.conf"
+    LEGACY_MODPROBE_CONF="/etc/modprobe.d/nvidia.conf"
     # Build the desired contents, then only write if different so
     # re-runs don't bump mkinitcpio unnecessarily.
     NV_MODPROBE_DESIRED=$(cat <<'EOF'
@@ -512,20 +541,34 @@ options nvidia NVreg_DynamicPowerManagement=0x00
 options nvidia NVreg_PreserveVideoMemoryAllocations=1
 EOF
     )
+    # Earlier versions wrote the same contents to /etc/modprobe.d/nvidia.conf,
+    # masking CachyOS's. Remove that file only if it is byte-for-byte ours;
+    # one the user has edited is theirs and stays.
+    if [ -f "$LEGACY_MODPROBE_CONF" ]; then
+        if diff -q <(printf '%s\n' "$NV_MODPROBE_DESIRED") "$LEGACY_MODPROBE_CONF" >/dev/null 2>&1; then
+            sudo rm -f "$LEGACY_MODPROBE_CONF"
+            echo -e "  ${O}[✓] Removed our old ${LEGACY_MODPROBE_CONF} (it masked the CachyOS one).${R}"
+            NV_MODPROBE_CHANGED=true
+        else
+            echo -e "  ${T}[!] ${LEGACY_MODPROBE_CONF} is not ours — left alone, but it masks the packaged nvidia.conf.${R}"
+        fi
+    fi
     if ! [ -f "$MODPROBE_CONF" ] || \
        ! diff -q <(printf '%s\n' "$NV_MODPROBE_DESIRED") "$MODPROBE_CONF" >/dev/null 2>&1; then
         printf '%s\n' "$NV_MODPROBE_DESIRED" | sudo tee "$MODPROBE_CONF" > /dev/null
-        echo -e "  ${O}[✓] /etc/modprobe.d/nvidia.conf written (modeset + always-on PM).${R}"
+        echo -e "  ${O}[✓] ${MODPROBE_CONF} written (modeset + always-on PM).${R}"
         NV_MODPROBE_CHANGED=true
     else
-        echo -e "  ${S}[~] /etc/modprobe.d/nvidia.conf already up to date.${R}"
+        echo -e "  ${S}[~] ${MODPROBE_CONF} already up to date.${R}"
     fi
 
     # Nouveau must be out of the way before nvidia loads, otherwise
     # the proprietary driver fails to bind on some boots and HDMI
     # comes up using Nouveau (which can't drive RTX 4000-series).
     NOUVEAU_BLACKLIST="/etc/modprobe.d/blacklist-nouveau.conf"
-    if [ -f "$NOUVEAU_BLACKLIST" ] && grep -q '^blacklist nouveau' "$NOUVEAU_BLACKLIST" 2>/dev/null; then
+    # nvidia-utils ships its own (/usr/lib/modprobe.d/nvidia-utils.conf), so
+    # look in the packaged directory too, not just /etc.
+    if grep -qsE '^[[:space:]]*blacklist[[:space:]]+nouveau' /usr/lib/modprobe.d/*.conf /etc/modprobe.d/*.conf; then
         echo -e "  ${S}[~] Nouveau already blacklisted.${R}"
     else
         printf 'blacklist nouveau\noptions nouveau modeset=0\n' | sudo tee "$NOUVEAU_BLACKLIST" > /dev/null
@@ -802,9 +845,9 @@ if $IS_NVIDIA; then
         echo -e "  ${S}  HDMI on dGPU via AQ_DRM_DEVICES${R}"
     fi
     echo -e "  ${S}  nvidia-utils, nvidia-settings, libva-nvidia-driver${R}"
-    echo -e "  ${S}  /etc/mkinitcpio.conf — early KMS modules${R}"
-    echo -e "  ${S}  /etc/modprobe.d/nvidia.conf — DRM modeset + always-on PM${R}"
-    echo -e "  ${S}  /etc/modprobe.d/blacklist-nouveau.conf${R}"
+    echo -e "  ${S}  early KMS — left to CachyOS chwd where it manages it${R}"
+    echo -e "  ${S}  /etc/modprobe.d/10-stoa-nvidia.conf — DRM modeset + always-on PM (sorted below CachyOS's, so theirs win)${R}"
+    echo -e "  ${S}  nouveau blacklist — only if nothing packaged already provides one${R}"
     echo -e "  ${S}  bumblebee (deprecated) removed if present${R}"
     echo -e "  ${S}  nvidia-{suspend,resume,hibernate}.service enabled${R}"
     echo -e "  ${S}  hyprland.lua — Wayland env vars${R}"

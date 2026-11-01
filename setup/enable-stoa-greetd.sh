@@ -299,102 +299,67 @@ _fix_keyring_default() {
     fi
 }
 
-# ── Pin the greeter's compositor to the GPU that drives the panel ──
+# ── Guard greetd's start: wait out Plymouth, pin the greeter's GPU ──
 #
-# stoa-gpu-setup writes WLR_DRM_DEVICES into hyprland.lua and stoa-env.sh.
-# Both are session-scoped, so the greeter — which runs before any session
-# and brings its own wlroots compositor — gets nothing and picks for
-# itself. On a hybrid laptop it picks both cards and builds a multi-GPU
-# renderer with the dGPU primary, and the modifier set it then advertises
-# to clients is not one the panel's display engine can scan out:
+# Two problems, one ExecStartPre (setup/lib/greetd-prestart.sh — its header
+# has the full story):
 #
-#   [backend/backend.c:248] Found 2 GPUs
-#   [backend/drm/renderer.c:17] Creating multi-GPU renderer
-#   [render/egl.c:523] Using EGL device /dev/dri/card1        (NVIDIA, primary)
-#   ...
-#   [backend/drm/fb.c:172] Buffer format 0x34325241 with modifier
-#                          0x20000001056BB03 cannot be scanned out
-#   [backend/drm/drm.c:792] connector eDP-1: Failed to import buffer
+# 1. A boot-time race. `plymouth quit` returns before plymouthd exits, and
+#    plymouthd holds DRM master on the panel's GPU until it does. greetd
+#    started ~20 ms after the quit, so the greeter's compositor sometimes
+#    died with "libseat: Could not take device: Device or resource busy"
+#    and greetd — which does not retry a greeter that exits without a
+#    session — left a black screen until the power button. The guard holds
+#    greetd back until plymouthd is gone and the card is free.
 #
-# — the greeter's own AR24 surface, failing once per frame, ~190 messages a
-# second, while the output swapchain (modifier ...10567B03) scans out fine.
-# Left alone that is ~59 MB of journal per boot, which on a stock journal
-# cap evicts every previous boot before anyone can read it.
+# 2. On a hybrid laptop the greeter's own wlroots compositor picks both
+#    cards and builds a multi-GPU renderer with the dGPU primary, and the
+#    modifiers it then advertises are not ones the panel's display engine
+#    can scan out ("Failed to import buffer", ~190 messages a second,
+#    ~59 MB of journal per boot). stoa-gpu-setup's WLR_DRM_DEVICES is
+#    session-scoped, so the greeter never sees it. Naming one card makes
+#    the compositor single-GPU.
 #
-# Naming one card makes the compositor single-GPU: renderer and KMS device
-# are then the same, so the modifiers it advertises are by construction the
-# ones the panel can take. Which card is not assumed — it is the one that
-# owns a connected eDP connector, read from sysfs.
-#
-# Only written on a machine that actually has more than one DRM card.
-# Pinning a single-GPU machine can only do harm if the detection is wrong.
-_panel_drm_node() {
-    local conn card
-    for conn in /sys/class/drm/card*-eDP-*; do
-        [ -e "${conn}/status" ] || continue
-        [ "$(cat "${conn}/status" 2>/dev/null)" = "connected" ] || continue
-        card="${conn##*/}"          # card2-eDP-1
-        card="${card%%-*}"          # card2
-        [ -e "/dev/dri/${card}" ] && { echo "/dev/dri/${card}"; return 0; }
-    done
-    return 1
-}
-
-# cardN numbering is not stable across boots; the udev symlinks that
-# stoa-gpu-setup installs match on PCI vendor and are. Prefer one when it
-# resolves to the same device.
-_stable_drm_alias() {
-    local node="$1" link
-    for link in /dev/dri/igpu-card /dev/dri/nvidia-card; do
-        [ -e "$link" ] || continue
-        if [ "$(readlink -f "$link")" = "$(readlink -f "$node")" ]; then
-            echo "$link"; return 0
-        fi
-    done
-    echo "$node"
-}
+#    Which card is resolved at every start, from the connected eDP
+#    connector, not here at install time: cardN follows module load order
+#    and changes whenever that does (a /dev/dri/card2 written at install
+#    went stale the day NVIDIA left the initramfs). The guard writes the
+#    answer to /run/stoa/greetd-gpu.env, which the unit reads as an
+#    EnvironmentFile after the guard has run. Single-GPU machines get no
+#    file and are left alone.
+GREETD_PRESTART_SRC="${STOA_DIR}/setup/lib/greetd-prestart.sh"
+GREETD_PRESTART_DST="/usr/local/lib/stoa/greetd-prestart"
 
 _write_greetd_gpu_dropin() {
-    # Count DRM primary nodes, not /sys/class/drm entries: that directory
-    # also holds one entry per *connector* (card2-eDP-1), so globbing it
-    # counts a single-GPU laptop with two outputs as two GPUs.
-    local cards=(/dev/dri/card[0-9]*)
-    if [ "${#cards[@]}" -lt 2 ]; then
-        echo -e "  ${S}[~] Single GPU — no device pinning needed for the greeter.${R}"
+    if [ ! -f "$GREETD_PRESTART_SRC" ]; then
+        echo -e "  ${T}[!] ${GREETD_PRESTART_SRC} missing — greetd start guard not installed.${R}"
         return 0
     fi
-
-    local node
-    if ! node="$(_panel_drm_node)"; then
-        echo -e "  ${S}[~] No connected eDP panel found — leaving the greeter's GPU choice alone.${R}"
-        return 0
-    fi
-
-    local dev
-    dev="$(_stable_drm_alias "$node")"
-
+    sudo install -D -m 0755 "$GREETD_PRESTART_SRC" "$GREETD_PRESTART_DST"
     sudo mkdir -p "$GREETD_DROPIN_DIR"
     sudo tee "$GREETD_GPU_DROPIN" >/dev/null <<EOF
 # Managed by StoaLinux — setup/enable-stoa-greetd.sh
 # Removed by: bash setup/enable-stoa-greetd.sh --disable
 #
-# One card only, so the greeter's compositor stays single-GPU and the
-# buffer modifiers it advertises are ones ${node##*/} can scan out.
+# ${GREETD_PRESTART_DST} waits for Plymouth to release the GPU and, on
+# multi-GPU machines, writes WLR_DRM_DEVICES for the panel's card.
+# Logs: journalctl -b -t stoa-greetd-prestart
 [Service]
-Environment=WLR_DRM_DEVICES=${dev}
-Environment=WLR_NO_HARDWARE_CURSORS=1
+ExecStartPre=-${GREETD_PRESTART_DST}
+EnvironmentFile=-/run/stoa/greetd-gpu.env
 EOF
     sudo systemctl daemon-reload
-    echo -e "  ${O}[✓] Greeter pinned to ${dev} (drives $(basename "$node"), the panel).${R}"
+    echo -e "  ${O}[✓] greetd start guard installed (Plymouth wait + per-boot panel GPU pin).${R}"
 }
 
 _unwrite_greetd_gpu_dropin() {
-    sudo test -e "$GREETD_GPU_DROPIN" || return 0
-    sudo rm -f "$GREETD_GPU_DROPIN"
-    sudo rmdir "$GREETD_DROPIN_DIR" 2>/dev/null || true
+    sudo test -e "$GREETD_GPU_DROPIN" || sudo test -e "$GREETD_PRESTART_DST" || return 0
+    sudo rm -f "$GREETD_GPU_DROPIN" "$GREETD_PRESTART_DST" /run/stoa/greetd-gpu.env
+    sudo rmdir "$GREETD_DROPIN_DIR" /usr/local/lib/stoa 2>/dev/null || true
     sudo systemctl daemon-reload
-    echo -e "  ${O}[✓] Greeter GPU pinning removed.${R}"
+    echo -e "  ${O}[✓] greetd start guard removed.${R}"
 }
+
 
 # ── Greeter keyboard ──────────────────────────────────────────────────
 #
