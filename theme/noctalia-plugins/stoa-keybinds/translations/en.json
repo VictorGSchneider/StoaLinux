@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "icon": {
+      "label": "Icon",
+      "description": "Glyph shown in the bar."
+    },
+    "show_apps": {
+      "label": "Show app shortcuts in the bar",
+      "description": "Display the compact line of the most-used app binds (Terminal, Launcher, Brave, Files…) next to the icon. Follows STOA_SHOW_KEYBINDS in stoa.conf."
+    }
+  }
+}

@@ -168,11 +168,14 @@ manage_open_near_click = true
 [plugin_settings."stoa/health"]
 manage_open_near_click = true
 
+[plugin_settings."stoa/keybinds"]
+manage_open_near_click = true
+
 [plugin_settings."stoa/predict"]
 popup_placement = "attached"
 
 [plugins]
-enabled = [ "stoa/drive", "stoa/health", "alexander/screen-toolkit", "stoa/memento", "stoa/predict" ]
+enabled = [ "stoa/drive", "stoa/health", "stoa/keybinds", "alexander/screen-toolkit", "stoa/memento", "stoa/predict" ]
 
 [shell]
 external_ip_enabled = true
