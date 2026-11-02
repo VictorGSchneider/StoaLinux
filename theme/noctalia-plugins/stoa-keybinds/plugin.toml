@@ -1,0 +1,61 @@
+#  ╔══════════════════════════════════════════════════════════════╗
+#  ║  STOA LINUX — Keybinds pill (Noctalia v5 plugin)              ║
+#  ║  The cheatsheet one click away, in the bar.                    ║
+#  ╚══════════════════════════════════════════════════════════════╝
+#
+#  Noctalia v5 ships no cheatsheet widget, so Super+/ used to be the only
+#  way to see the binds (a yad text dialog, scripts/stoa-keybinds-toggle.sh).
+#  This puts the same cheatsheet in the bar: a keyboard icon whose tooltip
+#  lists the sections, and an attached panel with every bind grouped the
+#  way the cheatsheet groups them.
+#
+#  The data is NOT duplicated here. scripts/stoa-keybinds-bar.sh stays the
+#  single source of truth (it already swaps the navigation lines on niri),
+#  and this plugin only reads its `text` output and lays it out — so a new
+#  bind added to that script shows up in the panel with no change here.
+#
+#  Optionally the compact "most-used apps" line the old waybar module
+#  carried can be shown next to the icon (setting `show_apps`); it follows
+#  STOA_SHOW_KEYBINDS from stoa.conf, same as before.
+
+id          = "stoa/keybinds"
+name        = "Stoa Keybinds"
+version     = "1.0.0"
+author      = "stoa"
+icon        = "keyboard"
+description = "Keyboard shortcut cheatsheet — one icon, opens a panel with every bind"
+tags        = ["bar", "keybinds", "help"]
+
+# Same floor as the other Stoa plugins: panel.luau hands inline Lua
+# closures as onClick props (plugin API level 9, see stoa-drive).
+plugin_api = 9
+
+[[widget]]
+id    = "pill"
+entry = "widget.luau"
+
+# Attached: opens anchored below the bar icon that toggled it, same as
+# stoa-drive and stoa-health.
+[[panel]]
+id        = "cheatsheet"
+entry     = "panel.luau"
+placement = "attached"
+width     = 380
+height    = 560
+
+# Settings are an ARRAY of tables named `setting` (singular), each with an
+# explicit `key`; `label_key` is a translation key resolved against
+# translations/en.json.
+[[setting]]
+key       = "icon"
+type      = "glyph"
+default   = "keyboard"
+label_key = "settings.icon.label"
+description_key = "settings.icon.description"
+
+[[setting]]
+key       = "show_apps"
+type      = "bool"
+default   = false
+label_key = "settings.show_apps.label"
+description_key = "settings.show_apps.description"

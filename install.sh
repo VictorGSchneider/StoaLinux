@@ -150,6 +150,8 @@ _link "${STOA_DIR}/theme/noctalia-plugins/stoa-drive" \
       "${NOCTALIA_PLUGINS}/stoa-drive"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-health" \
       "${NOCTALIA_PLUGINS}/stoa-health"
+_link "${STOA_DIR}/theme/noctalia-plugins/stoa-keybinds" \
+      "${NOCTALIA_PLUGINS}/stoa-keybinds"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-memento" \
       "${NOCTALIA_PLUGINS}/stoa-memento"
 _link "${STOA_DIR}/theme/noctalia-plugins/stoa-predict" \
@@ -161,7 +163,7 @@ _link "${STOA_DIR}/theme/noctalia-plugins/stoa-predict" \
 # On a live shell, enable each through IPC instead; it appends to whatever
 # the user already has and is a no-op for one already enabled.
 if command -v noctalia &>/dev/null && noctalia msg plugins list &>/dev/null; then
-    for plugin in stoa/drive stoa/health stoa/memento stoa/predict alexander/screen-toolkit; do
+    for plugin in stoa/drive stoa/health stoa/keybinds stoa/memento stoa/predict alexander/screen-toolkit; do
         noctalia msg plugins enable "$plugin" &>/dev/null || \
             echo -e "  ${S}[~] Could not enable ${plugin} (enable it in Settings → Plugins).${R}"
     done

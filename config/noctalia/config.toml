@@ -196,10 +196,10 @@ reserve_space      = true
 
 start  = ["launcher", "workspaces", "taskbar"]
 center = ["clock"]
-# `stoa/drive:pill` and `stoa/health:pill` are the local plugins in
-# theme/noctalia-plugins/{stoa-drive,stoa-health} (plugin widgets are
-# addressed as <plugin-id>:<entry-id>).
-end    = ["media", "tray", "notifications", "clipboard", "stoa/drive:pill", "stoa/health:pill", "sysmon", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
+# `stoa/drive:pill`, `stoa/health:pill` and `stoa/keybinds:pill` are the local
+# plugins in theme/noctalia-plugins/{stoa-drive,stoa-health,stoa-keybinds}
+# (plugin widgets are addressed as <plugin-id>:<entry-id>).
+end    = ["media", "tray", "notifications", "clipboard", "stoa/drive:pill", "stoa/health:pill", "stoa/keybinds:pill", "sysmon", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
 
 # ── Control centre shortcuts ──────────────────────────────────────────
 
@@ -239,7 +239,8 @@ started = "~/.local/bin/stoa-doctor"
 # ── Plugins ───────────────────────────────────────────────────────────
 # Stoa's local plugins live in theme/noctalia-plugins/ and are symlinked
 # into ~/.local/share/noctalia/plugins by install.sh:
-#   stoa/drive, stoa/health   bar pills (see [bar.default] above)
+#   stoa/drive, stoa/health,  bar pills (see [bar.default] above)
+#   stoa/keybinds
 #   stoa/memento              Memento Mori desktop widget (below)
 #   stoa/predict              text-prediction popup (Super+Shift+S)
 # alexander/screen-toolkit comes from the built-in community source: screen
@@ -251,7 +252,7 @@ started = "~/.local/bin/stoa-doctor"
 # plugins over IPC so an existing install picks up new ones too.
 
 [plugins]
-enabled = ["stoa/drive", "stoa/health", "stoa/memento", "stoa/predict", "alexander/screen-toolkit"]
+enabled = ["stoa/drive", "stoa/health", "stoa/keybinds", "stoa/memento", "stoa/predict", "alexander/screen-toolkit"]
 
 # ── Desktop widgets ───────────────────────────────────────────────────
 # One Memento Mori tile. No `output`: Noctalia puts it on the focused
