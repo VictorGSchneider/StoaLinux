@@ -165,7 +165,7 @@ hl.bind(mod .. " + G", hl.dsp.exec_cmd("~/.local/bin/dfm"))
 hl.bind(mod .. " + slash", hl.dsp.exec_cmd("~/.local/bin/stoa-keybinds-toggle"))
 
 -- ── Lock Screen ──
-hl.bind(mod .. " + Escape", hl.dsp.exec_cmd("noctalia msg lock"))
+hl.bind(mod .. " + Escape", hl.dsp.exec_cmd("noctalia msg session lock"))
 
 -- ── Navigation (vim) ──
 hl.bind(mod .. " + H", hl.dsp.focus({ direction = "l" }))

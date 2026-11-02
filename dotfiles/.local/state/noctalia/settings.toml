@@ -13,7 +13,7 @@ capsule_foreground = "primary"
 capsule_opacity = 0.65999998524785042
 center = [ "clock", "taskbar", "launcher", "workspaces", "widget" ]
 contact_shadow = true
-end = [ "tray", "notifications", "clipboard", "stoa/drive:pill", "group:g1", "session" ]
+end = [ "tray", "notifications", "clipboard", "stoa/drive:pill", "group:g1", "pill", "session" ]
 font_scale = 1.0499999839812517
 layer = "overlay"
 margin_ends = 15
@@ -168,6 +168,10 @@ manage_open_near_click = true
 [plugin_settings."stoa/health"]
 manage_open_near_click = true
 
+[plugin_settings."stoa/keybinds"]
+cheatsheet_open_near_click = true
+icon = "keyboard-hide"
+
 [plugin_settings."stoa/predict"]
 popup_placement = "attached"
 
@@ -259,13 +263,13 @@ transition_on_startup = true
     enabled = true
 
     [wallpaper.default]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-memento.png"
 
     [wallpaper.last]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-memento.png"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-marble.png"
+    path = "/home/zeno/.config/stoa/wallpapers/quote-46127458-memento.png"
 
 [widget.launcher]
 capsule_foreground = "primary"
@@ -278,6 +282,9 @@ show_scroll_lock = true
 [widget.media]
 rotate_album_art = true
 title_scroll = "always"
+
+[widget.pill]
+type = "stoa/keybinds:pill"
 
 [widget.tray]
 match_adjacent_spacing = true

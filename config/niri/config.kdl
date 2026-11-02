@@ -216,7 +216,7 @@ binds {
     Mod+Slash { spawn-sh "~/.local/bin/stoa-keybinds-toggle"; }
 
     // ── Lock screen ──
-    Mod+Escape allow-inhibiting=false { spawn-sh "noctalia msg lock"; }
+    Mod+Escape allow-inhibiting=false { spawn-sh "noctalia msg session lock"; }
 
     // ── Navigation (vim): columns left/right, windows up/down ──
     Mod+H { focus-column-left; }

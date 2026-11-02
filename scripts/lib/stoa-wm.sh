@@ -369,7 +369,7 @@ stoa_wm_exit() {
 
 # Lock the screen. Noctalia owns the lock screen under both compositors.
 stoa_wm_lock() {
-    command -v noctalia >/dev/null 2>&1 && noctalia msg lock
+    command -v noctalia >/dev/null 2>&1 && noctalia msg session lock
 }
 
 # Command line that starts the compositor from a TTY.
