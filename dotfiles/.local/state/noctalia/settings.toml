@@ -172,7 +172,7 @@ manage_open_near_click = true
 popup_placement = "attached"
 
 [plugins]
-enabled = [ "stoa/drive", "stoa/health", "alexander/screen-toolkit", "stoa/memento", "stoa/predict" ]
+enabled = [ "stoa/drive", "stoa/health", "alexander/screen-toolkit", "stoa/memento", "stoa/predict", "stoa/keybinds" ]
 
 [shell]
 external_ip_enabled = true
