@@ -333,7 +333,6 @@ _link "${STOA_DIR}/scripts/stoa-drive-unpin"       "${HOME}/.local/bin/stoa-driv
 _link "${STOA_DIR}/scripts/stoa-drive-emblems"     "${HOME}/.local/bin/stoa-drive-emblems"
 _link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-firewall"
 _link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
-_link "${STOA_DIR}/scripts/stoa-winapps.sh"      "${HOME}/.local/bin/stoa-winapps"
 _link "${STOA_DIR}/scripts/stoa-wm.sh"            "${HOME}/.local/bin/stoa-wm"
 _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
 _link "${STOA_DIR}/scripts/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"

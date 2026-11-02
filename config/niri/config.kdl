@@ -211,7 +211,7 @@ binds {
     Mod+N { spawn "kitty" "-e" "btop"; }
     Mod+O { spawn "obsidian"; }
     Mod+S { spawn-sh "~/.local/bin/stoa-settings"; }
-    Mod+W { spawn-sh "~/.local/bin/stoa-winapps"; }
+    Mod+W { spawn "enpass"; }
     Mod+G { spawn-sh "~/.local/bin/dfm"; }
     Mod+Slash { spawn-sh "~/.local/bin/stoa-keybinds-toggle"; }
 

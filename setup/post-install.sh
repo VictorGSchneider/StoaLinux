@@ -203,8 +203,6 @@ PRINT_PKGS="cups cups-pdf system-config-printer"
 # Audio equalizer (PipeWire)
 EQUALIZER_PKGS="easyeffects"
 
-# WinApps (Windows apps via KVM/QEMU + FreeRDP)
-WINAPPS_PKGS="qemu-full libvirt virt-manager dnsmasq edk2-ovmf freerdp"
 
 # Audio + utilities
 UTIL_PKGS="pipewire pipewire-pulse pipewire-alsa wireplumber brightnessctl jq curl ffmpeg zip unzip fastfetch"
@@ -219,7 +217,7 @@ DEV_PKGS="github-cli gnupg"
 # as a fallback (and is already pulled in by `base`, but listed here for intent).
 SHELL_PKGS="zsh zsh-autosuggestions zsh-syntax-highlighting zsh-history-substring-search zsh-completions bash git base-devel"
 
-ALL_PKGS="$WAYLAND_PKGS $UI_PKGS $SETTINGS_APP_PKGS $APP_PKGS $IDE_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $WINAPPS_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS $SHELL_PKGS_QS"
+ALL_PKGS="$WAYLAND_PKGS $UI_PKGS $SETTINGS_APP_PKGS $APP_PKGS $IDE_PKGS $STOA_APPS $GAMING_PKGS $SCREENSHOT_PKGS $STOATOOLS_PKGS $GESTURE_PKGS $MOUSE_PKGS $RGB_PKGS $CLOUD_PKGS $STORE_PKGS $LOCK_PKGS $CLIPBOARD_PKGS $FIREWALL_PKGS $BLUETOOTH_PKGS $XDG_PKGS $NIGHTLIGHT_PKGS $POWER_MGMT_PKGS $PRINT_PKGS $EQUALIZER_PKGS $DFM_PKGS $FONT_PKGS $THEME_PKGS $UTIL_PKGS $DEV_PKGS $SHELL_PKGS $SHELL_PKGS_QS"
 
 echo -e "  ${S}Wayland:    ${WAYLAND_PKGS}${R}"
 echo -e "  ${S}UI:         ${UI_PKGS}${R}"
@@ -251,7 +249,6 @@ echo -e "  ${S}Night:      ${NIGHTLIGHT_PKGS}${R}"
 echo -e "  ${S}Power:      ${POWER_MGMT_PKGS}${R}"
 echo -e "  ${S}Print:      ${PRINT_PKGS}${R}"
 echo -e "  ${S}Equalizer:  ${EQUALIZER_PKGS}${R}"
-echo -e "  ${S}WinApps:    ${WINAPPS_PKGS}${R}"
 echo -e "  ${S}DFM:        ${DFM_PKGS}${R}"
 echo -e "  ${S}Audio:      ${UTIL_PKGS}${R}"
 echo -e "  ${S}Shell:      ${SHELL_PKGS_QS}${R}"
@@ -559,7 +556,6 @@ echo -e "  ${S}  stoa-firewall     — Firewall & port monitor (Super+S → Fire
 echo -e "  ${S}  stoa-maintain     — Backup, restore & cleanup (Super+S → Maintenance)${R}"
 echo -e "  ${S}  stoa-predict      — Text prediction + emoji suggestions (Super+Shift+S)${R}"
 echo -e "  ${S}  stoa-settings     → Fan & Performance — fan mode, speed, profiles, GPU (Super+S → Power → Fan)${R}"
-echo -e "  ${S}  stoa-winapps      — Windows apps via KVM/RDP (Super+W)${R}"
 echo -e "  ${S}  dfm               — Dotfile Manager GUI (Super+G)${R}"
 if [ -d /opt/damx ] || [ -f /etc/systemd/system/damx-daemon.service ]; then
     echo -e "  ${S}  DAMX              — Div Acer Manager Max (Acer profiles, fans, battery)${R}"

@@ -160,7 +160,7 @@ hl.bind(mod .. " + E", hl.dsp.exec_cmd("thunar"))
 hl.bind(mod .. " + N", hl.dsp.exec_cmd("kitty -e btop"))
 hl.bind(mod .. " + O", hl.dsp.exec_cmd("obsidian"))
 hl.bind(mod .. " + S", hl.dsp.exec_cmd("~/.local/bin/stoa-settings"))
-hl.bind(mod .. " + W", hl.dsp.exec_cmd("~/.local/bin/stoa-winapps"))
+hl.bind(mod .. " + W", hl.dsp.exec_cmd("enpass"))
 hl.bind(mod .. " + G", hl.dsp.exec_cmd("~/.local/bin/dfm"))
 hl.bind(mod .. " + slash", hl.dsp.exec_cmd("~/.local/bin/stoa-keybinds-toggle"))
 

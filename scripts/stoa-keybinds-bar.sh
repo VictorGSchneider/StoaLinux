@@ -63,7 +63,7 @@ read -r -d '' TOOLTIP <<'EOF'
   Super+N              Monitor (btop)
   Super+O              Obsidian
   Super+S              Settings
-  Super+W              WinApps
+  Super+W              Enpass
 
 ▸ Clipboard
   Super+V              Clipboard history

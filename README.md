@@ -114,7 +114,7 @@ To push your own changes back with `stoa-sync`, connect the machine to GitHub on
   <tr><td><code>Super+N</code></td><td>Monitor (btop)</td><td><code>Super+F</code></td><td>Fullscreen</td></tr>
   <tr><td><code>Super+O</code></td><td>Notes (Obsidian)</td><td><code>Super+R</code></td><td>Resize (HJKL)</td></tr>
   <tr><td><code>Super+S</code></td><td>Settings panel</td><td><code>Super+HJKL</code></td><td>Navigate</td></tr>
-  <tr><td><code>Super+W</code></td><td>WinApps</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
+  <tr><td><code>Super+W</code></td><td>Enpass</td><td><code>Super+Shift+HJKL</code></td><td>Move window</td></tr>
   <tr><td><code>Super+A</code></td><td>App store</td><td><code>Super+G</code></td><td>Dotfile Manager (DFM)</td></tr>
   <tr><td><code>Super+V</code></td><td>Clipboard history</td><td><code>Super+1-0</code></td><td>Workspaces I–X</td></tr>
   <tr><td><code>Super+Shift+S</code></td><td>Text prediction</td><td><code>Print</code></td><td>Capture (screenshot/record)</td></tr>
@@ -173,7 +173,6 @@ A family of small, single-purpose `stoa-*` tools — each one exists because rea
   <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
   <tr><td><code>stoa-drive</code></td><td>Cloud drive (rclone)</td><td></td><td></td></tr>
   <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
-  <tr><td><code>stoa-winapps</code></td><td>Windows apps (KVM/RDP)</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>
   <tr><td><code>stoa-wm</code></td><td>Compositor control (Hyprland / niri)</td><td></td><td></td></tr>
   <tr><td><code>stoa-quotes-sync</code></td><td>Fetch quotes online</td><td></td><td></td></tr>
@@ -202,7 +201,6 @@ The chosen ones — not the biggest name in each category, the one that does its
   <tr><td>Betterbird</td><td>Email</td><td></td><td></td></tr>
   <tr><td>imv</td><td>Images</td><td>lf / Thunar</td><td>Files</td></tr>
   <tr><td>EasyEffects</td><td>Audio equalizer</td><td>gammastep</td><td>Night light</td></tr>
-  <tr><td>QEMU/KVM</td><td>WinApps (VM)</td><td>FreeRDP</td><td>Remote desktop</td></tr>
   <tr><td>Steam</td><td>Gaming (Proton)</td><td>GnuPG</td><td>Encryption & signing</td></tr>
 </table>
 
