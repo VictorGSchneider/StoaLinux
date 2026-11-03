@@ -51,6 +51,27 @@ with open(sys.argv[1], "rb") as fh:
     cp "$src" "$dst"
 }
 
+# Remove `path = ...` from the volatile wallpaper tables
+# ([wallpaper.default], [wallpaper.last], [wallpaper.monitors.*]) in place.
+# The (now empty) tables stay, so the file remains valid TOML and the rest of
+# [wallpaper] (fill_mode, transition, automation) is still versioned.
+_strip_wallpaper_paths() {
+    local f="$1" tmp
+    tmp=$(mktemp) || return 0
+    if awk '
+        /^[[:space:]]*\[/ {
+            hdr = $0
+            sub(/^[[:space:]]*\[/, "", hdr)
+            skip = (hdr ~ /^wallpaper\.(default|last|monitors\.)/)
+        }
+        skip && /^[[:space:]]*path[[:space:]]*=/ { next }
+        { print }
+    ' "$f" > "$tmp"; then
+        cat "$tmp" > "$f"
+    fi
+    rm -f "$tmp"
+}
+
 # Pull with an explicit strategy. Plain `git pull` refuses to pick one when
 # this clone and GitHub both have commits ("divergent branches") — which is
 # exactly what happens when a sync commit was made here but its push was
@@ -96,6 +117,13 @@ if [ -f "$NOCTALIA_STATE/settings.toml" ] && [ ! -L "$NOCTALIA_STATE/settings.to
     state_dst="$STOA_DIR/dotfiles/.local/state/noctalia/settings.toml"
     mkdir -p "$(dirname "$state_dst")"
     _cp_toml "$NOCTALIA_STATE/settings.toml" "$state_dst"
+    # Drop the current-wallpaper paths: they change on every wallpaper swap
+    # (and are absolute, hashed, machine-bound), so keeping them made each
+    # swap produce a "chore: sync" commit. Idempotent, so it is also safe
+    # when _cp_toml skipped an invalid source and left the old snapshot.
+    if [ -f "$state_dst" ]; then
+        _strip_wallpaper_paths "$state_dst"
+    fi
 fi
 
 # ── User-defined paths (~/.config/stoa/sync.list) ──
