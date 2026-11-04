@@ -968,15 +968,48 @@ def cmd_restore(opts) -> int:
 
 # ── CLI ──────────────────────────────────────────────────────────────
 
+KEEP_NOTE = "Keep list: ~/.config/stoa/history-keep (one regex per line)."
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="stoa-history",
         description="Analyse and prune shell history. Nothing is written "
                     "without --apply, and every write is backed up first.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="Keep list: ~/.config/stoa/history-keep (one regex per line).",
+        add_help=False,
     )
     sub = parser.add_subparsers(dest="command")
+
+    class FullHelp(argparse.Action):
+        """-h / --help: the overview, then every command's own help in full.
+
+        argparse's default only lists the subcommand names, so every option
+        was one `stoa-history <command> --help` away. Print them all here,
+        built from the real parsers so the two can never drift apart.
+        `stoa-history <command> --help` still shows just that command.
+        """
+
+        def __init__(self, option_strings, dest=argparse.SUPPRESS,
+                     default=argparse.SUPPRESS, help=None):
+            super().__init__(option_strings=option_strings, dest=dest,
+                             default=default, nargs=0, help=help)
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            print(parser.format_help().rstrip())
+            for name, sp in sub.choices.items():
+                print()
+                print(f"── {parser.prog} {name} " + "─" * max(
+                    0, 60 - len(parser.prog) - len(name)))
+                epilog, sp.epilog = sp.epilog, None   # printed once, below
+                print(sp.format_help().rstrip())
+                sp.epilog = epilog
+            print()
+            print(KEEP_NOTE)
+            parser.exit()
+
+    parser.add_argument("-h", "--help", action=FullHelp,
+                        help="show this help, with every command in full")
 
     def common(p: argparse.ArgumentParser) -> None:
         p.add_argument("--file", action="append", metavar="PATH",
@@ -1014,17 +1047,20 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--examples", type=int, default=3, metavar="N",
                        help="show N examples per class (0 for none; default: 3)")
 
-    p_stats = sub.add_parser("stats", help="what is in your history (default)")
+    p_stats = sub.add_parser("stats", help="what is in your history (default)",
+                             epilog=KEEP_NOTE)
     common(p_stats)
 
-    p_clean = sub.add_parser("clean", help="prune it (dry run without --apply)")
+    p_clean = sub.add_parser("clean", help="prune it (dry run without --apply)",
+                             epilog=KEEP_NOTE)
     common(p_clean)
     p_clean.add_argument("--apply", action="store_true",
                          help="write the pruned files, after backing them up")
     p_clean.add_argument("-y", "--yes", action="store_true",
                          help="skip the confirmation prompt")
 
-    p_suggest = sub.add_parser("suggest", help="aliases worth having")
+    p_suggest = sub.add_parser("suggest", help="aliases worth having",
+                               epilog=KEEP_NOTE)
     common(p_suggest)
     p_suggest.add_argument("--min-count", type=int, default=5, metavar="N",
                            help="how many times a line must appear (default: 5)")
