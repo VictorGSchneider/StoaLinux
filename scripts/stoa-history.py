@@ -33,7 +33,7 @@ WHAT IT PRUNES  (each class can be switched off: --no-secrets, --no-junk,
 PASTED COMMANDS
   Copying a command out of a chat or a web page brings its trailing
   newline along, so the shell records a two-line command whose second
-  line is empty: `cmd\` and a blank line. A history built by pasting is
+  line is empty: `cmd\\` and a blank line. A history built by pasting is
   then a third blank lines, and each of those commands shows up in
   Ctrl-R with a phantom second line. `clean` trims that trailing escaped
   newline back off — the one edit it makes to an entry it keeps, and the
@@ -366,7 +366,7 @@ def parse_plain(content: str) -> list[Entry]:
 
 
 def trim_paste(entry: Entry) -> bool:
-    """Turn `cmd\` + blank line back into `cmd`. True when it changed.
+    """Turn `cmd\\` + blank line back into `cmd`. True when it changed.
 
     Pasting a command with a newline at the end — copying one out of a
     chat or a web page, which is most of them — leaves the newline in the
