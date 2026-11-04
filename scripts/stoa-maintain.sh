@@ -161,6 +161,7 @@ check_root() {
 
     if ! command -v sudo >/dev/null 2>&1; then
         log_msg ERROR "Needs root and sudo is not installed."
+        log_msg ERROR "To clean only your own files instead: --cleanup --user"
         return 1
     fi
 
@@ -179,6 +180,7 @@ check_root() {
     if ! sudo -n true 2>/dev/null && [ ! -t 0 ]; then
         log_msg ERROR "Needs root, but there is no terminal to ask for a password."
         log_msg ERROR "Run it as root, or grant this user a NOPASSWD sudoers rule."
+        log_msg ERROR "To clean only your own files instead: --cleanup --user"
         return 1
     fi
     return 0
@@ -456,6 +458,9 @@ restore_interactive() {
     log_msg INFO "Restore complete."
 }
 
+# Backward-compatible alias
+restaurar_configs() { restore_interactive "$@"; }
+
 # ── Restore all (no prompt) ──
 
 restore_all() {
@@ -509,6 +514,9 @@ restore_all() {
     rm -rf "$TMPDIR_RESTORE"
     log_msg INFO "Full restore complete."
 }
+
+# Backward-compatible alias
+restaurar_tudo() { restore_all "$@"; }
 
 # ── Package manager wrappers ──
 
@@ -883,6 +891,9 @@ full_cleanup() {
 
     log_msg INFO "${CLEANUP_SCOPE^} cleanup completed."
 }
+
+# Backward-compatible alias
+limpeza_completa() { full_cleanup "$@"; }
 
 # ── Schedule cleanup at boot ──
 
