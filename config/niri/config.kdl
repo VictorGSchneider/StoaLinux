@@ -164,6 +164,14 @@ window-rule {
     opacity 1.0
 }
 
+// Every yad dialog (Stoa Settings/Store/Drive/Health menus, clipboard, paste…)
+// floats and opens centred at the size the script asked for — sized from its
+// content by scripts/lib/stoa-yad.sh — instead of becoming a tiled column.
+window-rule {
+    match app-id=r#"^[Yy]ad$"#
+    open-floating true
+}
+
 // Qalculate floats, centred, at a fixed size.
 window-rule {
     match app-id=r#"^qalculate-gtk$"#

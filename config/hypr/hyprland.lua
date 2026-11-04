@@ -274,6 +274,16 @@ for _, app in ipairs({
     opaque(app)
 end
 
+-- ── yad dialogs ──
+-- Floating and centred at the size the script requested (sized from its content
+-- by scripts/lib/stoa-yad.sh), instead of a tiled, full-size window.
+hl.window_rule({
+    name   = "yad-float",
+    match  = { class = "^([Yy]ad)$" },
+    float  = true,
+    center = true,
+})
+
 -- ── Qalculate ──
 hl.window_rule({
     name   = "qalculate-float",

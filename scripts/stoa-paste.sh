@@ -9,6 +9,10 @@
 #   stoa-paste          — menu with format options
 #   stoa-paste plain    — paste as plain text (no formatting)
 
+_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-yad.sh"
+# shellcheck source=lib/stoa-yad.sh
+[ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"
+
 _get_clipboard() {
     wl-paste 2>/dev/null
 }
@@ -132,9 +136,7 @@ _menu() {
     )
 
     local choice
-    choice=$(printf '%s\n' "${options[@]}" \
-        | yad --list --title="Paste as" --column="Option" --no-headers \
-              --width=340 --height=360 --separator='')
+    choice=$(printf '%s\n' "${options[@]}" | stoa_yad_list "Paste as")
     [ -z "$choice" ] && exit 0
 
     case "$choice" in

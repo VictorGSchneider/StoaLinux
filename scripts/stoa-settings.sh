@@ -67,27 +67,14 @@ _hyprctl_get() {
     esac
 }
 
-# yad --list renders cell text as Pango markup. A bare "&" (e.g. "Mouse & Touchpad")
-# or "<" is invalid markup, so GTK keeps the previous row's text in that cell:
-# the label shows up as a duplicate of its neighbour, while the tooltip and the
-# click still use the real value. Escape on the way in, unescape on the way out
-# so callers keep matching on the original, human-written label.
-_yad_esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
-_yad_unesc() {
-    local s="$1"
-    s=${s//&lt;/"<"}; s=${s//&gt;/">"}; s=${s//&amp;/"&"}
-    printf '%s\n' "$s"
-}
+_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-yad.sh"
+# shellcheck source=lib/stoa-yad.sh
+[ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"
 
 _yad_select() {
-    local prompt="$1" out rc
+    local prompt="$1"
     shift
-    out=$(printf '%s\n' "$@" | _yad_esc \
-        | yad --list --title="$prompt" --column="Option" --no-headers \
-              --width=480 --height=440 --separator='')
-    rc=$?
-    _yad_unesc "$out"
-    return $rc
+    printf '%s\n' "$@" | stoa_yad_list "$prompt"
 }
 
 _yad_input() {
@@ -103,20 +90,13 @@ _yad_confirm() {
 _yad_info() {
     local prompt="$1"
     shift
-    printf '%s\n' "$@" \
-        | yad --text-info --title="$prompt" --fontname="monospace 11" \
-              --width=520 --height=440 --button="Close:0"
+    printf '%s\n' "$@" | stoa_yad_info "$prompt"
 }
 
 # Drop-in for the old rofi `"${ROFI[@]}" -p "<title>"` pattern: reads a
 # list from stdin (one option per line) and returns the picked line.
 _yad_pipe() {
-    local out rc
-    out=$(_yad_esc | yad --list --title="$1" --column="Option" --no-headers \
-        --width=480 --height=440 --separator='')
-    rc=$?
-    _yad_unesc "$out"
-    return $rc
+    stoa_yad_list "$1"
 }
 
 # ══════════════════════════════════════════════════════════════

@@ -5,39 +5,21 @@ APPIMAGE_DIR="${HOME}/Applications"
 
 _notify() { notify-send -t 2500 "Stoa Store" "$1" 2>/dev/null; }
 
-# yad --list renders cell text as Pango markup. A bare "&" (e.g. "Mouse & Touchpad")
-# or "<" is invalid markup, so GTK keeps the previous row's text in that cell:
-# the label shows up as a duplicate of its neighbour, while the tooltip and the
-# click still use the real value. Escape on the way in, unescape on the way out
-# so callers keep matching on the original, human-written label.
-_yad_esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
-_yad_unesc() {
-    local s="$1"
-    s=${s//&lt;/"<"}; s=${s//&gt;/">"}; s=${s//&amp;/"&"}
-    printf '%s\n' "$s"
-}
+_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-yad.sh"
+# shellcheck source=lib/stoa-yad.sh
+[ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"
 
 # Selection list built from function arguments (each arg = one row).
 _yad_select() {
-    local prompt="$1" out rc
+    local prompt="$1"
     shift
-    out=$(printf '%s\n' "$@" | _yad_esc \
-        | yad --list --title="$prompt" --column="Option" --no-headers \
-              --width=520 --height=440 --separator='')
-    rc=$?
-    _yad_unesc "$out"
-    return $rc
+    printf '%s\n' "$@" | stoa_yad_list "$prompt"
 }
 
 # Selection list built from stdin (one row per line) — replaces the old
 # `command | _yad_list "prompt"` idiom used throughout the store modules.
 _yad_list() {
-    local prompt="$1" out rc
-    out=$(_yad_esc | yad --list --title="$prompt" --column="Option" --no-headers \
-        --width=560 --height=460 --separator='')
-    rc=$?
-    _yad_unesc "$out"
-    return $rc
+    stoa_yad_list "$1"
 }
 
 _yad_input() {
@@ -53,9 +35,7 @@ _yad_confirm() {
 # Read-only scrollable text viewer for long, non-actionable output
 # (package info dumps, changelogs, status reports).
 _yad_info() {
-    local prompt="$1"
-    yad --text-info --title="$prompt" --fontname="monospace 11" \
-        --width=560 --height=420 --button="Close:0"
+    stoa_yad_info "$1"
 }
 
 _helper() {
