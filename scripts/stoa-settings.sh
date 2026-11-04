@@ -6544,281 +6544,57 @@ _maintain_list() {
     esac
 }
 
-# ── Restore interactive ──
-_maintain_restore_interactive() {
-    local backup_file="$1"
-    if ! command -v unzip &>/dev/null; then
-        _notify "unzip not installed (pacman -S unzip)"
-        return
-    fi
-
-    if ! unzip -t "$backup_file" >/dev/null 2>&1; then
-        _notify "Invalid or corrupted zip file"
-        return
-    fi
-
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
-
-    # Safety backup
-    local pre_restore="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
-    local existing=()
-    while IFS= read -r -d '' f; do
-        local dest="/${f#"$tmpdir"/}"
-        [ -f "$dest" ] && existing+=("$dest")
-    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
-
-    if [ ${#existing[@]} -gt 0 ] && command -v zip &>/dev/null; then
-        zip -q "$pre_restore" "${existing[@]}" 2>/dev/null || true
-        _notify "Safety backup: $(basename "$pre_restore")"
-    fi
-
-    # Build file list for yad selection
-    local files=()
-    while IFS= read -r -d '' f; do
-        local dest="/${f#"$tmpdir"/}"
-        files+=("$dest")
-    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
-
-    local restored=0 skipped=0
-    for dest in "${files[@]}"; do
-        local src="${tmpdir}${dest}"
-        local status="NEW"
-        [ -f "$dest" ] && status="EXISTS"
-
-        local confirm
-        confirm=$(_yad_select "  [$status] $dest" "  Restore" "  Skip")
-        if [[ "$confirm" == *"Restore"* ]]; then
-            sudo mkdir -p "$(dirname "$dest")"
-            sudo cp "$src" "$dest"
-            restored=$((restored + 1))
-        else
-            skipped=$((skipped + 1))
-        fi
-    done
-
-    rm -rf "$tmpdir"
-    _notify "Restore done: $restored restored, $skipped skipped"
+# ── Restore ──
+# Writing /etc files needs sudo, which a GUI process cannot ask for (no
+# terminal → PAM "conversation failed" → pam_faillock; and the old code then
+# reported "restored N" whether or not the copy happened). stoa-maintain does
+# the safety backup + restore and reports what really happened, so run it in a
+# terminal.
+_maintain_run_term() {
+    local bin
+    bin=$(_maintain_bin)
+    [ -n "$bin" ] || { _notify "stoa-maintain not found"; return 1; }
+    command -v kitty >/dev/null 2>&1 || { _notify "kitty not installed — run: stoa-maintain $*"; return 1; }
+    kitty --hold -e bash "$bin" "$@" &
+    disown
 }
 
-# ── Restore all (no prompt) ──
+_maintain_restore_interactive() {
+    _maintain_run_term --restore-interactive "$1"
+}
+
 _maintain_restore_all() {
     local backup_file="$1"
-    if ! command -v unzip &>/dev/null; then
-        _notify "unzip not installed (pacman -S unzip)"
-        return
-    fi
-
-    _yad_confirm "Restore ALL files from $(basename "$backup_file")? This overwrites existing files." || return
-
-    if ! unzip -t "$backup_file" >/dev/null 2>&1; then
-        _notify "Invalid or corrupted zip file"
-        return
-    fi
-
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    unzip -o "$backup_file" -d "$tmpdir" >/dev/null 2>&1
-
-    # Safety backup
-    local pre_restore="$STOA_BACKUP_DIR/pre_restore_$(date +%Y%m%d_%H%M%S).zip"
-    local existing=()
-    while IFS= read -r -d '' f; do
-        local dest="/${f#"$tmpdir"/}"
-        [ -f "$dest" ] && existing+=("$dest")
-    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
-
-    if [ ${#existing[@]} -gt 0 ] && command -v zip &>/dev/null; then
-        zip -q "$pre_restore" "${existing[@]}" 2>/dev/null || true
-    fi
-
-    local count=0
-    while IFS= read -r -d '' f; do
-        local dest="/${f#"$tmpdir"/}"
-        sudo mkdir -p "$(dirname "$dest")"
-        sudo cp "$f" "$dest"
-        count=$((count + 1))
-    done < <(find "$tmpdir" -type f -print0 2>/dev/null)
-
-    rm -rf "$tmpdir"
-    _notify "Restored $count files (safety backup: $(basename "$pre_restore"))"
+    _yad_confirm "Restore ALL files from $(basename "$backup_file")? This overwrites existing files (a safety backup is made first). It asks for your sudo password in a terminal." || return
+    _maintain_run_term --restore "$backup_file"
 }
 
 # ── Full system cleanup ──
+# stoa-maintain is the one implementation of the cleanup (scopes, honest
+# per-step results, age-guarded temp sweep). This menu used to carry its own
+# copy that ran ten bare `sudo`s from a GUI process: there is no terminal to
+# answer the password prompt, so each one failed as a PAM "conversation
+# failed" — pam_faillock counts those, three lock the account out of the
+# login screen for ten minutes — and the report still printed a green tick.
+# Run it in a terminal instead, where sudo can actually ask.
+_maintain_bin() {
+    local here
+    here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/stoa-maintain.sh"
+    if [ -r "$here" ]; then echo "$here"; return 0; fi
+    command -v stoa-maintain 2>/dev/null
+}
+
+# $1: 0 = full cleanup, 1 = dry-run (changes nothing), 2 = your own files only (no sudo)
 _maintain_cleanup() {
-    local dry_run="${1:-0}"
-    local mode="Cleanup"
-    [ "$dry_run" -eq 1 ] && mode="Cleanup (dry-run)"
+    local mode="${1:-0}"
+    local -a args=(--cleanup)
+    case "$mode" in
+        1) args+=(--dry-run) ;;
+        2) args+=(--user) ;;
+        *) _yad_confirm "Run full system cleanup? Updates packages, removes orphans, clears caches, journal, flatpak, docker, Steam shader cache and temp files. It asks for your sudo password in a terminal." || return ;;
+    esac
 
-    _yad_confirm "Run full system cleanup? Includes package cache, orphans, journal, flatpak, docker, Steam cache, tmp files." || return
-    _notify "Running $mode..."
-
-    local space_before
-    space_before=$(df / | awk 'NR==2{print $3}')
-
-    local log_lines=()
-    log_lines+=("─── System $mode ───")
-    log_lines+=("")
-
-    # 1. Update & upgrade
-    log_lines+=("  [1/10] Package update")
-    if [ "$dry_run" -eq 0 ]; then
-        sudo pacman -Syu --noconfirm >> "$_maintain_log" 2>&1 && \
-            log_lines+=("    ✓ System updated") || \
-            log_lines+=("    ✕ Update failed — check log")
-    else
-        log_lines+=("    [DRY-RUN] Would run: pacman -Syu")
-    fi
-
-    # 2. Clean package cache
-    log_lines+=("  [2/10] Package cache")
-    if [ "$dry_run" -eq 0 ]; then
-        if command -v paccache &>/dev/null; then
-            local cleaned
-            cleaned=$(sudo paccache -rk1 2>&1 | tail -1)
-            log_lines+=("    ✓ $cleaned")
-        else
-            sudo pacman -Sc --noconfirm >> "$_maintain_log" 2>&1
-            log_lines+=("    ✓ Cache cleaned")
-        fi
-    else
-        log_lines+=("    [DRY-RUN] Would clean package cache")
-    fi
-
-    # 3. Remove orphan packages
-    log_lines+=("  [3/10] Orphan packages")
-    local orphans
-    orphans=$(pacman -Qdtq 2>/dev/null)
-    if [ -n "$orphans" ]; then
-        local orphan_count
-        orphan_count=$(echo "$orphans" | wc -l)
-        if [ "$dry_run" -eq 0 ]; then
-            echo "$orphans" | sudo pacman -Rns --noconfirm - >> "$_maintain_log" 2>&1
-            log_lines+=("    ✓ Removed $orphan_count orphans")
-        else
-            log_lines+=("    [DRY-RUN] Would remove $orphan_count orphans")
-        fi
-    else
-        log_lines+=("    ✓ No orphans")
-    fi
-
-    # 4. Snap cleanup
-    log_lines+=("  [4/10] Snap cleanup")
-    if command -v snap &>/dev/null; then
-        if [ "$dry_run" -eq 0 ]; then
-            sudo snap set system refresh.retain=2 2>/dev/null
-            snap list --all 2>/dev/null | awk '/disabled/{print $1, $2}' | while read -r snapname revision; do
-                sudo snap remove "$snapname" --revision="$revision" --purge 2>/dev/null || \
-                sudo snap remove "$snapname" --purge 2>/dev/null
-            done
-            log_lines+=("    ✓ Disabled snaps cleaned")
-        else
-            log_lines+=("    [DRY-RUN] Would clean disabled snap revisions")
-        fi
-    else
-        log_lines+=("    — snap not installed")
-    fi
-
-    # 5. Flatpak cleanup
-    log_lines+=("  [5/10] Flatpak cleanup")
-    if command -v flatpak &>/dev/null; then
-        if [ "$dry_run" -eq 0 ]; then
-            flatpak uninstall --unused -y >> "$_maintain_log" 2>&1
-            log_lines+=("    ✓ Unused runtimes removed")
-        else
-            log_lines+=("    [DRY-RUN] Would remove unused flatpak runtimes")
-        fi
-    else
-        log_lines+=("    — flatpak not installed")
-    fi
-
-    # 6. Journal log cleanup
-    log_lines+=("  [6/10] Journal logs")
-    if [ "$dry_run" -eq 0 ]; then
-        local freed
-        freed=$(sudo journalctl --vacuum-time=7d 2>&1 | tail -1)
-        sudo journalctl --vacuum-size=100M >> "$_maintain_log" 2>&1
-        log_lines+=("    ✓ $freed")
-    else
-        local journal_size
-        journal_size=$(journalctl --disk-usage 2>/dev/null | grep -oP '[\d.]+[KMGT]')
-        log_lines+=("    [DRY-RUN] Would vacuum journal (currently $journal_size)")
-    fi
-
-    # 7. Old kernel cleanup (Arch uses pacman, kernels are just packages)
-    log_lines+=("  [7/10] Old kernels")
-    log_lines+=("    — Arch manages kernels via pacman (handled by orphan removal)")
-
-    # 8. Docker cleanup
-    log_lines+=("  [8/10] Docker")
-    if command -v docker &>/dev/null; then
-        if [ "$dry_run" -eq 0 ]; then
-            local docker_out
-            docker_out=$(docker system prune -f 2>&1 | tail -1)
-            log_lines+=("    ✓ $docker_out")
-        else
-            log_lines+=("    [DRY-RUN] Would prune docker resources")
-        fi
-    else
-        log_lines+=("    — docker not installed")
-    fi
-
-    # 9. Steam shader cache cleanup
-    log_lines+=("  [9/10] Steam cache")
-    if [ -d "$HOME/.steam/steam/steamapps" ]; then
-        # shadercache only, as the heading says. compatdata beside it holds
-        # the Proton prefixes, where a game keeps its saves unless it uses
-        # Steam Cloud — that is not cache, and clearing it loses progress.
-        local shader_size
-        shader_size=$(du -sh "$HOME/.steam/steam/steamapps/shadercache" 2>/dev/null | cut -f1)
-        if [ "$dry_run" -eq 0 ]; then
-            rm -rf "$HOME/.steam/steam/steamapps/shadercache/"* 2>/dev/null
-            log_lines+=("    ✓ Cleared shader cache (${shader_size:-0})")
-        else
-            log_lines+=("    [DRY-RUN] Would clear shader cache (${shader_size:-0})")
-        fi
-    else
-        log_lines+=("    — Steam not installed")
-    fi
-
-    # 10. Clean temporary files
-    log_lines+=("  [10/10] Temporary files")
-    if [ "$dry_run" -eq 0 ]; then
-        local tmp_count=0
-        while IFS= read -r -d '' file; do
-            if command -v lsof &>/dev/null; then
-                lsof "$file" >/dev/null 2>&1 || { rm -f "$file" 2>/dev/null && tmp_count=$((tmp_count + 1)); }
-            elif command -v fuser &>/dev/null; then
-                fuser "$file" >/dev/null 2>&1 || { rm -f "$file" 2>/dev/null && tmp_count=$((tmp_count + 1)); }
-            else
-                rm -f "$file" 2>/dev/null && tmp_count=$((tmp_count + 1))
-            fi
-        done < <(find /tmp /var/tmp -type f -print0 2>/dev/null)
-        log_lines+=("    ✓ Removed $tmp_count temporary files")
-    else
-        local tmp_total
-        tmp_total=$(find /tmp /var/tmp -type f 2>/dev/null | wc -l)
-        log_lines+=("    [DRY-RUN] Would clean $tmp_total temporary files")
-    fi
-
-    # Report space freed
-    log_lines+=("")
-    local space_after freed_kb
-    space_after=$(df / | awk 'NR==2{print $3}')
-    freed_kb=$((space_before - space_after))
-    if [ "$freed_kb" -gt 0 ] 2>/dev/null; then
-        if command -v numfmt &>/dev/null; then
-            log_lines+=("  Disk space freed: $(numfmt --to=iec --suffix=B $((freed_kb * 1024)))")
-        else
-            log_lines+=("  Disk space freed: ${freed_kb} KB")
-        fi
-    else
-        log_lines+=("  Cleanup complete (no measurable space freed)")
-    fi
-
-    printf '%s\n' "${log_lines[@]}" | _yad_pipe "  $mode"
-    _notify "$mode complete"
+    _maintain_run_term "${args[@]}"
 }
 
 # ── Schedule cleanup at boot ──
@@ -6845,62 +6621,31 @@ _maintain_schedule() {
             "  Keep" \
             "  Back")
         if [[ "$action" == *"Remove"* ]]; then
+            command -v kitty >/dev/null 2>&1 || { _notify "kitty not installed"; return; }
+            # In a terminal: these need sudo, which a GUI process cannot ask for.
             if [ "$method" = "crontab" ]; then
-                crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | crontab -
-                sudo crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | sudo crontab -
+                kitty --hold -e bash -c '
+                    crontab -l 2>/dev/null | grep -vE "$1" | crontab -
+                    sudo crontab -l 2>/dev/null | grep -vE "$1" | sudo crontab -
+                    echo; echo "Boot cleanup removed (crontab)."' _ "$_LEGACY_CRON_RE" &
             else
-                sudo systemctl disable stoa-maintain-cleanup.timer 2>/dev/null
-                sudo rm -f /etc/systemd/system/stoa-maintain-cleanup.{service,timer} 2>/dev/null
-                sudo systemctl daemon-reload 2>/dev/null
+                kitty --hold -e bash -c '
+                    sudo systemctl disable --now stoa-maintain-cleanup.timer
+                    sudo rm -f /etc/systemd/system/stoa-maintain-cleanup.service /etc/systemd/system/stoa-maintain-cleanup.timer
+                    sudo systemctl daemon-reload
+                    echo; echo "Boot cleanup removed (systemd timer)."' &
             fi
-            _notify "Boot cleanup removed ($method)"
+            disown
         fi
         return
     fi
 
-    _yad_confirm "Schedule system cleanup to run at every boot?" || return
+    _yad_confirm "Schedule system cleanup to run at every boot? It asks for your sudo password in a terminal to install a root systemd timer." || return
 
-    # systemd first, deliberately: the cleanup runs pacman and journalctl,
-    # so it needs root. Scheduled in *this user's* crontab it runs
-    # unprivileged with no terminal, every sudo inside fails as a PAM
-    # "conversation failed", and pam_faillock counts each one — three is
-    # the Arch default and the account is then locked for ten minutes, at
-    # the login screen, on the next boot. A root unit has nothing to ask.
-    crontab -l 2>/dev/null | grep -qE "$_LEGACY_CRON_RE" && \
-        crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" | crontab -
-    if command -v systemctl &>/dev/null; then
-        local unit_dir="/etc/systemd/system"
-        sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
-[Unit]
-Description=Stoa Maintain system cleanup at boot
-After=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash $script_path --cleanup --unattended
-SVCEOF
-        sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
-[Unit]
-Description=Run Stoa Maintain cleanup on boot
-
-[Timer]
-OnBootSec=2min
-
-[Install]
-WantedBy=timers.target
-TMREOF
-        sudo systemctl daemon-reload
-        sudo systemctl enable stoa-maintain-cleanup.timer
-        _notify "Cleanup scheduled at boot (systemd timer)"
-    elif command -v crontab &>/dev/null; then
-        # No systemd: root's crontab, so the job is privileged already.
-        local cron_cmd="@reboot bash $script_path --cleanup --unattended"
-        (sudo crontab -l 2>/dev/null | grep -v "stoa-maintain" ; echo "$cron_cmd") \
-            | sudo crontab -
-        _notify "Cleanup scheduled at boot (root crontab)"
-    else
-        _notify "Neither systemctl nor crontab found"
-    fi
+    # stoa-maintain --schedule installs the root unit (systemd first, root
+    # crontab otherwise) and drops the legacy user-crontab entry that used to
+    # lock people out at the login screen. It needs sudo, so: a terminal.
+    _maintain_run_term --schedule
 }
 
 # ── Maintenance menu ──
@@ -6912,6 +6657,7 @@ menu_maintain() {
             "  Restore / Browse Backups" \
             "  Full Cleanup" \
             "  Cleanup (dry-run)" \
+            "  Cleanup (no sudo)" \
             "  Schedule Cleanup at Boot" \
             "  Back")
         # Anchored: an unanchored *"Back"* also matches "  Backup Configs"
@@ -6922,6 +6668,7 @@ menu_maintain() {
             *"Backup Configs"*) _maintain_backup ;;
             *"Restore"*)        _maintain_list ;;
             *"dry-run"*)        _maintain_cleanup 1 ;;
+            *"no sudo"*)        _maintain_cleanup 2 ;;
             *"Full Cleanup"*)   _maintain_cleanup 0 ;;
             *"Schedule"*)       _maintain_schedule ;;
         esac
