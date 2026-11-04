@@ -32,6 +32,26 @@ source "$_STOA_LIB/stoa-wm.sh"
 
 _usage() {
     sed -n '/^#   stoa-wm name/,/^#   stoa-wm start-command/p' "${BASH_SOURCE[0]}" | sed 's/^#//'
+    cat <<'STOA_HELP'
+
+  actions (stoa-wm action <name>)
+    close fullscreen float minimize overview
+    workspace-next workspace-prev focus-next focus-prev
+    move-left move-right move-up move-down
+  default cursor size: 24     -h, --help, help: this text
+
+RESUMO RÁPIDO
+  stoa-wm name | version | outputs | internal | external | focused-output | geom
+  stoa-wm reload | exit | lock
+  stoa-wm set hyprland|niri
+  stoa-wm extend OUT [REF]
+  stoa-wm mirror OUT SRC
+  stoa-wm disable OUT
+  stoa-wm action NAME
+  stoa-wm cursor THEME [SIZE]
+  stoa-wm start-command [WM]
+  stoa-wm -h | --help | help
+STOA_HELP
 }
 
 cmd="${1:-}"

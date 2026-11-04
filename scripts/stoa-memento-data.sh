@@ -12,6 +12,34 @@
 # ║  LIFE_YEARS).                                                ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-memento-data — memento-mori numbers as JSON, for the stoa/memento desktop widget.
+
+USAGE
+  stoa-memento-data
+
+OUTPUT
+  How much of the day, week, month, year and configured life span has elapsed and
+  how much remains.
+
+FILES
+  ~/.config/stoa/memento.conf   NAME, BIRTH (YYYY-MM-DD) and LIFE_YEARS; created with
+                                defaults on first run
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-memento-data
+  stoa-memento-data -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/memento.conf"
 
 # ── Create default config if it doesn't exist ──

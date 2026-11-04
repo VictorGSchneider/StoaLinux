@@ -15,6 +15,34 @@
 # ║  `git add -A` automatically — don't add them to sync.list.  ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-sync — mirror live state into the repo, then commit and push (the `sync-stoa` alias).
+
+USAGE
+  stoa-sync
+
+STEPS
+  1  git pull --rebase --autostash
+  2  snapshot ~/.local/state/noctalia/settings.toml (wallpaper paths removed)
+  3  mirror every path listed in ~/.config/stoa/sync.list into dotfiles/
+  4  git add -A, commit and push if anything changed
+
+Takes no arguments. STOA_DIR overrides the checkout (default ~/StoaLinux).
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-sync
+  stoa-sync -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 set -e
 
 STOA_DIR="${STOA_DIR:-$HOME/StoaLinux}"

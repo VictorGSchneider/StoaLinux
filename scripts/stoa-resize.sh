@@ -10,6 +10,30 @@
 #   stoa-resize *.png                   — glob works too
 
 # Require ImageMagick 7 (`magick`). Legacy `convert` differs in resize syntax.
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-resize — resize images with ImageMagick.
+
+USAGE
+  stoa-resize IMAGE [IMAGE ...]
+
+Opens a yad form with the size options; non-image arguments are ignored.
+
+OPTIONS
+  -h, --help    show this help
+
+Needs: ImageMagick 7 (magick), yad.
+
+RESUMO RÁPIDO
+  stoa-resize IMAGE [IMAGE ...]
+  stoa-resize -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 if ! command -v magick &>/dev/null; then
     echo "stoa-resize: ImageMagick 7 (magick) not found in PATH"
     notify-send -t 3000 "Image Resizer" "ImageMagick 7 (magick) not installed"

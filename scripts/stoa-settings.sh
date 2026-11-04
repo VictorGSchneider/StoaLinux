@@ -7,6 +7,36 @@
 # ║  standalone GUI apps for categories that already have one.   ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-settings — the Stoa Settings panel (a yad menu).
+
+USAGE
+  stoa-settings
+
+Opens the main menu; takes no arguments.
+
+SECTIONS
+  Display, Audio, Equalizer, Night Light, Keyboard, Mouse & Touchpad, Network, VPN,
+  Firewall, Bluetooth, Hardware, Disks & Storage, Printers & Scanners, Cloud Drive,
+  Wallpaper, Theme, Power Management, Date & Time, Accessibility, Screensaver,
+  System Health, Maintenance, Stoa Config.
+
+Maintenance runs stoa-maintain in a terminal (cleanup, restore, schedule need sudo).
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-settings
+  stoa-settings -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 WALLDIR="${HOME}/.config/stoa/wallpapers"

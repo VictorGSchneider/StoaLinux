@@ -21,6 +21,44 @@
 #   stoa-firewall authorize — Authorize a port from notification
 
 # ── Colors ──
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-firewall — nftables firewall (deny all inbound) with a port monitor.
+
+USAGE
+  stoa-firewall [COMMAND [ARGS]]      default command: status
+
+COMMANDS
+  setup                   install nftables and configure deny-all
+  status                  firewall status and the active rules
+  ports                   every listening port, whether it is allowed, and the process
+  allow PORT [tcp|udp]    add a port to the whitelist (default: tcp)
+  deny PORT [tcp|udp]     remove a port from the whitelist
+  authorize PORT [tcp|udp]  allow a port permanently without checks; used by the monitor's
+                          notification action
+  enable                  enable nftables at boot
+  disable                 disable it
+  monitor                 watch for new listening ports and notify, with allow/deny actions
+                          (run as a systemd user service)
+  help                    show this help
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-firewall [status]
+  stoa-firewall setup | ports | enable | disable | monitor
+  stoa-firewall allow PORT [tcp|udp]
+  stoa-firewall deny PORT [tcp|udp]
+  stoa-firewall authorize PORT [tcp|udp]
+  stoa-firewall -h | --help | help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 B='\033[38;2;196;154;92m'
 S='\033[38;2;110;106;98m'
 F='\033[38;2;212;207;196m'

@@ -7,6 +7,70 @@
 # ║  Dropbox, S3, etc). Streams on-demand — no full download.   ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-drive — cloud drives (rclone): mount, cache, two-way sync and account management.
+
+USAGE
+  stoa-drive [COMMAND [ARGS]]       no command opens the interactive menu
+
+MOUNTS
+  mount-all                         mount every configured remote under ~/Drive
+  unmount-all                       unmount them all
+  mount NAME                        mount one remote
+  unmount NAME                      unmount one remote
+  prewarm [NAME]                    walk the tree to fill the VFS cache (all mounted, or NAME)
+  status                            list remotes and whether each is mounted
+
+SYNC (rclone bisync)
+  sync REMOTE:PATH LOCAL            run one sync now
+  sync-all                          run every registered pair
+  sync-all-quiet                    same, without notifications
+  sync-enable                       run the pairs on a timer
+  sync-disable                      stop the timer
+  sync-status                       auto-sync state and the registered pairs
+  sync-status-json                  the same as JSON
+  add-sync-pair REMOTE:PATH LOCAL   register a pair
+  remove-sync-pair REMOTE:PATH LOCAL  unregister a pair
+
+ACCOUNTS
+  add-account PROVIDER|- NAME       create a remote ("-" to pick the provider interactively)
+  remove-account NAME               delete a remote
+
+OPTIONS
+  -h, --help, help    show this help
+
+SETTINGS (override in ~/.config/stoa/stoa.conf)
+  RCLONE_CACHE_SIZE (5G, "off" = unlimited)   RCLONE_CACHE_MODE (full)
+  RCLONE_CACHE_MAX_AGE (720h)                 RCLONE_DIR_CACHE_TIME (24h)
+  RCLONE_ATTR_TIMEOUT (1h)                    RCLONE_POLL_INTERVAL (1m)
+  STOA_DRIVE_PREWARM (true)                   STOA_SYNC_INTERVAL (5min)
+  STOA_SYNC_CONFLICT (newer|older|larger|smaller|path1|path2|none)
+
+FILES
+  ~/.config/stoa/drive-sync.list    registered sync pairs
+
+RESUMO RÁPIDO
+  stoa-drive
+  stoa-drive mount-all | unmount-all | status
+  stoa-drive mount NAME | unmount NAME
+  stoa-drive prewarm [NAME]
+  stoa-drive sync REMOTE:PATH LOCAL
+  stoa-drive sync-all | sync-all-quiet
+  stoa-drive sync-enable | sync-disable
+  stoa-drive sync-status | sync-status-json
+  stoa-drive add-sync-pair REMOTE:PATH LOCAL
+  stoa-drive remove-sync-pair REMOTE:PATH LOCAL
+  stoa-drive add-account PROVIDER|- NAME
+  stoa-drive remove-account NAME
+  stoa-drive -h | --help | help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 DRIVE_DIR="${HOME}/Drive"
 SYNC_LIST="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/drive-sync.list"

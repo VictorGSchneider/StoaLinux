@@ -5,6 +5,29 @@
 # Output: {"issues": N, "warnings": N}
 #   issues == -1  → log file absent (doctor hasn't run yet)
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-doctor-status — compact JSON status of the last stoa-doctor run (for the doctor pill).
+
+USAGE
+  stoa-doctor-status
+
+OUTPUT
+  {"issues": N, "warnings": N}      issues == -1 when the log does not exist yet
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-doctor-status
+  stoa-doctor-status -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 LOG="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/doctor.log"
 
 if [ ! -f "$LOG" ]; then

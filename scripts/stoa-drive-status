@@ -9,6 +9,30 @@
 #
 # cache_pct is relative to the --vfs-cache-max-size limit (1 GiB) used in stoa-drive.
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-drive-status — JSON state of the rclone remotes and their VFS cache (for the drive pill).
+
+USAGE
+  stoa-drive-status
+
+OUTPUT
+  {"available":bool,"total":N,"mounted":M,"drives":[{"name","type","mounted",
+   "cache_pct","cache_bytes","cache_human","cache_files"}, ...]}
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-drive-status
+  stoa-drive-status -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 DRIVE_DIR="${HOME}/Drive"
 CACHE_DIR="${HOME}/.cache/rclone/vfs"
 

@@ -5,6 +5,12 @@
     stoa-snapshots --show packages    …on the newest package snapshot
     stoa-snapshots --show configs     …on the newest config backup
     stoa-snapshots summary            JSON for the stoa-health panel (no GTK)
+
+RESUMO RÁPIDO
+    stoa-snapshots
+    stoa-snapshots --show packages | configs
+    stoa-snapshots summary
+    stoa-snapshots -h | --help
 """
 
 import json

@@ -23,6 +23,36 @@
 #   count       snapshots of / (-1 when not readable)
 #   latest      date of the newest one, "" when none or not readable
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-snapshot — boot snapshots of the root filesystem (snapper + Limine).
+
+USAGE
+  stoa-snapshot COMMAND [ARGS]
+
+COMMANDS
+  status                 JSON: available, reason, configured, snapshot count; never prompts
+  create [DESCRIPTION]   take a snapshot now
+  setup                  install and configure snapper and the Limine integration
+                         (opens a terminal)
+  restore                roll back to a snapshot (limine-snapper-restore, in a terminal)
+  list                   list the snapshots (in a terminal)
+  help                   show this help
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-snapshot status | setup | restore | list
+  stoa-snapshot create [DESCRIPTION]
+  stoa-snapshot -h | --help | help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 STOA_REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 SETUP="${STOA_REPO}/setup/enable-limine-snapshots.sh"
 TERM_CMD="${TERMINAL:-kitty}"

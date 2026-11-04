@@ -4,6 +4,29 @@
 #
 # Usage: stoa-drive-unpin <path-under-~/Drive>...
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-drive-unpin — drop files under ~/Drive from the offline cache.
+
+USAGE
+  stoa-drive-unpin PATH [PATH ...]
+
+Removes the cached copy and the emblem; the next access streams from the cloud again.
+PATH must be under ~/Drive/<remote>/. The reverse of stoa-drive-pin.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-drive-unpin PATH [PATH ...]
+  stoa-drive-unpin -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 DRIVE_DIR="${HOME}/Drive"
 CACHE_DIR="${HOME}/.cache/rclone/vfs"
 

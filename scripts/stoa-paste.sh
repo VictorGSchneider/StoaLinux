@@ -9,6 +9,37 @@
 #   stoa-paste          — menu with format options
 #   stoa-paste plain    — paste as plain text (no formatting)
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-paste — paste the clipboard in another format.
+
+USAGE
+  stoa-paste [FORMAT]      no FORMAT opens a menu of all of them
+
+FORMATS
+  plain       plain text, no formatting
+  upper       UPPERCASE
+  lower       lowercase
+  title       Title Case
+  trim        trim leading/trailing whitespace
+  snake       snake_case
+  camel       camelCase
+  json        pretty-print JSON
+  markdown    strip Markdown markup
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-paste [plain | upper | lower | title | trim | snake | camel | json | markdown]
+  stoa-paste -h | --help | help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 _STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-yad.sh"
 # shellcheck source=lib/stoa-yad.sh
 [ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"

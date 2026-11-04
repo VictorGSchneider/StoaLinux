@@ -10,6 +10,44 @@
 # ║  Requires: imagemagick, ffmpeg, mpv                          ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-screensaver — living marble animation, played fullscreen when the session is idle.
+
+USAGE
+  stoa-screensaver COMMAND [ARGS]
+
+COMMANDS
+  generate [STYLE]     generate the animation frames (default style: marble)
+  start                start the screensaver now
+  stop                 stop it
+  enable               turn on the idle trigger (swayidle)
+  disable              turn it off
+  status               show whether it is enabled, the timeout and the video
+  set-timeout SECONDS  idle seconds before it starts
+  help                 show this help
+
+OPTIONS
+  -h, --help    show this help
+
+FILES
+  ~/.config/stoa/screensaver.conf    settings
+  ~/.config/stoa/screensaver/        generated video
+
+Needs: imagemagick, ffmpeg, mpv, swayidle.
+
+RESUMO RÁPIDO
+  stoa-screensaver generate [STYLE]
+  stoa-screensaver start | stop | enable | disable | status
+  stoa-screensaver set-timeout SECONDS
+  stoa-screensaver -h | --help | help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 STOA_SS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver"
 STOA_SS_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/screensaver.conf"
 STOA_SS_VIDEO="${STOA_SS_DIR}/marble-flow.mp4"

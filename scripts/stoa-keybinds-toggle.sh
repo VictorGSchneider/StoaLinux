@@ -8,6 +8,28 @@
 # ║  cheatsheet through a read-only yad text dialog instead.     ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-keybinds-toggle — show the keybind cheatsheet in a yad window (Super+/).
+
+USAGE
+  stoa-keybinds-toggle
+
+Renders `stoa-keybinds-bar text` in a text dialog. Takes no arguments.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-keybinds-toggle
+  stoa-keybinds-toggle -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 set -e
 
 KEYBINDS_BIN="${HOME}/.local/bin/stoa-keybinds-bar"

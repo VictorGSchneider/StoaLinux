@@ -13,6 +13,29 @@
 # ║  the AUR) and waybar was only ever the stand-in for it.      ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-bar — start the Stoa shell (Noctalia) with the right environment.
+
+USAGE
+  stoa-bar
+
+Exports ~/.local/bin into PATH and the Qt platform theme, then starts Noctalia.
+Started by the compositor at login; takes no arguments.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-bar
+  stoa-bar -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 set -e
 
 # When launched via exec-once from Hyprland (display manager or autologin),

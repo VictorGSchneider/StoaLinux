@@ -1188,7 +1188,18 @@ show_help() {
 
     echo -e "    ${F}--help, -h${R}   ${S}this text${R}"
     echo ""
+
     echo -e "  ${S}Package manager detected:${R} ${B}${PKG_MANAGER}${R}"
+    echo ""
+    echo -e "  ${B}RESUMO RÁPIDO${R}"
+    echo -e "    ${F}stoa-maintain${R}"
+    echo -e "    ${F}stoa-maintain --backup${R}"
+    echo -e "    ${F}stoa-maintain --restore FILE${R}"
+    echo -e "    ${F}stoa-maintain --restore-interactive FILE${R}"
+    echo -e "    ${F}stoa-maintain --list FILE${R}"
+    echo -e "    ${F}stoa-maintain --cleanup [--dry-run | --unattended | --user]${R}"
+    echo -e "    ${F}stoa-maintain --schedule [--dry-run | --user]${R}"
+    echo -e "    ${F}stoa-maintain -h | --help${R}"
     echo ""
 }
 

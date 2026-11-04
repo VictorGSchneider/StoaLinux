@@ -15,6 +15,33 @@
 # Works in both compositors through lib/stoa-wm.sh. niri cannot mirror on its
 # own: the mirror step needs wl-mirror and is skipped without it.
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-display — cycle the external monitor through three modes, one per call.
+
+USAGE
+  stoa-display
+
+MODES (in order, wrapping around)
+  1  laptop-only    external output disabled
+  2  extend-right   external placed to the right of the internal panel
+  3  mirror         external mirrors the internal panel (needs wl-mirror on niri)
+
+Bound to XF86Display (Fn+F7) and Super+P. Works under Hyprland and niri.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-display
+  stoa-display -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 set -euo pipefail
 
 _STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"

@@ -22,6 +22,38 @@
 
 # Prefer the per-user XDG_RUNTIME_DIR (typically /run/user/$UID) over
 # world-writable /tmp. Falls back to /tmp only when unset (non-systemd).
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-predict — word and emoji suggestions next to the text cursor (Wayland input method).
+
+USAGE
+  stoa-predict COMMAND [ARGS]
+
+COMMANDS
+  toggle                  start or stop prediction (Super+Shift+S)
+  start                   start it
+  stop                    stop it
+  run                     run the daemon itself; started by the Noctalia plugin
+  kill                    stop the daemon; used by the plugin
+  languages               the catalog: code, name, enabled, downloaded
+  set-languages CODE...   download what is missing, save the choice, restart if running
+  help                    show this help
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-predict toggle | start | stop | run | kill
+  stoa-predict languages
+  stoa-predict set-languages CODE...
+  stoa-predict -h | --help | help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 _STOA_RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
 PIDFILE="${_STOA_RUNTIME}/stoa-predict.pid"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"

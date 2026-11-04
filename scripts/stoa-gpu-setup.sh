@@ -17,6 +17,34 @@
 #   3. For NVIDIA: configures mkinitcpio, modprobe, and env vars
 #   4. For AMD/Intel GPU: confirms mesa/vulkan packages
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-gpu-setup — detect the CPU and GPU and install the right microcode and drivers (Arch).
+
+USAGE
+  ./scripts/stoa-gpu-setup.sh
+
+STEPS
+  1  detect the CPU (AMD/Intel) and install the matching microcode
+  2  detect the GPU (NVIDIA/AMD/Intel) and install its drivers
+  3  NVIDIA: configure mkinitcpio, modprobe and environment variables
+  4  AMD/Intel GPU: confirm the mesa/vulkan packages
+
+Changes the system and uses sudo; Arch only. Takes no arguments.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-gpu-setup
+  stoa-gpu-setup -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 set -e
 
 # ── Colors ──

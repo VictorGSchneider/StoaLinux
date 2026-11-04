@@ -28,8 +28,17 @@ Examples:
   stoa-rename -f "IMG_" -r "photo_" *.jpg  Direct
   stoa-rename -f "\d+" -r "001" -i *.png   Case insensitive
   stoa-rename -f "\.jpeg$" -r ".jpg" -R .  Recursive
+
+RESUMO RÁPIDO
+  stoa-rename FILE...
+  stoa-rename -f PATTERN -r REPLACE [-i] [-g] [-n] FILE...
+  stoa-rename -f PATTERN -r REPLACE [-i] [-g] [-n] -R DIR
+  stoa-rename -h | --help
 EOF
 }
+
+# getopts has no long options: catch --help before it.
+case "${1:-}" in --help) _usage; exit 0 ;; esac
 
 FIND_PATTERN=""
 REPLACE_STR=""

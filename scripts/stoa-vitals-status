@@ -16,6 +16,31 @@
 #   "scheduled":   true|false
 # }
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-vitals-status — aggregated JSON status for the Stoa Vitals plugin (Noctalia).
+
+USAGE
+  stoa-vitals-status
+
+OUTPUT (one line of JSON)
+  doctor {issues, warnings, log}, cpu {tempC, loadPct}, gpu {tempC},
+  memory {usedPct, usedGiB, totalGiB}, disk {mount, usedPct, freeGiB},
+  failedUnits, updates, uptime, snapshots, backups, scheduled
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-vitals-status
+  stoa-vitals-status -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 set -u
 
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"

@@ -9,6 +9,30 @@
 # if something breaks after an update.
 
 # When run as root (pacman hook), find the real user's home
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-pkg-snapshot — save the list of installed packages.
+
+USAGE
+  stoa-pkg-snapshot
+
+Writes ~/.config/stoa/pkg-snapshots/pkg-snapshot-<timestamp>.txt (`pacman -Q`) and keeps
+the 20 newest. Run automatically by a pacman hook before every install, upgrade and
+removal; also available as `stoa-health snapshot`. Takes no arguments.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-pkg-snapshot
+  stoa-pkg-snapshot -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 if [ "$(id -u)" -eq 0 ]; then
     _real_user=$(logname 2>/dev/null || who | awk 'NR==1{print $1}')
     _real_home=$(getent passwd "$_real_user" 2>/dev/null | cut -d: -f6)

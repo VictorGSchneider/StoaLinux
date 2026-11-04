@@ -8,6 +8,47 @@
 # ║  show inline. Data comes from stoa-vitals-status.             ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-health — system health actions (the System Health panel, also usable from a shell).
+
+USAGE
+  stoa-health [COMMAND]               no command opens the health menu
+
+COMMANDS
+  doctor             run stoa-doctor
+  status             health status as JSON
+  snapshot           take a package snapshot (stoa-pkg-snapshot)
+  backup             back up the configs (stoa-maintain --backup)
+  cleanup            full cleanup (stoa-maintain --cleanup)
+  cleanup-dry-run    preview the cleanup (stoa-maintain --cleanup --dry-run)
+  schedule           schedule the cleanup at boot (stoa-maintain --schedule)
+  update-all         pacman -Syu then yay -Syu
+  update-system      pacman -Syu
+  update-aur         yay -Syu
+  locksmith          open stoa-locksmith
+  help               show this help
+
+OPTIONS
+  -h, --help    show this help
+
+SETTINGS
+  STOA_HEALTH_PRIVILEGE=pkexec|sudo-n   how update/schedule get root (default: pkexec;
+                                        sudo-n needs a NOPASSWD sudoers rule)
+
+RESUMO RÁPIDO
+  stoa-health
+  stoa-health doctor | status | snapshot | locksmith
+  stoa-health backup | cleanup | cleanup-dry-run | schedule
+  stoa-health update-all | update-system | update-aur
+  stoa-health -h | --help | help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 DOCTOR_LOG="${STOA_DIR}/doctor.log"

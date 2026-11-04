@@ -11,6 +11,35 @@
 #   stoa-ocr por        — select area, OCR in Portuguese
 #   stoa-ocr eng        — select area, OCR in English
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-ocr — extract text from the screen or an image and copy it to the clipboard.
+
+USAGE
+  stoa-ocr [LANG]          select an area of the screen, OCR it
+  stoa-ocr FILE            OCR an image file
+
+LANG
+  eng (en, english)        English
+  por (pt, pt-br, portugues)  Portuguese
+  (none)                   English + Portuguese
+
+OPTIONS
+  -h, --help    show this help
+
+Needs: tesseract, grim, slurp, wl-clipboard.
+
+RESUMO RÁPIDO
+  stoa-ocr [eng | por]
+  stoa-ocr FILE
+  stoa-ocr -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 OCR_TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
 
 _copy() {

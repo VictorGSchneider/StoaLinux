@@ -978,7 +978,30 @@ class InputMethod:
             pass
 
 
+HELP = """\
+stoa-predict.py — the text-prediction daemon (Wayland input method).
+
+USAGE
+  stoa-predict.py
+
+Runs the input method itself: word and emoji suggestions in a popup next to the text
+cursor. Takes no arguments. Normally started and stopped through `stoa-predict`
+(toggle, start, stop, run, kill) by the Noctalia stoa/predict plugin (Super+Shift+S).
+stdout carries the status lines the plugin reads.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-predict.py
+  stoa-predict.py -h | --help
+"""
+
+
 def main():
+    if any(a in ("-h", "--help") for a in sys.argv[1:]):
+        print(HELP, end="")
+        return
     try:
         import cairo  # noqa: F401
         import gi

@@ -14,6 +14,32 @@
 #   stoa-locksmith /path/to/file /path/to/dir ...  — scan directly
 #   stoa-locksmith                                  — prompt for a path via yad
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-locksmith — find and end the processes that hold files or folders open.
+
+USAGE
+  stoa-locksmith [PATH ...]
+
+With PATHs, scans them (folders recursively) for processes with an open handle; with
+none, asks for a path in a yad prompt. The result is a checklist from which you can end
+the selected processes (SIGTERM, or SIGKILL as a second step) to release the lock.
+
+OPTIONS
+  -h, --help    show this help
+
+Needs: yad, lsof.
+
+RESUMO RÁPIDO
+  stoa-locksmith [PATH ...]
+  stoa-locksmith -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 _notify() {
     notify-send -t "${2:-3000}" "Locksmith" "$1"
 }

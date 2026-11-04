@@ -5,6 +5,27 @@
 # ╚══════════════════════════════════════════════════════════════╝
 
 # Colors
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-fetch — system information in the Stoa palette.
+
+USAGE
+  stoa-fetch [OPTION]
+
+OPTIONS
+  --plato       Diogenes' plucked chicken, with the system info beside it
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-fetch [--plato]
+  stoa-fetch -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 B='\033[38;2;196;154;92m'   # Bronze
 G='\033[38;2;212;168;75m'   # Gold
 S='\033[38;2;110;106;98m'   # Stone

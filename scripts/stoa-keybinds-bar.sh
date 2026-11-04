@@ -8,6 +8,35 @@
 # ║                                   wants them                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-keybinds-bar — the keybind cheatsheet, for the bar, the tooltip and the yad popup.
+
+USAGE
+  stoa-keybinds-bar [MODE]
+
+MODES
+  bar     one line of bar text plus tooltip as JSON   (default; empty when
+          STOA_SHOW_KEYBINDS is not "true")
+  info    the keyboard icon plus tooltip as JSON, class on/off
+  text    the full cheatsheet as plain text
+
+OPTIONS
+  -h, --help    show this help
+
+SETTINGS
+  STOA_SHOW_KEYBINDS=true|false   in ~/.config/stoa/stoa.conf
+
+RESUMO RÁPIDO
+  stoa-keybinds-bar [bar | info | text]
+  stoa-keybinds-bar -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 
 if [ -f "$STOA_CONF" ]; then

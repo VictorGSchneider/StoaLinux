@@ -213,6 +213,14 @@ Commands:
 No args = defaults + quotes.
 
 Requires: glslviewer (AUR), imagemagick, jq.
+
+RESUMO RÁPIDO
+  stoa-walls
+  stoa-walls defaults
+  stoa-walls quotes [N]
+  stoa-walls regen [N]
+  stoa-walls clean
+  stoa-walls help | -h | --help
 EOF
 }
 

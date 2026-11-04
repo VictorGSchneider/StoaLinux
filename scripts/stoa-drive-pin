@@ -8,6 +8,29 @@
 # Rclone serves files from there transparently; populating it with
 # `rclone copy` is equivalent to what the VFS layer does internally.
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-drive-pin — make files under ~/Drive available offline.
+
+USAGE
+  stoa-drive-pin PATH [PATH ...]
+
+Copies each PATH into the rclone VFS cache (~/.cache/rclone/vfs/<remote>/) and marks
+it with an emblem. PATH must be under ~/Drive/<remote>/. Undo with stoa-drive-unpin.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-drive-pin PATH [PATH ...]
+  stoa-drive-pin -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 DRIVE_DIR="${HOME}/Drive"
 CACHE_DIR="${HOME}/.cache/rclone/vfs"
 

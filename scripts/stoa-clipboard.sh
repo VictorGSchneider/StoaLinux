@@ -9,6 +9,35 @@
 #   stoa-clipboard pin     — Pin/unpin item from history
 #   stoa-clipboard clear   — Clear history (preserves pinned)
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help|help)
+        cat <<'STOA_HELP'
+stoa-clipboard — clipboard history with pinned entries (cliphist + yad).
+
+USAGE
+  stoa-clipboard [COMMAND]
+
+COMMANDS
+  show     history, pinned items on top; pick one to copy it   (default)
+  pin      pin or unpin an item from the history
+  clear    clear the history (pinned items are kept)
+  help     show this help
+
+OPTIONS
+  -h, --help    show this help
+
+FILES
+  ~/.local/share/stoa/clipboard-pins    pinned entries (one per line)
+
+RESUMO RÁPIDO
+  stoa-clipboard [show | pin | clear | help]
+  stoa-clipboard -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 PINS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/stoa"
 PINS_FILE="${PINS_DIR}/clipboard-pins"
 

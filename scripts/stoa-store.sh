@@ -15,6 +15,34 @@
 
 # Resolve the script directory *through* symlinks so the install-time symlink
 # at ~/.local/bin/stoa-store still finds the bundled module files in-tree.
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-store — the Stoa package store (a yad menu over pacman, AUR, flatpak, snap, AppImage…).
+
+USAGE
+  stoa-store
+
+Opens the main menu; takes no arguments.
+
+MENU
+  Search & install (opens bauh), Package browser, Update all, Update system, Cleanup,
+  System info, Flatpak manager, Snap manager, AppImage manager, DEB / RPM (convert),
+  Acer apps (DAMX; Acer hardware only), Developer tools, Setup auto-theme hook,
+  Re-apply Stoa theme, Install AUR helper.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-store
+  stoa-store -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 _STOA_STORE_SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 _STOA_STORE_LIB="$(dirname "$_STOA_STORE_SELF")/stoa-store"
 

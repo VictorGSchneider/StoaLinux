@@ -9,6 +9,29 @@
 # For ongoing pin/unpin the individual stoa-drive-pin/unpin scripts keep
 # emblems in sync automatically.
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-drive-emblems — mark cached files in a mounted drive with a Thunar emblem.
+
+USAGE
+  stoa-drive-emblems REMOTE
+
+Files present in the rclone VFS cache get the "ok" emblem; files that are only
+streamed get it cleared. Run it after mounting REMOTE (pin/unpin keep them in sync).
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-drive-emblems REMOTE
+  stoa-drive-emblems -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 DRIVE_DIR="${HOME}/Drive"
 CACHE_DIR="${HOME}/.cache/rclone/vfs"
 

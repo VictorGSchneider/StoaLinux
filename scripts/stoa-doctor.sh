@@ -8,6 +8,29 @@
 # required by Stoa scripts are present and functional.
 # Reports issues via desktop notifications (notify-send → Noctalia).
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-doctor — check that the binaries and services Stoa needs are present and working.
+
+USAGE
+  stoa-doctor
+
+Writes ~/.config/stoa/doctor.log and reports problems as desktop notifications.
+Runs at startup; takes no arguments. Read the result with stoa-doctor-status.
+
+OPTIONS
+  -h, --help    show this help
+
+RESUMO RÁPIDO
+  stoa-doctor
+  stoa-doctor -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 set -o pipefail
 
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"

@@ -1006,6 +1006,13 @@ def build_parser() -> argparse.ArgumentParser:
                 sp.epilog = epilog
             print()
             print(KEEP_NOTE)
+            print()
+            print("RESUMO RÁPIDO")
+            print("  stoa-history")
+            for name, sp in sub.choices.items():
+                usage = " ".join(sp.format_usage().replace("usage:", "", 1).split())
+                print("  " + usage.replace(" [-h]", ""))
+            print("  stoa-history -h | --help")
             parser.exit()
 
     parser.add_argument("-h", "--help", action=FullHelp,

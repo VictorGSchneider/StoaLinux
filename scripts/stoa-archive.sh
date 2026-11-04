@@ -13,6 +13,33 @@
 # Called directly from Thunar's "Stoatools" custom-action submenu
 # (see config/thunar/uca.xml) with the current Thunar selection.
 
+# ── --help ──
+case "${1:-}" in
+    -h|--help)
+        cat <<'STOA_HELP'
+stoa-archive — compress or extract the current file selection (Thunar "Stoatools").
+
+USAGE
+  stoa-archive FILE [FILE ...]
+
+BEHAVIOUR
+  If every FILE is an archive, offers to extract; otherwise offers to compress.
+  Opens a yad form for the options. Extracts .zip .tar .tar.gz/.tgz .tar.bz2/.tbz2/.tbz
+  .tar.xz/.txz .7z .rar.
+
+OPTIONS
+  -h, --help    show this help
+
+Needs: yad. Called from config/thunar/uca.xml.
+
+RESUMO RÁPIDO
+  stoa-archive FILE [FILE ...]
+  stoa-archive -h | --help
+STOA_HELP
+        exit 0
+        ;;
+esac
+
 _notify() {
     notify-send -t "${2:-3000}" "Archive" "$1"
 }
