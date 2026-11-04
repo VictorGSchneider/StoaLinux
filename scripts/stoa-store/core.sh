@@ -5,21 +5,39 @@ APPIMAGE_DIR="${HOME}/Applications"
 
 _notify() { notify-send -t 2500 "Stoa Store" "$1" 2>/dev/null; }
 
+# yad --list renders cell text as Pango markup. A bare "&" (e.g. "Mouse & Touchpad")
+# or "<" is invalid markup, so GTK keeps the previous row's text in that cell:
+# the label shows up as a duplicate of its neighbour, while the tooltip and the
+# click still use the real value. Escape on the way in, unescape on the way out
+# so callers keep matching on the original, human-written label.
+_yad_esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+_yad_unesc() {
+    local s="$1"
+    s=${s//&lt;/"<"}; s=${s//&gt;/">"}; s=${s//&amp;/"&"}
+    printf '%s\n' "$s"
+}
+
 # Selection list built from function arguments (each arg = one row).
 _yad_select() {
-    local prompt="$1"
+    local prompt="$1" out rc
     shift
-    printf '%s\n' "$@" \
+    out=$(printf '%s\n' "$@" | _yad_esc \
         | yad --list --title="$prompt" --column="Option" --no-headers \
-              --width=520 --height=440 --separator=''
+              --width=520 --height=440 --separator='')
+    rc=$?
+    _yad_unesc "$out"
+    return $rc
 }
 
 # Selection list built from stdin (one row per line) — replaces the old
 # `command | _yad_list "prompt"` idiom used throughout the store modules.
 _yad_list() {
-    local prompt="$1"
-    yad --list --title="$prompt" --column="Option" --no-headers \
-        --width=560 --height=460 --separator=''
+    local prompt="$1" out rc
+    out=$(_yad_esc | yad --list --title="$prompt" --column="Option" --no-headers \
+        --width=560 --height=460 --separator='')
+    rc=$?
+    _yad_unesc "$out"
+    return $rc
 }
 
 _yad_input() {

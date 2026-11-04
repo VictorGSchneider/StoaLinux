@@ -39,12 +39,25 @@ _SYNC_CONFLICT="${STOA_SYNC_CONFLICT:-newer}"
 
 _notify() { notify-send -t 2500 "Stoa Drive" "$1" 2>/dev/null; }
 
+# yad --list renders cell text as Pango markup; a bare "&" or "<" is invalid
+# markup and makes GTK keep the previous row's text in that cell. Escape on the
+# way in, unescape on the way out so callers still see the original text.
+_yad_esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+_yad_unesc() {
+    local s="$1"
+    s=${s//&lt;/"<"}; s=${s//&gt;/">"}; s=${s//&amp;/"&"}
+    printf '%s\n' "$s"
+}
+
 _yad_select() {
-    local prompt="$1"
+    local prompt="$1" out rc
     shift
-    printf '%s\n' "$@" \
+    out=$(printf '%s\n' "$@" | _yad_esc \
         | yad --list --title="$prompt" --column="Option" --no-headers \
-              --width=420 --height=420 --separator=''
+              --width=420 --height=420 --separator='')
+    rc=$?
+    _yad_unesc "$out"
+    return $rc
 }
 
 _yad_input() {

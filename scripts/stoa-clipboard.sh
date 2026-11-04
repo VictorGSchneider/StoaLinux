@@ -19,10 +19,23 @@ _copy() {
     wl-copy
 }
 
+# yad --list renders cell text as Pango markup; a bare "&" or "<" is invalid
+# markup and makes GTK keep the previous row's text in that cell. Escape on the
+# way in, unescape on the way out so callers still see the original text.
+_yad_esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+_yad_unesc() {
+    local s="$1"
+    s=${s//&lt;/"<"}; s=${s//&gt;/">"}; s=${s//&amp;/"&"}
+    printf '%s\n' "$s"
+}
+
 _yad_pick() {
-    local prompt="$1"
-    yad --list --title="$prompt" --column="Option" --no-headers \
-        --width=500 --height=480 --separator=''
+    local prompt="$1" out rc
+    out=$(_yad_esc | yad --list --title="$prompt" --column="Option" --no-headers \
+        --width=500 --height=480 --separator='')
+    rc=$?
+    _yad_unesc "$out"
+    return $rc
 }
 
 _show() {

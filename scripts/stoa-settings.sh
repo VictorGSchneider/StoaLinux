@@ -67,12 +67,27 @@ _hyprctl_get() {
     esac
 }
 
+# yad --list renders cell text as Pango markup. A bare "&" (e.g. "Mouse & Touchpad")
+# or "<" is invalid markup, so GTK keeps the previous row's text in that cell:
+# the label shows up as a duplicate of its neighbour, while the tooltip and the
+# click still use the real value. Escape on the way in, unescape on the way out
+# so callers keep matching on the original, human-written label.
+_yad_esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+_yad_unesc() {
+    local s="$1"
+    s=${s//&lt;/"<"}; s=${s//&gt;/">"}; s=${s//&amp;/"&"}
+    printf '%s\n' "$s"
+}
+
 _yad_select() {
-    local prompt="$1"
+    local prompt="$1" out rc
     shift
-    printf '%s\n' "$@" \
+    out=$(printf '%s\n' "$@" | _yad_esc \
         | yad --list --title="$prompt" --column="Option" --no-headers \
-              --width=480 --height=440 --separator=''
+              --width=480 --height=440 --separator='')
+    rc=$?
+    _yad_unesc "$out"
+    return $rc
 }
 
 _yad_input() {
@@ -96,8 +111,12 @@ _yad_info() {
 # Drop-in for the old rofi `"${ROFI[@]}" -p "<title>"` pattern: reads a
 # list from stdin (one option per line) and returns the picked line.
 _yad_pipe() {
-    yad --list --title="$1" --column="Option" --no-headers \
-        --width=480 --height=440 --separator=''
+    local out rc
+    out=$(_yad_esc | yad --list --title="$1" --column="Option" --no-headers \
+        --width=480 --height=440 --separator='')
+    rc=$?
+    _yad_unesc "$out"
+    return $rc
 }
 
 # ══════════════════════════════════════════════════════════════
