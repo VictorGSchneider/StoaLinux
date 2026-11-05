@@ -4,12 +4,15 @@
 --  ╚══════════════════════════════════════════════════════════════╝
 --
 --  Aggregate system health: doctor log, failed systemd units, CPU/GPU
---  temperature, memory, disk and pending updates — one icon, coloured by
---  worst offender, same thresholds the v4 QML widget used:
+--  temperature, memory, disk, pending updates and hardware health (SSD
+--  SMART, memory, CPU, GPUs, panel, battery, kernel log — from
+--  stoa-hardware) — one icon, coloured by worst offender, same thresholds
+--  the v4 QML widget used:
 --
---      error    doctor issues, failed units, or any sensor >= 90%/90C
---      warn     doctor warnings, or a sensor in the 80-90 band, or
---               >=50 pending updates
+--      error    doctor issues, failed units, a hardware failure, or any
+--               sensor >= 90%/90C
+--      warn     doctor warnings, hardware warnings, or a sensor in the
+--               80-90 band, or >=50 pending updates
 --      ok       none of the above
 --      unknown  stoa-vitals-status has not answered yet
 --
@@ -30,7 +33,8 @@
 --       "cpu":{"tempC":0.0,"loadPct":0.0},"gpu":{"tempC":0.0},
 --       "memory":{"usedPct":0.0,...},"disk":{"usedPct":N,...},
 --       "failedUnits":N,"updates":N,"uptime":"...",
---       "snapshots":N,"backups":N,"scheduled":bool}
+--       "snapshots":N,"backups":N,"scheduled":bool,
+--       "hardware":null | {"issues":N,"warnings":N,"findings":[{level,area,msg}],...}}
 
 local STATUS_BIN = "$HOME/.local/bin/stoa-vitals-status"
 local HEALTH_BIN = "$HOME/.local/bin/stoa-health"
@@ -46,6 +50,9 @@ local state = {
     memUsedPct = 0,
     diskUsedPct = 0,
     updates = 0,
+    hwIssues = 0,
+    hwWarnings = 0,
+    hwFirst = "",
 }
 
 -- getConfig reads THIS plugin's own [[setting]] entries from plugin.toml
@@ -81,7 +88,7 @@ local function severity()
     if not state.loaded then
         return "unknown"
     end
-    if state.doctorIssues > 0 or state.failedUnits > 0 then
+    if state.doctorIssues > 0 or state.failedUnits > 0 or state.hwIssues > 0 then
         return "error"
     end
     if state.cpuTempC >= 90 or state.gpuTempC >= 90 or state.diskUsedPct >= 95 then
@@ -90,7 +97,7 @@ local function severity()
     if state.doctorIssues < 0 then
         return "unknown"
     end
-    if state.doctorWarnings > 0 or state.cpuTempC >= 80 or state.gpuTempC >= 80
+    if state.doctorWarnings > 0 or state.hwWarnings > 0 or state.cpuTempC >= 80 or state.gpuTempC >= 80
         or state.diskUsedPct >= 85 or state.memUsedPct >= 90 or state.updates >= 50 then
         return "warn"
     end
@@ -108,7 +115,7 @@ end
 local function badgeCount()
     local issues = state.doctorIssues
     if issues < 0 then issues = 0 end
-    return issues + state.failedUnits
+    return issues + state.failedUnits + state.hwIssues
 end
 
 local function tooltip()
@@ -132,6 +139,19 @@ local function tooltip()
         local label = "failed unit"
         if state.failedUnits > 1 then label = "failed units" end
         parts[#parts + 1] = string.format("%d %s", state.failedUnits, label)
+    end
+    if state.hwIssues > 0 then
+        local label = "hardware issue"
+        if state.hwIssues > 1 then label = "hardware issues" end
+        parts[#parts + 1] = string.format("%d %s", state.hwIssues, label)
+    end
+    if state.hwWarnings > 0 then
+        local label = "hardware warning"
+        if state.hwWarnings > 1 then label = "hardware warnings" end
+        parts[#parts + 1] = string.format("%d %s", state.hwWarnings, label)
+    end
+    if state.hwFirst ~= "" then
+        parts[#parts + 1] = state.hwFirst
     end
     if state.cpuTempC >= 80 then
         parts[#parts + 1] = string.format("CPU %d°C", math.floor(state.cpuTempC + 0.5))
@@ -191,6 +211,26 @@ local function refresh()
         state.memUsedPct = memory.usedPct or 0
         state.diskUsedPct = disk.usedPct or 0
         state.updates = parsed.updates or 0
+
+        -- "hardware" is null when stoa-hardware could not run; treat that
+        -- as "nothing to report", not as a problem.
+        state.hwIssues = 0
+        state.hwWarnings = 0
+        state.hwFirst = ""
+        if type(parsed.hardware) == "table" then
+            local hw = parsed.hardware
+            state.hwIssues = hw.issues or 0
+            state.hwWarnings = hw.warnings or 0
+            if type(hw.findings) == "table" and type(hw.findings[1]) == "table" then
+                local msg = hw.findings[1].msg or ""
+                -- Cut on a character boundary: messages carry "°" and "×".
+                local chars = utf8.len(msg)
+                if chars ~= nil and chars > 70 then
+                    msg = string.sub(msg, 1, utf8.offset(msg, 68) - 1) .. "..."
+                end
+                state.hwFirst = msg
+            end
+        end
         paint()
     end)
 end

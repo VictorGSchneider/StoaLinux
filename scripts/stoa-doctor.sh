@@ -462,6 +462,30 @@ for dir in \
 done
 
 # ══════════════════════════════════════════
+#   Hardware health
+# ══════════════════════════════════════════
+# SSD SMART (via udisks2, no root), memory, CPU, GPUs, display panel,
+# battery and the kernel log — see stoa-hardware. Every line is tagged
+# "[hw]" so stoa-vitals-status can count these apart from the doctor's own
+# checks: it asks stoa-hardware for the live numbers itself, and adding
+# both would show one failing SSD as two issues.
+_HW_BIN="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/stoa-hardware.py"
+if [ -f "$_HW_BIN" ] && command -v python3 &>/dev/null; then
+    if _hw_out="$(python3 "$_HW_BIN" doctor 2>/dev/null)" && [ -n "$_hw_out" ]; then
+        while IFS=$'\t' read -r _hw_lvl _hw_msg; do
+            case "$_hw_lvl" in
+                ok)   _ok   "[hw] ${_hw_msg}" ;;
+                info) echo "[INFO] [hw] ${_hw_msg}" >> "$LOG" ;;
+                warn) _warn "[hw] ${_hw_msg}" ;;
+                fail) _fail "[hw] ${_hw_msg}" ;;
+            esac
+        done <<< "$_hw_out"
+    else
+        _warn "[hw] stoa-hardware produced no output — hardware checks skipped"
+    fi
+fi
+
+# ══════════════════════════════════════════
 #   Report
 # ══════════════════════════════════════════
 
@@ -473,7 +497,7 @@ done
 
 # Notify user of problems
 if [ ${#ISSUES[@]} -gt 0 ]; then
-    msg="Missing: ${#ISSUES[@]} required\n"
+    msg="Problems: ${#ISSUES[@]}\n"
     for issue in "${ISSUES[@]:0:5}"; do
         msg+="• ${issue}\n"
     done

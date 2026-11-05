@@ -11,11 +11,14 @@
 --  same JSON status endpoint the bar widget already polls and dispatches
 --  to the script's non-interactive CLI subcommands (doctor/snapshot/
 --  backup/cleanup/cleanup-dry-run/schedule/update-all/update-system/
---  update-aur/locksmith). System (Btrfs) snapshots go through
+--  update-aur/locksmith, plus cleanup-user/unschedule). The ones that need
+--  root open a terminal for sudo. System (Btrfs) snapshots go through
 --  scripts/stoa-snapshot.sh the same way (status/create/setup/restore/list).
 --
---  Three views, same split as the old yad tabs: Vitals (main) / Snapshots
---  / Maintenance.
+--  Four views: Vitals (main) / Snapshots / Maintenance, plus Hardware —
+--  SSD SMART, memory, CPU, GPUs, panel and battery from stoa-hardware, with
+--  buttons to run a SMART self-test or open the full smartctl report (both
+--  ask for your password through polkit).
 --
 --  Written in the Lua 5.4-compatible subset of Luau (no type annotations,
 --  no if-expressions) so the CI lua step can actually parse it — luac5.4
@@ -33,6 +36,7 @@ local BIN         = "$HOME/.local/bin/stoa-health"
 local SNAP_BIN    = "$HOME/.local/bin/stoa-snapshot"
 local BROWSER_BIN = "$HOME/.local/bin/stoa-snapshots"
 local STATUS_BIN  = "$HOME/.local/bin/stoa-vitals-status"
+local HW_BIN      = "$HOME/.local/bin/stoa-hardware"
 local DOCTOR_LOG  = "$HOME/.config/stoa/doctor.log"
 
 -- ── UI tree node builders ──
@@ -53,7 +57,7 @@ local function prog(props) return node("progress", props) end
 -- ── State ──
 
 local state = {
-    view = "main", -- "main" | "snapshots" | "maintenance"
+    view = "main", -- "main" | "snapshots" | "maintenance" | "hardware"
 
     loaded = false,
     doctorIssues = -1,
@@ -72,6 +76,10 @@ local state = {
     snapshots = 0,
     backups = 0,
     scheduled = false,
+
+    -- stoa-hardware's summary (the "hardware" key of the status JSON), or
+    -- nil when it could not run.
+    hw = nil,
 
     -- System (Btrfs) snapshots, from `stoa-snapshot status`. Fetched only
     -- while the Snapshots view is open: snapper is too slow for the bar's
@@ -130,6 +138,10 @@ local function refreshStatus()
         state.snapshots = parsed.snapshots or 0
         state.backups = parsed.backups or 0
         state.scheduled = parsed.scheduled == true
+        state.hw = nil
+        if type(parsed.hardware) == "table" then
+            state.hw = parsed.hardware
+        end
         render()
     end)
 end
@@ -194,6 +206,32 @@ local function openLog()
     noctalia.runAsync("xdg-open " .. DOCTOR_LOG)
 end
 
+-- Hardware ──
+
+-- Re-read everything now, SMART and kernel log included, instead of the
+-- ten-minute cache the 30 s poll uses.
+local function rescanHardware()
+    noctalia.runAsync(HW_BIN .. " summary --fresh", function(result)
+        refreshStatus()
+    end)
+end
+
+-- Both self-tests go through udisks2/polkit: the password box is the
+-- system's, not ours. The short one returns once started and a
+-- notification reports the result; the extended one takes much longer.
+local function smartTestShort()
+    runNotified("SMART self-test", BIN .. " smart-test short", nil)
+end
+
+local function smartTestExtended()
+    runNotified("SMART extended self-test", BIN .. " smart-test extended", nil)
+end
+
+-- Full `smartctl -x`; opens a terminal (pkexec prompt + long output).
+local function smartReport()
+    noctalia.runAsync(BIN .. " smart-report")
+end
+
 local function snapshotPackages()
     runNotified("Package snapshot", BIN .. " snapshot", refreshSnapshotSummary)
 end
@@ -232,38 +270,59 @@ local function openConfigBackups()
     noctalia.runAsync(BROWSER_BIN .. " --show configs")
 end
 
+-- The three updates need root, and yay escalates by itself half-way
+-- through a build. Run in the background there is nothing to answer sudo,
+-- every prompt-less sudo is a failed login to pam_faillock, and three lock
+-- the account out. They open a terminal (where the output can be read too)
+-- and return, so no notify wrapper; the pending count catches up on the
+-- panel's next poll.
 local function updateAll()
-    runNotified("Update all", BIN .. " update-all", refreshStatus)
+    noctalia.runAsync(BIN .. " update-all")
 end
 
 local function updateSystem()
-    runNotified("Update system", BIN .. " update-system", refreshStatus)
+    noctalia.runAsync(BIN .. " update-system")
 end
 
 local function updateAUR()
-    runNotified("Update AUR", BIN .. " update-aur", refreshStatus)
+    noctalia.runAsync(BIN .. " update-aur")
 end
 
+-- Both open a terminal and return, so no notify wrapper. The cleanup needs
+-- one: stoa-maintain --cleanup makes a dozen sudo calls and refuses to start
+-- without a terminal to prompt on (prompt-less sudo calls would each count
+-- as a failed login to pam_faillock) — run in the background it always
+-- ended in "Failed: Cleanup". The preview is output meant to be read.
 local function cleanupDryRun()
-    runNotified("Cleanup (dry-run)", BIN .. " cleanup-dry-run", refreshStatus)
+    noctalia.runAsync(BIN .. " cleanup-dry-run")
 end
 
 local function cleanupApply()
-    runNotified("Cleanup", BIN .. " cleanup", refreshStatus)
+    noctalia.runAsync(BIN .. " cleanup")
 end
 
--- --schedule only ever enables the cleanup timer/cron line — stoa-maintain
--- has no unschedule CLI path (systemd --user timers and crontab entries
--- get removed by hand, per its own --help text). A toggle here would
--- promise a disable this button cannot deliver, so it stays a plain
--- button, same "Toggle boot schedule" wording the yad menu used.
+-- Cleanup of your own files only: no sudo, so no terminal needed and the
+-- background-with-notification wrapper is safe here.
+local function cleanupUser()
+    runNotified("Cleanup (my files)", BIN .. " cleanup-user", refreshStatus)
+end
+
+-- Schedule / unschedule need root (a systemd timer in /etc), so both open a
+-- terminal like the updates. stoa-maintain --schedule only ever adds; the
+-- remove path is stoa-health's, which finds the timer or cron line wherever
+-- it was installed.
 local function scheduleCleanup()
-    runNotified("Toggle schedule", BIN .. " schedule", refreshStatus)
+    noctalia.runAsync(BIN .. " schedule")
 end
 
--- stoa-locksmith is its own interactive yad flow (pick a path, see who
--- holds it) — fire-and-forget, same as the drive panel's "opens a
--- terminal" account-creation button, no notify wrapper around it.
+local function unscheduleCleanup()
+    noctalia.runAsync(BIN .. " unschedule")
+end
+
+-- stoa-locksmith is the File Locksmith: find and end whatever holds a file
+-- or folder open. Its own interactive yad flow (pick a path, see who holds
+-- it) — fire-and-forget, no notify wrapper. It is not the firewall (that is
+-- Settings → Firewall); the button used to be labelled as if it were.
 local function openLocksmith()
     noctalia.runAsync(BIN .. " locksmith")
 end
@@ -287,6 +346,11 @@ local function goToMaintenance()
     render()
 end
 
+local function goToHardware()
+    state.view = "hardware"
+    render()
+end
+
 -- ── Rendering ──
 
 local function header(title, onBack)
@@ -296,20 +360,27 @@ local function header(title, onBack)
     })
 end
 
+local function hwCounts()
+    if state.hw == nil then return 0, 0 end
+    return state.hw.issues or 0, state.hw.warnings or 0
+end
+
 -- Same wording as _summary_line() in stoa-health.sh.
 local function statusLine()
     if not state.loaded then return "…" end
     if state.doctorIssues < 0 then return "doctor not run" end
-    local issues = state.doctorIssues + state.failedUnits
+    local hwIssues, hwWarnings = hwCounts()
+    local issues = state.doctorIssues + state.failedUnits + hwIssues
     if issues > 0 then
         local label = "issue"
         if issues > 1 then label = "issues" end
         return string.format("%d %s", issues, label)
     end
-    if state.doctorWarnings > 0 then
+    local warnings = state.doctorWarnings + hwWarnings
+    if warnings > 0 then
         local label = "warning"
-        if state.doctorWarnings > 1 then label = "warnings" end
-        return string.format("%d %s", state.doctorWarnings, label)
+        if warnings > 1 then label = "warnings" end
+        return string.format("%d %s", warnings, label)
     end
     return "all systems nominal"
 end
@@ -317,8 +388,9 @@ end
 local function statusColor()
     if not state.loaded then return "on_surface_variant" end
     if state.doctorIssues < 0 then return "on_surface_variant" end
-    if state.doctorIssues + state.failedUnits > 0 then return "error" end
-    if state.doctorWarnings > 0 then return "tertiary" end
+    local hwIssues, hwWarnings = hwCounts()
+    if state.doctorIssues + state.failedUnits + hwIssues > 0 then return "error" end
+    if state.doctorWarnings + hwWarnings > 0 then return "tertiary" end
     return "secondary"
 end
 
@@ -345,6 +417,25 @@ local function meterRow(label, pct, valueText)
     })
 end
 
+-- "Hardware   2 warnings" on the main view; the detail is one click away.
+local function hwSummaryRow()
+    local issues, warnings = hwCounts()
+    local text, color = "healthy", nil
+    if state.hw == nil then
+        text = "not checked"
+    elseif issues > 0 then
+        text, color = string.format("%.0f issues · %.0f warnings", issues, warnings), "error"
+    elseif warnings > 0 then
+        text, color = string.format("%.0f warnings", warnings), "tertiary"
+    end
+    local props = { text = text, fontSize = 12 }
+    if color ~= nil then props.color = color end
+    return rowN({ align = "center", gap = 8 }, {
+        lbl({ text = "Hardware", color = "on_surface_variant", fontSize = 12, flexGrow = 1 }),
+        lbl(props),
+    })
+end
+
 local function renderMain()
     local body
     if not state.loaded then
@@ -360,6 +451,7 @@ local function renderMain()
         body = scr({ flexGrow = 1, gap = 10 }, {
             statRow("Doctor", doctorText),
             statRow("Failed units", tostring(state.failedUnits)),
+            hwSummaryRow(),
             sep({ opacity = 0.3 }),
             meterRow("CPU", state.cpuTempC,
                 string.format("%.0f°C · %.0f%% load", state.cpuTempC, state.cpuLoadPct)),
@@ -387,6 +479,7 @@ local function renderMain()
             btn({ text = "Open Log", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = openLog }),
         }),
         rowN({ gap = 6 }, {
+            btn({ text = "Hardware", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = goToHardware }),
             btn({ text = "Snapshots", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = goToSnapshots }),
             btn({ text = "Maintenance", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = goToMaintenance }),
         }),
@@ -479,6 +572,173 @@ local function renderSnapshots()
     })
 end
 
+-- ── Hardware view ──
+
+-- Cut on a character boundary: messages carry "°" and "×".
+local function clip(s, n)
+    local chars = utf8.len(s)
+    if chars == nil or chars <= n then return s end
+    return string.sub(s, 1, utf8.offset(s, n - 2) - 1) .. "..."
+end
+
+local function levelColor(level)
+    if level == "fail" then return "error" end
+    if level == "warn" then return "tertiary" end
+    return nil
+end
+
+-- Worst level per area ("storage", "gpu", ...) from the non-passing
+-- findings, so a row turns red/amber when anything under it is wrong.
+local function hwAreaLevels()
+    local levels = {}
+    if state.hw ~= nil and type(state.hw.findings) == "table" then
+        for _, f in ipairs(state.hw.findings) do
+            local area = f.area or "other"
+            if f.level == "fail" then
+                levels[area] = "fail"
+            elseif levels[area] == nil then
+                levels[area] = f.level
+            end
+        end
+    end
+    return levels
+end
+
+local function hwRow(label, value, level)
+    local props = { text = value, fontSize = 12 }
+    local color = levelColor(level)
+    if color ~= nil then props.color = color end
+    return rowN({ align = "center", gap = 8 }, {
+        lbl({ text = label, color = "on_surface_variant", fontSize = 12 }),
+        lbl({ text = clip(value, 34), fontSize = 12, color = props.color, flexGrow = 1 }),
+    })
+end
+
+local function driveValue(d)
+    local parts = {}
+    if d.tempC ~= nil then
+        parts[#parts + 1] = string.format("%.0f°C", d.tempC)
+    end
+    if type(d.smart) == "table" then
+        if d.smart.percentUsed ~= nil then
+            parts[#parts + 1] = string.format("%.0f%% worn", d.smart.percentUsed)
+        end
+        if d.smart.mediaErrors ~= nil then
+            parts[#parts + 1] = string.format("%.0f errors", d.smart.mediaErrors)
+        end
+    else
+        parts[#parts + 1] = "no SMART"
+    end
+    return table.concat(parts, " · ")
+end
+
+local function hwRows()
+    local hw = state.hw
+    local lv = hwAreaLevels()
+    local rows = {}
+    local function add(n) rows[#rows + 1] = n end
+
+    local drives = {}
+    if type(hw.storage) == "table" and type(hw.storage.drives) == "table" then
+        drives = hw.storage.drives
+    end
+    for _, d in ipairs(drives) do
+        add(hwRow(d.name or "disk", driveValue(d), lv.storage))
+    end
+
+    local m = hw.memory or {}
+    add(hwRow("Memory", string.format("%.1f GiB · swap %.0f%%", m.totalGiB or 0, m.swapUsedPct or 0), lv.memory))
+
+    local c = hw.cpu or {}
+    local cpuText = string.format("%.0f threads", c.online or 0)
+    if c.tempC ~= nil then cpuText = cpuText .. string.format(" · %.0f°C", c.tempC) end
+    add(hwRow("CPU", cpuText, lv.cpu))
+
+    for _, g in ipairs(hw.gpus or {}) do
+        local text = "asleep"
+        if g.state ~= "asleep" then
+            text = ""
+            if g.tempC ~= nil then text = string.format("%.0f°C", g.tempC) end
+            if g.busyPct ~= nil then text = text .. string.format(" · %.0f%% busy", g.busyPct) end
+        end
+        add(hwRow(clip(g.name or "GPU", 22), text, lv.gpu))
+    end
+
+    local connectors = {}
+    if type(hw.display) == "table" and type(hw.display.connectors) == "table" then
+        connectors = hw.display.connectors
+    end
+    for _, x in ipairs(connectors) do
+        if x.internal == true then
+            local text = x.status or "unknown"
+            if x.status == "connected" and x.mode ~= nil then text = x.mode end
+            if type(hw.display.backlight) == "table" then
+                text = text .. string.format(" · %.0f%%", hw.display.backlight.pct or 0)
+            end
+            add(hwRow("Panel", text, lv.display))
+        end
+    end
+
+    if type(hw.battery) == "table" then
+        local b = hw.battery
+        local text = string.format("%.0f%%", b.capacityPct or 0)
+        if b.healthPct ~= nil then text = text .. string.format(" · health %.0f%%", b.healthPct) end
+        add(hwRow("Battery", text, lv.battery))
+    end
+    return rows
+end
+
+local function renderHardware()
+    local children = {}
+    local function add(n) children[#children + 1] = n end
+
+    if state.hw == nil then
+        add(lbl({ text = "Hardware checks unavailable — stoa-hardware did not run.",
+            color = "on_surface_variant", fontSize = 12 }))
+    else
+        local findings = state.hw.findings or {}
+        if #findings == 0 then
+            add(lbl({ text = "No hardware problems found", color = "secondary", fontSize = 12 }))
+        else
+            for i, f in ipairs(findings) do
+                if i > 5 then break end
+                add(lbl({ text = clip(f.msg or "", 50), fontSize = 11,
+                    color = levelColor(f.level) or "on_surface_variant" }))
+            end
+            if #findings > 5 then
+                add(lbl({ text = string.format("… and %d more — see the full report", #findings - 5),
+                    fontSize = 11, color = "on_surface_variant" }))
+            end
+        end
+        add(sep({ opacity = 0.3 }))
+        for _, r in ipairs(hwRows()) do add(r) end
+    end
+
+    return col({ flexGrow = 1, gap = 10, padding = 12 }, {
+        header("Hardware", goToMain),
+        scr({ flexGrow = 1, gap = 8 }, children),
+        sep({}),
+        lbl({ text = "SMART tests ask for your password.", color = "on_surface_variant", fontSize = 11 }),
+        rowN({ gap = 6 }, {
+            btn({ text = "SMART test", flexGrow = 1, controlSize = "sm", onClick = smartTestShort }),
+            btn({ text = "Extended…", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = smartTestExtended }),
+        }),
+        rowN({ gap = 6 }, {
+            btn({ text = "SMART report", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = smartReport }),
+            btn({ text = "Re-scan", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = rescanHardware }),
+        }),
+    })
+end
+
+-- One button for the state it can actually act on: schedule when there is
+-- none, remove when there is one. The old "Toggle" could only ever add.
+local function scheduleButton()
+    if state.scheduled then
+        return btn({ text = "Remove boot schedule", controlSize = "sm", variant = "outline", onClick = unscheduleCleanup })
+    end
+    return btn({ text = "Schedule cleanup at boot", controlSize = "sm", variant = "outline", onClick = scheduleCleanup })
+end
+
 local function renderMaintenance()
     local schedText = "auto-cleanup disabled"
     if state.scheduled then schedText = "auto-cleanup enabled" end
@@ -501,9 +761,10 @@ local function renderMaintenance()
                 btn({ text = "Cleanup (dry run)", flexGrow = 1, controlSize = "sm", variant = "outline", onClick = cleanupDryRun }),
                 btn({ text = "Cleanup (apply)", flexGrow = 1, controlSize = "sm", variant = "destructive", onClick = cleanupApply }),
             }),
-            btn({ text = "Toggle boot schedule", controlSize = "sm", variant = "outline", onClick = scheduleCleanup }),
+            btn({ text = "Cleanup (my files, no sudo)", controlSize = "sm", variant = "outline", onClick = cleanupUser }),
+            scheduleButton(),
             sep({ opacity = 0.3 }),
-            btn({ text = "Firewall (locksmith)", controlSize = "sm", variant = "ghost", onClick = openLocksmith }),
+            btn({ text = "File locksmith", controlSize = "sm", variant = "ghost", onClick = openLocksmith }),
         }),
     })
 end
@@ -514,6 +775,8 @@ function render()
         tree = renderSnapshots()
     elseif state.view == "maintenance" then
         tree = renderMaintenance()
+    elseif state.view == "hardware" then
+        tree = renderHardware()
     end
     panel.render(tree)
 end

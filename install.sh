@@ -340,6 +340,7 @@ _link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-docto
 _link "${STOA_DIR}/scripts/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"
 _link "${STOA_DIR}/scripts/stoa-vitals-status"    "${HOME}/.local/bin/stoa-vitals-status"
 _link "${STOA_DIR}/scripts/stoa-health.sh"        "${HOME}/.local/bin/stoa-health"
+_link "${STOA_DIR}/scripts/stoa-hardware.py"      "${HOME}/.local/bin/stoa-hardware"
 _link "${STOA_DIR}/scripts/stoa-snapshot.sh"      "${HOME}/.local/bin/stoa-snapshot"
 # Snapshot browser (GTK4): what is inside each package snapshot and config
 # backup. Opened from the stoa-health panel; also in the app launcher.

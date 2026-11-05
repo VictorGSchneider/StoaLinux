@@ -6,7 +6,7 @@
     },
     "poll_seconds": {
       "label": "Refresh interval (seconds)",
-      "description": "How often to re-read system health. Each poll runs stoa-vitals-status (doctor log, sensors, disk, pending updates)."
+      "description": "How often to re-read system health. Each poll runs stoa-vitals-status (doctor log, sensors, disk, pending updates, hardware health). SMART and the kernel log are cached for ten minutes."
     },
     "show_badge": {
       "label": "Show issue count",

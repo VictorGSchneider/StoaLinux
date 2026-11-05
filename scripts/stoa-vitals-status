@@ -13,8 +13,14 @@
 #   "uptime":      "...",
 #   "snapshots":   N,
 #   "backups":     N,
-#   "scheduled":   true|false
+#   "scheduled":   true|false,
+#   "hardware":    null | { "issues": N, "warnings": N, "findings": [...],
+#                           "storage": {...}, "memory": {...}, "cpu": {...},
+#                           "gpus": [...], "display": {...}, "battery": {...} }
 # }
+# "hardware" is stoa-hardware's summary (null if it cannot run). The doctor
+# counts above leave out the doctor's own "[hw]" log lines, so a failing SSD
+# is one issue, not two.
 
 # ── --help ──
 case "${1:-}" in
@@ -28,7 +34,9 @@ USAGE
 OUTPUT (one line of JSON)
   doctor {issues, warnings, log}, cpu {tempC, loadPct}, gpu {tempC},
   memory {usedPct, usedGiB, totalGiB}, disk {mount, usedPct, freeGiB},
-  failedUnits, updates, uptime, snapshots, backups, scheduled
+  failedUnits, updates, uptime, snapshots, backups, scheduled,
+  hardware {issues, warnings, findings, storage, memory, cpu, gpus, display,
+  battery} — from stoa-hardware, or null
 
 OPTIONS
   -h, --help    show this help
@@ -55,8 +63,10 @@ _STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
 d_issues=-1
 d_warnings=0
 if [ -f "$DOCTOR_LOG" ]; then
-    d_issues=$(grep -c '^\[FAIL\]' "$DOCTOR_LOG" 2>/dev/null || true)
-    d_warnings=$(grep -c '^\[WARN\]' "$DOCTOR_LOG" 2>/dev/null || true)
+    # "[hw]" lines are the doctor's copy of stoa-hardware's findings; the
+    # hardware block below reports those live, so they are left out here.
+    d_issues=$(awk '/^\[FAIL\]/ && !/^\[FAIL\] +\[hw\]/ { n++ } END { print n + 0 }' "$DOCTOR_LOG" 2>/dev/null)
+    d_warnings=$(awk '/^\[WARN\]/ && !/^\[WARN\] +\[hw\]/ { n++ } END { print n + 0 }' "$DOCTOR_LOG" 2>/dev/null)
     d_issues=${d_issues:-0}
     d_warnings=${d_warnings:-0}
 fi
@@ -80,7 +90,20 @@ fi
 
 # ── GPU temp (NVIDIA first, then sensors amdgpu) ──
 gpu_temp=0
-if command -v nvidia-smi >/dev/null 2>&1; then
+# nvidia-smi wakes a runtime-suspended discrete GPU just to read a
+# temperature; polling it every few seconds keeps the card (and the
+# battery drain) on forever. Leave a sleeping card alone and fall through
+# to the integrated GPU's sensor.
+_nvidia_asleep() {
+    local d
+    for d in /sys/bus/pci/devices/*; do
+        [ "$(cat "$d/vendor" 2>/dev/null)" = 0x10de ] || continue
+        case "$(cat "$d/class" 2>/dev/null)" in 0x03*) ;; *) continue ;; esac
+        [ "$(cat "$d/power/runtime_status" 2>/dev/null)" = suspended ] && return 0
+    done
+    return 1
+}
+if command -v nvidia-smi >/dev/null 2>&1 && ! _nvidia_asleep; then
     gpu_temp=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1)
 elif command -v sensors >/dev/null 2>&1; then
     gpu_temp=$(sensors 2>/dev/null | awk '
@@ -144,18 +167,31 @@ backups=$(find "$STOA_BACKUP_DIR" -maxdepth 1 -type f \
     -name "${hostname_str}.confs.*.zip" 2>/dev/null | wc -l)
 
 # ── Scheduled cleanup? ──
+# Any of the ways stoa-maintain --schedule can install it: your crontab
+# (--user, or the no-systemd fallback), the root systemd timer, or the
+# systemd --user timer (--schedule --user).
 scheduled=false
-if crontab -l 2>/dev/null | grep -q "stoa-maintain.*--cleanup"; then
+if crontab -l 2>/dev/null | grep -qE "(stoa-maintain|BRCS\.sh|brcs-cleanup).*--cleanup"; then
     scheduled=true
 elif systemctl is-enabled stoa-maintain-cleanup.timer >/dev/null 2>&1; then
     scheduled=true
+elif systemctl --user is-enabled stoa-maintain-cleanup.timer >/dev/null 2>&1; then
+    scheduled=true
 fi
 
-printf '{"doctor":{"issues":%s,"warnings":%s,"log":"%s"},"cpu":{"tempC":%s,"loadPct":%s},"gpu":{"tempC":%s},"memory":{"usedPct":%s,"usedGiB":%s,"totalGiB":%s},"disk":{"mount":"/","usedPct":%s,"freeGiB":%s},"failedUnits":%s,"updates":%s,"uptime":"%s","snapshots":%s,"backups":%s,"scheduled":%s}\n' \
+# ── Hardware health (SSD SMART, memory, CPU, GPUs, panel, battery) ──
+hardware=null
+_hw_bin="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/stoa-hardware.py"
+if [ -f "$_hw_bin" ] && command -v python3 >/dev/null 2>&1; then
+    _hw_json=$(python3 "$_hw_bin" summary 2>/dev/null)
+    case "$_hw_json" in "{"*) hardware=$_hw_json ;; esac
+fi
+
+printf '{"doctor":{"issues":%s,"warnings":%s,"log":"%s"},"cpu":{"tempC":%s,"loadPct":%s},"gpu":{"tempC":%s},"memory":{"usedPct":%s,"usedGiB":%s,"totalGiB":%s},"disk":{"mount":"/","usedPct":%s,"freeGiB":%s},"failedUnits":%s,"updates":%s,"uptime":"%s","snapshots":%s,"backups":%s,"scheduled":%s,"hardware":%s}\n' \
     "$d_issues" "$d_warnings" "$DOCTOR_LOG" \
     "$cpu_temp" "$cpu_load" \
     "$gpu_temp" \
     "$mem_used_pct" "$mem_used_gib" "$mem_total_gib" \
     "$disk_pct" "$disk_free" \
     "$failed_units" "$updates" "$uptime_str" \
-    "$snapshots" "$backups" "$scheduled"
+    "$snapshots" "$backups" "$scheduled" "$hardware"
