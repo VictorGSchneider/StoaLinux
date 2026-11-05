@@ -17,7 +17,8 @@
 # ║  Modes:                                                      ║
 # ║    defaults — one wallpaper per theme, fixed seed (kept as   ║
 # ║               marble.png/parchment.png/columns.png/          ║
-# ║               memento.png; hyprland.lua hardcodes those).    ║
+# ║               memento.png; Noctalia picks them up from the   ║
+# ║               wallpapers directory).                         ║
 # ║    quotes   — one wallpaper per theme per quote, seeded by   ║
 # ║               SHA1(quote). Idempotent.                       ║
 # ║                                                              ║
@@ -203,7 +204,7 @@ Quotes:    $QUOTES_FILE
 Commands:
   defaults          One wallpaper per theme, fixed seed (marble.png,
                     parchment.png, columns.png, memento.png).
-                    hyprland.lua hardcodes marble.png.
+                    Noctalia owns setting/rotating the wallpaper.
   quotes [N]        Render one wallpaper per theme per quote, seeded
                     by SHA1(quote). Optional N caps how many quotes.
   regen [N]         clean + quotes.
