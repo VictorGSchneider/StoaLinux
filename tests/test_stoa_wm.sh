@@ -29,6 +29,15 @@ trap 'rm -rf "$TMP"' EXIT
 
 BIN="$TMP/bin"; LOG="$TMP/calls.log"
 mkdir -p "$BIN" "$TMP/home"
+
+# System tools only — minus the binaries this test controls through stubs.
+# A bare /usr/bin on PATH lets whatever the dev machine has installed
+# (Hyprland, wl-mirror, limine…) leak into "not installed" cases.
+SYS="$TMP/sysbin"; mkdir -p "$SYS"
+for _f in /usr/bin/*; do
+    case "${_f##*/}" in Hyprland|hyprland|hyprctl|niri|wl-mirror) continue ;; esac
+    ln -s "$_f" "$SYS/${_f##*/}"
+done
 : > "$LOG"
 
 # ── Stubs ──
@@ -68,7 +77,7 @@ chmod +x "$BIN/hyprctl" "$BIN/niri"
 # Run a snippet with the library loaded, in a clean environment so the
 # machine running the test cannot leak its own session into the result.
 _wm() {
-    env -i PATH="$BIN:/usr/bin:/bin" HOME="$TMP/home" STUB_LOG="$LOG" "$@" \
+    env -i PATH="$BIN:$SYS" HOME="$TMP/home" STUB_LOG="$LOG" "$@" \
         bash -c "source '$LIB'; $SNIPPET"
 }
 FAILS=0
@@ -129,7 +138,7 @@ _check "W7 hyprland mirrors"       "yes" "$(_wm STOA_WM=hyprland)"
 
 # ── W8 stoa-env.sh fallback ──
 _env() { # <env assignments...>: XDG_CURRENT_DESKTOP after sourcing stoa-env.sh
-    env -i PATH="$BIN:/usr/bin:/bin" HOME="$TMP/home" "$@" \
+    env -i PATH="$BIN:$SYS" HOME="$TMP/home" "$@" \
         bash -c "source '$PWD/shell/stoa-env.sh'; printf '%s' \"\$XDG_CURRENT_DESKTOP\""
 }
 _check "W8 session value kept"   "Hyprland" "$(_env XDG_CURRENT_DESKTOP=Hyprland)"

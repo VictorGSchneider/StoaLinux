@@ -22,6 +22,15 @@ SCRIPT="$PWD/scripts/stoa-snapshot.sh"
 TMP=$(mktemp -d) || exit 1
 trap 'rm -rf "$TMP"' EXIT
 BIN="$TMP/bin"; mkdir -p "$BIN"
+
+# System tools only — minus the binaries this test controls through stubs.
+# A bare /usr/bin on PATH lets whatever the dev machine has installed
+# (Hyprland, wl-mirror, limine…) leak into "not installed" cases.
+SYS="$TMP/sysbin"; mkdir -p "$SYS"
+for _f in /usr/bin/*; do
+    case "${_f##*/}" in limine|limine-*) continue ;; esac
+    ln -s "$_f" "$SYS/${_f##*/}"
+done
 LOG="$TMP/calls.log"
 CFG="$TMP/snapper-root"
 
@@ -45,7 +54,7 @@ fi'
 FAILS=0
 _run() { # <args...> with FAKE_* in the environment
     : > "$LOG"
-    env PATH="$BIN:/usr/bin:/bin" STUB_LOG="$LOG" SNAPPER_ROOT_CONFIG="$CFG" HOME="$TMP" \
+    env PATH="$BIN:$SYS" STUB_LOG="$LOG" SNAPPER_ROOT_CONFIG="$CFG" HOME="$TMP" \
         "${ENVV[@]}" bash "$SCRIPT" "$@"
 }
 _check() { # <name> <want> <got>

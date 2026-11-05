@@ -1,4 +1,8 @@
 {
+    "show_wrap_guides": true,
+    "project_panel": {
+        "folder_indicator": "chevron"
+    },
     "proxy": "",
     "redact_private_values": true,
     "vim_mode": false,

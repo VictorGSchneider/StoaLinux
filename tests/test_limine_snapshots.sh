@@ -22,6 +22,15 @@ SCRIPT="$PWD/setup/enable-limine-snapshots.sh"
 TMP=$(mktemp -d) || exit 1
 trap 'rm -rf "$TMP"' EXIT
 BIN="$TMP/bin"; mkdir -p "$BIN"
+
+# System tools only — minus the binaries this test controls through stubs.
+# A bare /usr/bin on PATH lets whatever the dev machine has installed
+# (Hyprland, wl-mirror, limine…) leak into "not installed" cases.
+SYS="$TMP/sysbin"; mkdir -p "$SYS"
+for _f in /usr/bin/*; do
+    case "${_f##*/}" in limine|limine-*) continue ;; esac
+    ln -s "$_f" "$SYS/${_f##*/}"
+done
 SUDO_LOG="$TMP/sudo.log"
 
 _stub() { # <name> <body>
@@ -52,7 +61,7 @@ _case() {
     local name="$1" want_rc="$2" want_text="$3"; shift 3
     : > "$SUDO_LOG"
     local out rc
-    out=$(echo n | env PATH="$BIN:/usr/bin:/bin" SUDO_LOG="$SUDO_LOG" \
+    out=$(echo n | env PATH="$BIN:$SYS" SUDO_LOG="$SUDO_LOG" \
         MKINITCPIO_CONF="$MKCONF" "$@" bash "$SCRIPT" 2>&1); rc=$?
     if [ "$rc" -ne "$want_rc" ]; then
         echo "FAIL $name: exit $rc, want $want_rc"; echo "$out" | tail -n3 | sed 's/^/   /'

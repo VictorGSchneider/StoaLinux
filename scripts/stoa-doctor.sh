@@ -117,12 +117,15 @@ _check_optional satty   "Screenshot editor (satty)"
 # Noctalia v5 ships its own polkit agent (shell.polkit_agent in
 # config.toml), so a standalone agent is no longer required — only
 # accepted as an alternative when the shell is not the one running.
-if command -v noctalia &>/dev/null \
+# The shell is only a polkit agent if its config enables it, so test that
+# rather than the (already required) binary being on PATH.
+_noctalia_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/noctalia/config.toml"
+if grep -qsE '^[[:space:]]*polkit_agent[[:space:]]*=[[:space:]]*true' "$_noctalia_cfg" \
     || command -v hyprpolkitagent &>/dev/null \
     || command -v lxpolkit &>/dev/null; then
-    echo "[OK] Polkit agent present" >> "$LOG"
+    _ok "Polkit agent present"
 else
-    echo "[WARN] No polkit authentication agent found" >> "$LOG"
+    _warn "No polkit authentication agent found"
 fi
 
 # ── Did the Stoa polkit rule actually load? ──
