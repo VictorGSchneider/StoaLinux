@@ -346,6 +346,9 @@ hl.on("hyprland.start", function()
     -- Clipboard history is owned by Noctalia v5 (shell.clipboard_enabled), so
     -- the three cliphist watchers that used to live here are gone.
     hl.exec_cmd("~/.local/bin/stoa-quotes-sync tick")
+    -- Memento is always the first wallpaper of a session: stoa-walls boot
+    -- waits for Noctalia, refreshes the week bar and sets memento.png.
+    hl.exec_cmd("~/.local/bin/stoa-walls boot")
 end)
 
 -- >>> stoa-gpu-setup: env (auto-managed) >>>

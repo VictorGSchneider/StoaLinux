@@ -285,11 +285,29 @@ rmdir "${HOME}/.vscode/extensions/stoa-theme/themes" \
       "${HOME}/.vscode/extensions/stoa-theme" 2>/dev/null || true
 
 # ── Stoa data dirs ──
-mkdir -p "${CONFIG_DIR}/stoa/wallpapers"
+mkdir -p "${HOME}/Pictures/Wallpapers"
+# Wallpapers used to live in ~/.config/stoa/wallpapers. Move what is there
+# and leave a symlink so anything still pointing at the old path works.
+_old_walls="${CONFIG_DIR}/stoa/wallpapers"
+if [ -d "$_old_walls" ] && [ ! -L "$_old_walls" ]; then
+    find "$_old_walls" -maxdepth 1 -type f -exec mv -n {} "${HOME}/Pictures/Wallpapers/" \;
+    rmdir "$_old_walls" 2>/dev/null || true
+fi
+if [ ! -e "$_old_walls" ]; then
+    ln -s "${HOME}/Pictures/Wallpapers" "$_old_walls"
+fi
 mkdir -p "${HOME}/Pictures/screenshots"
 
 # ── GLSL shaders (stoa-walls + stoa-screensaver) ──
 _link "${STOA_DIR}/theme/shaders" "${CONFIG_DIR}/stoa/shaders"
+
+# ── Daily memento refresh (systemd --user timer) ──
+_link "${STOA_DIR}/config/systemd/user/stoa-memento-refresh.service" "${CONFIG_DIR}/systemd/user/stoa-memento-refresh.service"
+_link "${STOA_DIR}/config/systemd/user/stoa-memento-refresh.timer"   "${CONFIG_DIR}/systemd/user/stoa-memento-refresh.timer"
+if systemctl --user show-environment >/dev/null 2>&1; then
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable --now stoa-memento-refresh.timer 2>/dev/null || true
+fi
 
 # ── Environment ──
 _link "${STOA_DIR}/shell/stoa-env.sh" "${CONFIG_DIR}/stoa/stoa-env.sh"
@@ -314,6 +332,7 @@ fi
 mkdir -p "${HOME}/.local/bin"
 _link "${STOA_DIR}/scripts/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"
 _link "${STOA_DIR}/scripts/stoa-walls.sh"           "${HOME}/.local/bin/stoa-walls"
+_link "${STOA_DIR}/scripts/stoa-walls-ai.py"        "${HOME}/.local/bin/stoa-walls-ai"
 _link "${STOA_DIR}/scripts/stoa-memento-data.sh"    "${HOME}/.local/bin/stoa-memento-data"
 _link "${STOA_DIR}/scripts/stoa-keybinds-bar.sh"    "${HOME}/.local/bin/stoa-keybinds-bar"
 _link "${STOA_DIR}/scripts/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-keybinds-toggle"

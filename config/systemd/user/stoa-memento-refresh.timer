@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily refresh of the Stoa memento wallpaper
+
+[Timer]
+# Just after midnight; Persistent= runs a missed tick at the next login if
+# the machine was off or asleep at 00:05.
+OnCalendar=*-*-* 00:05:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
