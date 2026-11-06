@@ -46,7 +46,7 @@ CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/memento.conf"
 if [ ! -f "$CONF" ]; then
     mkdir -p "$(dirname "$CONF")"
     cat > "$CONF" <<'DEFAULT'
-NAME=Victor Gabriel Schneider
+NAME="Victor Gabriel Schneider"
 BIRTH=2000-11-01
 LIFE_YEARS=80
 DEFAULT
