@@ -8,16 +8,16 @@
 #  (Vitals / Snapshots / Maintenance) built from a user-configurable action
 #  list. The first v5 port punted on replicating that tabbed UI in the
 #  Luau UI-tree DSL untested and left the tabs as a yad menu
-#  (scripts/stoa-health.sh) instead — same stopgap stoa-drive started
+#  (scripts/health/stoa-health.sh) instead — same stopgap stoa-drive started
 #  with. Now ported the rest of the way, same split stoa-drive settled on:
 #  panel.luau is a thin declarative front end with the same three views
-#  (Vitals / Snapshots / Maintenance), scripts/stoa-health.sh keeps the
+#  (Vitals / Snapshots / Maintenance), scripts/health/stoa-health.sh keeps the
 #  business logic (including the pkexec/sudo-n privilege choice for
 #  update/schedule actions) behind non-interactive CLI subcommands.
 #
-#  The data source is unchanged: scripts/stoa-vitals-status still emits the
+#  The data source is unchanged: scripts/health/stoa-vitals-status still emits the
 #  same JSON, so the shell side did not have to move. 1.3 adds a "hardware"
-#  key to it (scripts/stoa-hardware.py: SSD SMART via udisks2, memory, CPU,
+#  key to it (scripts/health/stoa-hardware.py: SSD SMART via udisks2, memory, CPU,
 #  GPUs, display panel, battery, kernel log) and a Hardware view in the
 #  panel with SMART self-test / report buttons.
 

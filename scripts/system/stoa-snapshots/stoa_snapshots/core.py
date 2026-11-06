@@ -3,7 +3,7 @@
 Two kinds of snapshot exist on a Stoa system, and this module is the one
 place that knows how to read them:
 
-* Package snapshots, written by scripts/stoa-pkg-snapshot.sh before every
+* Package snapshots, written by scripts/packages/stoa-pkg-snapshot.sh before every
   pacman transaction: ~/.config/stoa/pkg-snapshots/pkg-snapshot-<stamp>.txt,
   a few "# key: value" header lines followed by `pacman -Q` output
   ("name version" per line).

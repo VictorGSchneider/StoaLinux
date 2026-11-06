@@ -10,7 +10,7 @@
 #  the widget was rewritten rather than translated.
 #
 #  Business logic (mount/unmount, bisync, account create/delete) stays in
-#  scripts/stoa-drive.sh — panel.luau is a thin declarative front end that
+#  scripts/drive/stoa-drive.sh — panel.luau is a thin declarative front end that
 #  reads its JSON status endpoints and dispatches to its non-interactive
 #  CLI subcommands (add-account/remove-account/add-sync-pair/...). The one
 #  step that still shells out to a terminal is creating a new rclone

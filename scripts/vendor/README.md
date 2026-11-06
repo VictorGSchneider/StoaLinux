@@ -11,8 +11,8 @@ diverged.
 
 | Prefix                     | Upstream                                         | Branch | Stoa fork        |
 |----------------------------|--------------------------------------------------|--------|------------------|
-| `scripts/vendor/brcs`      | https://github.com/VictorGSchneider/BRCS.sh      | `main` | `scripts/stoa-maintain.sh` |
-| `scripts/vendor/dfm`       | https://github.com/VictorGSchneider/DFM          | `main` | `scripts/stoa-dfm/`        |
+| `scripts/vendor/brcs`      | https://github.com/VictorGSchneider/BRCS.sh      | `main` | `scripts/system/stoa-maintain.sh` |
+| `scripts/vendor/dfm`       | https://github.com/VictorGSchneider/DFM          | `main` | `scripts/files/stoa-dfm/`        |
 
 ## Initial import (one-time, per subtree)
 
@@ -62,7 +62,7 @@ git subtree pull \
 
 ## Relationship to Stoa sources
 
-### `scripts/vendor/brcs` ↔ `scripts/stoa-maintain.sh`
+### `scripts/vendor/brcs` ↔ `scripts/system/stoa-maintain.sh`
 
 `stoa-maintain.sh` is our customized fork of `BRCS.sh` — it carries the
 Stoa color palette, different CLI banners, and integrates with the rest of
@@ -71,7 +71,7 @@ vendored `scripts/vendor/brcs/BRCS.sh` is our reference of the upstream,
 used to:
 
 1. Diff against when you want to know what changed upstream:
-   `diff -u scripts/vendor/brcs/BRCS.sh scripts/stoa-maintain.sh`.
+   `diff -u scripts/vendor/brcs/BRCS.sh scripts/system/stoa-maintain.sh`.
 2. Cherry-pick bug-fix hunks into `stoa-maintain.sh` after a sync.
 
 When you run `sync-upstream.sh brcs`, the vendored copy is updated; the
@@ -88,9 +88,9 @@ snapshot of it again. When a bug is found in vendored code, the fix goes
 upstream and comes back through a sync; anything Stoa-specific goes in
 `stoa-maintain.sh`.
 
-### `scripts/vendor/dfm` ↔ `scripts/stoa-dfm/`
+### `scripts/vendor/dfm` ↔ `scripts/files/stoa-dfm/`
 
-`scripts/stoa-dfm/` is our customized fork of the DFM Python package —
+`scripts/files/stoa-dfm/` is our customized fork of the DFM Python package —
 the place where Stoa-specific tweaks live (color palette, CLI banners,
 default paths, integration with the rest of the Stoa scripts). It is
 **not** a symlink to the vendored copy. The vendored
@@ -98,17 +98,17 @@ default paths, integration with the rest of the Stoa scripts). It is
 package, used to:
 
 1. Diff against when you want to know what changed upstream:
-   `diff -urN scripts/vendor/dfm scripts/stoa-dfm`.
-2. Cherry-pick bug-fix hunks into `scripts/stoa-dfm/` after a sync.
+   `diff -urN scripts/vendor/dfm scripts/files/stoa-dfm`.
+2. Cherry-pick bug-fix hunks into `scripts/files/stoa-dfm/` after a sync.
 
 Unlike the brcs fork (a single file), the DFM fork is a directory that
 mirrors the `dfm/` package layout plus `setup.py` and `requirements.txt`
-so the fork is directly installable (`pip install ./scripts/stoa-dfm`).
+so the fork is directly installable (`pip install ./scripts/files/stoa-dfm`).
 Upstream-only files like `LICENSE`, `README.md`, and `screenshots/` are
 not duplicated into the fork — Stoa ships its own.
 
 When you run `sync-upstream.sh dfm`, the vendored copy is updated; the
 fork is **not** touched automatically. The helper will walk every entry
-in `scripts/stoa-dfm/`, diff it against the matching path under
+in `scripts/files/stoa-dfm/`, diff it against the matching path under
 `scripts/vendor/dfm/`, and print a diffstat summary so you can
 forward-port bug fixes deliberately.

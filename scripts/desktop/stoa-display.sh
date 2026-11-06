@@ -44,7 +44,7 @@ esac
 
 set -euo pipefail
 
-_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib"
 # shellcheck source=lib/stoa-wm.sh
 source "$_STOA_LIB/stoa-wm.sh"
 

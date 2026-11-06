@@ -227,7 +227,7 @@ echo -e "  ${O}[✓] Dotfiles installed for ${CREATED_USER}.${R}"
 # ── GPU + CPU Setup ──
 echo ""
 echo -e "  ${S}To configure GPU and CPU microcode:${R}"
-echo -e "  ${B}    cd ~/StoaLinux && ./scripts/stoa-gpu-setup.sh${R}"
+echo -e "  ${B}    cd ~/StoaLinux && ./scripts/system/stoa-gpu-setup.sh${R}"
 
 # ══════════════════════════════════════════════════════════════
 # End

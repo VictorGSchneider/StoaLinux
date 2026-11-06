@@ -330,70 +330,70 @@ fi
 
 # ── Scripts ──
 mkdir -p "${HOME}/.local/bin"
-_link "${STOA_DIR}/scripts/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"
-_link "${STOA_DIR}/scripts/stoa-walls.sh"           "${HOME}/.local/bin/stoa-walls"
-_link "${STOA_DIR}/scripts/stoa-walls-ai.py"        "${HOME}/.local/bin/stoa-walls-ai"
-_link "${STOA_DIR}/scripts/stoa-memento-data.sh"    "${HOME}/.local/bin/stoa-memento-data"
-_link "${STOA_DIR}/scripts/stoa-keybinds-bar.sh"    "${HOME}/.local/bin/stoa-keybinds-bar"
-_link "${STOA_DIR}/scripts/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-keybinds-toggle"
-_link "${STOA_DIR}/scripts/stoa-osd.sh"             "${HOME}/.local/bin/stoa-osd"
-_link "${STOA_DIR}/scripts/stoa-clipboard.sh"       "${HOME}/.local/bin/stoa-clipboard"
-_link "${STOA_DIR}/scripts/stoa-quotes-sync.sh"     "${HOME}/.local/bin/stoa-quotes-sync"
-_link "${STOA_DIR}/scripts/stoa-locksmith.sh"       "${HOME}/.local/bin/stoa-locksmith"
-_link "${STOA_DIR}/scripts/stoa-resize.sh"          "${HOME}/.local/bin/stoa-resize"
-_link "${STOA_DIR}/scripts/stoa-paste.sh"           "${HOME}/.local/bin/stoa-paste"
-_link "${STOA_DIR}/scripts/stoa-ocr.sh"             "${HOME}/.local/bin/stoa-ocr"
-_link "${STOA_DIR}/scripts/stoa-rename.sh"          "${HOME}/.local/bin/stoa-rename"
-_link "${STOA_DIR}/scripts/stoa-archive.sh"         "${HOME}/.local/bin/stoa-archive"
-_link "${STOA_DIR}/scripts/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
-_link "${STOA_DIR}/scripts/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
-_link "${STOA_DIR}/scripts/stoa-drive.sh"           "${HOME}/.local/bin/stoa-drive"
-_link "${STOA_DIR}/scripts/stoa-drive-status"      "${HOME}/.local/bin/stoa-drive-status"
-_link "${STOA_DIR}/scripts/stoa-drive-pin"         "${HOME}/.local/bin/stoa-drive-pin"
-_link "${STOA_DIR}/scripts/stoa-drive-unpin"       "${HOME}/.local/bin/stoa-drive-unpin"
-_link "${STOA_DIR}/scripts/stoa-drive-emblems"     "${HOME}/.local/bin/stoa-drive-emblems"
-_link "${STOA_DIR}/scripts/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-firewall"
-_link "${STOA_DIR}/scripts/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
-_link "${STOA_DIR}/scripts/stoa-wm.sh"            "${HOME}/.local/bin/stoa-wm"
-_link "${STOA_DIR}/scripts/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
-_link "${STOA_DIR}/scripts/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"
-_link "${STOA_DIR}/scripts/stoa-vitals-status"    "${HOME}/.local/bin/stoa-vitals-status"
-_link "${STOA_DIR}/scripts/stoa-health.sh"        "${HOME}/.local/bin/stoa-health"
-_link "${STOA_DIR}/scripts/stoa-hardware.py"      "${HOME}/.local/bin/stoa-hardware"
-_link "${STOA_DIR}/scripts/stoa-snapshot.sh"      "${HOME}/.local/bin/stoa-snapshot"
+_link "${STOA_DIR}/scripts/tools/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"
+_link "${STOA_DIR}/scripts/wallpaper/stoa-walls.sh"           "${HOME}/.local/bin/stoa-walls"
+_link "${STOA_DIR}/scripts/wallpaper/stoa-walls-ai.py"        "${HOME}/.local/bin/stoa-walls-ai"
+_link "${STOA_DIR}/scripts/wallpaper/stoa-memento-data.sh"    "${HOME}/.local/bin/stoa-memento-data"
+_link "${STOA_DIR}/scripts/desktop/stoa-keybinds-bar.sh"    "${HOME}/.local/bin/stoa-keybinds-bar"
+_link "${STOA_DIR}/scripts/desktop/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-keybinds-toggle"
+_link "${STOA_DIR}/scripts/desktop/stoa-osd.sh"             "${HOME}/.local/bin/stoa-osd"
+_link "${STOA_DIR}/scripts/input/stoa-clipboard.sh"       "${HOME}/.local/bin/stoa-clipboard"
+_link "${STOA_DIR}/scripts/wallpaper/stoa-quotes-sync.sh"     "${HOME}/.local/bin/stoa-quotes-sync"
+_link "${STOA_DIR}/scripts/system/stoa-locksmith.sh"       "${HOME}/.local/bin/stoa-locksmith"
+_link "${STOA_DIR}/scripts/files/stoa-resize.sh"          "${HOME}/.local/bin/stoa-resize"
+_link "${STOA_DIR}/scripts/input/stoa-paste.sh"           "${HOME}/.local/bin/stoa-paste"
+_link "${STOA_DIR}/scripts/input/stoa-ocr.sh"             "${HOME}/.local/bin/stoa-ocr"
+_link "${STOA_DIR}/scripts/files/stoa-rename.sh"          "${HOME}/.local/bin/stoa-rename"
+_link "${STOA_DIR}/scripts/files/stoa-archive.sh"         "${HOME}/.local/bin/stoa-archive"
+_link "${STOA_DIR}/scripts/desktop/stoa-settings.sh"        "${HOME}/.local/bin/stoa-settings"
+_link "${STOA_DIR}/scripts/packages/stoa-store.sh"           "${HOME}/.local/bin/stoa-store"
+_link "${STOA_DIR}/scripts/drive/stoa-drive.sh"           "${HOME}/.local/bin/stoa-drive"
+_link "${STOA_DIR}/scripts/drive/stoa-drive-status"      "${HOME}/.local/bin/stoa-drive-status"
+_link "${STOA_DIR}/scripts/drive/stoa-drive-pin"         "${HOME}/.local/bin/stoa-drive-pin"
+_link "${STOA_DIR}/scripts/drive/stoa-drive-unpin"       "${HOME}/.local/bin/stoa-drive-unpin"
+_link "${STOA_DIR}/scripts/drive/stoa-drive-emblems"     "${HOME}/.local/bin/stoa-drive-emblems"
+_link "${STOA_DIR}/scripts/system/stoa-firewall.sh"       "${HOME}/.local/bin/stoa-firewall"
+_link "${STOA_DIR}/scripts/desktop/stoa-screensaver.sh"   "${HOME}/.local/bin/stoa-screensaver"
+_link "${STOA_DIR}/scripts/desktop/stoa-wm.sh"            "${HOME}/.local/bin/stoa-wm"
+_link "${STOA_DIR}/scripts/health/stoa-doctor.sh"        "${HOME}/.local/bin/stoa-doctor"
+_link "${STOA_DIR}/scripts/health/stoa-doctor-status"    "${HOME}/.local/bin/stoa-doctor-status"
+_link "${STOA_DIR}/scripts/health/stoa-vitals-status"    "${HOME}/.local/bin/stoa-vitals-status"
+_link "${STOA_DIR}/scripts/health/stoa-health.sh"        "${HOME}/.local/bin/stoa-health"
+_link "${STOA_DIR}/scripts/health/stoa-hardware.py"      "${HOME}/.local/bin/stoa-hardware"
+_link "${STOA_DIR}/scripts/system/stoa-snapshot.sh"      "${HOME}/.local/bin/stoa-snapshot"
 # Snapshot browser (GTK4): what is inside each package snapshot and config
 # backup. Opened from the stoa-health panel; also in the app launcher.
-_link "${STOA_DIR}/scripts/stoa-snapshots/stoa-snapshots" "${HOME}/.local/bin/stoa-snapshots"
+_link "${STOA_DIR}/scripts/system/stoa-snapshots/stoa-snapshots" "${HOME}/.local/bin/stoa-snapshots"
 mkdir -p "${HOME}/.local/share/applications"
-_link "${STOA_DIR}/scripts/stoa-snapshots/data/stoa-snapshots.desktop" \
+_link "${STOA_DIR}/scripts/system/stoa-snapshots/data/stoa-snapshots.desktop" \
       "${HOME}/.local/share/applications/stoa-snapshots.desktop"
-_link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
-_link "${STOA_DIR}/scripts/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-setup"
-_link "${STOA_DIR}/scripts/stoa-display.sh"      "${HOME}/.local/bin/stoa-display"
-_link "${STOA_DIR}/scripts/stoa-maintain.sh"      "${HOME}/.local/bin/stoa-maintain"
-_link "${STOA_DIR}/scripts/stoa-history.py"     "${HOME}/.local/bin/stoa-history"
-_link "${STOA_DIR}/scripts/stoa-bar.sh"           "${HOME}/.local/bin/stoa-bar"
-_link "${STOA_DIR}/scripts/stoa-bar-toggle.sh"   "${HOME}/.local/bin/stoa-bar-toggle"
-_link "${STOA_DIR}/scripts/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
-_link "${STOA_DIR}/scripts/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
-_link "${STOA_DIR}/scripts/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
+_link "${STOA_DIR}/scripts/packages/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
+_link "${STOA_DIR}/scripts/system/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-setup"
+_link "${STOA_DIR}/scripts/desktop/stoa-display.sh"      "${HOME}/.local/bin/stoa-display"
+_link "${STOA_DIR}/scripts/system/stoa-maintain.sh"      "${HOME}/.local/bin/stoa-maintain"
+_link "${STOA_DIR}/scripts/tools/stoa-history.py"     "${HOME}/.local/bin/stoa-history"
+_link "${STOA_DIR}/scripts/desktop/stoa-bar.sh"           "${HOME}/.local/bin/stoa-bar"
+_link "${STOA_DIR}/scripts/desktop/stoa-bar-toggle.sh"   "${HOME}/.local/bin/stoa-bar-toggle"
+_link "${STOA_DIR}/scripts/tools/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
+_link "${STOA_DIR}/scripts/input/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
+_link "${STOA_DIR}/scripts/input/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
 # Text prediction languages: start with Brazilian Portuguese and English
 # (the keyboard is br/abnt2) unless a choice was already made in Stoa
 # Settings. Offline, nothing is saved and prediction falls back to the
 # system word list until a language is added there.
 if [ ! -f "${CONFIG_DIR}/stoa/predict-languages" ]; then
-    if "${STOA_DIR}/scripts/stoa-predict.sh" set-languages pt_br en 2>/dev/null; then
+    if "${STOA_DIR}/scripts/input/stoa-predict.sh" set-languages pt_br en 2>/dev/null; then
         echo -e "  ${O}[+] Text prediction languages: pt_br en${R}"
     else
         echo -e "  ${S}[~] Text prediction languages skipped (offline) — add them in Super+S → Keyboard${R}"
     fi
 fi
-_link "${STOA_DIR}/scripts/stoa-bauh.py"          "${HOME}/.local/bin/stoa-bauh"
+_link "${STOA_DIR}/scripts/packages/stoa-bauh.py"          "${HOME}/.local/bin/stoa-bauh"
 # Also shadow the plain `bauh` command: ~/.local/bin precedes /usr/bin in
 # PATH (see shell/.zshrc, shell/.bashrc), so anyone typing `bauh` directly
 # — not just Stoa Store's "Search & install" — gets the patched launcher
 # instead of the AUR package's broken /usr/bin/bauh entry point.
-_link "${STOA_DIR}/scripts/stoa-bauh.py"          "${HOME}/.local/bin/bauh"
+_link "${STOA_DIR}/scripts/packages/stoa-bauh.py"          "${HOME}/.local/bin/bauh"
 
 # Bauh config (preserves user settings): seed the default config once so
 # the snap gem — which errors in the background on any machine without
@@ -413,25 +413,25 @@ fi
 # fix it in the repo rather than papering over it at install time.
 
 # ── DFM — Dotfile Manager (installed from the in-tree Stoa fork) ──
-# The Stoa fork lives at scripts/stoa-dfm/ (see scripts/vendor/README.md).
+# The Stoa fork lives at scripts/files/stoa-dfm/ (see scripts/vendor/README.md).
 # Install it editable so a `git pull` on StoaLinux propagates changes to the
 # running binary, matching the symlink semantics used for every other stoa-*
 # script. pipx is preferred (PEP 668 friendly); fall back to a user-local
 # venv when pipx is unavailable.
-DFM_SRC="${STOA_DIR}/scripts/stoa-dfm"
+DFM_SRC="${STOA_DIR}/scripts/files/stoa-dfm"
 DFM_VENV="${HOME}/.local/share/dfm-venv"
 DFM_BIN="${HOME}/.local/bin/dfm"
 
 if [ -d "$DFM_SRC" ] && [ -f "${DFM_SRC}/setup.py" ]; then
     if command -v pipx &>/dev/null; then
         pipx install --force --editable "$DFM_SRC" >/dev/null
-        echo -e "  ${O}[+] dfm (pipx, editable from scripts/stoa-dfm)${R}"
+        echo -e "  ${O}[+] dfm (pipx, editable from scripts/files/stoa-dfm)${R}"
     elif command -v python3 &>/dev/null; then
         python3 -m venv "$DFM_VENV"
         "$DFM_VENV/bin/pip" install --upgrade pip >/dev/null
         "$DFM_VENV/bin/pip" install -e "$DFM_SRC" >/dev/null
         ln -sf "$DFM_VENV/bin/dfm" "$DFM_BIN"
-        echo -e "  ${O}[+] dfm (venv, editable from scripts/stoa-dfm)${R}"
+        echo -e "  ${O}[+] dfm (venv, editable from scripts/files/stoa-dfm)${R}"
     else
         echo -e "  ${S}[!] python3 not found — skipping dfm install${R}"
     fi
@@ -454,7 +454,7 @@ if [ -d "$HOOK_DIR" ] || sudo mkdir -p "$HOOK_DIR" 2>/dev/null; then
     # Both hooks run as root out of /usr/local/bin, so the programs they
     # name are linked here — pointing at the repo source directly, since
     # ~/.local/bin/stoa-* resolves per user and pacman has no user.
-    _sudo_link "${STOA_DIR}/scripts/stoa-pkg-snapshot.sh" /usr/local/bin/stoa-pkg-snapshot
+    _sudo_link "${STOA_DIR}/scripts/packages/stoa-pkg-snapshot.sh" /usr/local/bin/stoa-pkg-snapshot
     _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" \
                /usr/local/bin/stoa-theme-enforce
 else
@@ -538,7 +538,7 @@ fi
 # before you have typed anything. Confirmed on a real machine: nine sudo
 # calls per boot, greetd answering pam_authenticate: AUTH_ERR.
 #
-# The scheduler in scripts/stoa-maintain.sh no longer writes such a line
+# The scheduler in scripts/system/stoa-maintain.sh no longer writes such a line
 # (it installs a root systemd unit instead), but an entry written by an
 # older release — or by the vendored BRCS.sh this repo derives from,
 # which named its own path — survives every upgrade untouched. Strip it

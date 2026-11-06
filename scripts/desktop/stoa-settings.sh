@@ -44,7 +44,7 @@ WALLDIR="${STOA_WALLS_DIR:-${HOME}/Pictures/Wallpapers}"
 # ── Compositor abstraction (Hyprland / niri) ──
 # Resolved through the install-time symlink so ~/.local/bin/stoa-settings
 # still finds the in-tree lib.
-_STOA_WM_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-wm.sh"
+_STOA_WM_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-wm.sh"
 # shellcheck source=lib/stoa-wm.sh
 [ -r "$_STOA_WM_LIB" ] && source "$_STOA_WM_LIB"
 

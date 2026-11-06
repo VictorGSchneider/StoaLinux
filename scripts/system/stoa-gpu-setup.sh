@@ -8,8 +8,8 @@
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # USAGE:
-#   chmod +x scripts/stoa-gpu-setup.sh
-#   ./scripts/stoa-gpu-setup.sh
+#   chmod +x scripts/system/stoa-gpu-setup.sh
+#   ./scripts/system/stoa-gpu-setup.sh
 #
 # What this script does:
 #   1. Detects CPU (AMD/Intel) and installs correct microcode
@@ -24,7 +24,7 @@ case "${1:-}" in
 stoa-gpu-setup — detect the CPU and GPU and install the right microcode and drivers (Arch).
 
 USAGE
-  ./scripts/stoa-gpu-setup.sh
+  ./scripts/system/stoa-gpu-setup.sh
 
 STEPS
   1  detect the CPU (AMD/Intel) and install the matching microcode
@@ -635,7 +635,7 @@ echo ""
 
 echo -e "  ${F}[5/5] Configuring environment variables (Hyprland + stoa-env)${R}"
 
-STOA_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+STOA_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 HYPR_CONF="${STOA_DIR}/config/hypr/hyprland.lua"
 ENV_FILE="${STOA_DIR}/shell/stoa-env.sh"
 

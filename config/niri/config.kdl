@@ -54,7 +54,7 @@ environment {
     // wayland plugin is not installed: with "wayland" alone Qt aborts.
     QT_QPA_PLATFORM "wayland;xcb"
     // qt5ct is Qt5-only; Noctalia (Qt6) gets its icon theme from
-    // scripts/stoa-bar.sh — see the same note in hyprland.lua.
+    // scripts/desktop/stoa-bar.sh — see the same note in hyprland.lua.
     QT_QPA_PLATFORMTHEME "qt5ct"
     QT_STYLE_OVERRIDE "Fusion"
     QT_AUTO_SCREEN_SCALE_FACTOR "1"

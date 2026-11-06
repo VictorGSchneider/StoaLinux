@@ -3,7 +3,7 @@
 --  ║  "First, do not lose your own peace." — Marcus Aurelius        ║
 --  ╚══════════════════════════════════════════════════════════════╝
 --
---  Native replacement for the yad menu in scripts/stoa-health.sh (now a
+--  Native replacement for the yad menu in scripts/health/stoa-health.sh (now a
 --  CLI fallback for anyone invoking stoa-health bare outside Noctalia).
 --  Same split as the stoa-drive port: all business logic — including the
 --  pkexec/sudo-n privilege choice for update/schedule actions — stays in
@@ -13,7 +13,7 @@
 --  backup/cleanup/cleanup-dry-run/schedule/update-all/update-system/
 --  update-aur/locksmith, plus cleanup-user/unschedule). The ones that need
 --  root open a terminal for sudo. System (Btrfs) snapshots go through
---  scripts/stoa-snapshot.sh the same way (status/create/setup/restore/list).
+--  scripts/system/stoa-snapshot.sh the same way (status/create/setup/restore/list).
 --
 --  Four views: Vitals (main) / Snapshots / Maintenance, plus Hardware —
 --  SSD SMART, memory, CPU, GPUs, panel and battery from stoa-hardware, with
@@ -260,7 +260,7 @@ local function backupConfigs()
     runNotified("Backup configs", BIN .. " backup", refreshSnapshotSummary)
 end
 
--- The snapshot browser (scripts/stoa-snapshots): what is in each package
+-- The snapshot browser (scripts/system/stoa-snapshots): what is in each package
 -- snapshot and config backup, diffs against now, single-file restore.
 local function openPackageSnapshots()
     noctalia.runAsync(BROWSER_BIN .. " --show packages")

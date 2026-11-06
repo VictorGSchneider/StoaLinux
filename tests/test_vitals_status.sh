@@ -1,5 +1,5 @@
 #!/bin/bash
-# Behavioural test for scripts/stoa-vitals-status and stoa-doctor-status.
+# Behavioural test for scripts/health/stoa-vitals-status and stoa-doctor-status.
 #
 # The widget decodes the vitals output with a JSON parser, so every doctor-log
 # shape must yield valid JSON with the right counts. Regression: with no
@@ -25,7 +25,7 @@ _check() { # <name> <expected> <actual>
     else printf '  ✗ %s: expected [%s], got [%s]\n' "$1" "$2" "$3"; FAILS=$((FAILS + 1)); fi
 }
 _run() { XDG_CONFIG_HOME="$TMP" "$@" 2>/dev/null; }
-_doctor() { _run scripts/stoa-vitals-status | jq -r '"\(.doctor.issues) \(.doctor.warnings)"' 2>/dev/null || echo INVALID; }
+_doctor() { _run scripts/health/stoa-vitals-status | jq -r '"\(.doctor.issues) \(.doctor.warnings)"' 2>/dev/null || echo INVALID; }
 
 mkdir -p "$TMP/stoa"
 rm -f "$TMP/stoa/doctor.log"
@@ -38,17 +38,17 @@ printf '[OK]   a\n[FAIL] x\n[FAIL] y\n[WARN] z\n' > "$TMP/stoa/doctor.log"
 _check "V2 fail and warn"   "2 1"  "$(_doctor)"
 
 _check "V4 doctor-status"   "2 1" \
-    "$(_run scripts/stoa-doctor-status | jq -r '"\(.issues) \(.warnings)"' 2>/dev/null || echo INVALID)"
+    "$(_run scripts/health/stoa-doctor-status | jq -r '"\(.issues) \(.warnings)"' 2>/dev/null || echo INVALID)"
 
 printf '[OK]   a\n[FAIL] [hw] ssd\n[WARN] [hw] gpu\n[WARN] real\n[FAIL]   [hw] spaced\n' > "$TMP/stoa/doctor.log"
 _check "V5 hw lines excluded" "0 1" "$(_doctor)"
 
 export XDG_CACHE_HOME="$TMP/cache"   # keep the SMART cache out of the real one
 _check "V6 hardware object"  "object" \
-    "$(_run scripts/stoa-vitals-status | jq -r '.hardware | type' 2>/dev/null || echo INVALID)"
+    "$(_run scripts/health/stoa-vitals-status | jq -r '.hardware | type' 2>/dev/null || echo INVALID)"
 
 mkdir -p "$TMP/lone"
-cp scripts/stoa-vitals-status "$TMP/lone/"; cp -r scripts/lib "$TMP/lone/lib"
+cp scripts/health/stoa-vitals-status "$TMP/lone/"; cp -r scripts/lib "$TMP/lone/lib"
 _check "V7 hardware absent"  "null" \
     "$(_run "$TMP/lone/stoa-vitals-status" | jq -r '.hardware | type' 2>/dev/null || echo INVALID)"
 
@@ -59,7 +59,7 @@ printf '#!/bin/bash\ncase "$*" in\n  "--user is-enabled "*) [ -e "$STUB_USER_TIM
 printf '#!/bin/bash\nexit 1\n' > "$TMP/stubs/crontab"
 chmod +x "$TMP/stubs/systemctl" "$TMP/stubs/crontab"
 _sched() { PATH="$TMP/stubs:$PATH" STUB_USER_TIMER="$TMP/user_timer" XDG_CONFIG_HOME="$TMP" \
-    scripts/stoa-vitals-status 2>/dev/null | jq -r '.scheduled' 2>/dev/null || echo INVALID; }
+    scripts/health/stoa-vitals-status 2>/dev/null | jq -r '.scheduled' 2>/dev/null || echo INVALID; }
 rm -f "$TMP/user_timer"
 _check "V8 not scheduled"            "false" "$(_sched)"
 touch "$TMP/user_timer"

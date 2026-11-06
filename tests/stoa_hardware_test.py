@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/stoa-hardware.py.
+"""Unit tests for scripts/health/stoa-hardware.py.
 
 evaluate() is pure (collected data in, findings out), so the thresholds are
 tested directly; the collectors run against a fake sysfs/procfs tree; the
@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-spec = importlib.util.spec_from_file_location("stoa_hardware", ROOT / "scripts" / "stoa-hardware.py")
+spec = importlib.util.spec_from_file_location("stoa_hardware", ROOT / "scripts" / "health" / "stoa-hardware.py")
 hw = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hw)
 

@@ -22,7 +22,7 @@
 #   stoa-wm reload | exit | lock
 #   stoa-wm start-command [wm]
 
-_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib"
 if [ ! -r "$_STOA_LIB/stoa-wm.sh" ]; then
     echo "stoa-wm: missing $_STOA_LIB/stoa-wm.sh" >&2
     exit 1

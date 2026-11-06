@@ -18,7 +18,7 @@
 --
 --  Left click opens the native panel (panel.luau, entry id "manage") —
 --  Vitals / Snapshots / Maintenance, same three sections the yad menu in
---  scripts/stoa-health.sh had, now as an attached panel like stoa-drive's.
+--  scripts/health/stoa-health.sh had, now as an attached panel like stoa-drive's.
 --  Right click runs the doctor directly — the single most common action,
 --  same shortcut the old right-click context menu led with. Middle click
 --  opens the doctor log.

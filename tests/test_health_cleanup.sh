@@ -34,7 +34,7 @@ _run() { # <subcommand> → what stoa-maintain saw, "" if it never ran
     rm -f "$TMP/out" "$TMP/title"
     env HOME="$TMP/home" XDG_CONFIG_HOME="$TMP/home/.config" TERMINAL="$TMP/term" \
         STUB_OUT="$TMP/out" STUB_TITLE="$TMP/title" \
-        bash scripts/stoa-health.sh "$1" < /dev/null > /dev/null 2>&1
+        bash scripts/health/stoa-health.sh "$1" < /dev/null > /dev/null 2>&1
     local i
     for i in $(seq 1 50); do [ -s "$TMP/out" ] && break; sleep 0.1; done
     sed 's/^tty=[a-z]* //' "$TMP/out" 2>/dev/null
