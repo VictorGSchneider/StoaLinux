@@ -1,5 +1,5 @@
 #!/bin/bash
-# Behavioural test for scripts/stoa-history.py.
+# Behavioural test for scripts/tools/stoa-history.py.
 #
 # The script rewrites the files that hold every command you have ever run,
 # so the failure mode is not a crash — it is a history file that came back
@@ -33,7 +33,7 @@
 
 cd "$(dirname "$0")/.." || exit 1
 
-SCRIPT="scripts/stoa-history.py"
+SCRIPT="scripts/tools/stoa-history.py"
 TMP=$(mktemp -d) || exit 1
 trap 'rm -rf "$TMP"' EXIT
 

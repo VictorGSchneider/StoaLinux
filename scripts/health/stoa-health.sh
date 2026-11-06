@@ -126,7 +126,7 @@ _unschedule_run() {
 
 _notify() { notify-send -t 2500 "Stoa Health" "$1" 2>/dev/null; }
 
-_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-yad.sh"
+_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-yad.sh"
 # shellcheck source=lib/stoa-yad.sh
 [ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"
 

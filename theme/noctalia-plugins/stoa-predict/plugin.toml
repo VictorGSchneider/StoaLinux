@@ -3,7 +3,7 @@
 #  ║  "Choose your words with care." — Epictetus                    ║
 #  ╚══════════════════════════════════════════════════════════════╝
 #
-#  Owns the prediction input method (scripts/stoa-predict.py). The
+#  Owns the prediction input method (scripts/input/stoa-predict.py). The
 #  daemon is a Wayland input method (input-method-v2, like fcitx): it
 #  draws its own popup next to the text cursor, takes ↑/↓/←/→/Enter while
 #  the popup is up and types the chosen word through the text-input

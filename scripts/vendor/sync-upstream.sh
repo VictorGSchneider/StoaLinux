@@ -15,12 +15,12 @@
 set -euo pipefail
 
 # name|prefix|upstream-url|branch|stoa-fork-path (relative to repo root)
-# The fork path may be either a single file (like scripts/stoa-maintain.sh
-# for brcs) or a directory (like scripts/stoa-dfm for dfm). Leave it empty
+# The fork path may be either a single file (like scripts/system/stoa-maintain.sh
+# for brcs) or a directory (like scripts/files/stoa-dfm for dfm). Leave it empty
 # only when the vendor has no Stoa fork at all.
 VENDORS=(
-    "brcs|scripts/vendor/brcs|https://github.com/VictorGSchneider/BRCS.sh.git|main|scripts/stoa-maintain.sh"
-    "dfm|scripts/vendor/dfm|https://github.com/VictorGSchneider/DFM.git|main|scripts/stoa-dfm"
+    "brcs|scripts/vendor/brcs|https://github.com/VictorGSchneider/BRCS.sh.git|main|scripts/system/stoa-maintain.sh"
+    "dfm|scripts/vendor/dfm|https://github.com/VictorGSchneider/DFM.git|main|scripts/files/stoa-dfm"
 )
 
 B='\033[38;2;196;154;92m'
@@ -93,7 +93,7 @@ main() {
     fi
 
     if [ -n "$fork" ] && [ -f "$fork" ]; then
-        # Single-file fork (e.g. brcs → scripts/stoa-maintain.sh).
+        # Single-file fork (e.g. brcs → scripts/system/stoa-maintain.sh).
         echo ""
         echo -e "${F}Diff summary — Stoa fork vs. vendored upstream:${R}"
         echo -e "${S}  (fork: ${fork})${R}"
@@ -111,7 +111,7 @@ main() {
             echo -e "${S}Full diff: diff -u ${upstream_file} ${fork}${R}"
         fi
     elif [ -n "$fork" ] && [ -d "$fork" ]; then
-        # Directory fork (e.g. dfm → scripts/stoa-dfm). Compare against the
+        # Directory fork (e.g. dfm → scripts/files/stoa-dfm). Compare against the
         # matching subtree of the vendored upstream: diff only the paths that
         # also exist in the fork, so unrelated top-level upstream files
         # (LICENSE, README, screenshots/, …) don't pollute the summary.

@@ -9,7 +9,7 @@
 # ║  PMs, Acer apps, and dev/system tooling — via yad dialogs.   ║
 # ║  Auto-applies the Stoa theme after every install.            ║
 # ║                                                              ║
-# ║  Modules live in scripts/stoa-store/ — this file is only     ║
+# ║  Modules live in scripts/packages/stoa-store/ — this file is only     ║
 # ║  the dispatcher; each section is its own sourced module.     ║
 # ╚══════════════════════════════════════════════════════════════╝
 

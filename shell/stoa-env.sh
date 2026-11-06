@@ -74,7 +74,7 @@ export STEAM_FORCE_DESKTOPUI_SCALING=1
 export PROTON_ENABLE_NVAPI=1
 
 # ── GPU / Wayland — set by stoa-gpu-setup.sh ──
-# These are commented out by default. Run `scripts/stoa-gpu-setup.sh`
+# These are commented out by default. Run `scripts/system/stoa-gpu-setup.sh`
 # and it will uncomment the lines matching your GPU. Setting them
 # manually for the wrong vendor breaks VAAPI / Wayland (e.g.
 # LIBVA_DRIVER_NAME=nvidia on an AMD/Intel iGPU disables hw decode).

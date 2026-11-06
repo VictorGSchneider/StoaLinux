@@ -4,12 +4,12 @@
 #  ╚══════════════════════════════════════════════════════════════╝
 #
 #  Noctalia v5 ships no cheatsheet widget, so Super+/ used to be the only
-#  way to see the binds (a yad text dialog, scripts/stoa-keybinds-toggle.sh).
+#  way to see the binds (a yad text dialog, scripts/desktop/stoa-keybinds-toggle.sh).
 #  This puts the same cheatsheet in the bar: a keyboard icon whose tooltip
 #  lists the sections, and an attached panel with every bind grouped the
 #  way the cheatsheet groups them.
 #
-#  The data is NOT duplicated here. scripts/stoa-keybinds-bar.sh stays the
+#  The data is NOT duplicated here. scripts/desktop/stoa-keybinds-bar.sh stays the
 #  single source of truth (it already swaps the navigation lines on niri),
 #  and this plugin only reads its `text` output and lays it out — so a new
 #  bind added to that script shows up in the panel with no change here.

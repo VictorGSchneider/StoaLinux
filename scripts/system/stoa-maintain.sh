@@ -43,7 +43,7 @@ TODAY=$(date +%Y%m%d)
 # Resolve through the install-time symlink so ~/.local/bin/stoa-maintain
 # still finds the shared path definitions in-tree — same trick stoa-store
 # uses for its modules.
-_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib"
 if [ ! -r "$_STOA_LIB/stoa-paths.sh" ]; then
     echo "stoa-maintain: missing $_STOA_LIB/stoa-paths.sh" >&2
     exit 1

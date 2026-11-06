@@ -39,7 +39,7 @@ mkdir -p "$STOA_DIR"
 
 # Compositor abstraction (Hyprland / niri). Resolved through the install-time
 # symlink so ~/.local/bin/stoa-doctor still finds the in-tree lib.
-_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib"
 # shellcheck source=lib/stoa-wm.sh
 [ -r "$_STOA_LIB/stoa-wm.sh" ] && source "$_STOA_LIB/stoa-wm.sh"
 STOA_WM_NAME=$(stoa_wm_name 2>/dev/null || echo hyprland)
@@ -214,7 +214,7 @@ elif [ -e "$_POLKIT_RULE" ]; then
         # install.sh copies this rule rather than symlinking it (polkitd
         # cannot follow a link into $HOME), so unlike every other Stoa
         # config it does not follow a `git pull`. Say so when it drifts.
-        _repo_rule="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")/config/polkit/50-stoa-wheel.rules"
+        _repo_rule="$(dirname "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")")/config/polkit/50-stoa-wheel.rules"
         if [ -f "$_repo_rule" ] && ! cmp -s "$_repo_rule" "$_POLKIT_RULE" 2>/dev/null; then
             _warn "Installed polkit rule differs from the repo — run install.sh"
         else

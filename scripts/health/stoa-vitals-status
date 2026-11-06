@@ -55,7 +55,7 @@ STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 DOCTOR_LOG="$STOA_DIR/doctor.log"
 SNAPSHOT_DIR="$STOA_DIR/pkg-snapshots"
 # Read-only poller: takes the shared path definitions, never migrates.
-_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib"
 # shellcheck source=lib/stoa-paths.sh
 [ -r "$_STOA_LIB/stoa-paths.sh" ] && source "$_STOA_LIB/stoa-paths.sh"
 

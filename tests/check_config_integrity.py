@@ -48,7 +48,7 @@ ROOT = Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "install.sh"
 CONF = ROOT / "stoa.conf"
 HOOK_DIR = ROOT / "theme" / "pacman-hooks"
-SETTINGS = ROOT / "scripts" / "stoa-settings.sh"
+SETTINGS = ROOT / "scripts" / "desktop" / "stoa-settings.sh"
 HYPRLAND = ROOT / "config" / "hypr" / "hyprland.lua"
 NIRI = ROOT / "config" / "niri" / "config.kdl"
 

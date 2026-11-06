@@ -5,7 +5,7 @@ APPIMAGE_DIR="${HOME}/Applications"
 
 _notify() { notify-send -t 2500 "Stoa Store" "$1" 2>/dev/null; }
 
-_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-yad.sh"
+_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../lib/stoa-yad.sh"
 # shellcheck source=lib/stoa-yad.sh
 [ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"
 
@@ -71,7 +71,7 @@ _pkg_quick_info() {
 # `bauh` binary: the AUR package still calls pkgutil.find_loader(), which
 # was removed from the stdlib in Python 3.12+, so bare `bauh` crashes on
 # startup on any current Arch install. stoa-bauh patches that back in
-# before importing bauh's own code — see scripts/stoa-bauh.py.
+# before importing bauh's own code — see scripts/packages/stoa-bauh.py.
 #
 # Launched detached with stdout/stderr captured to a log file instead of a
 # bare `& disown`: when this fires from a keybind or the Stoa Store menu
@@ -133,7 +133,7 @@ _apply_stoa_theme() {
     fi
     # Hyprland: live `hyprctl setcursor`. niri: rewrites its cursor block.
     local _wm_lib
-    _wm_lib="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-wm.sh"
+    _wm_lib="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../lib/stoa-wm.sh"
     if [ -r "$_wm_lib" ]; then
         # shellcheck source=../lib/stoa-wm.sh
         source "$_wm_lib"

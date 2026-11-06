@@ -71,7 +71,7 @@ _health() { # <args...>; waits for the backgrounded terminal to finish
     env -i PATH="$STUBS:$SYS" HOME="$H" XDG_CONFIG_HOME="$H/.config" TERMINAL="$TMP/term" \
         STUB_LOG="$LOG" STUB_TITLES="$TMP/titles" STUB_STATE="$TMP/state" STUBS_DIR="$STUBS" \
         PACMAN_RC="${PACMAN_RC:-0}" \
-        bash scripts/stoa-health.sh "$@" < /dev/null > "$TMP/out" 2>&1
+        bash scripts/health/stoa-health.sh "$@" < /dev/null > "$TMP/out" 2>&1
     local i
     for i in $(seq 1 40); do
         pgrep -f "$TMP/term" > /dev/null || break
@@ -130,7 +130,7 @@ _check "U3 user timer disabled"     "1" "$(grep -c '^systemctl --user disable --
 _check "U3 no sudo for a user timer" "" "$(grep -c '^sudo' "$LOG" | grep -v '^0$')"
 rm -f "$TMP/state/user_timer"
 
-printf '%s\n' '@daily bash /x/scripts/stoa-maintain.sh --cleanup --user' \
+printf '%s\n' '@daily bash /x/scripts/system/stoa-maintain.sh --cleanup --user' \
               '0 3 * * * /x/stoa-maintain --backup' \
               '* * * * * echo keep-me' \
               '@reboot bash /x/BRCS.sh --cleanup' > "$TMP/state/cron"

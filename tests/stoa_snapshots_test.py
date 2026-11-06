@@ -1,4 +1,4 @@
-"""Unit tests for scripts/stoa-snapshots/stoa_snapshots/core.py.
+"""Unit tests for scripts/system/stoa-snapshots/stoa_snapshots/core.py.
 
 Run by tests/test_stoa_snapshots.sh (so tests/run.sh and CI pick it up).
 No GTK: core.py is everything the browser shows, computed without a
@@ -15,7 +15,7 @@ from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts" / "stoa-snapshots"))
+sys.path.insert(0, str(ROOT / "scripts" / "system" / "stoa-snapshots"))
 
 from stoa_snapshots import core  # noqa: E402
 

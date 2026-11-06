@@ -3,7 +3,7 @@
 --  ╚══════════════════════════════════════════════════════════════╝
 --
 --  Starts and stops the prediction input method. `stoa-predict run`
---  execs scripts/stoa-predict.py, which registers as the Wayland input
+--  execs scripts/input/stoa-predict.py, which registers as the Wayland input
 --  method and prints one JSON object per line on stdout:
 --      {"ready":true}          the input method is live
 --      {"error":"…"}           it could not start (missing package,

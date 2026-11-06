@@ -3,7 +3,7 @@
 --  ║  "The wise man carries his possessions within him." — Bias    ║
 --  ╚══════════════════════════════════════════════════════════════╝
 --
---  Native replacement for the old rofi menu in scripts/stoa-drive.sh
+--  Native replacement for the old rofi menu in scripts/drive/stoa-drive.sh
 --  (now a yad-based CLI fallback). All the business logic (mount/unmount,
 --  bisync, rclone account create/delete) still lives in that script —
 --  this panel is a thin declarative front end: it reads the same JSON

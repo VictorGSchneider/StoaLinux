@@ -1,5 +1,5 @@
 #!/bin/bash
-# Behavioural test for scripts/stoa-snapshot.sh, the logic behind the
+# Behavioural test for scripts/system/stoa-snapshot.sh, the logic behind the
 # System (Btrfs) section of the stoa-health panel.
 #
 # snapper, findmnt, pacman, systemctl, pkexec and notify-send are stubbed;
@@ -18,7 +18,7 @@
 
 cd "$(dirname "$0")/.." || exit 1
 
-SCRIPT="$PWD/scripts/stoa-snapshot.sh"
+SCRIPT="$PWD/scripts/system/stoa-snapshot.sh"
 TMP=$(mktemp -d) || exit 1
 trap 'rm -rf "$TMP"' EXIT
 BIN="$TMP/bin"; mkdir -p "$BIN"

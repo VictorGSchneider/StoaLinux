@@ -53,7 +53,7 @@ STOA_HELP
         ;;
 esac
 
-STOA_REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+STOA_REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 SETUP="${STOA_REPO}/setup/enable-limine-snapshots.sh"
 TERM_CMD="${TERMINAL:-kitty}"
 SNAPPER_ROOT_CONFIG="${SNAPPER_ROOT_CONFIG:-/etc/snapper/configs/root}"
