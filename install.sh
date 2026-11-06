@@ -286,6 +286,8 @@ rmdir "${HOME}/.vscode/extensions/stoa-theme/themes" \
 
 # ── Stoa data dirs ──
 mkdir -p "${HOME}/Pictures/Wallpapers"
+# Local AI model files (stoa-walls setup-ai); a plain home folder like Pictures.
+mkdir -p "${HOME}/Models"
 # Wallpapers used to live in ~/.config/stoa/wallpapers. Move what is there
 # and leave a symlink so anything still pointing at the old path works.
 _old_walls="${CONFIG_DIR}/stoa/wallpapers"
