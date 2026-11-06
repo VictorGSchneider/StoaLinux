@@ -1,0 +1,6 @@
+[Unit]
+Description=Redraw the week bar on the Stoa memento wallpaper
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/stoa-walls refresh-memento --apply

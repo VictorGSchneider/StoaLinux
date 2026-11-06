@@ -100,7 +100,7 @@ enabled             = true
 fill_mode           = "crop"
 transition          = ["fade"]
 transition_duration = 1500
-directory           = "~/.config/stoa/wallpapers"
+directory           = "~/Pictures/Wallpapers"
 
 [wallpaper.automation]
 enabled          = false

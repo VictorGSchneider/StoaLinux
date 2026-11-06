@@ -166,7 +166,7 @@ A family of small, single-purpose `stoa-*` tools — each one exists because rea
   <tr><td><code>stoa-settings</code></td><td>Settings panel (23 panels)</td><td><code>stoa-ocr</code></td><td>Extract text from screen</td></tr>
   <tr><td><code>stoa-store</code></td><td>Package manager</td><td><code>stoa-paste</code></td><td>Paste as UPPER/lower/etc</td></tr>
   <tr><td><code>stoa-fetch</code></td><td>System fetch</td><td><code>stoa-resize</code></td><td>Batch resize images</td></tr>
-  <tr><td><code>stoa-walls</code></td><td>Wallpaper generator</td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
+  <tr><td><code>stoa-walls</code></td><td>Wallpaper generator (GLSL shaders, or local AI with <code>STOA_WALLS_BACKEND=ai</code>) → <code>~/Pictures/Wallpapers</code></td><td><code>stoa-rename</code></td><td>Regex rename + preview</td></tr>
   <tr><td><code>stoa-memento-data</code></td><td>Memento Mori data (desktop widget)</td><td><code>stoa-locksmith</code></td><td>Find + end what's locking a file/folder</td></tr>
   <tr><td><code>stoa-doctor</code></td><td>System health check</td><td><code>stoa-predict</code></td><td>Word + emoji suggestions at the text cursor (input method)</td></tr>
   <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td><code>stoa-archive</code></td><td>Compress selection / extract archives</td></tr>

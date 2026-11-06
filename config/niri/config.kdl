@@ -193,6 +193,8 @@ window-rule {
 spawn-sh-at-startup "~/.local/bin/stoa-bar"
 spawn-sh-at-startup "sleep 3; ~/.local/bin/stoa-drive mount-all"
 spawn-sh-at-startup "~/.local/bin/stoa-quotes-sync tick"
+// Memento is always the first wallpaper of a session (see stoa-walls boot).
+spawn-sh-at-startup "~/.local/bin/stoa-walls boot"
 
 // ── Keybinds ──
 // Mod is Super on a TTY session.

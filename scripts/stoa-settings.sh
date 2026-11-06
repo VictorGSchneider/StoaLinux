@@ -39,7 +39,7 @@ esac
 
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
-WALLDIR="${HOME}/.config/stoa/wallpapers"
+WALLDIR="${STOA_WALLS_DIR:-${HOME}/Pictures/Wallpapers}"
 
 # ── Compositor abstraction (Hyprland / niri) ──
 # Resolved through the install-time symlink so ~/.local/bin/stoa-settings
