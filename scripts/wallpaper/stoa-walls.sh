@@ -42,7 +42,7 @@ WALLDIR="${STOA_WALLS_DIR:-${HOME}/Pictures/Wallpapers}"
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
 STOA_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/stoa"
 AI_PY="${STOA_DATA}/venv/bin/python"
-AI_MODELS="${STOA_DATA}/models"
+AI_MODELS="${STOA_MODELS_DIR:-${HOME}/Models}"
 AI_MODEL_URL="https://huggingface.co/stabilityai/sdxl-turbo/resolve/main/sd_xl_turbo_1.0_fp16.safetensors"
 AI_MODEL_FILE="sd_xl_turbo_1.0_fp16.safetensors"
 AI_MODEL_SIZE=6938081905
@@ -327,6 +327,14 @@ cmd_setup_ai() {
         exit 1
     fi
     mkdir -p "$AI_MODELS"
+    # Models used to live in ~/.local/share/stoa/models; move them over.
+    local old="${STOA_DATA}/models" m
+    if [ -d "$old" ] && [ ! -L "$old" ]; then
+        for m in "$old"/*.safetensors; do
+            [ -f "$m" ] && mv -n "$m" "$AI_MODELS/"
+        done
+        rmdir "$old" 2>/dev/null || true
+    fi
     if [ ! -x "$AI_PY" ]; then
         echo "Creating venv in ${STOA_DATA}/venv ..."
         uv venv -q "${STOA_DATA}/venv"
@@ -354,6 +362,7 @@ cmd_help() {
 Usage: stoa-walls <command> [args]
 
 Backend:   ${BACKEND}  (STOA_WALLS_BACKEND=shader|ai)
+Models:    ${AI_MODELS}  (STOA_MODELS_DIR)
 Themes:    ${THEMES[*]}
 Shaders:   $SHADER_DIR
 Output:    $WALLDIR

@@ -19,8 +19,9 @@
 """Usage: stoa-walls-ai.py --theme T --seed N --out FILE [--quote Q]
 
 Environment:
-  STOA_WALLS_AI_MODEL   checkpoint (.safetensors)  [turbo, ~/.local/share/stoa/models]
+  STOA_WALLS_AI_MODEL   checkpoint (.safetensors)  [turbo, in ~/Models]
   STOA_WALLS_AI_STEPS   sampling steps             [4]
+  STOA_MODELS_DIR       where model files live      [~/Models]
   STOA_WALLS_AI_TYPE    sd-cli weight type         [q8_0]  (fp16 can OOM on 14 GB RAM)
   STOA_WALLS_AI_DEVICE  sd-cli backend device      [auto: first NVIDIA Vulkan device]
   STOA_WALLS_AI_SAMPLER sampling method            [euler_a]
@@ -35,7 +36,8 @@ GEN_W, GEN_H = 1024, 576
 MARGIN_X, MARGIN_TOP, MARGIN_BOTTOM = 120, 90, 140
 LIGHT, DARK, BRONZE = (236, 230, 216), (28, 26, 23), (196, 154, 92)
 DATA = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")) + "/stoa"
-DEFAULT_MODEL = DATA + "/models/sd_xl_turbo_1.0_fp16.safetensors"
+MODELS = os.environ.get("STOA_MODELS_DIR", os.path.expanduser("~/Models"))
+DEFAULT_MODEL = MODELS + "/sd_xl_turbo_1.0_fp16.safetensors"
 # Memento wallpapers keep their un-annotated image here so the week bar can be
 # redrawn later (--refresh) without running the model again.
 BASE_DIR = DATA + "/walls-base"
