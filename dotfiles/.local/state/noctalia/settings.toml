@@ -207,7 +207,8 @@ telemetry_enabled = true
         "stoa-snapshots",
         "dfm",
         "dev.zed.Zed",
-        "qalculate-gtk"
+        "qalculate-gtk",
+        "android-studio"
     ]
     search_position = "top"
     show_app_actions = true
