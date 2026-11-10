@@ -142,7 +142,7 @@ _setup_hook() {
     [ -f "$hook" ] && { _notify "Auto-theme hook already active"; return; }
     _yad_confirm "Install auto-theme pacman hook? (sudo)" || return
 
-    local stoa_dir; stoa_dir="$(dirname "$(readlink -f "$0")")/.."
+    local stoa_dir; stoa_dir="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../.."
     if [ -f "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" ]; then
         sudo mkdir -p /etc/pacman.d/hooks
         sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" "$script"

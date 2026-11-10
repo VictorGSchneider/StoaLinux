@@ -97,7 +97,7 @@ _hyprctl_get() {
     esac
 }
 
-_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-yad.sh"
+_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-yad.sh"
 # shellcheck source=lib/stoa-yad.sh
 [ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"
 
@@ -881,7 +881,7 @@ _theme_font_size() {
 
 STOA_COLORS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 STOA_COLORS_FILE="${STOA_COLORS_DIR}/colors.conf"
-STOA_DIR_RESOLVED="$(dirname "$(readlink -f "$0")")/.."
+STOA_DIR_RESOLVED="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.."
 
 # Preset palettes: bg_dark|bg|bg_light|fg|fg_dim|accent|accent2|green|red|blue|grey|name
 _color_presets() {
@@ -3564,7 +3564,7 @@ _fan_div_acer_launch() {
 
 _fan_div_acer_stoa_theme() {
     local script_dir
-    script_dir="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+    script_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
     local apply_script="${script_dir}/theme/div-acer-manager/stoa-damx-apply.sh"
 
     if [ ! -f "$apply_script" ]; then
@@ -4216,7 +4216,7 @@ _kb_rgb_stoa_theme() {
 
     # Source current palette
     local color_file="${HOME}/.config/stoa/colors.sh"
-    [ ! -f "$color_file" ] && color_file="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)/theme/colors.sh"
+    [ ! -f "$color_file" ] && color_file="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)/theme/colors.sh"
 
     if [ -f "$color_file" ]; then
         source "$color_file"
@@ -6400,7 +6400,7 @@ menu_health() {
 
 # Shared with stoa-maintain and stoa-vitals-status so the three cannot
 # disagree about where a backup is written and where it is looked for.
-_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib"
 # shellcheck source=lib/stoa-paths.sh
 [ -r "$_STOA_LIB/stoa-paths.sh" ] && source "$_STOA_LIB/stoa-paths.sh" && stoa_paths_migrate
 _maintain_log="${STOA_LOG_DIR}/backup_$(date +%Y%m%d).log"
@@ -6609,7 +6609,7 @@ _maintain_restore_all() {
 # Run it in a terminal instead, where sudo can actually ask.
 _maintain_bin() {
     local here
-    here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/stoa-maintain.sh"
+    here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../system/stoa-maintain.sh"
     if [ -r "$here" ]; then echo "$here"; return 0; fi
     command -v stoa-maintain 2>/dev/null
 }
