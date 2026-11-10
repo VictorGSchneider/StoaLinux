@@ -80,12 +80,6 @@ NOCTALIA_CLIPBOARD_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/clipboa
 PROFILE_MARK="# StoaLinux: autostart Hyprland on tty1"
 PROFILE_MARK_END="# StoaLinux: end autostart Hyprland block"
 PAM_MARK="# StoaLinux: pam_gnome_keyring (added by enable-stoa-greetd.sh)"
-HYPR_MARK="-- disabled by stoa-greetd"
-# The autostart line as it appears inside the hl.on("hyprland.start", ...)
-# callback in config/hypr/hyprland.lua. Indentation is captured and
-# restored so the toggle round-trips to a byte-identical file.
-HYPR_LOCK_CALL='hl.exec_cmd("hyprlock")'
-HYPR_LOCK_LINE="${HYPR_LOCK_CALL} -- stoa-greetd toggles this line"
 
 # Must stay in sync with enable-stoa-greeter.sh's copy: the greeter seeds a
 # marker-delimited block, and deleting only "marker + 1 line" would leave a
@@ -116,20 +110,24 @@ _disable_autologin() {
     fi
 }
 
+# hyprland.lua starts hyprlock at session start only while this marker file
+# exists (the autologin flow, where hyprlock IS the password prompt). greetd
+# asks for the password itself, so the marker goes away. A file instead of an
+# edit of hyprland.lua: that file is symlinked into the repository, and an edit
+# through the link got committed by stoa-sync and shipped to every clone.
+BOOT_LOCK="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/boot-lock"
+
 _comment_hyprlock_exec_once() {
-    [ -f "$HYPR_CONF" ] || return 0
-    if grep -qE '^[[:space:]]*hl\.exec_cmd\("hyprlock"\)' "$HYPR_CONF"; then
-        sed -i --follow-symlinks -E "s|^([[:space:]]*)hl\.exec_cmd\(\"hyprlock\"\).*\$|\1-- ${HYPR_LOCK_CALL} ${HYPR_MARK}|" "$HYPR_CONF"
-        echo -e "  ${O}[✓] hyprland.lua: hyprlock autostart commented (greetd handles boot login).${R}"
+    if [ -e "$BOOT_LOCK" ]; then
+        rm -f "$BOOT_LOCK"
+        echo -e "  ${O}[✓] hyprlock boot lock off (greetd handles boot login).${R}"
     fi
 }
 
 _uncomment_hyprlock_exec_once() {
-    [ -f "$HYPR_CONF" ] || return 0
-    if grep -qE '^[[:space:]]*-- hl\.exec_cmd\("hyprlock"\).*disabled by stoa-greetd' "$HYPR_CONF"; then
-        sed -i --follow-symlinks -E "s|^([[:space:]]*)-- hl\.exec_cmd\(\"hyprlock\"\).*disabled by stoa-greetd.*\$|\1${HYPR_LOCK_LINE}|" "$HYPR_CONF"
-        echo -e "  ${O}[✓] hyprland.lua: hyprlock autostart restored.${R}"
-    fi
+    mkdir -p "$(dirname "$BOOT_LOCK")"
+    : > "$BOOT_LOCK"
+    echo -e "  ${O}[✓] hyprlock boot lock restored.${R}"
 }
 
 # Which greeter to wire. Empty = auto-detect, preferring noctalia-greeter
@@ -673,8 +671,8 @@ _write_greeter_keyboard
 _fix_keyring_default
 _comment_hyprlock_exec_once
 
-sudo systemctl enable --now greetd.service
-echo -e "  ${O}[✓] greetd.service enabled.${R}"
+sudo systemctl enable greetd.service
+echo -e "  ${O}[✓] greetd.service enabled (starts on the next boot — not now: it conflicts with tty1 and would end this session).${R}"
 
 echo ""
 echo -e "  ${F}Done. On next boot:${R}"

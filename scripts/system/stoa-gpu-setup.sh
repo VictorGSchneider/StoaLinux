@@ -128,7 +128,10 @@ detect_igpu() {
 # nvidia-dkms is required whenever a non-default kernel is installed,
 # because the prebuilt `nvidia` package only ships modules for `linux`.
 detect_kernels() {
-    pacman -Qq 2>/dev/null | grep -E '^linux(-zen|-lts|-hardened|-rt|-rt-lts)?$' || true
+    # Every kernel flavour (linux-zen, linux-cachyos, linux-cachyos-lts…), but
+    # not the packages that merely start with "linux".
+    pacman -Qq 2>/dev/null | grep -E '^linux(-[a-z0-9]+)*$' \
+        | grep -vE '^linux-(firmware|api-headers|atm|docs|tools)|-(headers|docs)$' || true
 }
 
 needs_dkms() {
@@ -635,11 +638,30 @@ echo ""
 
 echo -e "  ${F}[5/5] Configuring environment variables (Hyprland + stoa-env)${R}"
 
-STOA_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-HYPR_CONF="${STOA_DIR}/config/hypr/hyprland.lua"
-ENV_FILE="${STOA_DIR}/shell/stoa-env.sh"
+STOA_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
+# One machine's GPU layout lives in files under ~/.config, never in the repo:
+# shell/stoa-env.sh and config/hypr/hyprland.lua are symlinked/tracked, so an
+# edit there is committed by stoa-sync and lands on every other clone.
+# stoa-env.sh sources gpu-env.sh; hyprland.lua does pcall(require, "stoa-gpu").
+_CFG="${XDG_CONFIG_HOME:-$HOME/.config}"
+HYPR_CONF="${_CFG}/hypr/stoa-gpu.lua"
+ENV_FILE="${_CFG}/stoa/gpu-env.sh"
+mkdir -p "${_CFG}/hypr" "${_CFG}/stoa"
 
-# Helper: uncomment a `# export FOO=...` line in stoa-env.sh.
+# Fresh template every run, so a re-run never drags stale variables along.
+cat > "$ENV_FILE" <<'GPUENV'
+# Written by stoa-gpu-setup — this machine only (not tracked by git).
+# export LIBVA_DRIVER_NAME=nvidia
+# export VDPAU_DRIVER=nvidia
+# export __GLX_VENDOR_LIBRARY_NAME=nvidia
+# export GBM_BACKEND=nvidia-drm
+# export NVD_BACKEND=direct
+# export WLR_NO_HARDWARE_CURSORS=1
+# export __GL_GSYNC_ALLOWED=1
+# export __GL_VRR_ALLOWED=1
+GPUENV
+
+# Helper: uncomment a `# export FOO=...` line in the template above.
 _uncomment_env() {
     local key="$1"
     sed -i "s|^# export ${key}=|export ${key}=|" "$ENV_FILE"
@@ -682,14 +704,9 @@ if $IS_NVIDIA; then
     # in a marker so we can rewrite it without dragging stale vars).
     # The config is lua since Hyprland 0.55, so the markers are lua
     # comments and each var is an hl.env() call.
-    HYPR_MARKER_BEGIN="-- >>> stoa-gpu-setup: env (auto-managed) >>>"
-    HYPR_MARKER_END="-- <<< stoa-gpu-setup: env (auto-managed) <<<"
-    # -e is required: the lua marker starts with "--", which grep would
-    # otherwise parse as the end-of-options delimiter and reject.
-    if grep -qF -e "$HYPR_MARKER_BEGIN" "$HYPR_CONF" 2>/dev/null; then
-        # Strip the previous block before writing the new one.
-        sed -i "/$HYPR_MARKER_BEGIN/,/$HYPR_MARKER_END/d" "$HYPR_CONF"
-    fi
+    # The whole file is ours and rewritten each run, so no marker stripping.
+    HYPR_MARKER_BEGIN="-- stoa-gpu-setup: env (this machine only, not tracked)"
+    HYPR_MARKER_END="-- end"
 
     # Resolve the NVIDIA card path NOW so we can write a literal value
     # (Hyprland does not expand $(...) in env lines).
@@ -812,7 +829,7 @@ if $IS_NVIDIA; then
         echo "hl.env(\"__GL_GSYNC_ALLOWED\", \"1\")"
         echo "hl.env(\"__GL_VRR_ALLOWED\", \"1\")"
         echo "$HYPR_MARKER_END"
-    } >> "$HYPR_CONF"
+    } > "$HYPR_CONF"
     echo -e "  ${O}[✓] hyprland.lua env block updated.${R}"
     [ -n "$NV_CARD_PATH" ] && echo -e "  ${S}      NVIDIA DRM card: ${NV_CARD_PATH}${R}"
 
@@ -878,8 +895,8 @@ if $IS_NVIDIA; then
     echo -e "  ${S}  nouveau blacklist — only if nothing packaged already provides one${R}"
     echo -e "  ${S}  bumblebee (deprecated) removed if present${R}"
     echo -e "  ${S}  nvidia-{suspend,resume,hibernate}.service enabled${R}"
-    echo -e "  ${S}  hyprland.lua — Wayland env vars${R}"
-    echo -e "  ${S}  stoa-env.sh — VAAPI/VDPAU env vars${R}"
+    echo -e "  ${S}  ~/.config/hypr/stoa-gpu.lua — Wayland env vars (this machine only)${R}"
+    echo -e "  ${S}  ~/.config/stoa/gpu-env.sh — VAAPI/VDPAU env vars (this machine only)${R}"
     echo ""
     echo -e "  ${T}Reboot the system to apply changes.${R}"
 elif [ "$GPU_VENDOR" = "amd" ]; then

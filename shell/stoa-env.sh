@@ -80,23 +80,26 @@ export PROTON_ENABLE_NVAPI=1
 # LIBVA_DRIVER_NAME=nvidia on an AMD/Intel iGPU disables hw decode).
 
 # NVIDIA (proprietary, Wayland):
-export LIBVA_DRIVER_NAME=radeonsi
-export VDPAU_DRIVER=radeonsi
+# export LIBVA_DRIVER_NAME=radeonsi
+# export VDPAU_DRIVER=radeonsi
 # export __GLX_VENDOR_LIBRARY_NAME=nvidia
 # export GBM_BACKEND=nvidia-drm
 # export NVD_BACKEND=direct
-export WLR_NO_HARDWARE_CURSORS=1
-export __GL_GSYNC_ALLOWED=1
-export __GL_VRR_ALLOWED=1
+# export WLR_NO_HARDWARE_CURSORS=1
+# export __GL_GSYNC_ALLOWED=1
+# export __GL_VRR_ALLOWED=1
 
 # AMD (radeonsi / RADV):
-export LIBVA_DRIVER_NAME=radeonsi
-export VDPAU_DRIVER=radeonsi
+# export LIBVA_DRIVER_NAME=radeonsi
+# export VDPAU_DRIVER=radeonsi
 
 # Intel (iHD for Gen8+, i965 for older):
-export LIBVA_DRIVER_NAME=radeonsi
-export VDPAU_DRIVER=radeonsi
+# export LIBVA_DRIVER_NAME=radeonsi
+# export VDPAU_DRIVER=radeonsi
 
 # Hybrid laptops (AMD/Intel iGPU + NVIDIA dGPU, muxless HDMI on dGPU):
 # Use the iGPU's VAAPI driver above, and let stoa-gpu-setup.sh add
 # AQ_DRM_DEVICES to hyprland.lua so HDMI lights up on the NVIDIA card.
+
+# This machine's GPU variables, written by stoa-gpu-setup (not in the repository).
+[ -r "${XDG_CONFIG_HOME}/stoa/gpu-env.sh" ] && . "${XDG_CONFIG_HOME}/stoa/gpu-env.sh"
