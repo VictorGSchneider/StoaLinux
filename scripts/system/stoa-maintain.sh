@@ -236,7 +236,7 @@ search_files() {
     if command -v locate >/dev/null 2>&1; then
         locate "$pattern" 2>/dev/null
     else
-        find / -name "*${pattern}" -type f 2>/dev/null
+        find /etc "$USER_DIR" -xdev -name "*${pattern}" -type f 2>/dev/null
     fi
 }
 
@@ -348,7 +348,10 @@ backup_configs() {
         fi
     done
 
-    all_files=$(echo "$all_files" | sort -u | sed '/^$/d')
+    # Credentials stay out of an archive that is world-readable by default and
+    # gets copied around: cloud tokens (rclone), the GitHub login, Wi-Fi keys.
+    all_files=$(echo "$all_files" | sort -u | sed '/^$/d' \
+        | grep -vE '/rclone/rclone\.conf$|/gh/hosts\.yml$|/NetworkManager/system-connections/')
 
     if [ -z "$all_files" ]; then
         log_msg WARN "No configuration files found."
@@ -359,11 +362,15 @@ backup_configs() {
     line_count=$(echo "$all_files" | wc -l)
     total=$line_count
 
+    local _old_umask
+    _old_umask=$(umask)
+    umask 077   # the archive is for its owner only
     echo "$all_files" | while IFS= read -r filepath; do
         echo "$filepath"
         count=$((count + 1))
         progress_bar "$total" "$count" >&2
     done | zip "$arq" -r -9 -@ >> "$log" 2>&1
+    umask "$_old_umask"
 
     local file_count
     file_count=$(echo "$all_files" | wc -l)
@@ -389,10 +396,20 @@ list_backup_contents() {
     unzip -l "$backup_file"
 }
 
+# Put one extracted file back. Files under $HOME are the user's own: copy them
+# as the user, keeping the mode. Anything else (/etc…) needs root.
+_restore_file() {
+    local src="$1" dest="$2"
+    case "$dest" in
+        "$HOME"/*) mkdir -p "$(dirname "$dest")" && cp -p "$src" "$dest" ;;
+        *)         sudo mkdir -p "$(dirname "$dest")" && sudo cp -p "$src" "$dest" ;;
+    esac
+}
+
 # ── Restore (interactive) ──
 
 restore_interactive() {
-    check_root
+    check_root || return 1
 
     local backup_file="${1:-}"
     [ -z "$backup_file" ] && read -r -p "  Enter the path to the backup file (.zip): " backup_file
@@ -445,9 +462,11 @@ restore_interactive() {
         echo -e "  ${F}Restore $DEST? [y/N]${R}"
         read -r CONF
         if [[ "$CONF" =~ ^[Yy]$ ]]; then
-            sudo mkdir -p "$(dirname "$DEST")"
-            sudo cp "$FILE" "$DEST"
-            log_msg INFO "Restored: $DEST"
+            if _restore_file "$FILE" "$DEST"; then
+                log_msg INFO "Restored: $DEST"
+            else
+                log_msg ERROR "Could not restore: $DEST"
+            fi
         else
             log_msg INFO "Skipped: $DEST"
         fi
@@ -464,7 +483,7 @@ restaurar_configs() { restore_interactive "$@"; }
 # ── Restore all (no prompt) ──
 
 restore_all() {
-    check_root
+    check_root || return 1
 
     local backup_file="${1:-}"
     [ -z "$backup_file" ] && read -r -p "  Enter the path to the backup file (.zip): " backup_file
@@ -505,9 +524,11 @@ restore_all() {
     log_msg INFO "Restoring all files..."
     for FILE in "${files[@]}"; do
         DEST="/${FILE#"$TMPDIR_RESTORE"/}"
-        sudo mkdir -p "$(dirname "$DEST")"
-        sudo cp "$FILE" "$DEST"
-        log_msg INFO "Restored: $DEST"
+        if _restore_file "$FILE" "$DEST"; then
+            log_msg INFO "Restored: $DEST"
+        else
+            log_msg ERROR "Could not restore: $DEST"
+        fi
         count=$((count+1))
         progress_bar "$total" "$count"
     done
@@ -830,7 +851,7 @@ full_cleanup() {
                 find "$USER_DIR/.cache" "$STOA_LOG_DIR" -type f \
                     \( -name '*.log' -o -name '*.bak' -o -name '*.bak.*' \) -mtime +30
                 find "$USER_DIR/.config" "$USER_DIR/.local/share" -type f \
-                    \( -name '*.bak' -o -name '*.bak.*' \) -mtime +30
+                    -name '*.bak.[0-9]*' -mtime +30
             } 2>/dev/null
         )
 
