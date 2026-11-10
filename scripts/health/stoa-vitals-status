@@ -113,6 +113,9 @@ elif command -v sensors >/dev/null 2>&1; then
         }')
 fi
 gpu_temp=${gpu_temp:-0}
+# nvidia-smi reports its failures on stdout ("Failed to initialize NVML…"),
+# so anything that is not a number must not reach the JSON.
+case "$gpu_temp" in ''|*[!0-9.]*) gpu_temp=0 ;; esac
 
 # ── Memory ──
 mem_used_pct=0
@@ -147,8 +150,20 @@ fi
 
 # ── Pending updates (arch / pacman) ──
 updates=0
+# checkupdates is a full `pacman -Sy`; the poll runs every 30 s and gets
+# killed after ~5 s, leaving a download-* directory in /tmp each time. The
+# count barely changes, so serve it from a cache and refresh it detached.
+_upd_cache="${XDG_CACHE_HOME:-$HOME/.cache}/stoa/updates-count"
+if [ -r "$_upd_cache" ]; then
+    updates=$(head -n1 "$_upd_cache" 2>/dev/null)
+    case "$updates" in ''|*[!0-9]*) updates=0 ;; esac
+fi
 if command -v checkupdates >/dev/null 2>&1; then
-    updates=$(checkupdates 2>/dev/null | wc -l)
+    if [ -z "$(find "$_upd_cache" -mmin -60 2>/dev/null)" ]; then
+        mkdir -p "$(dirname "$_upd_cache")" 2>/dev/null
+        touch "$_upd_cache" 2>/dev/null   # claim the slot: one refresher at a time
+        ( setsid -f bash -c 'n=$(timeout 300 checkupdates 2>/dev/null | wc -l) && echo "$n" > "$1.tmp" && mv -f "$1.tmp" "$1"' _ "$_upd_cache" >/dev/null 2>&1 ) </dev/null
+    fi
 elif command -v pacman >/dev/null 2>&1; then
     updates=$(pacman -Qu 2>/dev/null | wc -l)
 fi
@@ -163,7 +178,7 @@ if [ -d "$SNAPSHOT_DIR" ]; then
 fi
 
 hostname_str="${HOSTNAME:-$(hostname 2>/dev/null || echo host)}"
-backups=$(find "$STOA_BACKUP_DIR" -maxdepth 1 -type f \
+backups=$(find "${STOA_BACKUP_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/stoa/backups}" -maxdepth 1 -type f \
     -name "${hostname_str}.confs.*.zip" 2>/dev/null | wc -l)
 
 # ── Scheduled cleanup? ──
