@@ -23,7 +23,13 @@ _install_deb() {
     [[ "$path" == *.deb ]] || { _notify "File must be a .deb package"; return; }
 
     _notify "Converting .deb to Arch package..."
-    _run_in_term "cd /tmp && debtap -Q '$path' && sudo pacman -U /tmp/*.pkg.tar* && rm -f /tmp/*.pkg.tar*"
+    # A private work dir, and the path quoted for the shell it is pasted into: a
+    # fixed /tmp glob installs whatever else is lying there, and a quote in the
+    # file name ended the single-quoted string early.
+    local work qpath qwork
+    work=$(mktemp -d) || { _notify "Could not create a work directory"; return 1; }
+    printf -v qpath '%q' "$path"; printf -v qwork '%q' "$work"
+    _run_in_term "cd $qwork && debtap -Q $qpath && sudo pacman -U ./*.pkg.tar*; cd / && rm -rf $qwork"
     _apply_stoa_theme
     _notify "DEB package installed"
 }
@@ -40,7 +46,10 @@ _install_rpm() {
     [[ "$path" == *.rpm ]] || { _notify "File must be a .rpm package"; return; }
 
     _notify "Extracting .rpm package..."
-    _run_in_term "cd /tmp && mkdir -p stoa-rpm-extract && cd stoa-rpm-extract && rpmextract.sh '$path' && echo '── Contents extracted to /tmp/stoa-rpm-extract ──' && ls -la && echo && echo 'Install manually: sudo cp -r usr/ /usr/' && echo 'Or convert first: install debtap, then alien -d file.rpm, then debtap file.deb'"
+    local rwork qpath qrwork
+    rwork=$(mktemp -d) || { _notify "Could not create a work directory"; return 1; }
+    printf -v qpath '%q' "$path"; printf -v qrwork '%q' "$rwork"
+    _run_in_term "cd $qrwork && rpmextract.sh $qpath && echo \"── Contents extracted to $qrwork ──\" && ls -la && echo && echo 'Install manually: sudo cp -r usr/ /usr/' && echo 'Or convert first: install debtap, then alien -d file.rpm, then debtap file.deb'"
     _apply_stoa_theme
     _notify "RPM package installed"
 }

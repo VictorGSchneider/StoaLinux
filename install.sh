@@ -119,7 +119,7 @@ mkdir -p "${HOME}/Pictures/screenshots"
 # we no longer ship would just be a dead link — and on a pre-0.55 binary it
 # would silently keep serving the stale config. Drop ours; a real file the
 # user wrote themselves is left alone.
-if [ -L "${CONFIG_DIR}/hypr/hyprland.conf" ]; then
+if [ -L "${CONFIG_DIR}/hypr/hyprland.conf" ] && [[ "$(readlink "${CONFIG_DIR}/hypr/hyprland.conf")" == "${STOA_DIR}/"* ]]; then
     rm -f "${CONFIG_DIR}/hypr/hyprland.conf"
     echo -e "  ${S}[~] Removed stale hyprland.conf symlink (migrated to hyprland.lua).${R}"
 fi
@@ -127,7 +127,7 @@ fi
 # any symlinks a previous install left pointing at files we removed.
 for stale in "${CONFIG_DIR}/i3/config" "${CONFIG_DIR}/i3/i3status.conf" \
              "${CONFIG_DIR}/picom/picom.conf" "${CONFIG_DIR}/rofi/config.rasi"; do
-    if [ -L "$stale" ]; then
+    if [ -L "$stale" ] && [[ "$(readlink "$stale")" == "${STOA_DIR}/"* ]]; then
         rm -f "$stale"
         echo -e "  ${S}[~] Removed stale ${stale} symlink (i3/Xorg/rofi support dropped).${R}"
     fi

@@ -67,7 +67,7 @@ local function cycleRow(cycle)
             ui.spacer({ flexGrow = 1 }),
             ui.label({ text = detail, fontSize = 12, color = "on_surface_variant" }),
         }),
-        ui.progress({ progress = progress, fill = cycle.color, track = "surface_variant", radius = 2, height = 4 }),
+        ui.progress({ progress = progress, fill = cycle.color, track = "surface_container", radius = 2, height = 4 }),
     })
 end
 

@@ -167,7 +167,14 @@ if [ -f "$SYNC_LIST" ]; then
         [ -z "$line" ] && continue
 
         # expand ~ and $VAR
-        src=$(eval echo "$line")
+        # ~, $HOME and $XDG_* only: no eval, so a line is a path and never a command.
+        src="${line/#\~/$HOME}"
+        src="${src//\$\{HOME\}/$HOME}"
+        src="${src//\$HOME/$HOME}"
+        src="${src//\$\{XDG_CONFIG_HOME\}/${XDG_CONFIG_HOME:-$HOME/.config}}"
+        src="${src//\$XDG_CONFIG_HOME/${XDG_CONFIG_HOME:-$HOME/.config}}"
+        src="${src//\$\{XDG_DATA_HOME\}/${XDG_DATA_HOME:-$HOME/.local/share}}"
+        src="${src//\$XDG_DATA_HOME/${XDG_DATA_HOME:-$HOME/.local/share}}"
         [ -e "$src" ] || { echo "stoa-sync: skipping missing $src" >&2; continue; }
         [ -L "$src" ] && continue   # symlinks already caught by git add
 

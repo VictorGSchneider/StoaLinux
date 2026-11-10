@@ -413,7 +413,7 @@ local function meterRow(label, pct, valueText)
             lbl({ text = label, color = "on_surface_variant", fontSize = 12, flexGrow = 1 }),
             lbl({ text = valueText, fontSize = 12 }),
         }),
-        prog({ progress = pct / 100.0, fill = fill, track = "surface_variant" }),
+        prog({ progress = pct / 100.0, fill = fill, track = "surface_container" }),
     })
 end
 
