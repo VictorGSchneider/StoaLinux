@@ -91,6 +91,19 @@ _sudo_link() {
     echo -e "  ${O}[+] ${dst}${R}"
 }
 
+# Root-owned COPY of a file root will execute (pacman hooks and the programs
+# they run). A symlink into the checkout would let whoever can write the
+# checkout run code as root at the next pacman transaction. Any old symlink
+# is removed first: `install` over one would write through it into the repo.
+# Updates need another run of this script; stoa-doctor-style drift is the cost.
+_sudo_copy() {
+    local src="$1" dst="$2" mode="${3:-0644}"
+    if sudo test -L "$dst"; then sudo rm -f "$dst"; fi
+    if sudo cmp -s "$src" "$dst" 2>/dev/null; then return 0; fi
+    sudo install -D -m "$mode" -o root -g root "$src" "$dst"
+    echo -e "  ${O}[+] ${dst} (root-owned copy)${R}"
+}
+
 echo -e "${F}Creating symlinks...${R}"
 echo ""
 
@@ -285,7 +298,7 @@ rmdir "${HOME}/.vscode/extensions/stoa-theme/themes" \
       "${HOME}/.vscode/extensions/stoa-theme" 2>/dev/null || true
 
 # ── Stoa data dirs ──
-mkdir -p "${HOME}/Pictures/Wallpapers"
+mkdir -p "${HOME}/Pictures/Wallpapers" "${CONFIG_DIR}/stoa"
 # Local AI model files (stoa-walls setup-ai); a plain home folder like Pictures.
 mkdir -p "${HOME}/Models"
 # Wallpapers used to live in ~/.config/stoa/wallpapers. Move what is there
@@ -451,14 +464,13 @@ echo -e "${F}Pacman hooks:${R}"
 echo ""
 HOOK_DIR="/etc/pacman.d/hooks"
 if [ -d "$HOOK_DIR" ] || sudo mkdir -p "$HOOK_DIR" 2>/dev/null; then
-    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-pkg-snapshot.hook" "${HOOK_DIR}/stoa-pkg-snapshot.hook"
-    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook"        "${HOOK_DIR}/stoa-theme.hook"
+    _sudo_copy "${STOA_DIR}/theme/pacman-hooks/stoa-pkg-snapshot.hook" "${HOOK_DIR}/stoa-pkg-snapshot.hook"
+    _sudo_copy "${STOA_DIR}/theme/pacman-hooks/stoa-theme.hook"        "${HOOK_DIR}/stoa-theme.hook"
     # Both hooks run as root out of /usr/local/bin, so the programs they
-    # name are linked here — pointing at the repo source directly, since
-    # ~/.local/bin/stoa-* resolves per user and pacman has no user.
-    _sudo_link "${STOA_DIR}/scripts/packages/stoa-pkg-snapshot.sh" /usr/local/bin/stoa-pkg-snapshot
-    _sudo_link "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" \
-               /usr/local/bin/stoa-theme-enforce
+    # name are installed here as root-owned copies (see _sudo_copy).
+    _sudo_copy "${STOA_DIR}/scripts/packages/stoa-pkg-snapshot.sh" /usr/local/bin/stoa-pkg-snapshot 0755
+    _sudo_copy "${STOA_DIR}/theme/pacman-hooks/stoa-theme-enforce" \
+               /usr/local/bin/stoa-theme-enforce 0755
 else
     echo -e "  ${S}[!] Could not create ${HOOK_DIR} (need sudo)${R}"
 fi

@@ -31,8 +31,15 @@ T='\033[38;2;179;107;90m'
 R='\033[0m'
 
 # ── Shared helpers ──
+# The README hands out this one file, so lib/aur.sh may not sit next to it:
+# fetch it when it does not.
+_AUR_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/aur.sh"
+if [ ! -r "$_AUR_LIB" ]; then
+    _AUR_LIB="$(mktemp)"
+    curl -fsSL "https://raw.githubusercontent.com/VictorGSchneider/StoaLinux/main/setup/lib/aur.sh" -o "$_AUR_LIB" 2>/dev/null || true
+fi
 # shellcheck source=lib/aur.sh
-source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/aur.sh"
+[ -s "$_AUR_LIB" ] && source "$_AUR_LIB"
 
 # ── Banner ──
 echo ""
@@ -45,6 +52,10 @@ echo ""
 # ── Check root ──
 if [ "$(id -u)" -ne 0 ]; then
     echo -e "  ${T}[!] Run as root (live ISO).${R}"
+    exit 1
+fi
+if ! declare -F _install_aur_chroot >/dev/null; then
+    echo -e "  ${T}[!] Could not load setup/lib/aur.sh (offline?).${R}"
     exit 1
 fi
 
@@ -68,7 +79,7 @@ CONFIG_DIR="/tmp/stoa-archinstall"
 mkdir -p "$CONFIG_DIR"
 
 echo -e "  ${B}[1/4] Downloading StoaLinux config...${R}"
-curl -sL "${STOA_REPO}/setup/archinstall/user_configuration.json" -o "${CONFIG_DIR}/user_configuration.json"
+curl -fsSL "${STOA_REPO}/setup/archinstall/user_configuration.json" -o "${CONFIG_DIR}/user_configuration.json"
 echo -e "  ${O}[✓] Config downloaded.${R}"
 echo ""
 
@@ -79,7 +90,7 @@ echo -e "  ${S}  Audio:       PipeWire${R}"
 echo -e "  ${S}  Network:     NetworkManager${R}"
 echo -e "  ${S}  Locale:      pt_BR.UTF-8 / keyboard br-abnt2${R}"
 echo -e "  ${S}  Timezone:    America/Sao_Paulo${R}"
-echo -e "  ${S}  Packages:    Hyprland, Waybar, Kitty, Neovim...${R}"
+echo -e "  ${S}  Packages:    Hyprland, Noctalia, Kitty, Neovim...${R}"
 echo ""
 echo -e "  ${F}You configure in archinstall TUI:${R}"
 echo -e "  ${B}  → Disks (partitioning and formatting)${R}"
@@ -225,6 +236,9 @@ arch-chroot "$INSTALL_ROOT" chsh -s /bin/zsh "$CREATED_USER" 2>/dev/null || true
 echo -e "  ${O}[✓] Dotfiles installed for ${CREATED_USER}.${R}"
 
 # ── GPU + CPU Setup ──
+echo ""
+echo -e "  ${S}After the first boot, finish the desktop (shell, apps, login screen):${R}"
+echo -e "  ${B}    cd ~/StoaLinux && ./setup/post-install.sh${R}"
 echo ""
 echo -e "  ${S}To configure GPU and CPU microcode:${R}"
 echo -e "  ${B}    cd ~/StoaLinux && ./scripts/system/stoa-gpu-setup.sh${R}"

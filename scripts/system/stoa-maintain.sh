@@ -1009,6 +1009,13 @@ schedule_cleanup() {
             return 1
         fi
 
+        # The unit runs as root at every boot, so it must not run a file the
+        # user can rewrite: install a root-owned copy of the script and of the
+        # library it sources (it finds ../lib relative to itself).
+        local root_dir=/usr/local/lib/stoa/maintain
+        sudo install -D -m 0755 -o root -g root "$script_path" "$root_dir/bin/stoa-maintain"
+        sudo install -D -m 0644 -o root -g root "$_STOA_LIB/stoa-paths.sh" "$root_dir/lib/stoa-paths.sh"
+
         sudo tee "$unit_dir/stoa-maintain-cleanup.service" >/dev/null <<SVCEOF
 [Unit]
 Description=Stoa Maintain system cleanup at boot
@@ -1016,7 +1023,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash $script_path --cleanup --unattended
+ExecStart=/bin/bash $root_dir/bin/stoa-maintain --cleanup --unattended
 SVCEOF
 
         sudo tee "$unit_dir/stoa-maintain-cleanup.timer" >/dev/null <<TMREOF
@@ -1040,7 +1047,10 @@ TMREOF
         # a root entry left by BRCS.sh under its own name is the same
         # duplicate, and grepping for our filename walked past it.
         check_root || return 1
-        local CRON_CMD="@reboot bash $script_path --cleanup --unattended"
+        local root_dir=/usr/local/lib/stoa/maintain
+        sudo install -D -m 0755 -o root -g root "$script_path" "$root_dir/bin/stoa-maintain"
+        sudo install -D -m 0644 -o root -g root "$_STOA_LIB/stoa-paths.sh" "$root_dir/lib/stoa-paths.sh"
+        local CRON_CMD="@reboot bash $root_dir/bin/stoa-maintain --cleanup --unattended"
         (sudo crontab -l 2>/dev/null | grep -vE "$_LEGACY_CRON_RE" ; echo "$CRON_CMD") \
             | sudo crontab -
         log_msg INFO "Cleanup scheduled at boot via root crontab."
