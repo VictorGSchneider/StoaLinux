@@ -53,5 +53,17 @@ _check "K3 linux-cachyos only"            "dkms"     "$(_case $BASE linux-cachyo
 _check "K4 linux-cachyos + -lts"          "dkms"     "$(_case $BASE linux-cachyos linux-cachyos-lts)"
 _check "K5 firmware and headers are not kernels" "prebuilt" "$(_case $BASE linux linux-headers linux-firmware-whence)"
 
+# K6-K8: never add a second provider of the NVIDIA kernel module. The package
+# the script used to offer on CachyOS (nvidia → nvidia-580xx-dkms) conflicts
+# with the prebuilt linux-cachyos-nvidia-open and the transaction is refused.
+{
+    sed -n '/^nvidia_module_installed() {/,/^}/p' scripts/system/stoa-gpu-setup.sh
+    echo 'if nvidia_module_installed; then echo present; else echo absent; fi'
+} > "$TMP/harness2.sh"
+_mod() { FAKE_PKGS="$*" PATH="$TMP/bin:$PATH" bash "$TMP/harness2.sh" 2>/dev/null; }
+_check "K6 prebuilt linux-cachyos-nvidia-open is seen" "present" "$(_mod $BASE linux-cachyos linux-cachyos-nvidia-open nvidia-utils)"
+_check "K7 firmware and userspace alone are not a module" "absent" "$(_mod $BASE linux nvidia-utils linux-firmware-nvidia)"
+_check "K8 a plain nvidia package is seen" "present" "$(_mod $BASE linux nvidia)"
+
 [ "$FAILS" -eq 0 ] || { echo "$FAILS check(s) failed"; exit 1; }
 echo "gpu-setup-kernels: all checks passed"
