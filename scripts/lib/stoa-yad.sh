@@ -2,7 +2,7 @@
 # ║  STOA LINUX — yad helpers                                    ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Sourced by stoa-settings, stoa-store (core.sh), stoa-clipboard, stoa-paste,
+# Sourced by stoa-settings, stoa-store (core.sh), stoa-paste,
 # stoa-drive and stoa-health. Two jobs:
 #
 #   1. Size list / text windows from their content, so a 4-row menu is a small

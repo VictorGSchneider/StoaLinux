@@ -269,8 +269,22 @@ def collect_journal():
     return {"counts": counts, "samples": samples}
 
 
+def _gpu_asleep():
+    """True when any display-class PCI device is runtime-suspended."""
+    for dev in (SYS / "bus/pci/devices").glob("*"):
+        if (read(dev / "class", "") or "").startswith("0x03") \
+                and read(dev / "power/runtime_status") == "suspended":
+            return True
+    return False
+
+
 def pci_names():
     names = {}
+    # lspci reads PCI config space, and the kernel resumes a D3cold device to
+    # answer it: a sleeping dGPU would be woken (for ~20 s) every time the
+    # ten-minute cache expires. Leave the names to the previous run's cache.
+    if _gpu_asleep():
+        return names
     rc, out = run(["lspci", "-D", "-mm"])
     if rc == 0:
         for line in out.splitlines():
@@ -293,8 +307,14 @@ def slow(fresh=False):
                 return cached
         except (OSError, ValueError):
             pass
+    old = {}
+    try:
+        old = json.loads(CACHE.read_text())
+    except (OSError, ValueError):
+        pass
     data = {"ts": time.time(), "smart": collect_smart(),
-            "journal": collect_journal(), "pciNames": pci_names()}
+            "journal": collect_journal(),
+            "pciNames": pci_names() or old.get("pciNames") or {}}
     try:
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         tmp = CACHE.with_suffix(".tmp")
@@ -437,6 +457,10 @@ def collect_cpu():
             "tempC": temp, "throttleEvents": throttle}
 
 
+def _vendor_label(vendor):
+    return {"0x10de": "NVIDIA GPU", "0x1002": "AMD GPU", "0x8086": "Intel GPU"}.get(vendor, "GPU")
+
+
 def collect_gpus(sl):
     names = sl.get("pciNames") or {}
     gpus = []
@@ -446,7 +470,7 @@ def collect_gpus(sl):
             continue
         vendor = read(dev / "vendor", "")
         addr = dev.name
-        g = {"addr": addr, "name": names.get(addr, addr),
+        g = {"addr": addr, "name": names.get(addr) or _vendor_label(vendor),
              "runtime": read(dev / "power/runtime_status", "unknown"),
              "tempC": None, "busyPct": None, "vramUsedMiB": None, "vramTotalMiB": None,
              "thermalSlowdown": False, "state": "active"}

@@ -352,7 +352,6 @@ _link "${STOA_DIR}/scripts/wallpaper/stoa-memento-data.sh"    "${HOME}/.local/bi
 _link "${STOA_DIR}/scripts/desktop/stoa-keybinds-bar.sh"    "${HOME}/.local/bin/stoa-keybinds-bar"
 _link "${STOA_DIR}/scripts/desktop/stoa-keybinds-toggle.sh" "${HOME}/.local/bin/stoa-keybinds-toggle"
 _link "${STOA_DIR}/scripts/desktop/stoa-osd.sh"             "${HOME}/.local/bin/stoa-osd"
-_link "${STOA_DIR}/scripts/input/stoa-clipboard.sh"       "${HOME}/.local/bin/stoa-clipboard"
 _link "${STOA_DIR}/scripts/wallpaper/stoa-quotes-sync.sh"     "${HOME}/.local/bin/stoa-quotes-sync"
 _link "${STOA_DIR}/scripts/system/stoa-locksmith.sh"       "${HOME}/.local/bin/stoa-locksmith"
 _link "${STOA_DIR}/scripts/files/stoa-resize.sh"          "${HOME}/.local/bin/stoa-resize"
