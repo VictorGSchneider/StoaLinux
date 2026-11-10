@@ -378,6 +378,14 @@ if pacman -Qq limine-snapper-sync &>/dev/null; then
     fi
 fi
 
+# ── Reboot pending? ──
+# An upgrade deletes the running kernel's module tree. From then on drivers
+# built for it (NVIDIA above all) no longer match their userspace libraries
+# until the next boot.
+if [ ! -d "/usr/lib/modules/$(uname -r)" ]; then
+    _warn "The running kernel ($(uname -r)) was replaced by an update — reboot to load the new kernel and drivers"
+fi
+
 # ── Settings/Store standalone apps (replace the old rofi menus) ──
 _check_optional wdisplays           "Display layout (wdisplays)"
 _check_optional pwvucontrol         "Audio mixer (pwvucontrol)"
@@ -451,7 +459,6 @@ fi
 for dir in \
     "${HOME}/Pictures/screenshots" \
     "${HOME}/Videos/recordings" \
-    "${STOA_DIR}/wallpapers" \
     "${STOA_DIR}/pkg-snapshots"; do
     if [ -d "$dir" ]; then
         _ok "Directory exists: $dir"

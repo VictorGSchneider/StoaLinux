@@ -140,45 +140,17 @@ _setup_hook() {
     local hook="/etc/pacman.d/hooks/stoa-theme.hook"
     local script="/usr/local/bin/stoa-theme-enforce"
     [ -f "$hook" ] && { _notify "Auto-theme hook already active"; return; }
-    _yad_confirm "Install auto-theme pacman hook? (sudo)" || return
+    _yad_confirm "Install auto-theme pacman hook? (asks for your password in a terminal)" || return
 
-    local stoa_dir; stoa_dir="$(dirname "$(readlink -f "$0")")/.."
-    if [ -f "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" ]; then
-        sudo mkdir -p /etc/pacman.d/hooks
-        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" "$script"
-        sudo chmod +x "$script"
-        sudo cp "$stoa_dir/theme/pacman-hooks/stoa-theme.hook" "$hook"
-    else
-        sudo mkdir -p /etc/pacman.d/hooks
-        sudo tee "$script" > /dev/null <<'ENFORCE'
-#!/bin/bash
-U="${SUDO_USER:-$USER}"
-H=$(getent passwd "$U" | cut -d: -f6)
-[ -z "$H" ] && exit 0
-g="$H/.config/gtk-3.0/settings.ini"; [ ! -f "$g" ] && exit 0
-t=$(grep "^gtk-theme-name" "$g"|sed 's/^[^=]*=\s*//')
-i=$(grep "^gtk-icon-theme-name" "$g"|sed 's/^[^=]*=\s*//')
-command -v gsettings &>/dev/null && su - "$U" -c "
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$(id -u)/bus
-gsettings set org.gnome.desktop.interface gtk-theme '${t:-Adwaita-dark}' 2>/dev/null
-gsettings set org.gnome.desktop.interface icon-theme '${i:-Papirus-Dark}' 2>/dev/null
-gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null
-" 2>/dev/null
-ENFORCE
-        sudo chmod +x "$script"
-        sudo tee "$hook" > /dev/null <<'HOOK'
-[Trigger]
-Operation = Install
-Operation = Upgrade
-Type = Package
-Target = *
-[Action]
-Description = Applying Stoa theme...
-When = PostTransaction
-Exec = /usr/local/bin/stoa-theme-enforce
-HOOK
+    # Root-owned copies of the repo files, installed from a terminal where sudo
+    # can ask. Never a symlink into the checkout: root runs these.
+    local stoa_dir
+    stoa_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../.." && pwd)"
+    if [ ! -f "$stoa_dir/theme/pacman-hooks/stoa-theme-enforce" ]; then
+        _notify "Hook files not found — run install.sh from the StoaLinux clone"
+        return 1
     fi
-    _notify "Auto-theme hook installed!"
+    _run_in_term "sudo install -D -m 0755 -o root -g root '$stoa_dir/theme/pacman-hooks/stoa-theme-enforce' '$script' && sudo install -D -m 0644 -o root -g root '$stoa_dir/theme/pacman-hooks/stoa-theme.hook' '$hook' && echo 'Auto-theme hook installed.'"
 }
 
 _install_aur_helper() {

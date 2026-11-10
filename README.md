@@ -105,7 +105,7 @@ To push your own changes back with `stoa-sync`, connect the machine to GitHub on
 
 <table>
   <tr><th>Key</th><th>Action</th><th>Key</th><th>Action</th></tr>
-  <tr><td><code>Super+Return</code></td><td>Terminal (Kitty)</td><td><code>Super+Shift+V</code></td><td>Clipboard pin</td></tr>
+  <tr><td><code>Super+Return</code></td><td>Terminal (Kitty)</td><td><code>Super+Shift+B</code></td><td>Clear clipboard history</td></tr>
   <tr><td><code>Super+B</code></td><td>Browser (Brave)</td><td><code>Super+Shift+T</code></td><td>OCR (screen text)</td></tr>
   <tr><td><code>Super+C</code></td><td>Calculator (Qalculate)</td><td><code>Super+Shift+P</code></td><td>Advanced paste</td></tr>
   <tr><td><code>Super+Space</code></td><td>Launcher (Noctalia)</td><td><code>Super+/</code></td><td>Keybinds bar</td></tr>
@@ -170,7 +170,6 @@ A family of small, single-purpose `stoa-*` tools — each one exists because rea
   <tr><td><code>stoa-memento-data</code></td><td>Memento Mori data (desktop widget)</td><td><code>stoa-locksmith</code></td><td>Find + end what's locking a file/folder</td></tr>
   <tr><td><code>stoa-doctor</code></td><td>System health check</td><td><code>stoa-predict</code></td><td>Word + emoji suggestions at the text cursor (input method)</td></tr>
   <tr><td><code>stoa-screensaver</code></td><td>Living marble screensaver</td><td><code>stoa-archive</code></td><td>Compress selection / extract archives</td></tr>
-  <tr><td><code>stoa-clipboard</code></td><td>Clipboard + pins</td><td></td><td></td></tr>
   <tr><td><code>stoa-drive</code></td><td>Cloud drive (rclone)</td><td></td><td></td></tr>
   <tr><td><code>stoa-firewall</code></td><td>nftables firewall</td><td></td><td></td></tr>
   <tr><td><code>stoa-osd</code></td><td>Volume/brightness OSD</td><td></td><td></td></tr>

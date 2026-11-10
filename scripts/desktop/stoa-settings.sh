@@ -38,6 +38,7 @@ STOA_HELP
 esac
 
 STOA_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/stoa.conf"
+STOA_BIN="${HOME}/.local/bin"
 STOA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 WALLDIR="${STOA_WALLS_DIR:-${HOME}/Pictures/Wallpapers}"
 
@@ -51,6 +52,21 @@ _STOA_WM_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-wm.sh"
 # ── Helpers ──
 
 _notify() { notify-send -t 2500 "Stoa Settings" "$1" 2>/dev/null; }
+
+# Run a command as root from a GUI process. There is no terminal for sudo to
+# ask on: a bare sudo fails as a PAM "conversation failed", which pam_faillock
+# counts (three lock the account for ten minutes). Use a cached/NOPASSWD sudo
+# if there is one, else polkit's graphical prompt.
+_priv() {
+    if sudo -n true 2>/dev/null; then
+        sudo -n "$@"
+    elif command -v pkexec >/dev/null 2>&1; then
+        pkexec "$@"
+    else
+        _notify "Needs administrator rights and no polkit agent is available"
+        return 1
+    fi
+}
 
 # Live tweaks (gaps, opacity, border…) are Hyprland-only; say where the
 # equivalent setting lives otherwise.
@@ -97,7 +113,7 @@ _hyprctl_get() {
     esac
 }
 
-_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/stoa-yad.sh"
+_STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-yad.sh"
 # shellcheck source=lib/stoa-yad.sh
 [ -r "$_STOA_YAD_LIB" ] && source "$_STOA_YAD_LIB"
 
@@ -434,7 +450,7 @@ _net_info() {
     [ -n "$pub_ip" ] && lines+=("  Public IP: $pub_ip")
 
     # ── Firewall ──
-    if command -v nft &>/dev/null && sudo nft list table inet stoa_firewall &>/dev/null 2>&1; then
+    if command -v nft &>/dev/null && _priv nft list table inet stoa_firewall &>/dev/null 2>&1; then
         lines+=("  Firewall: Active")
     else
         lines+=("  Firewall: Inactive")
@@ -748,7 +764,7 @@ menu_wallpaper() {
         case "$choice" in
             *Generate*)
                 _notify "Generating wallpapers..."
-                stoa-walls 2>/dev/null
+                "${STOA_BIN}/stoa-walls" 2>/dev/null
                 _notify "Wallpapers generated!"
                 ;;
             *custom*)
@@ -881,7 +897,7 @@ _theme_font_size() {
 
 STOA_COLORS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
 STOA_COLORS_FILE="${STOA_COLORS_DIR}/colors.conf"
-STOA_DIR_RESOLVED="$(dirname "$(readlink -f "$0")")/.."
+STOA_DIR_RESOLVED="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.."
 
 # Preset palettes: bg_dark|bg|bg_light|fg|fg_dim|accent|accent2|green|red|blue|grey|name
 _color_presets() {
@@ -1502,7 +1518,7 @@ STOA_FW_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/firewall"
 WHITELIST="${STOA_FW_DIR}/allowed-ports.conf"
 
 _fw_status() {
-    if sudo nft list table inet stoa_firewall &>/dev/null 2>&1; then
+    if _priv nft list table inet stoa_firewall &>/dev/null 2>&1; then
         echo "Active"
     else
         echo "Inactive"
@@ -1515,9 +1531,9 @@ _fw_ports_list() {
         [ -z "$line" ] && continue
         local proto local_addr pid_prog port process
         proto=$(echo "$line" | awk '{print $1}')
-        local_addr=$(echo "$line" | awk '{print $4}')
+        local_addr=$(echo "$line" | awk '{print $5}')
         port=$(echo "$local_addr" | rev | cut -d: -f1 | rev)
-        pid_prog=$(echo "$line" | awk '{print $6}')
+        pid_prog=$(echo "$line" | awk '{print $7}')
 
         if [[ "$pid_prog" =~ users:\(\(\"([^\"]+)\" ]]; then
             process="${BASH_REMATCH[1]}"
@@ -1528,7 +1544,7 @@ _fw_ports_list() {
         local status="BLOCKED"
         grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null && status="ALLOWED"
         lines+=("${status}  :${port}/${proto}  ${process}")
-    done < <(ss -tlnpH 2>/dev/null; ss -ulnpH 2>/dev/null)
+    done < <(ss -tlnpH 2>/dev/null | sed 's/^/tcp /'; ss -ulnpH 2>/dev/null | sed 's/^/udp /')
 
     if [ ${#lines[@]} -eq 0 ]; then
         echo "No listening ports"
@@ -1553,13 +1569,13 @@ _fw_toggle_port() {
     if grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null; then
         # Currently allowed → block it
         if _yad_confirm "Block port ${port}/${proto}?"; then
-            stoa-firewall deny "$port" "$proto" 2>/dev/null
+            "${STOA_BIN}/stoa-firewall" deny "$port" "$proto" 2>/dev/null
             _notify "Port ${port}/${proto} blocked"
         fi
     else
         # Currently blocked → allow it
         if _yad_confirm "Allow port ${port}/${proto}?"; then
-            stoa-firewall allow "$port" "$proto" 2>/dev/null
+            "${STOA_BIN}/stoa-firewall" allow "$port" "$proto" 2>/dev/null
             _notify "Port ${port}/${proto} allowed"
         fi
     fi
@@ -1599,7 +1615,7 @@ menu_firewall() {
                 local proto_choice
                 proto_choice=$(_yad_select "  Protocol" "tcp" "udp")
                 [ -z "$proto_choice" ] && continue
-                stoa-firewall allow "$port_input" "$proto_choice" 2>/dev/null
+                "${STOA_BIN}/stoa-firewall" allow "$port_input" "$proto_choice" 2>/dev/null
                 _notify "Port ${port_input}/${proto_choice} allowed"
                 ;;
             *"Block a port"*)
@@ -1613,21 +1629,21 @@ menu_firewall() {
                 local bport bproto
                 bport=$(echo "$block_choice" | cut -d/ -f1)
                 bproto=$(echo "$block_choice" | cut -d/ -f2)
-                stoa-firewall deny "$bport" "$bproto" 2>/dev/null
+                "${STOA_BIN}/stoa-firewall" deny "$bport" "$bproto" 2>/dev/null
                 _notify "Port ${bport}/${bproto} blocked"
                 ;;
             *"Enable"*)
-                kitty -e sudo stoa-firewall enable &
+                kitty -e sudo "${STOA_BIN}/stoa-firewall" enable &
                 disown
                 ;;
             *"Disable"*)
                 _yad_confirm "Disable firewall? All ports will be open." && {
-                    kitty -e sudo stoa-firewall disable &
+                    kitty -e sudo "${STOA_BIN}/stoa-firewall" disable &
                     disown
                 }
                 ;;
             *"Setup"*)
-                kitty -e sudo stoa-firewall setup &
+                kitty -e sudo "${STOA_BIN}/stoa-firewall" setup &
                 disown
                 ;;
         esac
@@ -1708,7 +1724,7 @@ _hw_memory() {
         while IFS= read -r dimm; do
             [ -z "$dimm" ] && continue
             lines+=("    $dimm")
-        done < <(sudo dmidecode -t memory 2>/dev/null | awk '
+        done < <(_priv dmidecode -t memory 2>/dev/null | awk '
             /^Memory Device$/ {dev=1; size=""; type=""; speed=""; loc=""}
             dev && /Size:/ {size=$2 " " $3}
             dev && /Type:/ && !/Type Detail/ {type=$2}
@@ -3149,12 +3165,12 @@ _power_auto_suspend() {
 
     local conf_dir="/etc/systemd/sleep.conf.d"
     if [ "$minutes" -eq 0 ]; then
-        sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
+        _priv systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
         _notify "Auto suspend: disabled"
     else
-        sudo systemctl unmask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
-        sudo mkdir -p "$conf_dir"
-        printf '[Sleep]\nIdleActionSec=%dm\nIdleAction=suspend\n' "$minutes" | sudo tee "$conf_dir/stoa-idle.conf" >/dev/null
+        _priv systemctl unmask sleep.target suspend.target hibernate.target hybrid-sleep.target 2>/dev/null
+        _priv mkdir -p "$conf_dir"
+        printf '[Sleep]\nIdleActionSec=%dm\nIdleAction=suspend\n' "$minutes" | _priv tee "$conf_dir/stoa-idle.conf" >/dev/null
         _notify "Auto suspend: ${minutes} min"
     fi
 }
@@ -3415,7 +3431,7 @@ _fan_mode_acer_wmi() {
         *Silent*) val=2 ;;
     esac
 
-    echo "$val" | sudo tee "$mode_file" >/dev/null 2>&1
+    echo "$val" | _priv tee "$mode_file" >/dev/null 2>&1
     if [ $? -eq 0 ]; then
         _input_save "fan_mode" "$val"
         _notify "Fan mode: $(echo "$choice" | sed 's/^[[:space:]]*//')"
@@ -3461,7 +3477,7 @@ _fan_speed_manual() {
 
     if [[ "$choice" == *"Auto"* ]]; then
         # Enable automatic fan control
-        echo "2" | sudo tee "$pwm_enable" >/dev/null 2>&1
+        echo "2" | _priv tee "$pwm_enable" >/dev/null 2>&1
         _input_save "fan_speed" "auto"
         _notify "Fan: auto mode"
         return
@@ -3482,8 +3498,8 @@ _fan_speed_manual() {
     local pwm_val=$((val_pct * 255 / 100))
 
     # Switch to manual mode first, then set speed
-    echo "1" | sudo tee "$pwm_enable" >/dev/null 2>&1
-    echo "$pwm_val" | sudo tee "$pwm_file" >/dev/null 2>&1
+    echo "1" | _priv tee "$pwm_enable" >/dev/null 2>&1
+    echo "$pwm_val" | _priv tee "$pwm_file" >/dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         _input_save "fan_speed" "$val_pct"
@@ -3511,7 +3527,7 @@ _fan_nbfc_set_speed() {
     [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
     if [[ "$choice" == *"Auto"* ]]; then
-        sudo $nbfc_cmd set -a 2>/dev/null
+        _priv $nbfc_cmd set -a 2>/dev/null
         _notify "NBFC: auto fan speed"
         return
     fi
@@ -3524,7 +3540,7 @@ _fan_nbfc_set_speed() {
         val=$(echo "$choice" | grep -oP '\d+')
     fi
 
-    sudo $nbfc_cmd set -s "$val" 2>/dev/null
+    _priv $nbfc_cmd set -s "$val" 2>/dev/null
     _notify "NBFC fan speed: ${val}%"
 }
 
@@ -3533,7 +3549,7 @@ _fan_nbfc_config() {
     command -v nbfc_service &>/dev/null && nbfc_cmd="nbfc_service"
 
     local configs
-    configs=$(sudo $nbfc_cmd config -l 2>/dev/null | head -30)
+    configs=$(_priv $nbfc_cmd config -l 2>/dev/null | head -30)
 
     if [ -z "$configs" ]; then
         _notify "No NBFC configs found.\nCheck: sudo nbfc config -l"
@@ -3544,9 +3560,9 @@ _fan_nbfc_config() {
     choice=$(echo "$configs" | _yad_pipe "  NBFC Config (select your laptop)")
     [ -z "$choice" ] && return
 
-    sudo $nbfc_cmd config -s "$choice" 2>/dev/null
-    sudo systemctl restart nbfc_service 2>/dev/null || \
-        sudo systemctl restart nbfc 2>/dev/null
+    _priv $nbfc_cmd config -s "$choice" 2>/dev/null
+    _priv systemctl restart nbfc_service 2>/dev/null || \
+        _priv systemctl restart nbfc 2>/dev/null
     _notify "NBFC config: $choice"
 }
 
@@ -3564,7 +3580,7 @@ _fan_div_acer_launch() {
 
 _fan_div_acer_stoa_theme() {
     local script_dir
-    script_dir="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+    script_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
     local apply_script="${script_dir}/theme/div-acer-manager/stoa-damx-apply.sh"
 
     if [ ! -f "$apply_script" ]; then
@@ -3652,7 +3668,7 @@ _fan_perf_profile() {
     # Apply CPU governor
     if [ -n "$gov" ]; then
         for cpu_gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-            [ -f "$cpu_gov" ] && echo "$gov" | sudo tee "$cpu_gov" >/dev/null 2>&1
+            [ -f "$cpu_gov" ] && echo "$gov" | _priv tee "$cpu_gov" >/dev/null 2>&1
         done
     fi
 
@@ -3665,9 +3681,9 @@ _fan_perf_profile() {
         [ -f /sys/module/acer_predator_turbo/parameters/fan_mode ] && mode_file="/sys/module/acer_predator_turbo/parameters/fan_mode"
         if [ -n "$mode_file" ]; then
             case "$fan_mode" in
-                auto)   echo "0" | sudo tee "$mode_file" >/dev/null 2>&1 ;;
-                turbo)  echo "1" | sudo tee "$mode_file" >/dev/null 2>&1 ;;
-                silent) echo "2" | sudo tee "$mode_file" >/dev/null 2>&1 ;;
+                auto)   echo "0" | _priv tee "$mode_file" >/dev/null 2>&1 ;;
+                turbo)  echo "1" | _priv tee "$mode_file" >/dev/null 2>&1 ;;
+                silent) echo "2" | _priv tee "$mode_file" >/dev/null 2>&1 ;;
             esac
         fi
     fi
@@ -3704,7 +3720,7 @@ _fan_kb_backlight_timeout() {
 
     local val
     val=$(echo "$choice" | grep -oP '\d+')
-    echo "$val" | sudo tee "$timeout_file" >/dev/null 2>&1
+    echo "$val" | _priv tee "$timeout_file" >/dev/null 2>&1
     _input_save "kb_backlight_timeout" "$val"
     _notify "KB backlight timeout: ${val}s"
 }
@@ -3734,7 +3750,7 @@ _fan_boot_sound() {
 
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
-    echo "$val" | sudo tee "$sound_file" >/dev/null 2>&1
+    echo "$val" | _priv tee "$sound_file" >/dev/null 2>&1
     [ "$val" = "1" ] && _notify "Boot sound: on" || _notify "Boot sound: off"
 }
 
@@ -3763,7 +3779,7 @@ _fan_lcd_override() {
 
     local val
     [[ "$choice" == *"Enable"* ]] && val=1 || val=0
-    echo "$val" | sudo tee "$lcd_file" >/dev/null 2>&1
+    echo "$val" | _priv tee "$lcd_file" >/dev/null 2>&1
     [ "$val" = "1" ] && _notify "LCD override: on" || _notify "LCD override: off"
 }
 
@@ -3796,7 +3812,7 @@ _fan_gpu_mode() {
 
     local val
     [[ "$choice" == *"Integrated"* ]] && val=0 || val=1
-    echo "$val" | sudo tee "$gpu_file" >/dev/null 2>&1
+    echo "$val" | _priv tee "$gpu_file" >/dev/null 2>&1
     _notify "GPU mode: $(echo "$choice" | sed 's/^[[:space:]]*//')"
 }
 
@@ -4216,7 +4232,7 @@ _kb_rgb_stoa_theme() {
 
     # Source current palette
     local color_file="${HOME}/.config/stoa/colors.sh"
-    [ ! -f "$color_file" ] && color_file="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)/theme/colors.sh"
+    [ ! -f "$color_file" ] && color_file="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)/theme/colors.sh"
 
     if [ -f "$color_file" ]; then
         source "$color_file"
@@ -4331,7 +4347,7 @@ _predict_languages() {
         if [ "$enabled" = yes ]; then rows+=(TRUE); else rows+=(FALSE); fi
         if [ "$downloaded" = yes ]; then status="downloaded"; else status="downloads ~600 KB"; fi
         rows+=("$code" "$name" "$status")
-    done < <(stoa-predict languages)
+    done < <("${STOA_BIN}/stoa-predict" languages)
 
     # Language names are not ASCII. GTK rejects them in argv ("Invalid byte
     # sequence") unless the locale is UTF-8, and a session started without
@@ -4349,7 +4365,7 @@ _predict_languages() {
     fi
 
     _notify "Saving prediction languages..."
-    if err=$(stoa-predict set-languages "${codes[@]}" 2>&1); then
+    if err=$("${STOA_BIN}/stoa-predict" set-languages "${codes[@]}" 2>&1); then
         _notify "Prediction languages: ${codes[*]}"
     else
         _notify "${err:-Could not save the prediction languages}"
@@ -4360,7 +4376,7 @@ menu_predict() {
     while true; do
         local state langs choice
         if _predict_running; then state="on"; else state="off"; fi
-        langs=$(stoa-predict languages | awk -F'\t' '$3 == "yes" { printf "%s%s", sep, $2; sep = ", " }')
+        langs=$("${STOA_BIN}/stoa-predict" languages | awk -F'\t' '$3 == "yes" { printf "%s%s", sep, $2; sep = ", " }')
 
         choice=$(_yad_select "  Text prediction" \
             "  Prediction ($state) - Super+Shift+S" \
@@ -4369,7 +4385,7 @@ menu_predict() {
         [ -z "$choice" ] || [[ "$choice" == *"Back"* ]] && return
 
         case "$choice" in
-            *Prediction*) stoa-predict toggle >/dev/null; sleep 1 ;;
+            *Prediction*) "${STOA_BIN}/stoa-predict" toggle >/dev/null; sleep 1 ;;
             *Languages*)  _predict_languages ;;
         esac
     done
@@ -4462,11 +4478,11 @@ _print_add() {
 _print_toggle_cups() {
     if systemctl is-active cups.service &>/dev/null; then
         _yad_confirm "Stop CUPS service?" && {
-            sudo systemctl stop cups.service 2>/dev/null
+            _priv systemctl stop cups.service 2>/dev/null
             _notify "CUPS service stopped"
         }
     else
-        sudo systemctl enable --now cups.service 2>/dev/null
+        _priv systemctl enable --now cups.service 2>/dev/null
         _notify "CUPS service started"
     fi
 }
@@ -4589,7 +4605,7 @@ _dt_set_timezone() {
     fi
 
     _yad_confirm "Set timezone to $tz?" && {
-        sudo timedatectl set-timezone "$tz" 2>/dev/null
+        _priv timedatectl set-timezone "$tz" 2>/dev/null
         _notify "Timezone: $tz"
     }
 }
@@ -4600,11 +4616,11 @@ _dt_toggle_ntp() {
 
     if [ "$ntp_status" = "yes" ]; then
         _yad_confirm "Disable auto time sync (NTP)?" && {
-            sudo timedatectl set-ntp false 2>/dev/null
+            _priv timedatectl set-ntp false 2>/dev/null
             _notify "NTP: disabled"
         }
     else
-        sudo timedatectl set-ntp true 2>/dev/null
+        _priv timedatectl set-ntp true 2>/dev/null
         _notify "NTP: enabled (auto sync)"
     fi
 }
@@ -4626,7 +4642,7 @@ _dt_set_manual_time() {
     [ -z "$time_input" ] && return
 
     _yad_confirm "Set to ${date_input} ${time_input}?" && {
-        sudo timedatectl set-time "${date_input} ${time_input}" 2>/dev/null
+        _priv timedatectl set-time "${date_input} ${time_input}" 2>/dev/null
         _notify "Time set: ${date_input} ${time_input}"
     }
 }
@@ -4680,11 +4696,11 @@ _dt_language() {
 
     _yad_confirm "Set language to ${locale_val}? (requires logout)" && {
         # Enable the locale if not already
-        sudo sed -i "s/^#\(${locale_val}\)/\1/" /etc/locale.gen 2>/dev/null
-        sudo locale-gen &>/dev/null
+        _priv sed -i "s/^#\(${locale_val}\)/\1/" /etc/locale.gen 2>/dev/null
+        _priv locale-gen &>/dev/null
 
         # Set system locale
-        sudo localectl set-locale "LANG=${locale_val}" 2>/dev/null
+        _priv localectl set-locale "LANG=${locale_val}" 2>/dev/null
         _notify "Language: ${locale_val} (logout to apply)"
     }
 }
@@ -5128,10 +5144,10 @@ _ss_toggle() {
     local status
     status=$(_ss_is_enabled)
     if [ "$status" = "on" ]; then
-        stoa-screensaver disable 2>/dev/null
+        "${STOA_BIN}/stoa-screensaver" disable 2>/dev/null
         _notify "Screensaver: disabled"
     else
-        stoa-screensaver enable 2>/dev/null
+        "${STOA_BIN}/stoa-screensaver" enable 2>/dev/null
         _notify "Screensaver: enabled"
     fi
 }
@@ -5161,13 +5177,13 @@ _ss_set_timeout() {
         *"30 minute"*)  seconds=1800 ;;
     esac
 
-    stoa-screensaver set-timeout "$seconds" 2>/dev/null
+    "${STOA_BIN}/stoa-screensaver" set-timeout "$seconds" 2>/dev/null
     _notify "Screensaver timeout: $((seconds / 60)) min"
 }
 
 _ss_regenerate() {
     _notify "Generating screensaver animation..."
-    kitty -e stoa-screensaver generate &
+    kitty -e "${STOA_BIN}/stoa-screensaver" generate &
     disown
 }
 
@@ -5177,7 +5193,7 @@ _ss_preview() {
         _notify "No animation yet — generate first"
         return
     fi
-    stoa-screensaver start &
+    "${STOA_BIN}/stoa-screensaver" start &
     disown
 }
 
@@ -5241,11 +5257,11 @@ menu_stoa() {
                 ;;
             *wallpapers*)
                 _notify "Generating wallpapers..."
-                stoa-walls 2>/dev/null
+                "${STOA_BIN}/stoa-walls" 2>/dev/null
                 _notify "Wallpapers generated!"
                 ;;
             *fetch*)
-                kitty -e stoa-fetch &
+                kitty -e "${STOA_BIN}/stoa-fetch" &
                 disown
                 ;;
         esac
@@ -5340,11 +5356,11 @@ _disk_smart() {
     lines+=("─── SMART Health: $disk ───")
 
     local health
-    health=$(sudo smartctl -H "$disk" 2>/dev/null | grep -i "result\|status" | head -1)
+    health=$(_priv smartctl -H "$disk" 2>/dev/null | grep -i "result\|status" | head -1)
     [ -n "$health" ] && lines+=("  $health") || lines+=("  Could not read SMART (need sudo)")
 
     local info
-    info=$(sudo smartctl -i "$disk" 2>/dev/null)
+    info=$(_priv smartctl -i "$disk" 2>/dev/null)
     if [ -n "$info" ]; then
         local model serial fw
         model=$(echo "$info" | grep -i "Device Model\|Model Number" | head -1 | sed 's/.*: *//')
@@ -5357,7 +5373,7 @@ _disk_smart() {
 
     # Key SMART attributes
     local attrs
-    attrs=$(sudo smartctl -A "$disk" 2>/dev/null)
+    attrs=$(_priv smartctl -A "$disk" 2>/dev/null)
     if [ -n "$attrs" ]; then
         lines+=("" "─── Key Attributes ───")
         local temp power_on reallocated wear
@@ -5407,8 +5423,8 @@ _disk_mount() {
         _notify "Mounted $dev → $mp"
     else
         local mp="/mnt/$(basename "$dev")"
-        sudo mkdir -p "$mp"
-        sudo mount "$dev" "$mp" && _notify "Mounted $dev → $mp" || _notify "Mount failed"
+        _priv mkdir -p "$mp"
+        _priv mount "$dev" "$mp" && _notify "Mounted $dev → $mp" || _notify "Mount failed"
     fi
 }
 
@@ -5442,7 +5458,7 @@ _disk_unmount() {
     if command -v udisksctl &>/dev/null; then
         udisksctl unmount -b "$dev" 2>&1 | head -1
     else
-        sudo umount "$dev" 2>/dev/null
+        _priv umount "$dev" 2>/dev/null
     fi
     _notify "Unmounted $dev"
 }
@@ -5594,7 +5610,7 @@ _disk_fsck() {
     _yad_confirm "Run filesystem check on $dev?" || return
 
     local result
-    result=$(sudo fsck -n "$dev" 2>&1)
+    result=$(_priv fsck -n "$dev" 2>&1)
     echo "$result" | _yad_pipe "  fsck $dev"
 }
 
@@ -5642,7 +5658,7 @@ _disk_format() {
     esac
 
     _notify "Formatting $dev as $fs_choice..."
-    if sudo $mkfs_cmd "$dev" 2>&1; then
+    if _priv $mkfs_cmd "$dev" 2>&1; then
         _notify "Formatted $dev as $fs_choice"
     else
         _notify "Format failed!"
@@ -5679,12 +5695,12 @@ _disk_label() {
     [ -z "$new_label" ] && return
 
     case "$fstype" in
-        ext2|ext3|ext4) sudo e2label "$dev" "$new_label" ;;
-        btrfs)          sudo btrfs filesystem label "$dev" "$new_label" ;;
-        xfs)            sudo xfs_admin -L "$new_label" "$dev" ;;
-        vfat)           sudo fatlabel "$dev" "$new_label" ;;
-        ntfs)           sudo ntfslabel "$dev" "$new_label" ;;
-        exfat)          sudo exfatlabel "$dev" "$new_label" ;;
+        ext2|ext3|ext4) _priv e2label "$dev" "$new_label" ;;
+        btrfs)          _priv btrfs filesystem label "$dev" "$new_label" ;;
+        xfs)            _priv xfs_admin -L "$new_label" "$dev" ;;
+        vfat)           _priv fatlabel "$dev" "$new_label" ;;
+        ntfs)           _priv ntfslabel "$dev" "$new_label" ;;
+        exfat)          _priv exfatlabel "$dev" "$new_label" ;;
         *)              _notify "Cannot set label for $fstype"; return ;;
     esac
     _notify "Label set: $dev → $new_label"
@@ -5711,10 +5727,10 @@ _disk_benchmark() {
     _notify "Benchmarking $disk... (this takes a few seconds)"
 
     local result
-    result=$(sudo hdparm -tT "$disk" 2>/dev/null)
+    result=$(_priv hdparm -tT "$disk" 2>/dev/null)
     if [ -z "$result" ]; then
         # Fallback with dd
-        result=$(sudo dd if="$disk" of=/dev/null bs=1M count=512 2>&1 | tail -1)
+        result=$(_priv dd if="$disk" of=/dev/null bs=1M count=512 2>&1 | tail -1)
     fi
 
     local lines=()
@@ -5768,7 +5784,7 @@ _disk_fstab() {
             [ -z "$entry" ] && return
 
             _yad_confirm "Add to /etc/fstab?\n$entry" || return
-            echo "$entry" | sudo tee -a /etc/fstab >/dev/null
+            echo "$entry" | _priv tee -a /etc/fstab >/dev/null
             _notify "Entry added to fstab"
             ;;
     esac
@@ -5822,7 +5838,7 @@ _disk_cleanup() {
         *"package cache"*)
             if command -v paccache &>/dev/null; then
                 _yad_confirm "Clean package cache? (keep last 3 versions)" || return
-                sudo paccache -r 2>&1 | tail -1
+                _priv paccache -r 2>&1 | tail -1
                 _notify "Package cache cleaned"
             else
                 _notify "paccache not found (pacman-contrib)"
@@ -5830,7 +5846,7 @@ _disk_cleanup() {
             ;;
         *journal*)
             _yad_confirm "Vacuum journal to 2 weeks?" || return
-            sudo journalctl --vacuum-time=2weeks 2>&1 | tail -1
+            _priv journalctl --vacuum-time=2weeks 2>&1 | tail -1
             _notify "Journal cleaned"
             ;;
         *trash*)
@@ -5843,7 +5859,7 @@ _disk_cleanup() {
             pkgs=$(pacman -Qtdq 2>/dev/null)
             [ -z "$pkgs" ] && { _notify "No orphaned packages"; return; }
             _yad_confirm "Remove orphaned packages?\n$(echo "$pkgs" | head -10)" || return
-            echo "$pkgs" | sudo pacman -Rns - 2>&1 | tail -3
+            echo "$pkgs" | _priv pacman -Rns - 2>&1 | tail -3
             _notify "Orphaned packages removed"
             ;;
     esac
@@ -5905,7 +5921,7 @@ menu_disks() {
 # ── Run doctor and show results ──
 _health_doctor() {
     _notify "Running health check..."
-    stoa-doctor 2>/dev/null
+    "${STOA_BIN}/stoa-doctor" 2>/dev/null
     local log="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/doctor.log"
     if [ -f "$log" ]; then
         cat "$log" | _yad_pipe "  Doctor Report"
@@ -6265,10 +6281,10 @@ _health_security() {
     lines+=("")
     lines+=("─── Firewall ───")
     if command -v nft &>/dev/null; then
-        if sudo nft list ruleset 2>/dev/null | grep -q "chain"; then
+        if _priv nft list ruleset 2>/dev/null | grep -q "chain"; then
             lines+=("  ● nftables active")
             local rules
-            rules=$(sudo nft list ruleset 2>/dev/null | grep -c "rule" || echo "0")
+            rules=$(_priv nft list ruleset 2>/dev/null | grep -c "rule" || echo "0")
             lines+=("  Rules loaded: $rules")
         else
             lines+=("  ○ nftables — no rules loaded")
@@ -6400,7 +6416,7 @@ menu_health() {
 
 # Shared with stoa-maintain and stoa-vitals-status so the three cannot
 # disagree about where a backup is written and where it is looked for.
-_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+_STOA_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib"
 # shellcheck source=lib/stoa-paths.sh
 [ -r "$_STOA_LIB/stoa-paths.sh" ] && source "$_STOA_LIB/stoa-paths.sh" && stoa_paths_migrate
 _maintain_log="${STOA_LOG_DIR}/backup_$(date +%Y%m%d).log"
@@ -6609,7 +6625,7 @@ _maintain_restore_all() {
 # Run it in a terminal instead, where sudo can actually ask.
 _maintain_bin() {
     local here
-    here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/stoa-maintain.sh"
+    here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../system/stoa-maintain.sh"
     if [ -r "$here" ]; then echo "$here"; return 0; fi
     command -v stoa-maintain 2>/dev/null
 }
@@ -6752,7 +6768,7 @@ main_menu() {
             *Hardware*)     menu_hardware ;;
             *"Disks & Storage"*) menu_disks ;;
             *"Printers & Scanners"*) menu_printers ;;
-            *"Cloud Drive"*) stoa-drive & disown; exit 0 ;;
+            *"Cloud Drive"*) "${STOA_BIN}/stoa-drive" & disown; exit 0 ;;
             *Wallpaper*)    menu_wallpaper ;;
             *Theme*)        menu_theme ;;
             *"Power Management"*) menu_power_mgmt ;;

@@ -26,10 +26,10 @@ font_name="${font_name:-EB Garamond 11}"
 
 # Sync GTK 4.0
 if [ -f "$gtk4" ]; then
-    sed -i "s/^gtk-theme-name\s*=.*/gtk-theme-name = ${gtk_theme}/" "$gtk4"
-    sed -i "s/^gtk-icon-theme-name\s*=.*/gtk-icon-theme-name = ${icon_theme}/" "$gtk4"
-    sed -i "s/^gtk-cursor-theme-name\s*=.*/gtk-cursor-theme-name = ${cursor_theme}/" "$gtk4"
-    sed -i "s/^gtk-font-name\s*=.*/gtk-font-name = ${font_name}/" "$gtk4"
+    sed -i --follow-symlinks "s/^gtk-theme-name\s*=.*/gtk-theme-name = ${gtk_theme}/" "$gtk4"
+    sed -i --follow-symlinks "s/^gtk-icon-theme-name\s*=.*/gtk-icon-theme-name = ${icon_theme}/" "$gtk4"
+    sed -i --follow-symlinks "s/^gtk-cursor-theme-name\s*=.*/gtk-cursor-theme-name = ${cursor_theme}/" "$gtk4"
+    sed -i --follow-symlinks "s/^gtk-font-name\s*=.*/gtk-font-name = ${font_name}/" "$gtk4"
 fi
 
 # Apply via gsettings (as user)

@@ -83,6 +83,22 @@ _notify() {
     notify-send -t 3000 "Stoa Firewall" "$1" 2>/dev/null
 }
 
+# Root for the nft and systemctl calls. The script also runs from the settings
+# panel and the port monitor, with no terminal: a bare sudo cannot ask there and
+# pam_faillock counts the failure. Cached/NOPASSWD sudo, else polkit's prompt.
+_priv() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    elif sudo -n true 2>/dev/null; then
+        sudo -n "$@"
+    elif command -v pkexec >/dev/null 2>&1; then
+        pkexec "$@"
+    else
+        echo -e "  ${T}[!] Needs root and no terminal or polkit agent is available.${R}" >&2
+        return 1
+    fi
+}
+
 _init_dirs() {
     mkdir -p "$STOA_FW_DIR"
     touch "$WHITELIST" "$KNOWN_PORTS"
@@ -164,15 +180,15 @@ _apply_rules() {
 
     # Dry-run validate the new ruleset BEFORE flushing the old one.
     # Without this, a syntax error leaves the firewall fully open.
-    if ! sudo nft -c -f "$tmpfile" 2>/dev/null; then
+    if ! _priv nft -c -f "$tmpfile" 2>/dev/null; then
         echo -e "  ${T}[!] Generated nftables ruleset failed validation; keeping previous ruleset.${R}" >&2
         rm -f "$tmpfile"
         return 1
     fi
 
     # Flush old stoa rules and apply validated new ones
-    sudo nft delete table inet stoa_firewall 2>/dev/null
-    if ! sudo nft -f "$tmpfile"; then
+    _priv nft delete table inet stoa_firewall 2>/dev/null
+    if ! _priv nft -f "$tmpfile"; then
         echo -e "  ${T}[!] nft -f failed unexpectedly after validation; firewall may be inactive.${R}" >&2
         rm -f "$tmpfile"
         return 1
@@ -180,8 +196,8 @@ _apply_rules() {
     rm -f "$tmpfile"
 
     # Save persistent rules
-    sudo mkdir -p /etc/nftables.d
-    _generate_rules | sudo tee "$NFT_RULES" > /dev/null
+    _priv mkdir -p /etc/nftables.d
+    _generate_rules | _priv tee "$NFT_RULES" > /dev/null
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -204,13 +220,13 @@ cmd_setup() {
 
     # Enable nftables service
     echo -e "  ${S}  Enabling nftables service...${R}"
-    sudo systemctl enable nftables --now 2>/dev/null
+    _priv systemctl enable nftables --now 2>/dev/null
 
     # Ensure main nftables.conf includes our rules
     if ! grep -q "include.*nftables.d" /etc/nftables.conf 2>/dev/null; then
         echo -e "  ${S}  Adding include directive to /etc/nftables.conf...${R}"
-        sudo mkdir -p /etc/nftables.d
-        echo 'include "/etc/nftables.d/*.conf"' | sudo tee -a /etc/nftables.conf > /dev/null
+        _priv mkdir -p /etc/nftables.d
+        echo 'include "/etc/nftables.d/*.conf"' | _priv tee -a /etc/nftables.conf > /dev/null
     fi
 
     # Apply deny-all rules
@@ -231,7 +247,7 @@ cmd_setup() {
 cmd_status() {
     _banner
 
-    if sudo nft list table inet stoa_firewall &>/dev/null; then
+    if _priv nft list table inet stoa_firewall &>/dev/null; then
         echo -e "  ${O}  Status: ACTIVE${R}"
     else
         echo -e "  ${T}  Status: INACTIVE${R}"
@@ -251,6 +267,14 @@ cmd_status() {
     fi
 
     echo ""
+
+    # Another firewall in front makes Stoa's allow rules ineffective: every
+    # base chain with policy drop must accept a packet on its own.
+    if command -v ufw >/dev/null 2>&1 && systemctl is-enabled ufw.service >/dev/null 2>&1; then
+        echo -e "  ${T}  ufw is enabled too: a port allowed here is still dropped by ufw.${R}"
+        echo -e "  ${S}  Use one of them — 'sudo ufw allow PORT' or disable ufw.${R}"
+        echo ""
+    fi
 
     # Monitor status
     if systemctl --user is-active stoa-firewall-monitor &>/dev/null; then
@@ -277,9 +301,9 @@ cmd_ports() {
         local proto port pid_prog state process pid
         proto=$(echo "$line" | awk '{print $1}')
         local local_addr
-        local_addr=$(echo "$line" | awk '{print $4}')
+        local_addr=$(echo "$line" | awk '{print $5}')
         port=$(echo "$local_addr" | rev | cut -d: -f1 | rev)
-        pid_prog=$(echo "$line" | awk '{print $6}')
+        pid_prog=$(echo "$line" | awk '{print $7}')
         state=$(echo "$line" | awk '{print $2}')
 
         # Extract process name and PID
@@ -301,28 +325,12 @@ cmd_ports() {
 
         printf "  ${F}  %-5s  %-5s  ${R}%-18b  ${S}%-8s  ${F}%s${R}\n" \
             "$port" "$proto" "$status_icon" "$pid" "$process"
-    done < <(ss -tlnpH 2>/dev/null; ss -ulnpH 2>/dev/null)
+    done < <(ss -tlnpH 2>/dev/null | sed 's/^/tcp /'; ss -ulnpH 2>/dev/null | sed 's/^/udp /')
 
     if ! $has_ports; then
         echo -e "  ${S}  No listening ports found.${R}"
     fi
     echo ""
-}
-
-# Validate that $port is a numeric 1–65535 and $proto is tcp|udp. Rejects
-# arbitrary strings that would otherwise be pasted into the whitelist, the
-# nftables ruleset, and the later `sed` deletion pattern.
-_validate_port_proto() {
-    local port="$1" proto="$2"
-    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
-        echo -e "  ${T}Invalid port: '${port}' (expected 1-65535).${R}"
-        return 1
-    fi
-    if [ "$proto" != "tcp" ] && [ "$proto" != "udp" ]; then
-        echo -e "  ${T}Invalid protocol: '${proto}' (expected tcp or udp).${R}"
-        return 1
-    fi
-    return 0
 }
 
 cmd_allow() {
@@ -372,14 +380,14 @@ cmd_deny() {
 cmd_enable() {
     _init_dirs
     _apply_rules
-    sudo systemctl enable nftables --now 2>/dev/null
+    _priv systemctl enable nftables --now 2>/dev/null
     echo -e "  ${O}[✓] Firewall enabled.${R}"
     _notify "Firewall enabled"
 }
 
 cmd_disable() {
-    sudo nft delete table inet stoa_firewall 2>/dev/null
-    sudo rm -f "$NFT_RULES"
+    _priv nft delete table inet stoa_firewall 2>/dev/null
+    _priv rm -f "$NFT_RULES"
     echo -e "  ${T}[!] Firewall disabled. All ports open.${R}"
     _notify "Firewall disabled — all ports open"
 }
@@ -400,8 +408,8 @@ cmd_monitor() {
 
         local current_ports
         current_ports=$(mktemp)
-        ss -tlnpH 2>/dev/null | awk '{print $1 " " $4 " " $6}' > "$current_ports"
-        ss -ulnpH 2>/dev/null | awk '{print $1 " " $4 " " $6}' >> "$current_ports"
+        ss -tlnpH 2>/dev/null | awk '{print "tcp " $4 " " $6}' > "$current_ports"
+        ss -ulnpH 2>/dev/null | awk '{print "udp " $4 " " $6}' >> "$current_ports"
 
         while IFS= read -r line; do
             [ -z "$line" ] && continue
@@ -457,6 +465,7 @@ cmd_authorize() {
     _init_dirs
     local port="$1" proto="${2:-tcp}"
     [ -z "$port" ] && return 1
+    _validate_port_proto "$port" "$proto" || return 1
 
     echo "${port}/${proto}" >> "$WHITELIST"
     _apply_rules

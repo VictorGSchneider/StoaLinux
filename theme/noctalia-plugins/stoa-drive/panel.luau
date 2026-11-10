@@ -335,7 +335,7 @@ local function driveRow(d)
     return col({ gap = 4, key = d.name }, {
         rowN({ align = "center", gap = 8 }, topChildren),
         rowN({ align = "center", gap = 8 }, {
-            prog({ progress = cachePct / 100.0, flexGrow = 1, fill = "tertiary", track = "surface_variant" }),
+            prog({ progress = cachePct / 100.0, flexGrow = 1, fill = "tertiary", track = "surface_container" }),
             lbl({ text = cacheInfo, fontSize = 11, color = "on_surface_variant" }),
         }),
     })

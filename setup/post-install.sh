@@ -107,7 +107,7 @@ UI_PKGS="libnotify"
 # Standalone GUI apps that replace what used to be custom rofi menus in
 # stoa-settings/stoa-store (display layout, audio device/mixer, network
 # profiles/VPN, bluetooth pairing, disk management, GTK theming).
-SETTINGS_APP_PKGS="wdisplays pwvucontrol nm-connection-editor blueman gnome-disk-utility"
+SETTINGS_APP_PKGS="wdisplays nm-connection-editor blueman gnome-disk-utility"
 
 # Browser + Notes (AUR)
 BROWSER_PKGS="brave-bin"
@@ -294,6 +294,7 @@ if [ "$INSTALL_PKGS" = "y" ]; then
         echo -e "  ${S}    Or use: Super+S → VPN${R}"
     fi
     _install_aur bauh                   "Bauh (package manager GUI)" bauh || true
+    _install_aur pwvucontrol            "pwvucontrol (audio mixer)" pwvucontrol || true
     _install_aur nwg-look               "nwg-look (GTK theme editor)" nwg-look || true
 
     # ── AUR packages with custom already-installed checks ──

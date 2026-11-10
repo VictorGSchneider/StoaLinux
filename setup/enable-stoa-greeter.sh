@@ -132,9 +132,7 @@ if [ "${1:-}" = "--disable" ]; then
     _disable_autologin
     _unseed_profile "$HOME/.zprofile"
     _unseed_profile "$HOME/.bash_profile"
-    echo ""
-    echo -e "  ${F}Note:${R} ${S}hyprlock is still the first autostart call in hyprland.lua —${R}"
-    echo -e "        ${S}edit it manually if you no longer want the session to lock on start.${R}"
+    rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/boot-lock"
     echo ""
     exit 0
 fi
@@ -180,6 +178,10 @@ else
 fi
 
 _enable_autologin
+# hyprland.lua starts hyprlock only while this marker exists (see
+# enable-stoa-greetd.sh); here hyprlock is the password prompt.
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/stoa"
+: > "${XDG_CONFIG_HOME:-$HOME/.config}/stoa/boot-lock"
 _seed_profile "$HOME/.zprofile"
 _seed_profile "$HOME/.bash_profile"
 

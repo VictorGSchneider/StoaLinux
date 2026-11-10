@@ -9,7 +9,9 @@
         "removable": true
     },
     "hostname": "stoa",
-    "kernels": ["linux"],
+    "kernels": [
+        "linux"
+    ],
     "locale_config": {
         "kb_layout": "br-abnt2",
         "sys_enc": "UTF-8",
@@ -21,13 +23,10 @@
     "ntp": true,
     "packages": [
         "hyprland",
-        "waybar",
-        "swaybg",
         "xdg-desktop-portal-hyprland",
         "xdg-desktop-portal-gtk",
         "libnotify",
         "wdisplays",
-        "pwvucontrol",
         "nm-connection-editor",
         "blueman",
         "gnome-disk-utility",
@@ -44,7 +43,6 @@
         "slurp",
         "wf-recorder",
         "wl-clipboard",
-        "cliphist",
         "imagemagick",
         "brightnessctl",
         "qt5ct",
@@ -79,7 +77,6 @@
         "gvfs-mtp",
         "catfish",
         "qalculate-gtk",
-        "hyprlock",
         "github-cli",
         "gnupg",
         "nftables",
@@ -89,7 +86,14 @@
         "v4l-utils",
         "bluez",
         "bluez-utils",
-        "fastfetch"
+        "fastfetch",
+        "noctalia",
+        "niri",
+        "yad",
+        "zsh-autosuggestions",
+        "zsh-syntax-highlighting",
+        "zsh-history-substring-search",
+        "zsh-completions"
     ],
     "parallel downloads": 10,
     "profile_config": {
