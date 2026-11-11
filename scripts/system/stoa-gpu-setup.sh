@@ -134,6 +134,12 @@ detect_kernels() {
         | grep -vE '^linux-(firmware|api-headers|atm|docs|tools)|-(headers|docs)$' || true
 }
 
+# True when some installed package already provides the NVIDIA kernel module
+# (nvidia, nvidia-open, *-dkms, linux-<flavour>-nvidia[-open]).
+nvidia_module_installed() {
+    pacman -Qq 2>/dev/null | grep -v '^linux-firmware' | grep -qE '^(nvidia|nvidia-open|nvidia-[0-9]+xx|nvidia-open-dkms|nvidia-dkms|nvidia-[0-9]+xx-dkms|linux[a-z0-9-]*-nvidia(-open)?)$'
+}
+
 needs_dkms() {
     # Returns 0 (true) if any kernel other than plain `linux` is installed.
     local kernels
@@ -357,6 +363,14 @@ case "$GPU_VENDOR" in
                     GPU_DRIVER_PKGS="nvidia-utils nvidia-settings libva-nvidia-driver"
                 else
                     GPU_DRIVER_PKGS="${NVIDIA_DRIVER} nvidia-utils nvidia-settings libva-nvidia-driver"
+                    # CachyOS ships the module prebuilt per kernel
+                    # (linux-cachyos-nvidia-open…). Adding a second provider of
+                    # NVIDIA-MODULE (nvidia, nvidia-dkms, nvidia-580xx-dkms)
+                    # conflicts with it: keep the userspace, skip the module.
+                    if nvidia_module_installed; then
+                        GPU_DRIVER_PKGS="nvidia-utils nvidia-settings libva-nvidia-driver"
+                        echo -e "  ${O}      NVIDIA kernel module already installed — keeping it, adding userspace only.${R}"
+                    fi
                 fi
 
                 # Hybrid laptop: also install the iGPU's mesa stack so
