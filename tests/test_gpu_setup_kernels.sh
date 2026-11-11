@@ -53,6 +53,14 @@ _check "K3 linux-cachyos only"            "dkms"     "$(_case $BASE linux-cachyo
 _check "K4 linux-cachyos + -lts"          "dkms"     "$(_case $BASE linux-cachyos linux-cachyos-lts)"
 _check "K5 firmware and headers are not kernels" "prebuilt" "$(_case $BASE linux linux-headers linux-firmware-whence)"
 
+# K9: the prebuilt module packages (linux-cachyos-nvidia-open) are named like
+# kernels but are not: they have no -headers package, and the script asked
+# pacman for linux-cachyos-nvidia-open-headers ("target not found").
+_kernels() { { sed -n '/^detect_kernels() {/,/^}/p' scripts/system/stoa-gpu-setup.sh; echo detect_kernels; } > "$TMP/h3.sh"
+             FAKE_PKGS="$*" PATH="$TMP/bin:$PATH" bash "$TMP/h3.sh" 2>/dev/null | tr '\n' ' '; }
+_check "K9 module packages are not kernels" "linux-cachyos linux-cachyos-lts " \
+    "$(_kernels $BASE linux-cachyos linux-cachyos-lts linux-cachyos-nvidia-open linux-cachyos-lts-nvidia-open linux-cachyos-headers)"
+
 # K6-K8: never add a second provider of the NVIDIA kernel module. The package
 # the script used to offer on CachyOS (nvidia → nvidia-580xx-dkms) conflicts
 # with the prebuilt linux-cachyos-nvidia-open and the transaction is refused.

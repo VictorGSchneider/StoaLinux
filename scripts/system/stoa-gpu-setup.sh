@@ -131,7 +131,7 @@ detect_kernels() {
     # Every kernel flavour (linux-zen, linux-cachyos, linux-cachyos-lts…), but
     # not the packages that merely start with "linux".
     pacman -Qq 2>/dev/null | grep -E '^linux(-[a-z0-9]+)*$' \
-        | grep -vE '^linux-(firmware|api-headers|atm|docs|tools)|-(headers|docs)$' || true
+        | grep -vE '^linux-(firmware|api-headers|atm|docs|tools)|-(headers|docs)$|-nvidia(-open)?$' || true
 }
 
 # True when some installed package already provides the NVIDIA kernel module
@@ -437,7 +437,7 @@ ALL_PKGS=""
 # kernel that's installed but missing -headers. Add headers for each
 # detected kernel package.
 HEADER_PKGS=""
-if $IS_NVIDIA && $USE_DKMS; then
+if $IS_NVIDIA && $USE_DKMS && ! nvidia_module_installed; then
     for k in $INSTALLED_KERNELS; do
         HEADER_PKGS="$HEADER_PKGS ${k}-headers"
     done
