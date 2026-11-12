@@ -196,6 +196,9 @@ _link "${STOA_DIR}/config/thunar/uca.xml"           "${CONFIG_DIR}/Thunar/uca.xm
 _link "${STOA_DIR}/config/zed/settings.json"        "${CONFIG_DIR}/zed/settings.json"
 _link "${STOA_DIR}/config/fastfetch/config.jsonc"      "${CONFIG_DIR}/fastfetch/config.jsonc"
 _link "${STOA_DIR}/config/fastfetch/stoa-temple.txt"   "${CONFIG_DIR}/fastfetch/stoa-temple.txt"
+# EB Garamond lives in texlive-fontsextra's texmf tree; this makes fontconfig see it.
+_link "${STOA_DIR}/config/fontconfig/conf.d/50-stoa-ebgaramond.conf" \
+      "${CONFIG_DIR}/fontconfig/conf.d/50-stoa-ebgaramond.conf"
 
 # ── Theme (GTK + Qt + Steam + Calibre + YACReader + OnlyOffice + Betterbird + Zed) ──
 _link "${STOA_DIR}/theme/gtk-3.0/settings.ini"  "${CONFIG_DIR}/gtk-3.0/settings.ini"

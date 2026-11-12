@@ -34,6 +34,10 @@ they went unnoticed:
       rewrite at the shipped file instead, the palette named Stoa
       silently becomes Dracula and there is no way back to the original.
 
+  R6  every fontconfig drop-in under config/fontconfig/conf.d is well-formed
+      XML and is linked by install.sh. A typo there makes fontconfig skip the
+      whole file silently and the theme font falls back without a word.
+
 Commented-out options in stoa.conf count: they are documentation of a
 supported setting, and a user who uncomments one expects it to work.
 """
@@ -42,6 +46,7 @@ from __future__ import annotations
 
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -370,10 +375,27 @@ def check_user_crontab_writes() -> list[str]:
     return problems
 
 
+def check_fontconfig_dropins() -> list[str]:
+    problems: list[str] = []
+    install = INSTALL.read_text(encoding="utf-8")
+    for conf in sorted((ROOT / "config" / "fontconfig" / "conf.d").glob("*.conf")):
+        rel = conf.relative_to(ROOT).as_posix()
+        try:
+            root = ET.parse(conf).getroot()
+        except ET.ParseError as err:
+            problems.append(f"{rel}: not well-formed XML ({err})")
+            continue
+        if root.tag != "fontconfig":
+            problems.append(f"{rel}: root element is <{root.tag}>, want <fontconfig>")
+        if rel not in install.replace("${STOA_DIR}/", ""):
+            problems.append(f"{rel}: install.sh never links it")
+    return problems
+
+
 def main() -> int:
     problems = (check_hook_targets() + check_conf_options()
                 + check_keybind_docs() + check_user_crontab_writes()
-                + check_shipped_palette())
+                + check_shipped_palette() + check_fontconfig_dropins())
     for problem in problems:
         print(f"config-integrity: {problem}")
     if problems:
