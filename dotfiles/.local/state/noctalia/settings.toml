@@ -1,5 +1,8 @@
 config_version = 16
 
+[accessibility]
+ui_scale = 1.0500000081956387
+
 [backdrop]
 enabled = true
 
@@ -14,7 +17,9 @@ capsule_opacity = 0.65999998524785042
 center = [ "clock", "taskbar", "launcher", "workspaces", "widget" ]
 contact_shadow = true
 end = [ "tray", "notifications", "clipboard", "stoa/drive:pill", "group:g1", "pill", "session" ]
-font_scale = 1.0499999839812517
+font_family = "EB Garamond"
+font_scale = 1.1999999806284904
+font_weight = 600
 layer = "overlay"
 margin_ends = 15
 padding = 0
@@ -180,6 +185,7 @@ enabled = [ "stoa/drive", "stoa/health", "alexander/screen-toolkit", "stoa/memen
 
 [shell]
 external_ip_enabled = true
+font_family = "EB Garamond"
 niri_overview_type_to_launch_enabled = true
 panel_anchor_bar = "default"
 password_style = "random"
@@ -255,9 +261,15 @@ mode = "dark"
 source = "custom"
 wallpaper_scheme = "m3-content"
 
+    [theme.templates]
+    enable_builtin_templates = false
+    enable_community_templates = false
+
 [wallpaper]
+edge_smoothness = 0.99999997764825821
 fill_mode = "fit"
-transition = [ "disc", "fade", "honeycomb", "stripes", "wipe", "zoom" ]
+transition = [ "diamond", "disc", "fade", "honeycomb", "melt", "pixel", "stripes", "vortex", "wipe", "zoom" ]
+transition_duration = 3700
 transition_on_startup = true
 
     [wallpaper.automation]
