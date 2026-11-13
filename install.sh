@@ -346,6 +346,11 @@ else
     echo -e "  ${S}[~] stoa/sync.list already exists (preserved)${R}"
 fi
 
+# Personal files stoa-sync mirrored into dotfiles/ on the old machine. In a
+# terminal this asks before touching anything and backs up what it replaces;
+# without one (a pipe, CI) it only lists. `stoa-restore --help` has the rest.
+bash "${STOA_DIR}/scripts/tools/stoa-restore.sh" || true
+
 # ── Scripts ──
 mkdir -p "${HOME}/.local/bin"
 _link "${STOA_DIR}/scripts/tools/stoa-fetch.sh"           "${HOME}/.local/bin/stoa-fetch"
@@ -392,6 +397,7 @@ _link "${STOA_DIR}/scripts/tools/stoa-history.py"     "${HOME}/.local/bin/stoa-h
 _link "${STOA_DIR}/scripts/desktop/stoa-bar.sh"           "${HOME}/.local/bin/stoa-bar"
 _link "${STOA_DIR}/scripts/desktop/stoa-bar-toggle.sh"   "${HOME}/.local/bin/stoa-bar-toggle"
 _link "${STOA_DIR}/scripts/tools/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
+_link "${STOA_DIR}/scripts/tools/stoa-restore.sh"       "${HOME}/.local/bin/stoa-restore"
 _link "${STOA_DIR}/scripts/input/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/input/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
 # Text prediction languages: start with Brazilian Portuguese and English

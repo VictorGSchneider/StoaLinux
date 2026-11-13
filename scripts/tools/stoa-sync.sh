@@ -31,6 +31,7 @@ STEPS
   4  git add -A, commit and push if anything changed
 
 Takes no arguments. STOA_DIR overrides the checkout (default ~/StoaLinux).
+On a new machine, `stoa-restore` brings the mirrored files from dotfiles/ back.
 
 OPTIONS
   -h, --help    show this help
