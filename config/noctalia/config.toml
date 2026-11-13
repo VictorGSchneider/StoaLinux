@@ -12,7 +12,7 @@
 #  colorschemes/) are inert: v5 only reads *.toml and palettes/.
 
 [shell]
-font_family           = "sans-serif"
+font_family           = "EB Garamond"   # from texlive-fontsextra, see config/fontconfig
 time_format           = "{:%H:%M}"
 date_format           = "%A, %d/%m"
 polkit_agent          = true          # replaces hyprpolkitagent
@@ -21,20 +21,43 @@ clipboard_history_max_entries = 200
 offline_mode          = false
 telemetry_enabled     = false
 settings_show_advanced = true
+settings_window_translucent = true
+niri_overview_type_to_launch_enabled = true
+password_style        = "random"
+# telemetry_enabled stays false on purpose. The GUI wrote `true` into
+# settings.toml on its first save, and that wins over this: turn it off in
+# the Noctalia settings, or delete the key from settings.toml.
 
 [shell.animation]
 enabled = true
 speed   = 1.0
 
 [shell.panel]
-transparency_mode        = "solid"
-borders                  = true
+transparency_mode        = "glass"
+borders                  = false
 shadow                   = true
-launcher_placement       = "floating"
+launcher_placement       = "attached"
 launcher_position        = "center"
-clipboard_placement      = "floating"
+clipboard_placement      = "attached"
 clipboard_position       = "center"
 control_center_placement = "attached"
+session_placement        = "floating"
+session_position         = "center"
+open_near_click_launcher       = true
+open_near_click_clipboard      = true
+open_near_click_control_center = true
+open_near_click_wallpaper      = true
+
+[shell.screenshot]
+annotate             = true
+confirm_region       = true
+remember_last_region = true
+save_to_file         = false
+show_cursor          = true
+
+[shell.session]
+grid           = true
+show_shortcuts = false
 
 # Push wallpaper, palette, theme mode, font and monitor layout to the
 # Noctalia greeter whenever they change, so the login screen and the
@@ -56,13 +79,28 @@ control_center_placement = "attached"
 # Noctalia Greeter -> Sync Now, after changing the theme.
 
 [shell.greeter_sync]
+# Keep this false while [wallpaper.automation] is on: every rotation would
+# raise the polkit password box described above. A GUI save can write
+# `auto_sync = true` into settings.toml and silently undo it.
 auto_sync = false
 
 [shell.launcher]
 categories    = true
 show_icons    = true
 sort_by_usage = true
-app_grid      = false
+app_grid      = true
+category_icons_only = true
+default_view  = "pinned"
+search_position = "top"
+show_app_actions = true
+show_session_button  = false
+show_settings_button = false
+pinned = [
+    "brave-browser", "steam", "eu.betterbird.Betterbird",
+    "onlyoffice-desktopeditors", "obsidian", "calibre-gui", "kitty",
+    "thunar", "enpass", "stoa-snapshots", "dfm", "dev.zed.Zed",
+    "qalculate-gtk",
+]
 
 [shell.launcher.providers.calculator]
 prefix = "calc"
@@ -73,12 +111,15 @@ prefix = "emo"
 
 [shell.launcher.providers.session]
 prefix = "session"
+global = true
 
 [shell.launcher.providers.wallpaper]
 prefix = "wall"
+global = true
 
 [shell.launcher.providers.windows]
 prefix = "win"
+global = true
 
 # ── Theme ─────────────────────────────────────────────────────────────
 # The Stoa palette carries over from the v4 colorscheme unchanged —
@@ -90,6 +131,13 @@ mode           = "dark"
 source         = "custom"
 custom_palette = "Stoa"
 pure_black_dark = false
+wallpaper_scheme = "m3-content"
+
+# Off: Stoa writes the apps' themes itself (Super+S -> Theme), and kitty.conf
+# no longer includes the themes/noctalia.conf these templates used to generate.
+[theme.templates]
+enable_builtin_templates   = false
+enable_community_templates = false
 
 # ── Wallpaper ─────────────────────────────────────────────────────────
 # Replaces swaybg. stoa-walls.sh still curates the collection; Noctalia
@@ -97,13 +145,15 @@ pure_black_dark = false
 
 [wallpaper]
 enabled             = true
-fill_mode           = "crop"
-transition          = ["fade"]
-transition_duration = 1500
+fill_mode           = "fit"
+transition          = ["diamond", "disc", "fade", "honeycomb", "melt", "pixel", "stripes", "vortex", "wipe", "zoom"]
+transition_duration = 3700
+transition_on_startup = true
+edge_smoothness     = 1.0
 directory           = "~/Pictures/Wallpapers"
 
 [wallpaper.automation]
-enabled          = false
+enabled          = true
 interval_seconds = 1800
 order            = "random"
 recursive        = true
@@ -166,10 +216,13 @@ action  = "screen_off"
 enabled = true
 
 # ── Bar ───────────────────────────────────────────────────────────────
-# Mirrors the previous waybar layout:
-#   left   workspaces (+ taskbar, which covers waybar's window title)
-#   center clock
-#   right  clipboard, sysmon, network, battery, volume, control centre
+# A transparent, floating bar (background_opacity 0) whose widgets sit in
+# capsules:
+#   left   sysmon, weather, health pill, media
+#   center clock, taskbar, launcher, workspaces, screen-toolkit widget
+#   right  tray, notifications, clipboard, drive pill, a capsule group
+#          (network, bluetooth, volume, brightness, battery), the keybinds
+#          pill, session
 #
 # waybar spent four modules on disk/cpu/memory/network; v5 folds all of
 # that into the single `sysmon` widget, driven by [system.monitor] above.
@@ -184,22 +237,114 @@ enabled = true
 
 [bar.default]
 position           = "top"
-thickness          = 34
-background_opacity = 1.0
+thickness          = 40
+background_opacity = 0.0
 radius             = 12
-margin_ends        = 180
+margin_ends        = 15
 margin_edge        = 10
-padding            = 14
+padding            = 0
 widget_spacing     = 6
 shadow             = true
 reserve_space      = true
+layer              = "overlay"
+scale              = 1.05
+font_family        = "EB Garamond"
+font_scale         = 1.2
+font_weight        = 600
+contact_shadow     = true
+capsule            = true
+capsule_fill       = "on_primary"
+capsule_foreground = "primary"
+capsule_border     = "on_primary"
+capsule_border_width = 0.0
+capsule_opacity    = 0.66
 
-start  = ["launcher", "workspaces", "taskbar"]
-center = ["clock"]
+start  = ["sysmon", "weather", "stoa/health:pill", "media"]
+center = ["clock", "taskbar", "launcher", "workspaces", "widget"]
 # `stoa/drive:pill`, `stoa/health:pill` and `stoa/keybinds:pill` are the local
 # plugins in theme/noctalia-plugins/{stoa-drive,stoa-health,stoa-keybinds}
 # (plugin widgets are addressed as <plugin-id>:<entry-id>).
-end    = ["media", "tray", "notifications", "clipboard", "stoa/drive:pill", "stoa/health:pill", "stoa/keybinds:pill", "sysmon", "network", "bluetooth", "volume", "brightness", "battery", "control-center", "session"]
+# `group:g1` is the capsule group below; `pill` is [widget.pill].
+end    = ["tray", "notifications", "clipboard", "stoa/drive:pill", "group:g1", "pill", "session"]
+
+[bar.default.dead_zone.actions]
+middle      = "volume-mute"
+scroll_up   = "volume-up 1"
+scroll_down = "volume-down 1"
+
+[[bar.default.capsule_group]]
+id        = "g1"
+members   = ["network", "bluetooth", "volume", "brightness", "battery"]
+enabled   = true
+accordion = false
+accordion_direction = "end"
+fill      = "on_primary"
+foreground = "primary"
+border    = "on_primary"
+border_width = 1.0
+opacity   = 1.0
+padding   = 6.0
+
+# Bar widgets configured beyond their defaults.
+[widget.pill]
+type = "stoa/keybinds:pill"
+
+[widget.widget]
+type = "alexander/screen-toolkit:widget"
+
+[widget.launcher]
+glyph = "columns"
+capsule_foreground = "primary"
+
+[widget.lock_keys]
+hide_when_off = true
+show_scroll_lock = true
+
+[widget.media]
+rotate_album_art = true
+title_scroll = "always"
+
+[widget.tray]
+match_adjacent_spacing = true
+
+[widget.weather]
+max_length = 180
+
+# ── Dock, night light and friends ─────────────────────────────────────
+
+[accessibility]
+ui_scale = 1.05
+
+[backdrop]
+enabled = true
+
+[brightness]
+sync_all_monitors = true
+
+[calendar]
+enabled = true
+dedupe_events = true
+
+[dock]
+enabled          = true
+layer            = "overlay"
+background_opacity = 0.0
+pinned           = ["brave-browser"]
+reserve_space    = false
+show_dots        = true
+smart_auto_hide  = true
+
+[nightlight]
+enabled           = true
+temperature_day   = 4800
+temperature_night = 2800
+
+[control_center]
+width           = 800
+sidebar_section = "none"
+
+[control_center.calendar]
+show_week_numbers = true
 
 # ── Control centre shortcuts ──────────────────────────────────────────
 
@@ -250,6 +395,31 @@ started = "~/.local/bin/stoa-doctor"
 # in settings.toml (the GUI writes one the first time a plugin is toggled)
 # replaces this list rather than adding to it; install.sh enables the same
 # plugins over IPC so an existing install picks up new ones too.
+
+[plugin_settings."stoa/drive"]
+manage_open_near_click = true
+
+[plugin_settings."stoa/health"]
+manage_open_near_click = true
+
+[plugin_settings."stoa/keybinds"]
+cheatsheet_open_near_click = true
+icon = "keyboard-hide"
+
+[plugin_settings."stoa/predict"]
+popup_placement = "attached"
+
+[plugin_settings."alexander/screen-toolkit"]
+panel-mode = "legacy"
+panel_placement = "attached"
+panel_open_near_click = true
+panel-legacy_layer = "overlay"
+panel-legacy_open_near_click = true
+panel-legacy_position = "auto"
+result_layer = "overlay"
+record-copy-to-clipboard = true
+search-engine-url = "https://search.brave.com/search?q="
+selected-ocr-lang = "eng+pt-br"
 
 [plugins]
 enabled = ["stoa/drive", "stoa/health", "stoa/keybinds", "stoa/memento", "stoa/predict", "alexander/screen-toolkit"]
