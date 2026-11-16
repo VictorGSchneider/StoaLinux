@@ -34,8 +34,10 @@ COMMANDS
   setup                   install nftables and configure deny-all
   status                  firewall status and the active rules
   ports                   every listening port, whether it is allowed, and the process
-  allow PORT [tcp|udp]    add a port to the whitelist (default: tcp)
-  deny PORT [tcp|udp]     remove a port from the whitelist
+  allow PORT [tcp|udp] [--keep]
+                          allow a port until the next reboot (default: tcp); --keep makes
+                          it permanent. Permanent today: see "status"
+  deny PORT [tcp|udp]     close a port (temporary or permanent)
   authorize PORT [tcp|udp]  allow a port permanently without checks; used by the monitor's
                           notification action
   enable                  enable nftables at boot
@@ -43,6 +45,8 @@ COMMANDS
   port PORT [tcp|udp]     everything about one port: process, user, binary, who is
                           connected, what got through/was dropped, allow/deny history
   log [HOURS]             allow/deny history and traffic summary (default 24h)
+  allowed                 list every allowed port, one per line
+  rules [boot]            print the ruleset (boot = what /etc keeps for the next boot)
   active                  exit 0 if the firewall is loaded (never asks for a password)
   monitor                 watch for new listening ports and notify, with allow/deny actions
                           (run as a systemd user service)
@@ -71,7 +75,13 @@ T='\033[38;2;179;107;90m'
 R='\033[0m'
 
 STOA_FW_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/firewall"
+# Two lists. PERMANENT survives reboots and is the only thing written to /etc
+# (loaded at boot, no prompt needed). WHITELIST is the temporary one: it is
+# loaded live and wiped on the first run after each boot (_boot_reset), so a
+# port that was opened once for some app is closed again at the next boot.
 WHITELIST="${STOA_FW_DIR}/allowed-ports.conf"
+PERMANENT="${STOA_FW_DIR}/permanent-ports.conf"
+BOOT_ID_FILE="${STOA_FW_DIR}/boot-id"
 KNOWN_PORTS="${STOA_FW_DIR}/known-ports.list"
 NFT_RULES="/etc/nftables.d/stoa-firewall.conf"
 AUDIT_LOG="${STOA_FW_DIR}/audit.log"
@@ -115,15 +125,41 @@ _fw_active() {
     elif sudo -n true 2>/dev/null; then
         sudo -n nft list table inet stoa_firewall &>/dev/null
     else
-        # No root without asking: the rules file is world-readable, and
-        # nftables.service reloads it at boot and on enable.
-        [ -s "$NFT_RULES" ] && systemctl is-active --quiet nftables
+        # No root without asking. A drop logged lately proves the table is
+        # loaded; failing that, the persisted rules file plus an enabled
+        # nftables.service (it is a oneshot: it is never "active", so that
+        # says nothing) mean it is configured and loads at boot.
+        journalctl -k --no-pager -o cat --since -10min --grep 'stoa-fw-(drop|pass):' 2>/dev/null | grep -q . && return 0
+        [ -s "$NFT_RULES" ] && systemctl is-enabled --quiet nftables
     fi
 }
 
 _init_dirs() {
     mkdir -p "$STOA_FW_DIR"
     touch "$WHITELIST" "$KNOWN_PORTS"
+    # First ever run: Enpass (browser integration) is the one port that stays.
+    [ -e "$PERMANENT" ] || echo "10391/tcp" > "$PERMANENT"
+    _boot_reset
+}
+
+# New boot since the last run -> forget the temporary allows. The rules
+# loaded at boot came from /etc and hold only PERMANENT, so this keeps the
+# list (and what the UI shows) equal to what the firewall really does.
+_boot_reset() {
+    local now last
+    now=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null) || return 0
+    last=$(cat "$BOOT_ID_FILE" 2>/dev/null)
+    if [ -n "$last" ] && [ "$last" != "$now" ]; then
+        if [ -s "$WHITELIST" ]; then
+            local e
+            while IFS= read -r e; do
+                [ -n "$e" ] && printf '%s  %-9s %-11s via=boot-reset  listener=-\n' \
+                    "$(date '+%F %T')" deny "$e" >> "$AUDIT_LOG" 2>/dev/null
+            done < "$WHITELIST"
+        fi
+        : > "$WHITELIST"
+    fi
+    echo "$now" > "$BOOT_ID_FILE"
 }
 
 # ── Validate port (1-65535) and protocol (tcp|udp) ──
@@ -162,12 +198,20 @@ _audit() {
 # ── Check if port is in whitelist ──
 _is_allowed() {
     local port="$1" proto="${2:-tcp}"
-    grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null
+    grep -qx "${port}/${proto}" "$WHITELIST" "$PERMANENT" 2>/dev/null
+}
+
+# Every allowed entry, one per line. "boot" = only what survives a reboot.
+_allowed_entries() {
+    if [ "${1:-}" = boot ]; then cat "$PERMANENT" 2>/dev/null
+    else cat "$PERMANENT" "$WHITELIST" 2>/dev/null; fi | sed '/^$/d;/^#/d' | awk '!seen[$0]++'
 }
 
 # ── Generate nftables rules from whitelist ──
 _generate_rules() {
-    local rules="" tcp_ports="" udp_ports=""
+    # $1 = boot -> only the permanent ports (what /etc keeps for the next boot)
+    local mode="${1:-}" rules="" tcp_ports="" udp_ports="" entries
+    entries=$(_allowed_entries "$mode")
     rules+="table inet stoa_firewall {\n"
     rules+="    chain input {\n"
     rules+="        type filter hook input priority 0; policy drop;\n"
@@ -186,7 +230,7 @@ _generate_rules() {
     rules+="        udp dport 68 accept\n"
 
     # Add whitelisted ports
-    if [ -s "$WHITELIST" ]; then
+    if [ -n "$entries" ]; then
         local accepts="" port proto
         while IFS= read -r entry; do
             [ -z "$entry" ] && continue
@@ -198,7 +242,7 @@ _generate_rules() {
                 tcp) tcp_ports+="${tcp_ports:+,}${port}" ;;
                 udp) udp_ports+="${udp_ports:+,}${port}" ;;
             esac
-        done < "$WHITELIST"
+        done <<< "$entries"
         rules+="\n"
         rules+="        # What got through: new connections on allowed ports (rate-limited).\n"
         rules+="        # 'stoa-firewall port N' and 'log' read these. An accept ends the\n"
@@ -230,40 +274,46 @@ _generate_rules() {
 # Exit: 0 ok, 2 could not stage, 3 ruleset failed validation (old one kept),
 #       4 nft -f failed after validation.
 _ROOT_APPLY='
-src=$1 dest=$2 enable=$3 inc=$4
+live=$1 boot=$2 dest=$3 enable=$4 inc=$5
 mkdir -p "$(dirname "$dest")" || exit 2
 staged="$dest.new"
-# Copy into a root-owned file first: what is validated is what is loaded, and
-# the user-owned temp file cannot be swapped in between.
-install -m 0644 -o root -g root "$src" "$staged" || exit 2
+# Copy into root-owned files first: what is validated is what is loaded, and
+# the user-owned temp files cannot be swapped in between.
+install -m 0644 -o root -g root "$boot" "$staged" || exit 2
+install -m 0600 -o root -g root "$live" "$staged.live" || { rm -f "$staged"; exit 2; }
 # Dry-run BEFORE flushing the old table. Without this, a syntax error leaves
 # the firewall fully open.
-if ! nft -c -f "$staged" 2>/dev/null; then rm -f "$staged"; exit 3; fi
+if ! nft -c -f "$staged.live" 2>/dev/null || ! nft -c -f "$staged" 2>/dev/null; then
+    rm -f "$staged" "$staged.live"; exit 3
+fi
 [ "$enable" = 1 ] && systemctl enable nftables --now >/dev/null 2>&1
 if [ "$inc" = 1 ] && ! grep -q "include.*nftables.d" /etc/nftables.conf 2>/dev/null; then
     echo "include \"/etc/nftables.d/*.conf\"" >> /etc/nftables.conf
 fi
 nft delete table inet stoa_firewall 2>/dev/null
-if ! nft -f "$staged"; then rm -f "$staged"; exit 4; fi
+if ! nft -f "$staged.live"; then rm -f "$staged" "$staged.live"; exit 4; fi
+rm -f "$staged.live"
+# On disk: only the permanent ports. Temporary ones are live, gone at reboot.
 mv -f "$staged" "$dest"
 '
 
 # _apply_rules [--enable-service] [--ensure-include]
 _apply_rules() {
-    local enable=0 inc=0 arg tmpfile rc
+    local enable=0 inc=0 arg tmpfile bootfile rc
     for arg in "$@"; do
         case "$arg" in
             --enable-service) enable=1 ;;
             --ensure-include) inc=1 ;;
         esac
     done
-    tmpfile=$(mktemp)
+    tmpfile=$(mktemp); bootfile=$(mktemp)
     _generate_rules > "$tmpfile"
-    chmod 0644 "$tmpfile"
+    _generate_rules boot > "$bootfile"
+    chmod 0644 "$tmpfile" "$bootfile"
 
-    _priv bash -c "$_ROOT_APPLY" stoa-root "$tmpfile" "$NFT_RULES" "$enable" "$inc"
+    _priv bash -c "$_ROOT_APPLY" stoa-root "$tmpfile" "$bootfile" "$NFT_RULES" "$enable" "$inc"
     rc=$?
-    rm -f "$tmpfile"
+    rm -f "$tmpfile" "$bootfile"
     case "$rc" in
         0) return 0 ;;
         3) echo -e "  ${T}[!] Generated nftables ruleset failed validation; keeping previous ruleset.${R}" >&2 ;;
@@ -317,13 +367,16 @@ cmd_status() {
     echo ""
 
     # Show whitelisted ports
-    if [ -s "$WHITELIST" ]; then
+    _init_dirs
+    if [ -n "$(_allowed_entries)" ]; then
         echo -e "  ${F}  Allowed ports:${R}"
         while IFS= read -r entry; do
-            [ -z "$entry" ] && continue
-            [[ "$entry" == \#* ]] && continue
-            echo -e "  ${O}    ✓ ${entry}${R}"
-        done < "$WHITELIST"
+            if grep -qx "$entry" "$PERMANENT" 2>/dev/null; then
+                echo -e "  ${O}    ✓ ${entry}${S}  permanent${R}"
+            else
+                echo -e "  ${O}    ✓ ${entry}${S}  until reboot${R}"
+            fi
+        done < <(_allowed_entries)
     else
         echo -e "  ${S}  No ports whitelisted (all incoming blocked).${R}"
     fi
@@ -401,7 +454,10 @@ cmd_ports() {
 
 cmd_allow() {
     _init_dirs
-    local port="$1" proto="${2:-tcp}"
+    local port="$1" proto="${2:-tcp}" keep=0 list="$WHITELIST"
+    if [ "$proto" = "--keep" ]; then proto=tcp; keep=1; fi
+    if [ "${3:-}" = "--keep" ]; then keep=1; fi
+    [ "$keep" = 1 ] && list="$PERMANENT"
 
     if [ -z "$port" ]; then
         echo -e "  ${T}Usage: stoa-firewall allow <port> [tcp|udp]${R}"
@@ -410,18 +466,26 @@ cmd_allow() {
 
     _validate_port_proto "$port" "$proto" || return 1
 
-    if _is_allowed "$port" "$proto"; then
-        echo -e "  ${S}Port ${port}/${proto} is already allowed.${R}"
+    if grep -qx "${port}/${proto}" "$PERMANENT" 2>/dev/null; then
+        echo -e "  ${S}Port ${port}/${proto} is already allowed (permanent).${R}"
+        return 0
+    fi
+    if [ "$keep" = 0 ] && _is_allowed "$port" "$proto"; then
+        echo -e "  ${S}Port ${port}/${proto} is already allowed (until reboot; use --keep to make it permanent).${R}"
         return 0
     fi
 
-    echo "${port}/${proto}" >> "$WHITELIST"
+    echo "${port}/${proto}" >> "$list"
     if ! _apply_rules; then
-        sed -i "/^${port}\/${proto}$/d" "$WHITELIST"   # not applied: do not list it as allowed
+        sed -i "/^${port}\/${proto}$/d" "$list"   # not applied: do not list it as allowed
         return 1
     fi
-    _audit allow "${port}/${proto}"
-    echo -e "  ${O}[✓] Port ${port}/${proto} allowed.${R}"
+    _audit allow "${port}/${proto}$([ "$keep" = 1 ] && echo ' permanent')"
+    if [ "$keep" = 1 ]; then
+        echo -e "  ${O}[✓] Port ${port}/${proto} allowed permanently.${R}"
+    else
+        echo -e "  ${O}[✓] Port ${port}/${proto} allowed until the next reboot.${R}"
+    fi
     _notify "Port ${port}/${proto} allowed"
 }
 
@@ -441,9 +505,13 @@ cmd_deny() {
         return 0
     fi
 
-    sed -i "/^${port}\/${proto}$/d" "$WHITELIST"
+    local was_perm=0
+    grep -qx "${port}/${proto}" "$PERMANENT" 2>/dev/null && was_perm=1
+    sed -i "/^${port}\/${proto}$/d" "$WHITELIST" "$PERMANENT"
     if ! _apply_rules; then
-        echo "${port}/${proto}" >> "$WHITELIST"   # not applied: it is still open
+        # not applied: it is still open
+        if [ "$was_perm" = 1 ]; then echo "${port}/${proto}" >> "$PERMANENT"
+        else echo "${port}/${proto}" >> "$WHITELIST"; fi
         return 1
     fi
     _audit deny "${port}/${proto}"
@@ -476,6 +544,64 @@ _fw_hits() { # <pass|drop> [since]
                for (i=1;i<=NF;i++) { split($i,k,"=")
                    if (k[1]=="SRC") s=k[2]; else if (k[1]=="PROTO") p=tolower(k[2]); else if (k[1]=="DPT") d=k[2] }
                if (d != "") print s, p, d }'
+}
+
+# ── Who is behind a port: IPs (and names) talking to it, for the notification ──
+# A listening socket has no "site" of its own. What can be told is (1) who has
+# connected or tried to reach this port lately (firewall drop/pass log, live
+# connections) and (2) which hosts the owning process is talking to right now
+# (for a browser: the sites it has open). Names come from reverse DNS, so they
+# are the server's name, not always the site's.
+_host_of() { # IP -> "IP (name)" or "IP"
+    local ip="$1" name
+    case "$ip" in
+        192.168.*|10.*|172.1[6-9].*|172.2?.*|172.3[01].*|127.*|fe80:*) echo "$ip (local network)"; return ;;
+    esac
+    name=$(timeout 2 getent hosts "$ip" 2>/dev/null | awk '{print $2; exit}')
+    if [ -n "$name" ]; then echo "$ip ($name)"; else echo "$ip"; fi
+}
+
+# Short form for the toast: the card is small and clips what does not fit, so
+# a name is cut to its last two labels ("fbcdn.net", not the whole rDNS).
+_host_short() { # IP -> "LAN IP" | "name.tld" | "IP"
+    local full name
+    full=$(_host_of "$1")
+    case "$full" in
+        *"(local network)") echo "$1"; return ;;
+        *" ("*")") name="${full#* (}"; name="${name%)}"
+                   echo "$name" | awk -F. 'NF>2 {print $(NF-1) "." $NF; next} {print}' ;;
+        *) echo "$1" ;;
+    esac
+}
+
+# Compact on purpose: at most 2 lines of ~40 characters each.
+_port_context() { # port proto pid -> up to 2 lines (may be empty)
+    local port="$1" proto="$2" pid="$3" ip n out="" list=""
+    local from
+    from=$( { _fw_hits drop -3min; _fw_hits pass -3min; } 2>/dev/null |
+        awk -v p="$port" -v pr="$proto" '$3==p && $2==pr {print $1}' | sort | uniq -c | sort -rn | head -2)
+    if [ -n "$from" ]; then
+        while read -r n ip; do list+="${list:+, }$(_host_short "$ip")"; done <<< "$from"
+        out+="Tried to reach: ${list}"$'\n'
+    fi
+    if [ -n "$pid" ] && [ -d "/proc/$pid" ]; then
+        # A browser's network work happens in child processes: take the tree.
+        local tree="$pid" kids="$pid" k pat peers
+        while [ -n "$kids" ]; do
+            kids=$(for k in $kids; do ps -o pid= --ppid "$k" 2>/dev/null; done | xargs)
+            tree+=" $kids"
+        done
+        pat=$(for k in $tree; do printf 'pid=%s,|' "$k"; done); pat="${pat%|}"
+        peers=$(ss -tnpH state established 2>/dev/null | grep -E "$pat" |
+            awk '{ sub(/:[0-9]+$/, "", $4); print $4 }' |
+            sed 's/^\[//;s/\]$//' | sort | uniq -c | sort -rn | head -3)
+        list=""
+        if [ -n "$peers" ]; then
+            while read -r n ip; do list+="${list:+, }$(_host_short "$ip")"; done <<< "$peers"
+            out+="Talking to: ${list}"$'\n'
+        fi
+    fi
+    printf '%s' "$out"
 }
 
 # stoa-firewall port PORT [tcp|udp] — everything known about one port.
@@ -525,7 +651,7 @@ cmd_port() {
 
         if [ "$proto" = tcp ]; then
             local conns
-            conns=$(ss -tnpH state established "( sport = :${port} )" 2>/dev/null | awk '{print $4 "  " $5}')
+            conns=$(ss -tnpH state established "( sport = :${port} )" 2>/dev/null | awk '{print $3 "  <-  " $4}')
             if [ -n "$conns" ]; then
                 echo -e "  ${F}Connected now:${R}"; echo "$conns" | sed 's/^/             /'
             fi
@@ -605,8 +731,9 @@ cmd_monitor() {
             }
 
             # Extract process name
-            if [[ "$pid_prog" =~ users:\(\(\"([^\"]+)\" ]]; then
-                process="${BASH_REMATCH[1]}"
+            local mpid=""
+            if [[ "$pid_prog" =~ users:\(\(\"([^\"]+)\",pid=([0-9]+) ]]; then
+                process="${BASH_REMATCH[1]}"; mpid="${BASH_REMATCH[2]}"
             else
                 process="unknown"
             fi
@@ -615,11 +742,14 @@ cmd_monitor() {
             echo "$port" >> "$KNOWN_PORTS"
 
             # Send notification with action
-            local action
+            # Give the first packets a moment to arrive, then say who is behind it.
+            sleep 3
+            local action ctx
+            ctx=$(_port_context "$port" "$proto" "$mpid")
             action=$(notify-send -t 0 -u critical \
                 -A "allow=Allow" -A "deny=Deny" \
                 "Stoa Firewall" \
-                "New port detected: ${port}/${proto}\nProcess: ${process}\n\nAllow this port?" \
+                "New port: ${port}/${proto}\n${process}${mpid:+ (pid ${mpid})}${ctx:+\n${ctx}}" \
                 2>/dev/null)
 
             case "$action" in
@@ -649,7 +779,7 @@ cmd_authorize() {
         return 1
     fi
     _audit authorize "${port}/${proto}"
-    _notify "Port ${port}/${proto} permanently allowed"
+    _notify "Port ${port}/${proto} allowed until reboot"
 }
 
 # ── Install systemd user service ──
@@ -684,18 +814,20 @@ case "${1:-status}" in
     setup)     cmd_setup ;;
     status)    cmd_status ;;
     ports)     cmd_ports ;;
-    allow)     cmd_allow "$2" "$3" ;;
+    allow)     cmd_allow "$2" "$3" "$4" ;;
     deny)      cmd_deny "$2" "$3" ;;
     enable)    cmd_enable ;;
     disable)   cmd_disable ;;
     monitor)   cmd_monitor ;;
     active)    _fw_active ;;
     port)      cmd_port "$2" "$3" ;;
+    allowed)   _init_dirs; _allowed_entries ;;
+    rules)     _init_dirs; _generate_rules "$2" ;;
     log)       cmd_log "$2" ;;
     authorize) cmd_authorize "$2" "$3" ;;
     *)
         echo -e "  ${T}Unknown command: $1${R}"
-        echo -e "  ${S}Usage: stoa-firewall {setup|status|ports|port|log|allow|deny|enable|disable|monitor}${R}"
+        echo -e "  ${S}Usage: stoa-firewall {setup|status|ports|port|log|allowed|rules|allow|deny|enable|disable|monitor}${R}"
         exit 1
         ;;
 esac

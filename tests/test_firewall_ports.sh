@@ -125,5 +125,22 @@ _check "B5 setup is one privileged call"        "1" "$(_priv_calls)"
 : > "$TMP/sudo.log"; _fw status > /dev/null; _fw active > /dev/null
 _check "B6 status/active never ask for root"    "0" "$(_priv_calls)"
 
+# Reboot hygiene: a port opened "for now" is live but is NOT written to /etc,
+# so it is gone at the next boot; permanent ports (Enpass' 10391/tcp) stay.
+# The first run after a new boot also empties the temporary list, so the UI
+# keeps matching what the firewall really does.
+PERM="$TMP/config/stoa/firewall/permanent-ports.conf"
+_check "R0 Enpass is permanent from the start"   "10391/tcp" "$(cat "$PERM")"
+_check "R1 live rules hold temporary ports"      "yes" "$(_fw rules | grep -q 'dport 8080 accept' && echo yes || echo no)"
+_check "R2 boot rules do not"                    "no"  "$(_fw rules boot | grep -q 'dport 8080 accept' && echo yes || echo no)"
+_check "R3 boot rules keep the permanent port"   "yes" "$(_fw rules boot | grep -q 'dport 10391 accept' && echo yes || echo no)"
+echo "old-boot-id" > "$TMP/config/stoa/firewall/boot-id"
+_fw status > /dev/null
+_check "R4 a new boot empties the temporary list" "0" "$(grep -c . "$WL")"
+_check "R5 …and keeps the permanent one"           "10391/tcp" "$(cat "$PERM")"
+_fw allow 8081 tcp > /dev/null; _fw allow 8082 tcp --keep > /dev/null
+_check "R6 allow is temporary by default"        "8081/tcp" "$(grep 8081 "$WL")"
+_check "R7 allow --keep is permanent"            "8082/tcp" "$(grep 8082 "$PERM")"
+
 [ "$FAILS" -eq 0 ] || { echo "$FAILS check(s) failed"; exit 1; }
 echo "firewall-ports: all checks passed"

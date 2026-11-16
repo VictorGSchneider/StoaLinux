@@ -1543,7 +1543,7 @@ _fw_ports_list() {
         fi
 
         local status="BLOCKED"
-        grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null && status="ALLOWED"
+        "${STOA_BIN}/stoa-firewall" allowed | grep -qx "${port}/${proto}" && status="ALLOWED"
         lines+=("${status}  :${port}/${proto}  ${process}")
     done < <(ss -tlnpH 2>/dev/null | sed 's/^/tcp /'; ss -ulnpH 2>/dev/null | sed 's/^/udp /')
 
@@ -1567,7 +1567,7 @@ _fw_toggle_port() {
     port=$(echo "$port_proto" | cut -d/ -f1)
     proto=$(echo "$port_proto" | cut -d/ -f2)
 
-    if grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null; then
+    if "${STOA_BIN}/stoa-firewall" allowed | grep -qx "${port}/${proto}"; then
         # Currently allowed → block it
         if _yad_confirm "Block port ${port}/${proto}?"; then
             STOA_FW_SOURCE=settings "${STOA_BIN}/stoa-firewall" deny "$port" "$proto" 2>/dev/null
@@ -1620,12 +1620,12 @@ menu_firewall() {
                 _notify "Port ${port_input}/${proto_choice} allowed"
                 ;;
             *"Block a port"*)
-                if [ ! -s "$WHITELIST" ]; then
+                if [ -z "$("${STOA_BIN}/stoa-firewall" allowed)" ]; then
                     _notify "No ports in whitelist"
                     continue
                 fi
                 local block_choice
-                block_choice=$(cat "$WHITELIST" | _yad_pipe "  Remove from whitelist")
+                block_choice=$("${STOA_BIN}/stoa-firewall" allowed | _yad_pipe "  Remove from whitelist")
                 [ -z "$block_choice" ] && continue
                 local bport bproto
                 bport=$(echo "$block_choice" | cut -d/ -f1)
