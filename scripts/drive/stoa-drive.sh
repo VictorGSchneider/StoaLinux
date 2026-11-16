@@ -101,7 +101,7 @@ _SYNC_CONFLICT="${STOA_SYNC_CONFLICT:-newer}"
 
 # ── Helpers ──
 
-_notify() { notify-send -t 2500 "Stoa Drive" "$1" 2>/dev/null; }
+_notify() { notify-send -t "${2:-2500}" "Stoa Drive" "$1" 2>/dev/null; }
 
 _STOA_YAD_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/stoa-yad.sh"
 # shellcheck source=lib/stoa-yad.sh
@@ -601,10 +601,15 @@ _run_all_syncs() {
     pairs=$(_list_sync_pairs)
     [ -z "$pairs" ] && { [ "${1:-}" != "quiet" ] && _notify "No sync pairs configured"; return; }
 
-    local ok=0 fail=0
+    local ok=0 fail=0 details=""
     while IFS=$'\t' read -r rp lp; do
         [ -z "$rp" ] && continue
-        if _run_sync "$rp" "$lp" 1; then ((ok++)); else ((fail++)); fi
+        if _run_sync "$rp" "$lp" 1; then
+            ((ok++))
+        else
+            ((fail++))
+            details+=$'\n'"• ${rp}: $(_sync_fail_reason "$(_pair_workdir "$rp" "$lp")/last.log")"
+        fi
     done <<< "$pairs"
 
     if [ "${1:-}" = "quiet" ]; then
@@ -613,7 +618,25 @@ _run_all_syncs() {
     if [ "$fail" -eq 0 ]; then
         _notify "Synced ${ok} pair(s)"
     else
-        _notify "Synced ${ok}, failed ${fail}. Check ${SYNC_CACHE}/*/last.log"
+        _notify "Synced ${ok}, failed ${fail}${details}"$'\n'"Logs: ${SYNC_CACHE}/*/last.log" 10000
+    fi
+}
+
+# One-line reason for a failed bisync, taken from its log. A graceful-shutdown
+# line with no ERROR means the run was killed (panel/terminal closed), not that
+# the sync itself broke.
+_sync_fail_reason() {
+    local log="$1" line
+    if [ ! -s "$log" ]; then echo "no log output"; return; fi
+    line=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -E 'ERROR|CRITICAL' | tail -n1)
+    if [ -n "$line" ]; then
+        # drop the timestamp, keep the message; cap length for the popup
+        line=${line#*: }
+        echo "${line:0:140}"
+    elif grep -q 'gracefully shutdown' "$log"; then
+        echo "interrupted (process was stopped mid-sync)"
+    else
+        sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -v '^\s*$' | tail -n1 | cut -c1-140
     fi
 }
 
