@@ -1570,13 +1570,13 @@ _fw_toggle_port() {
     if grep -qx "${port}/${proto}" "$WHITELIST" 2>/dev/null; then
         # Currently allowed → block it
         if _yad_confirm "Block port ${port}/${proto}?"; then
-            "${STOA_BIN}/stoa-firewall" deny "$port" "$proto" 2>/dev/null
+            STOA_FW_SOURCE=settings "${STOA_BIN}/stoa-firewall" deny "$port" "$proto" 2>/dev/null
             _notify "Port ${port}/${proto} blocked"
         fi
     else
         # Currently blocked → allow it
         if _yad_confirm "Allow port ${port}/${proto}?"; then
-            "${STOA_BIN}/stoa-firewall" allow "$port" "$proto" 2>/dev/null
+            STOA_FW_SOURCE=settings "${STOA_BIN}/stoa-firewall" allow "$port" "$proto" 2>/dev/null
             _notify "Port ${port}/${proto} allowed"
         fi
     fi
@@ -1616,7 +1616,7 @@ menu_firewall() {
                 local proto_choice
                 proto_choice=$(_yad_select "  Protocol" "tcp" "udp")
                 [ -z "$proto_choice" ] && continue
-                "${STOA_BIN}/stoa-firewall" allow "$port_input" "$proto_choice" 2>/dev/null
+                STOA_FW_SOURCE=settings "${STOA_BIN}/stoa-firewall" allow "$port_input" "$proto_choice" 2>/dev/null
                 _notify "Port ${port_input}/${proto_choice} allowed"
                 ;;
             *"Block a port"*)
@@ -1630,7 +1630,7 @@ menu_firewall() {
                 local bport bproto
                 bport=$(echo "$block_choice" | cut -d/ -f1)
                 bproto=$(echo "$block_choice" | cut -d/ -f2)
-                "${STOA_BIN}/stoa-firewall" deny "$bport" "$bproto" 2>/dev/null
+                STOA_FW_SOURCE=settings "${STOA_BIN}/stoa-firewall" deny "$bport" "$bproto" 2>/dev/null
                 _notify "Port ${bport}/${bproto} blocked"
                 ;;
             *"Enable"*)

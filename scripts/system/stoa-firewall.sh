@@ -40,6 +40,9 @@ COMMANDS
                           notification action
   enable                  enable nftables at boot
   disable                 disable it
+  port PORT [tcp|udp]     everything about one port: process, user, binary, who is
+                          connected, what got through/was dropped, allow/deny history
+  log [HOURS]             allow/deny history and traffic summary (default 24h)
   active                  exit 0 if the firewall is loaded (never asks for a password)
   monitor                 watch for new listening ports and notify, with allow/deny actions
                           (run as a systemd user service)
@@ -71,6 +74,7 @@ STOA_FW_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/firewall"
 WHITELIST="${STOA_FW_DIR}/allowed-ports.conf"
 KNOWN_PORTS="${STOA_FW_DIR}/known-ports.list"
 NFT_RULES="/etc/nftables.d/stoa-firewall.conf"
+AUDIT_LOG="${STOA_FW_DIR}/audit.log"
 
 _banner() {
     echo ""
@@ -135,6 +139,24 @@ _validate_port_proto() {
         return 1
     fi
     return 0
+}
+
+# ── Who is listening on PORT/PROTO: "name(pid)" or "-" ──
+_listener_of() {
+    local port="$1" proto="${2:-tcp}" flag=-tlnpH
+    [ "$proto" = udp ] && flag=-ulnpH
+    ss "$flag" 2>/dev/null | awk -v p="$port" '
+        { n = split($4, a, ":"); if (a[n] == p) { print $NF; exit } }' |
+        sed -nE 's/.*\(\("([^"]+)",pid=([0-9]+).*/\1(\2)/p' | head -1 | grep . || echo "-"
+}
+
+# ── Audit: who allowed/blocked what, and what was listening then ──
+# $1 action (allow|deny|authorize)  $2 port/proto.  The source is STOA_FW_SOURCE
+# (the monitor and the settings panel set it), else the calling process.
+_audit() {
+    local src="${STOA_FW_SOURCE:-$(ps -o comm= -p "$PPID" 2>/dev/null)}"
+    printf '%s  %-9s %-11s via=%s  listener=%s\n' "$(date '+%F %T')" "$1" "$2" \
+        "${src:-?}" "$(_listener_of "${2%/*}" "${2#*/}")" >> "$AUDIT_LOG" 2>/dev/null
 }
 
 # ── Check if port is in whitelist ──
@@ -329,8 +351,8 @@ cmd_ports() {
     _banner
     _init_dirs
 
-    echo -e "  ${F}  Port   Proto  State     PID       Process${R}"
-    echo -e "  ${S}  ─────  ─────  ────────  ────────  ───────────────${R}"
+    echo -e "  ${F}  Port   Proto  State     PID       Process          Reachable from${R}"
+    echo -e "  ${S}  ─────  ─────  ────────  ────────  ───────────────  ──────────────${R}"
 
     # Get all listening ports with process info
     local has_ports=false
@@ -363,8 +385,12 @@ cmd_ports() {
             status_icon="${T}BLOCKED${R}"
         fi
 
-        printf "  ${F}  %-5s  %-5s  ${R}%-18b  ${S}%-8s  ${F}%s${R}\n" \
-            "$port" "$proto" "$status_icon" "$pid" "$process"
+        # Loopback never goes through the firewall (iif lo accept).
+        local reach="network"
+        case "$local_addr" in 127.*|"[::1]"*|::1*) reach="this machine only" ;; esac
+
+        printf "  ${F}  %-5s  %-5s  ${R}%-18b  ${S}%-8s  ${F}%-15s  ${S}%s${R}\n" \
+            "$port" "$proto" "$status_icon" "$pid" "$process" "$reach"
     done < <(ss -tlnpH 2>/dev/null | sed 's/^/tcp /'; ss -ulnpH 2>/dev/null | sed 's/^/udp /')
 
     if ! $has_ports; then
@@ -394,6 +420,7 @@ cmd_allow() {
         sed -i "/^${port}\/${proto}$/d" "$WHITELIST"   # not applied: do not list it as allowed
         return 1
     fi
+    _audit allow "${port}/${proto}"
     echo -e "  ${O}[✓] Port ${port}/${proto} allowed.${R}"
     _notify "Port ${port}/${proto} allowed"
 }
@@ -419,6 +446,7 @@ cmd_deny() {
         echo "${port}/${proto}" >> "$WHITELIST"   # not applied: it is still open
         return 1
     fi
+    _audit deny "${port}/${proto}"
     echo -e "  ${O}[✓] Port ${port}/${proto} blocked.${R}"
     _notify "Port ${port}/${proto} blocked"
 }
@@ -438,11 +466,114 @@ cmd_disable() {
 }
 
 # ══════════════════════════════════════════════════════════════
+#   WHO / WHAT / WHEN
+# ══════════════════════════════════════════════════════════════
+
+# journalctl line -> "SRC proto dport", from the kernel log prefixes.
+_fw_hits() { # <pass|drop> [since]
+    journalctl -k --no-pager -o cat --since "${2:--24h}" --grep "stoa-fw-$1:" 2>/dev/null |
+        awk '{ s=""; p=""; d=""
+               for (i=1;i<=NF;i++) { split($i,k,"=")
+                   if (k[1]=="SRC") s=k[2]; else if (k[1]=="PROTO") p=tolower(k[2]); else if (k[1]=="DPT") d=k[2] }
+               if (d != "") print s, p, d }'
+}
+
+# stoa-firewall port PORT [tcp|udp] — everything known about one port.
+cmd_port() {
+    _init_dirs
+    local port="$1" want="${2:-}"
+    [ -z "$port" ] && { echo -e "  ${T}Usage: stoa-firewall port <port> [tcp|udp]${R}"; return 1; }
+    _validate_port_proto "$port" "${want:-tcp}" || return 1
+    _banner
+
+    local proto flag found=false
+    for proto in tcp udp; do
+        [ -n "$want" ] && [ "$proto" != "$want" ] && continue
+        flag=-tlnpH; [ "$proto" = udp ] && flag=-ulnpH
+
+        echo -e "  ${B}── ${port}/${proto} ──${R}"
+        if _is_allowed "$port" "$proto"; then
+            echo -e "  ${F}Firewall:    ${O}ALLOWED${R}"
+        else
+            echo -e "  ${F}Firewall:    ${T}BLOCKED${R}"
+        fi
+
+        local line addr pid name
+        while IFS= read -r line; do
+            addr=$(echo "$line" | awk '{print $4}')
+            [ "${addr##*:}" = "$port" ] || continue
+            found=true
+            name=""; pid=""
+            if [[ "$line" =~ users:\(\(\"([^\"]+)\",pid=([0-9]+) ]]; then
+                name="${BASH_REMATCH[1]}"; pid="${BASH_REMATCH[2]}"
+            fi
+            echo -e "  ${F}Listening:   ${R}${addr}"
+            case "$addr" in
+                127.*|"[::1]"*) echo -e "  ${S}             loopback: only this machine can reach it; the firewall is not involved${R}" ;;
+                *)              echo -e "  ${S}             reachable from the network (if allowed above)${R}" ;;
+            esac
+            if [ -n "$pid" ] && [ -d "/proc/$pid" ]; then
+                echo -e "  ${F}Process:     ${R}${name} (pid ${pid}), user $(ps -o user= -p "$pid" 2>/dev/null | xargs)"
+                echo -e "  ${F}Started:     ${R}$(ps -o lstart= -p "$pid" 2>/dev/null | xargs)"
+                echo -e "  ${F}Binary:      ${R}$(readlink "/proc/$pid/exe" 2>/dev/null || echo '?')"
+                echo -e "  ${F}Command:     ${R}$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | cut -c1-200)"
+                echo -e "  ${F}Opened by:   ${R}$(ps -o comm= -p "$(ps -o ppid= -p "$pid" | xargs)" 2>/dev/null) (parent of ${name})"
+            else
+                echo -e "  ${F}Process:     ${S}not visible (root/another user's process, or gone)${R}"
+            fi
+        done < <(ss "$flag" 2>/dev/null)
+
+        if [ "$proto" = tcp ]; then
+            local conns
+            conns=$(ss -tnpH state established "( sport = :${port} )" 2>/dev/null | awk '{print $4 "  " $5}')
+            if [ -n "$conns" ]; then
+                echo -e "  ${F}Connected now:${R}"; echo "$conns" | sed 's/^/             /'
+            fi
+        fi
+
+        local passed dropped
+        passed=$(_fw_hits pass | awk -v p="$port" -v pr="$proto" '$3==p && $2==pr {print $1}' | sort | uniq -c | sort -rn | head -5)
+        dropped=$(_fw_hits drop | awk -v p="$port" -v pr="$proto" '$3==p && $2==pr {print $1}' | sort | uniq -c | sort -rn | head -5)
+        echo -e "  ${F}Got through (24h, new connections):${R}"
+        echo "${passed:-  none logged}" | sed 's/^/             /'
+        echo -e "  ${F}Dropped (24h; the log is rate-limited, counts are a floor):${R}"
+        echo "${dropped:-  none logged}" | sed 's/^/             /'
+
+        echo -e "  ${F}Allow/deny history:${R}"
+        { grep -F " ${port}/${proto} " "$AUDIT_LOG" 2>/dev/null | tail -5; } | sed 's/^/             /'
+        echo ""
+    done
+    $found || echo -e "  ${S}Nothing is listening on ${port} right now.${R}\n"
+}
+
+# stoa-firewall log [HOURS] — recent allow/deny actions and traffic summary.
+cmd_log() {
+    _init_dirs
+    local hours="${1:-24}"
+    [[ "$hours" =~ ^[0-9]+$ ]] || hours=24
+    _banner
+    echo -e "  ${F}Allow/deny history (last 20):${R}"
+    if [ -s "$AUDIT_LOG" ]; then tail -20 "$AUDIT_LOG" | sed 's/^/    /'
+    else echo -e "  ${S}    none yet (recorded from now on)${R}"; fi
+    echo ""
+    local kind label
+    for kind in pass drop; do
+        [ "$kind" = pass ] && label="Got through" || label="Dropped"
+        echo -e "  ${F}${label}, last ${hours}h  (count  from  proto/port):${R}"
+        _fw_hits "$kind" "-${hours}h" | awk '{print $1 "  " $2 "/" $3}' | sort | uniq -c | sort -rn | head -15 | sed 's/^/    /'
+        echo ""
+    done
+    echo -e "  ${S}  Logs are rate-limited (30/min through, 5/min dropped): counts are a floor.${R}"
+    echo ""
+}
+
+# ══════════════════════════════════════════════════════════════
 #   PORT MONITOR DAEMON
 # ══════════════════════════════════════════════════════════════
 
 cmd_monitor() {
     _init_dirs
+    export STOA_FW_SOURCE=monitor
 
     # Snapshot current ports as known
     ss -tlnpH 2>/dev/null | awk '{print $4}' | rev | cut -d: -f1 | rev | sort -n > "$KNOWN_PORTS"
@@ -517,6 +648,7 @@ cmd_authorize() {
         sed -i "/^${port}\/${proto}$/d" "$WHITELIST"
         return 1
     fi
+    _audit authorize "${port}/${proto}"
     _notify "Port ${port}/${proto} permanently allowed"
 }
 
@@ -558,10 +690,12 @@ case "${1:-status}" in
     disable)   cmd_disable ;;
     monitor)   cmd_monitor ;;
     active)    _fw_active ;;
+    port)      cmd_port "$2" "$3" ;;
+    log)       cmd_log "$2" ;;
     authorize) cmd_authorize "$2" "$3" ;;
     *)
         echo -e "  ${T}Unknown command: $1${R}"
-        echo -e "  ${S}Usage: stoa-firewall {setup|status|ports|allow|deny|enable|disable|monitor}${R}"
+        echo -e "  ${S}Usage: stoa-firewall {setup|status|ports|port|log|allow|deny|enable|disable|monitor}${R}"
         exit 1
         ;;
 esac
