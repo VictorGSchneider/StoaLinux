@@ -166,18 +166,24 @@ end
 -- right after a fresh mount in stoa-drive.sh); called with no arg here
 -- it re-walks whatever is mounted right now, mounted or not touched by
 -- any sync pair.
+-- runAsync kills its child after ~5s (measured: the sync-all trace shows
+-- "STOPPED by signal after 5s; parent=noctalia"), and a bisync of a big vault
+-- takes longer than that. So the sync runs as a transient systemd user unit,
+-- detached from the panel; runAsync only waits for systemd-run to start it.
+-- stoa-drive's own notifications report the result (Synced N / failed + why).
+-- The fixed unit name doubles as a guard: a second click while one is still
+-- running is refused by systemd instead of starting overlapping bisyncs.
 local function syncNow()
-    noctalia.notify("Stoa Drive", "Running: Sync")
-    noctalia.runAsync(BIN .. " sync-all", function(syncResult)
-        noctalia.runAsync(BIN .. " prewarm", function(prewarmResult)
-            if syncResult.exitCode == 0 and prewarmResult.exitCode == 0 then
-                noctalia.notify("Stoa Drive", "Done: Sync")
-            else
-                noctalia.notifyError("Stoa Drive", "Sync finished with errors")
-            end
-            refreshStatus()
-            refreshSync()
-        end)
+    local cmd = "systemd-run --user --no-block --collect --unit=stoa-drive-sync-now "
+        .. 'sh -c "' .. BIN .. " sync-all; " .. BIN .. ' prewarm"'
+    noctalia.runAsync(cmd, function(result)
+        if result.exitCode == 0 then
+            noctalia.notify("Stoa Drive", "Running: Sync")
+        else
+            noctalia.notifyError("Stoa Drive", "Sync already running")
+        end
+        refreshStatus()
+        refreshSync()
     end)
 end
 

@@ -601,6 +601,13 @@ _run_all_syncs() {
     pairs=$(_list_sync_pairs)
     [ -z "$pairs" ] && { [ "${1:-}" != "quiet" ] && _notify "No sync pairs configured"; return; }
 
+    # Diagnostic trace: if this run is stopped by a signal (e.g. the panel's
+    # runAsync killing it), record when/who so the cause is visible afterwards.
+    local t0 trace="${SYNC_CACHE}/sync-all.trace" mode="${1:-manual}"
+    t0=$(date +%s)
+    mkdir -p "$SYNC_CACHE"
+    trap 'echo "$(date "+%F %T") sync-all STOPPED by signal after $(( $(date +%s) - t0 ))s; parent=$(ps -o comm= -p $PPID 2>/dev/null) ppid=$PPID mode=${mode}" >> "$trace"; exit 143' TERM INT HUP
+
     local ok=0 fail=0 details=""
     while IFS=$'\t' read -r rp lp; do
         [ -z "$rp" ] && continue
@@ -611,6 +618,9 @@ _run_all_syncs() {
             details+=$'\n'"• ${rp}: $(_sync_fail_reason "$(_pair_workdir "$rp" "$lp")/last.log")"
         fi
     done <<< "$pairs"
+
+    trap - TERM INT HUP
+    echo "$(date '+%F %T') sync-all finished in $(( $(date +%s) - t0 ))s ok=${ok} fail=${fail} mode=${mode}" >> "$trace"
 
     if [ "${1:-}" = "quiet" ]; then
         return 0
