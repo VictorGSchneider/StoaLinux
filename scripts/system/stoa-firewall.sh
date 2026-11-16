@@ -145,7 +145,7 @@ _is_allowed() {
 
 # ── Generate nftables rules from whitelist ──
 _generate_rules() {
-    local rules=""
+    local rules="" tcp_ports="" udp_ports=""
     rules+="table inet stoa_firewall {\n"
     rules+="    chain input {\n"
     rules+="        type filter hook input priority 0; policy drop;\n"
@@ -165,16 +165,27 @@ _generate_rules() {
 
     # Add whitelisted ports
     if [ -s "$WHITELIST" ]; then
-        rules+="\n"
-        rules+="        # Whitelisted ports\n"
+        local accepts="" port proto
         while IFS= read -r entry; do
             [ -z "$entry" ] && continue
             [[ "$entry" == \#* ]] && continue
-            local port proto
             port=$(echo "$entry" | cut -d/ -f1)
             proto=$(echo "$entry" | cut -d/ -f2)
-            rules+="        ${proto} dport ${port} accept\n"
+            accepts+="        ${proto} dport ${port} accept\n"
+            case "$proto" in
+                tcp) tcp_ports+="${tcp_ports:+,}${port}" ;;
+                udp) udp_ports+="${udp_ports:+,}${port}" ;;
+            esac
         done < "$WHITELIST"
+        rules+="\n"
+        rules+="        # What got through: new connections on allowed ports (rate-limited).\n"
+        rules+="        # 'stoa-firewall port N' and 'log' read these. An accept ends the\n"
+        rules+="        # chain, so the log rules have to come before the accepts.\n"
+        [ -n "$tcp_ports" ] && rules+="        tcp dport { ${tcp_ports} } ct state new limit rate 30/minute log prefix \"stoa-fw-pass: \"\n"
+        [ -n "$udp_ports" ] && rules+="        udp dport { ${udp_ports} } ct state new limit rate 30/minute log prefix \"stoa-fw-pass: \"\n"
+        rules+="\n"
+        rules+="        # Whitelisted ports\n"
+        rules+="$accepts"
     fi
 
     rules+="\n"
