@@ -450,7 +450,7 @@ _net_info() {
     [ -n "$pub_ip" ] && lines+=("  Public IP: $pub_ip")
 
     # ── Firewall ──
-    if command -v nft &>/dev/null && _priv nft list table inet stoa_firewall &>/dev/null 2>&1; then
+    if "${STOA_BIN}/stoa-firewall" active &>/dev/null; then
         lines+=("  Firewall: Active")
     else
         lines+=("  Firewall: Inactive")
@@ -1518,7 +1518,8 @@ STOA_FW_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stoa/firewall"
 WHITELIST="${STOA_FW_DIR}/allowed-ports.conf"
 
 _fw_status() {
-    if _priv nft list table inet stoa_firewall &>/dev/null 2>&1; then
+    # Read-only: must never raise a password prompt (the menu redraws this).
+    if "${STOA_BIN}/stoa-firewall" active &>/dev/null; then
         echo "Active"
     else
         echo "Inactive"
@@ -1633,17 +1634,17 @@ menu_firewall() {
                 _notify "Port ${bport}/${bproto} blocked"
                 ;;
             *"Enable"*)
-                kitty -e sudo "${STOA_BIN}/stoa-firewall" enable &
+                kitty -e "${STOA_BIN}/stoa-firewall" enable &
                 disown
                 ;;
             *"Disable"*)
                 _yad_confirm "Disable firewall? All ports will be open." && {
-                    kitty -e sudo "${STOA_BIN}/stoa-firewall" disable &
+                    kitty -e "${STOA_BIN}/stoa-firewall" disable &
                     disown
                 }
                 ;;
             *"Setup"*)
-                kitty -e sudo "${STOA_BIN}/stoa-firewall" setup &
+                kitty -e "${STOA_BIN}/stoa-firewall" setup &
                 disown
                 ;;
         esac

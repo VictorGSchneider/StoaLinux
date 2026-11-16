@@ -40,6 +40,7 @@ COMMANDS
                           notification action
   enable                  enable nftables at boot
   disable                 disable it
+  active                  exit 0 if the firewall is loaded (never asks for a password)
   monitor                 watch for new listening ports and notify, with allow/deny actions
                           (run as a systemd user service)
   help                    show this help
@@ -96,6 +97,23 @@ _priv() {
     else
         echo -e "  ${T}[!] Needs root and no terminal or polkit agent is available.${R}" >&2
         return 1
+    fi
+}
+
+# Every _priv that has to go through pkexec is its own password box, so root
+# work is never spread over several calls: it is gathered into ONE script and
+# sent through _priv once (see _ROOT_APPLY and cmd_disable). Read-only checks
+# must never prompt at all — _fw_active.
+_fw_active() {
+    local out
+    if [ "$(id -u)" -eq 0 ]; then
+        nft list table inet stoa_firewall &>/dev/null
+    elif sudo -n true 2>/dev/null; then
+        sudo -n nft list table inet stoa_firewall &>/dev/null
+    else
+        # No root without asking: the rules file is world-readable, and
+        # nftables.service reloads it at boot and on enable.
+        [ -s "$NFT_RULES" ] && systemctl is-active --quiet nftables
     fi
 }
 
@@ -173,31 +191,53 @@ _generate_rules() {
 }
 
 # ── Apply rules ──
+# All of the root work, run as ONE privileged call (one password prompt).
+# $1 ruleset file (user-owned)   $2 persistent path
+# $3 1 = enable nftables.service  $4 1 = make nftables.conf include nftables.d
+# Exit: 0 ok, 2 could not stage, 3 ruleset failed validation (old one kept),
+#       4 nft -f failed after validation.
+_ROOT_APPLY='
+src=$1 dest=$2 enable=$3 inc=$4
+mkdir -p "$(dirname "$dest")" || exit 2
+staged="$dest.new"
+# Copy into a root-owned file first: what is validated is what is loaded, and
+# the user-owned temp file cannot be swapped in between.
+install -m 0644 -o root -g root "$src" "$staged" || exit 2
+# Dry-run BEFORE flushing the old table. Without this, a syntax error leaves
+# the firewall fully open.
+if ! nft -c -f "$staged" 2>/dev/null; then rm -f "$staged"; exit 3; fi
+[ "$enable" = 1 ] && systemctl enable nftables --now >/dev/null 2>&1
+if [ "$inc" = 1 ] && ! grep -q "include.*nftables.d" /etc/nftables.conf 2>/dev/null; then
+    echo "include \"/etc/nftables.d/*.conf\"" >> /etc/nftables.conf
+fi
+nft delete table inet stoa_firewall 2>/dev/null
+if ! nft -f "$staged"; then rm -f "$staged"; exit 4; fi
+mv -f "$staged" "$dest"
+'
+
+# _apply_rules [--enable-service] [--ensure-include]
 _apply_rules() {
-    local tmpfile
+    local enable=0 inc=0 arg tmpfile rc
+    for arg in "$@"; do
+        case "$arg" in
+            --enable-service) enable=1 ;;
+            --ensure-include) inc=1 ;;
+        esac
+    done
     tmpfile=$(mktemp)
     _generate_rules > "$tmpfile"
+    chmod 0644 "$tmpfile"
 
-    # Dry-run validate the new ruleset BEFORE flushing the old one.
-    # Without this, a syntax error leaves the firewall fully open.
-    if ! _priv nft -c -f "$tmpfile" 2>/dev/null; then
-        echo -e "  ${T}[!] Generated nftables ruleset failed validation; keeping previous ruleset.${R}" >&2
-        rm -f "$tmpfile"
-        return 1
-    fi
-
-    # Flush old stoa rules and apply validated new ones
-    _priv nft delete table inet stoa_firewall 2>/dev/null
-    if ! _priv nft -f "$tmpfile"; then
-        echo -e "  ${T}[!] nft -f failed unexpectedly after validation; firewall may be inactive.${R}" >&2
-        rm -f "$tmpfile"
-        return 1
-    fi
+    _priv bash -c "$_ROOT_APPLY" stoa-root "$tmpfile" "$NFT_RULES" "$enable" "$inc"
+    rc=$?
     rm -f "$tmpfile"
-
-    # Save persistent rules
-    _priv mkdir -p /etc/nftables.d
-    _generate_rules | _priv tee "$NFT_RULES" > /dev/null
+    case "$rc" in
+        0) return 0 ;;
+        3) echo -e "  ${T}[!] Generated nftables ruleset failed validation; keeping previous ruleset.${R}" >&2 ;;
+        4) echo -e "  ${T}[!] nft -f failed unexpectedly after validation; firewall may be inactive.${R}" >&2 ;;
+        *) echo -e "  ${T}[!] Could not apply the firewall rules (no administrator access?).${R}" >&2 ;;
+    esac
+    return 1
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -218,20 +258,9 @@ cmd_setup() {
         exit 1
     fi
 
-    # Enable nftables service
-    echo -e "  ${S}  Enabling nftables service...${R}"
-    _priv systemctl enable nftables --now 2>/dev/null
-
-    # Ensure main nftables.conf includes our rules
-    if ! grep -q "include.*nftables.d" /etc/nftables.conf 2>/dev/null; then
-        echo -e "  ${S}  Adding include directive to /etc/nftables.conf...${R}"
-        _priv mkdir -p /etc/nftables.d
-        echo 'include "/etc/nftables.d/*.conf"' | _priv tee -a /etc/nftables.conf > /dev/null
-    fi
-
-    # Apply deny-all rules
-    echo -e "  ${S}  Applying deny-all policy...${R}"
-    _apply_rules
+    # Service, include directive and deny-all rules: one privileged call.
+    echo -e "  ${S}  Enabling nftables and applying deny-all policy...${R}"
+    _apply_rules --enable-service --ensure-include || exit 1
 
     # Install and enable port monitor
     echo -e "  ${S}  Installing port monitor service...${R}"
@@ -247,7 +276,7 @@ cmd_setup() {
 cmd_status() {
     _banner
 
-    if _priv nft list table inet stoa_firewall &>/dev/null; then
+    if _fw_active; then
         echo -e "  ${O}  Status: ACTIVE${R}"
     else
         echo -e "  ${T}  Status: INACTIVE${R}"
@@ -350,7 +379,10 @@ cmd_allow() {
     fi
 
     echo "${port}/${proto}" >> "$WHITELIST"
-    _apply_rules
+    if ! _apply_rules; then
+        sed -i "/^${port}\/${proto}$/d" "$WHITELIST"   # not applied: do not list it as allowed
+        return 1
+    fi
     echo -e "  ${O}[✓] Port ${port}/${proto} allowed.${R}"
     _notify "Port ${port}/${proto} allowed"
 }
@@ -372,22 +404,24 @@ cmd_deny() {
     fi
 
     sed -i "/^${port}\/${proto}$/d" "$WHITELIST"
-    _apply_rules
+    if ! _apply_rules; then
+        echo "${port}/${proto}" >> "$WHITELIST"   # not applied: it is still open
+        return 1
+    fi
     echo -e "  ${O}[✓] Port ${port}/${proto} blocked.${R}"
     _notify "Port ${port}/${proto} blocked"
 }
 
 cmd_enable() {
     _init_dirs
-    _apply_rules
-    _priv systemctl enable nftables --now 2>/dev/null
+    _apply_rules --enable-service || return 1
     echo -e "  ${O}[✓] Firewall enabled.${R}"
     _notify "Firewall enabled"
 }
 
 cmd_disable() {
-    _priv nft delete table inet stoa_firewall 2>/dev/null
-    _priv rm -f "$NFT_RULES"
+    _priv sh -c 'nft delete table inet stoa_firewall 2>/dev/null; rm -f -- "$1"' \
+        stoa-root "$NFT_RULES" || return 1
     echo -e "  ${T}[!] Firewall disabled. All ports open.${R}"
     _notify "Firewall disabled — all ports open"
 }
@@ -468,7 +502,10 @@ cmd_authorize() {
     _validate_port_proto "$port" "$proto" || return 1
 
     echo "${port}/${proto}" >> "$WHITELIST"
-    _apply_rules
+    if ! _apply_rules; then
+        sed -i "/^${port}\/${proto}$/d" "$WHITELIST"
+        return 1
+    fi
     _notify "Port ${port}/${proto} permanently allowed"
 }
 
@@ -509,6 +546,7 @@ case "${1:-status}" in
     enable)    cmd_enable ;;
     disable)   cmd_disable ;;
     monitor)   cmd_monitor ;;
+    active)    _fw_active ;;
     authorize) cmd_authorize "$2" "$3" ;;
     *)
         echo -e "  ${T}Unknown command: $1${R}"

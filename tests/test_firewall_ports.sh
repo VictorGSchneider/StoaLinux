@@ -24,7 +24,7 @@
 #   M1  the monitor's Allow action ends with the port in the whitelist
 #
 # ss, notify-send and sudo are stubs: ss answers with fixed sockets,
-# notify-send "clicks" Allow, sudo records and runs nothing. No rule is
+# notify-send "clicks" Allow, sudo/pkexec record and run nothing. No rule is
 # loaded and no real socket is inspected.
 
 cd "$(dirname "$0")/.." || exit 1
@@ -70,7 +70,11 @@ cat > "$TMP/bin/notify-send" <<'STUB'
 case "$*" in *allow=Allow*) echo allow ;; esac
 exit 0
 STUB
-printf '#!/bin/sh\necho "sudo $*" >> "$STUB_LOG"\nexit 0\n' > "$TMP/bin/sudo"
+# No cached sudo (`sudo -n true` fails), so every privileged call goes to
+# pkexec — one password box each. Only the first words are logged: a
+# privileged call is a multi-line script and must stay one log line.
+printf '#!/bin/sh\n[ "$*" = "-n true" ] && exit 1\nexit 0\n' > "$TMP/bin/sudo"
+printf '#!/bin/sh\necho "pkexec $1 $2" >> "$STUB_LOG"\nexit 0\n' > "$TMP/bin/pkexec"
 chmod +x "$TMP/bin/"*
 
 WL="$TMP/config/stoa/firewall/allowed-ports.conf"
@@ -103,6 +107,23 @@ for _ in $(seq 1 24); do grep -q '^9090/' "$WL" && break; sleep 0.5; done
 _stop_monitor
 _check "M1 Allow from the monitor whitelists the port" "9090/tcp" "$(grep '^9090/' "$WL")"
 grep -m1 'Invalid' "$TMP/monitor.out" | sed 's/\x1b\[[0-9;]*m//g; s/^ */        /'
+
+# Password boxes. Every privileged call that cannot use a cached sudo is one
+# pkexec prompt, so allowing a port must be ONE call, whatever it does inside,
+# and merely looking at the status must be none.
+_priv_calls() { grep -c '^pkexec' "$TMP/sudo.log" 2>/dev/null || true; }
+: > "$TMP/sudo.log"; _fw allow 7777 tcp > /dev/null
+_check "B1 allow is one privileged call"        "1" "$(_priv_calls)"
+: > "$TMP/sudo.log"; _fw deny 7777 tcp > /dev/null
+_check "B2 deny is one privileged call"         "1" "$(_priv_calls)"
+: > "$TMP/sudo.log"; _fw enable > /dev/null
+_check "B3 enable is one privileged call"       "1" "$(_priv_calls)"
+: > "$TMP/sudo.log"; _fw disable > /dev/null
+_check "B4 disable is one privileged call"      "1" "$(_priv_calls)"
+: > "$TMP/sudo.log"; _fw setup > /dev/null
+_check "B5 setup is one privileged call"        "1" "$(_priv_calls)"
+: > "$TMP/sudo.log"; _fw status > /dev/null; _fw active > /dev/null
+_check "B6 status/active never ask for root"    "0" "$(_priv_calls)"
 
 [ "$FAILS" -eq 0 ] || { echo "$FAILS check(s) failed"; exit 1; }
 echo "firewall-ports: all checks passed"
