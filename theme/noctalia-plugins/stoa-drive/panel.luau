@@ -248,8 +248,19 @@ local function addSyncPair()
     render()
 end
 
+-- Same detachment as syncNow (runAsync kills its child after ~5s, too short
+-- for a big vault). `stoa-drive sync` reports its own result via notification.
 local function syncPairNow(p)
-    runNotified("Sync", BIN .. " sync " .. shQuote(p.remotePath) .. " " .. shQuote(p.localPath), refreshSync)
+    local cmd = "systemd-run --user --no-block --collect --unit=stoa-drive-sync-pair "
+        .. BIN .. " sync " .. shQuote(p.remotePath) .. " " .. shQuote(p.localPath)
+    noctalia.runAsync(cmd, function(result)
+        if result.exitCode == 0 then
+            noctalia.notify("Stoa Drive", "Running: Sync")
+        else
+            noctalia.notifyError("Stoa Drive", "Sync already running")
+        end
+        refreshSync()
+    end)
 end
 
 local function removeSyncPair(p)
@@ -462,7 +473,7 @@ local function renderSync()
             btn({ text = "Add pair", flexGrow = 1, controlSize = "sm", onClick = addSyncPair }),
             btn({
                 text = "Sync all now", flexGrow = 1, controlSize = "sm", variant = "outline",
-                onClick = function() runNotified("Sync all", BIN .. " sync-all", refreshSync) end,
+                onClick = syncNow,
             }),
         }),
     })
