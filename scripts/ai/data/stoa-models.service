@@ -1,0 +1,9 @@
+[Unit]
+Description=Stoa models (llama serve router with the local GGUFs)
+Wants=stoa-mcp-web.service
+After=stoa-mcp-web.service
+
+[Service]
+ExecStart=%h/.local/bin/stoa-models run 9931
+Restart=on-failure
+RestartSec=3

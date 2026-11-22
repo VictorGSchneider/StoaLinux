@@ -1,0 +1,7 @@
+[Unit]
+Description=Stoa MCP web (search and fetch tools for the local LLM chat)
+
+[Service]
+ExecStart=%h/.local/bin/stoa-mcp-web 9932
+Restart=on-failure
+RestartSec=3

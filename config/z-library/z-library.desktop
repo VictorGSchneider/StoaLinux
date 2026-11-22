@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Z-Library
+Comment=Z-Library desktop app
+Exec=/home/zeno/.local/opt/Z-Library/Z-Library %U
+Terminal=false
+Type=Application
+Icon=z-library
+Categories=Office;Education;
+StartupWMClass=Z-Library

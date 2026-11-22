@@ -19,6 +19,7 @@ import json
 import os
 import re
 import socket
+import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import quote_plus, urlparse
@@ -119,14 +120,30 @@ def _clean(text):
 
 
 # ---- ferramentas -----------------------------------------------------------
+def _brave_html(query):
+    """Busca via curl do sistema (autorizado pelo usuário): o Brave responde 429 ao
+    cliente Python. Host fixo (Brave) e query codificada, em lista de args (sem
+    shell), então não há SSRF aqui; fetch_url continua com o bloqueio de IPs."""
+    p = subprocess.run(
+        ["curl", "-sS", "--proto", "=https", "--max-time", str(TIMEOUT),
+         "--max-filesize", str(MAX_BYTES), "-A", UA,
+         "-H", "Accept-Language: pt-BR,pt;q=0.9,en;q=0.8",
+         "-w", "\n%{http_code}", BRAVE + quote_plus(query)],
+        capture_output=True, timeout=TIMEOUT + 5,
+    )
+    if p.returncode != 0:
+        raise RuntimeError("curl falhou: " + p.stderr.decode("utf-8", "replace").strip()[:200])
+    html, _, code = p.stdout.decode("utf-8", "replace").rpartition("\n")
+    if code == "429":
+        raise RuntimeError("Brave limitou as requisições (429). Tente de novo em instantes.")
+    if code != "200":
+        raise RuntimeError(f"Brave respondeu HTTP {code}")
+    return html
+
+
 def web_search(query, max_results=8):
     max_results = max(1, min(int(max_results), 20))
-    r, _ctype, body = _get(BRAVE + quote_plus(query))
-    if r.status_code == 429:
-        raise RuntimeError("Brave limitou as requisições (429). Tente de novo em instantes.")
-    if r.status_code != 200:
-        raise RuntimeError(f"Brave respondeu HTTP {r.status_code}")
-    soup = BeautifulSoup(_decode(r, body), "lxml")
+    soup = BeautifulSoup(_brave_html(query), "lxml")
     out = []
     for sn in soup.select('div.snippet[data-type="web"]'):
         a = sn.select_one("a.l1[href]") or sn.select_one("a[href]")

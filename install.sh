@@ -322,6 +322,8 @@ _link "${STOA_DIR}/theme/shaders" "${CONFIG_DIR}/stoa/shaders"
 # ── Daily memento refresh (systemd --user timer) ──
 _link "${STOA_DIR}/config/systemd/user/stoa-memento-refresh.service" "${CONFIG_DIR}/systemd/user/stoa-memento-refresh.service"
 _link "${STOA_DIR}/config/systemd/user/stoa-memento-refresh.timer"   "${CONFIG_DIR}/systemd/user/stoa-memento-refresh.timer"
+_link "${STOA_DIR}/scripts/ai/data/stoa-models.service"              "${CONFIG_DIR}/systemd/user/stoa-models.service"
+_link "${STOA_DIR}/scripts/ai/data/stoa-mcp-web.service"             "${CONFIG_DIR}/systemd/user/stoa-mcp-web.service"
 if systemctl --user show-environment >/dev/null 2>&1; then
     systemctl --user daemon-reload 2>/dev/null || true
     systemctl --user enable --now stoa-memento-refresh.timer 2>/dev/null || true
@@ -389,6 +391,14 @@ _link "${STOA_DIR}/scripts/system/stoa-snapshots/stoa-snapshots" "${HOME}/.local
 mkdir -p "${HOME}/.local/share/applications"
 _link "${STOA_DIR}/scripts/system/stoa-snapshots/data/stoa-snapshots.desktop" \
       "${HOME}/.local/share/applications/stoa-snapshots.desktop"
+_link "${STOA_DIR}/scripts/ai/data/stoa-models.desktop" \
+      "${HOME}/.local/share/applications/stoa-models.desktop"
+_link "${STOA_DIR}/config/android-studio/android-studio.desktop" \
+      "${HOME}/.local/share/applications/android-studio.desktop"
+_link "${STOA_DIR}/config/brave/brave-browser.desktop" \
+      "${HOME}/.local/share/applications/brave-browser.desktop"
+_link "${STOA_DIR}/config/z-library/z-library.desktop" \
+      "${HOME}/.local/share/applications/z-library.desktop"
 _link "${STOA_DIR}/scripts/packages/stoa-pkg-snapshot.sh"  "${HOME}/.local/bin/stoa-pkg-snapshot"
 _link "${STOA_DIR}/scripts/system/stoa-gpu-setup.sh"    "${HOME}/.local/bin/stoa-gpu-setup"
 _link "${STOA_DIR}/scripts/desktop/stoa-display.sh"      "${HOME}/.local/bin/stoa-display"

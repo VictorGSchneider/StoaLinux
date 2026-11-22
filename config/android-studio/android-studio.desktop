@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Android Studio
+Comment=Android IDE
+Exec=/home/zeno/Code/android-studio/bin/studio %f
+Icon=/home/zeno/Code/android-studio/bin/studio.svg
+Terminal=false
+Categories=Development;IDE;
+StartupNotify=true
+StartupWMClass=jetbrains-studio
