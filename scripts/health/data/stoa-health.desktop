@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Health
+GenericName=System health
+Comment=Check system health, run the doctor and read the hardware report
+Exec=stoa-health
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;
+Keywords=health;doctor;smart;hardware;
+StartupNotify=false

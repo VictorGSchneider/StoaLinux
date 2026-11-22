@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Drive
+GenericName=Cloud drives
+Comment=Mount, sync and manage cloud drives with rclone
+Exec=stoa-drive
+Icon=folder-remote
+Terminal=false
+Categories=Network;
+Keywords=drive;cloud;rclone;mount;sync;
+StartupNotify=false

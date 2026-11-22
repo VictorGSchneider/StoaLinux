@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Hardware Report
+GenericName=Hardware report
+Comment=SSD health, memory, CPU, GPUs, display and battery
+Exec=bash -c "stoa-health hardware; echo; read -rp 'Press Enter to close'"
+Icon=computer
+Terminal=true
+Categories=System;
+Keywords=hardware;smart;ssd;battery;gpu;
+StartupNotify=false

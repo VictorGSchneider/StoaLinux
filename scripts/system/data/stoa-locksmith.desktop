@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Locksmith
+GenericName=File lock finder
+Comment=Find the processes using a file or folder and end them
+Exec=stoa-locksmith
+Icon=dialog-password
+Terminal=false
+Categories=System;
+Keywords=locksmith;lock;process;in use;
+StartupNotify=false

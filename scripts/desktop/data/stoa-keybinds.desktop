@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Keybinds
+GenericName=Keyboard shortcuts
+Comment=Show the keybind cheatsheet
+Exec=stoa-keybinds-toggle
+Icon=preferences-desktop-keyboard-shortcuts
+Terminal=false
+Categories=Utility;
+Keywords=keybinds;shortcuts;keys;
+StartupNotify=false

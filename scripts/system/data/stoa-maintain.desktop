@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Maintain
+GenericName=System maintenance
+Comment=Backup, restore and clean up the system in a terminal
+Exec=stoa-maintain
+Icon=system-run
+Terminal=true
+Categories=System;
+Keywords=maintain;backup;cleanup;restore;
+StartupNotify=false

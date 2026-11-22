@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Store
+GenericName=Software manager
+Comment=Install and update software from pacman, AUR, Flatpak, Snap and AppImage
+Exec=stoa-store
+Icon=system-software-install
+Terminal=false
+Categories=System;
+Keywords=store;packages;pacman;aur;flatpak;snap;appimage;
+StartupNotify=false

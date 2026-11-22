@@ -393,6 +393,22 @@ _link "${STOA_DIR}/scripts/system/stoa-snapshots/data/stoa-snapshots.desktop" \
       "${HOME}/.local/share/applications/stoa-snapshots.desktop"
 _link "${STOA_DIR}/scripts/ai/data/stoa-models.desktop" \
       "${HOME}/.local/share/applications/stoa-models.desktop"
+_link "${STOA_DIR}/scripts/desktop/data/stoa-settings.desktop" \
+      "${HOME}/.local/share/applications/stoa-settings.desktop"
+_link "${STOA_DIR}/scripts/desktop/data/stoa-keybinds.desktop" \
+      "${HOME}/.local/share/applications/stoa-keybinds.desktop"
+_link "${STOA_DIR}/scripts/packages/data/stoa-store.desktop" \
+      "${HOME}/.local/share/applications/stoa-store.desktop"
+_link "${STOA_DIR}/scripts/drive/data/stoa-drive.desktop" \
+      "${HOME}/.local/share/applications/stoa-drive.desktop"
+_link "${STOA_DIR}/scripts/health/data/stoa-health.desktop" \
+      "${HOME}/.local/share/applications/stoa-health.desktop"
+_link "${STOA_DIR}/scripts/health/data/stoa-hardware.desktop" \
+      "${HOME}/.local/share/applications/stoa-hardware.desktop"
+_link "${STOA_DIR}/scripts/system/data/stoa-locksmith.desktop" \
+      "${HOME}/.local/share/applications/stoa-locksmith.desktop"
+_link "${STOA_DIR}/scripts/system/data/stoa-maintain.desktop" \
+      "${HOME}/.local/share/applications/stoa-maintain.desktop"
 _link "${STOA_DIR}/config/android-studio/android-studio.desktop" \
       "${HOME}/.local/share/applications/android-studio.desktop"
 _link "${STOA_DIR}/config/brave/brave-browser.desktop" \

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stoa Settings
+GenericName=System settings
+Comment=Display, audio, network, power, theme and more
+Exec=stoa-settings
+Icon=preferences-system
+Terminal=false
+Categories=Settings;
+Keywords=settings;display;audio;network;power;theme;
+StartupNotify=false
