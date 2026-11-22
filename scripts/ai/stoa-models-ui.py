@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""stoa-ui-brand: gera uma cópia da interface web do llama com o nome "StoaAI".
+"""stoa-models-ui: gera uma cópia da interface web do llama com o nome "StoaAI".
 
 O título da aba é texto fixo dentro do bundle da interface ("llama-ui",
 "Search · llama.cpp"). Este script sobe um llama serve temporário, baixa a
 interface, troca só essas strings de título e grava o resultado em OUT
 (servido depois com `llama serve --path OUT`).
 
-Uso: stoa-ui-brand.py OUT [LLAMA_BIN]     (OUT é recriado por inteiro)
+Uso: stoa-models-ui.py OUT [LLAMA_BIN]     (OUT é recriado por inteiro)
+     stoa-models-ui.py --ensure            gera em ~/.cache/stoa/llama-ui só se faltar
+                                          ou se a versão do llama mudou
 """
-import gzip, os, posixpath, re, shutil, signal, subprocess, sys, time
+import fcntl, gzip, hashlib, os, posixpath, re, shutil, signal, subprocess, sys, time
 import urllib.request
 
 NAME = "StoaAI"
 PORT = 9939
-out = os.path.abspath(sys.argv[1])
-llama = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser("~/.local/bin/llama")
+ensure = sys.argv[1:2] == ["--ensure"]
+out = os.path.expanduser("~/.cache/stoa/llama-ui") if ensure else os.path.abspath(sys.argv[1])
+llama = sys.argv[2] if len(sys.argv) > 2 and not ensure else os.path.expanduser("~/.local/bin/llama")
 base = f"http://127.0.0.1:{PORT}/"
 TITLE_PATTERNS = [  # (regex, substituição): só sufixos/atribuições de título e o nome do app
     (re.compile(r" - llama-ui`"), " - " + NAME + "`"),
@@ -31,6 +34,19 @@ def get(path):
         return gzip.decompress(data) if r.headers.get("Content-Encoding") == "gzip" else data
 
 
+os.makedirs(os.path.dirname(out), exist_ok=True)
+lock = open(out + ".lock", "w")
+fcntl.flock(lock, fcntl.LOCK_EX)  # stoa-models-llama e stoa-models-ollama podem pedir ao mesmo tempo
+ver = (subprocess.run([llama, "--version"], capture_output=True, text=True).stdout
+       or "").strip().splitlines()[:1] or ["?"]
+ver = ver[0]
+try:
+    uptodate = os.path.exists(os.path.join(out, "index.html")) and open(out + ".ver").read().strip() == ver
+except OSError:
+    uptodate = False
+if ensure and uptodate:
+    sys.exit(0)
+
 srv = subprocess.Popen(
     [llama, "serve", "--host", "127.0.0.1", "--port", str(PORT),
      "--models-dir", os.path.expanduser("~/Models/llm")],
@@ -45,7 +61,7 @@ try:
     else:
         sys.exit("llama temporário não respondeu")
     shutil.rmtree(tmp, ignore_errors=True)
-    seen, todo, failed = set(), [""], []
+    seen, todo, failed = set(), ["", "service-worker.js", "sw.js"], []
     while todo:
         p = todo.pop()
         if p in seen:
@@ -76,11 +92,33 @@ try:
                 n = rx.sub(rep, n)
             if n != t:
                 open(fp, "w", encoding="utf8", errors="surrogateescape").write(n); patched += 1
+    # avisa o stoa-models-watch que há uma aba aberta (ele desliga tudo quando a última fecha)
+    idx = os.path.join(tmp, "index.html")
+    h = open(idx, encoding="utf8").read()
+    beacon = '<script>try{new EventSource("http://127.0.0.1:9942/alive")}catch(e){}</script>'
+    for anchor in ("</head>", "</body>"):
+        if anchor in h:
+            h = h.replace(anchor, beacon + anchor, 1)
+            break
+    else:
+        sys.exit("index.html sem </head> nem </body>: a interface mudou?")
+    open(idx, "w", encoding="utf8").write(h)
+    stamp = hashlib.sha1(h.encode()).hexdigest()[:8]
+    # service worker: muda a versão para o navegador reinstalar e refazer o cache
+    swp = os.path.join(tmp, "service-worker.js")
+    if os.path.exists(swp):
+        t = open(swp, encoding="utf8", errors="surrogateescape").read()
+        t2 = re.sub(r"version:`(\d+)`", r"version:`\g<1>-" + NAME.lower() + "-" + stamp + "`", t)
+        open(swp, "w", encoding="utf8", errors="surrogateescape").write(t2)
+        sw_ok = t2 != t
+    else:
+        sw_ok = False
     if not patched or not os.path.exists(os.path.join(tmp, "index.html")):
         sys.exit("nenhum título encontrado para trocar: a interface mudou?")
     shutil.rmtree(out, ignore_errors=True)
     os.rename(tmp, out)
-    print(f"{len(seen) - len(failed)} arquivos, {patched} com título trocado" + (f", {len(failed)} falharam" if failed else ""))
+    open(out + ".ver", "w").write(ver)
+    print(f"{len(seen) - len(failed)} arquivos, {patched} com título trocado, service worker {'atualizado' if sw_ok else 'NÃO encontrado'}" + (f", {len(failed)} falharam" if failed else ""))
 finally:
     try:
         os.killpg(srv.pid, signal.SIGTERM)

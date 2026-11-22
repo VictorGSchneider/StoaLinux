@@ -1,47 +1,48 @@
 #!/bin/bash
-# stoa-models: llama serve (modo router) com os modelos de ~/Models/llm, mais o
-# stoa-mcp-web (busca/leitura de páginas) como serviços de usuário do systemd.
-#
-#   stoa-models [open]  sobe tudo, espera ficar pronto e abre a UI no navegador
-#   stoa-models start   sobe tudo sem abrir o navegador
-#   stoa-models stop    para tudo (libera a VRAM)
-#   stoa-models restart | status
-#   stoa-models run [porta]   em primeiro plano (é o que o serviço executa)
-#
-# --ui-mcp-proxy: UI web usa servidores MCP públicos. NÃO use
-# --ui-mcp-proxy-allow-private-urls (abriria a rede local).
-PORT=9931
-UNITS=(stoa-models stoa-mcp-web)
+# stoa-models: escolhe como conversar com os modelos locais.
+#   stoa-models          janela para escolher entre llama (navegador) e Ollama (terminal)
+#   stoa-models llama    sobe o llama serve + MCP e abre o chat StoaAI no navegador
+#   stoa-models ollama   abre o chat StoaAI para o Ollama no navegador
+#   stoa-models ollama-term  escolhe um modelo do Ollama e abre `ollama run` no kitty
+#   stoa-models stop     para o llama serve, o MCP e o chat, e descarrega os modelos do Ollama
+#   (ao fechar a última aba do chat, o stoa-models-watch roda `stoa-models stop` sozinho)
+note() { notify-send "StoaAI" "$1" 2>/dev/null || echo "StoaAI: $1" >&2; }
 
-case "${1:-open}" in
-  run)
-    shift
-    LLAMA="$HOME/.local/bin/llama"
-    # Interface com o nome StoaAI na aba (cópia gerada, refeita se o llama mudar de versão).
-    UI="$HOME/.cache/stoa/llama-ui"; VER=$("$LLAMA" --version 2>&1 | head -1)
-    if [ ! -f "$UI/index.html" ] || [ "$(cat "$UI.ver" 2>/dev/null)" != "$VER" ]; then
-      HERE=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")"); mkdir -p "$(dirname "$UI")"
-      if python3 -I "$HERE/stoa-ui-brand.py" "$UI" "$LLAMA" >&2; then echo "$VER" > "$UI.ver"
-      else rm -rf "$UI" "$UI.ver"; echo "stoa-models: usando a interface original do llama" >&2; fi
-    fi
-    UIARG=(); [ -f "$UI/index.html" ] && UIARG=(--path "$UI")
-    exec "$LLAMA" serve \
-      --models-dir "$HOME/Models/llm" \
-      --models-preset "$HOME/.config/llama/presets.ini" \
-      --models-max 1 --host 127.0.0.1 --port "${1:-$PORT}" \
-      --ui-mcp-proxy "${UIARG[@]}"
+ollama_web() {
+  systemctl --user start stoa-models-ollama || exit 1
+  for _ in $(seq 30); do curl -sf -m 1 http://127.0.0.1:9940/ >/dev/null && break; sleep 0.3; done
+  exec xdg-open http://localhost:9940
+}
+
+ollama_term() {
+  command -v ollama >/dev/null || { note "ollama não está instalado"; exit 1; }
+  local models choice
+  models=$(ollama list 2>/dev/null | awk 'NR>1 {print $1}')
+  [ -n "$models" ] || { note "Ollama não respondeu ou não tem modelos (o serviço está ativo?)"; exit 1; }
+  choice=$(printf '%s\n' "$models" | yad --list --title "StoaAI · Ollama" --text "Modelo:" \
+    --column "Modelo" --print-column 1 --separator '' --width 460 --height 320 \
+    --button "Cancelar:1" --button "Abrir:0") || exit 0
+  [ -n "$choice" ] && exec kitty --title "StoaAI · $choice" ollama run "$choice"
+}
+
+case "${1:-choose}" in
+  llama)  exec stoa-models-llama open ;;
+  ollama) ollama_web ;;
+  ollama-term) ollama_term ;;
+  stop)
+    stoa-models-llama stop
+    systemctl --user stop stoa-models-ollama
+    command -v ollama >/dev/null && ollama ps 2>/dev/null | awk 'NR>1 {print $1}' | xargs -r -n1 ollama stop
+    systemctl --user stop stoa-models-watch  # por último: pode ser quem chamou
     ;;
-  start)   systemctl --user start stoa-models ;;
-  stop)    systemctl --user stop "${UNITS[@]}" ;;
-  restart) systemctl --user restart "${UNITS[@]}" ;;
-  status)  systemctl --user status "${UNITS[@]}" --no-pager ;;
-  open)
-    systemctl --user start stoa-models || exit 1
-    for _ in $(seq 60); do
-      curl -sf -m 1 "http://127.0.0.1:$PORT/v1/models" >/dev/null && break
-      sleep 1
-    done
-    exec xdg-open "http://localhost:$PORT"
+  choose)
+    pick=$(yad --list --title "StoaAI" --text "Como você quer conversar?" \
+      --column "id:HD" --column "Motor" --column "Como abre" --print-column 1 --separator '' \
+      llama  "llama.cpp"  "Navegador, com busca na web (MCP)" \
+      ollama "Ollama"     "Navegador (chat StoaAI)" \
+      ollama-term "Ollama" "Terminal (ollama run)" \
+      --width 520 --height 260 --button "Cancelar:1" --button "Abrir:0") || exit 0
+    [ -n "$pick" ] && exec "$0" "$pick"
     ;;
-  *) echo "uso: stoa-models [open|start|stop|restart|status|run [porta]]" >&2; exit 2 ;;
+  *) echo "uso: stoa-models [llama|ollama|ollama-term|stop]" >&2; exit 2 ;;
 esac

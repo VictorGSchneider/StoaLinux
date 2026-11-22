@@ -2,22 +2,26 @@
 Type=Application
 Name=StoaAI
 GenericName=Local AI chat
-Comment=Chat with your local models using llama.cpp (browser, with web search) or Ollama (terminal)
-Exec=stoa-ai
+Comment=Chat with your local models using llama.cpp (browser, with web search) or Ollama (browser or terminal)
+Exec=stoa-models
 Icon=applications-science
 Terminal=false
 Categories=Utility;
 Keywords=ai;llm;llama;ollama;chat;models;gguf;
-Actions=llama;ollama;stop;
+Actions=llama;ollama;ollama-term;stop;
 
 [Desktop Action llama]
 Name=Chat with llama.cpp (browser)
-Exec=stoa-ai llama
+Exec=stoa-models llama
 
 [Desktop Action ollama]
+Name=Chat with Ollama (browser)
+Exec=stoa-models ollama
+
+[Desktop Action ollama-term]
 Name=Chat with Ollama (terminal)
-Exec=stoa-ai ollama
+Exec=stoa-models ollama-term
 
 [Desktop Action stop]
 Name=Stop models
-Exec=stoa-ai stop
+Exec=stoa-models stop

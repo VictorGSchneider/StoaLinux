@@ -1,0 +1,7 @@
+[Unit]
+Description=Stoa models watchdog (stops the models when the last chat tab is closed)
+
+[Service]
+ExecStart=%h/.local/bin/stoa-models-watch
+Restart=on-failure
+RestartSec=3

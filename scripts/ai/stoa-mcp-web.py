@@ -31,7 +31,8 @@ from bs4 import BeautifulSoup
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("STOA_MCP_PORT", 9932))
 ALLOWED_ORIGINS = set(
     os.environ.get(
-        "STOA_MCP_ORIGINS", "http://localhost:9931,http://127.0.0.1:9931"
+        "STOA_MCP_ORIGINS",
+        "http://localhost:9931,http://127.0.0.1:9931,http://localhost:9940,http://127.0.0.1:9940",
     ).split(",")
 )
 ALLOWED_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}

@@ -1,0 +1,8 @@
+[Unit]
+Description=Stoa AI chat page for Ollama
+Wants=stoa-models-watch.service
+
+[Service]
+ExecStart=%h/.local/bin/stoa-models-ollama 9940
+Restart=on-failure
+RestartSec=3

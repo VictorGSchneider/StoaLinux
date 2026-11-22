@@ -322,8 +322,10 @@ _link "${STOA_DIR}/theme/shaders" "${CONFIG_DIR}/stoa/shaders"
 # ── Daily memento refresh (systemd --user timer) ──
 _link "${STOA_DIR}/config/systemd/user/stoa-memento-refresh.service" "${CONFIG_DIR}/systemd/user/stoa-memento-refresh.service"
 _link "${STOA_DIR}/config/systemd/user/stoa-memento-refresh.timer"   "${CONFIG_DIR}/systemd/user/stoa-memento-refresh.timer"
-_link "${STOA_DIR}/scripts/ai/data/stoa-models.service"              "${CONFIG_DIR}/systemd/user/stoa-models.service"
+_link "${STOA_DIR}/scripts/ai/data/stoa-models-llama.service"              "${CONFIG_DIR}/systemd/user/stoa-models-llama.service"
 _link "${STOA_DIR}/scripts/ai/data/stoa-mcp-web.service"             "${CONFIG_DIR}/systemd/user/stoa-mcp-web.service"
+_link "${STOA_DIR}/scripts/ai/data/stoa-models-ollama.service"   "${CONFIG_DIR}/systemd/user/stoa-models-ollama.service"
+_link "${STOA_DIR}/scripts/ai/data/stoa-models-watch.service"       "${CONFIG_DIR}/systemd/user/stoa-models-watch.service"
 if systemctl --user show-environment >/dev/null 2>&1; then
     systemctl --user daemon-reload 2>/dev/null || true
     systemctl --user enable --now stoa-memento-refresh.timer 2>/dev/null || true
@@ -391,8 +393,8 @@ _link "${STOA_DIR}/scripts/system/stoa-snapshots/stoa-snapshots" "${HOME}/.local
 mkdir -p "${HOME}/.local/share/applications"
 _link "${STOA_DIR}/scripts/system/stoa-snapshots/data/stoa-snapshots.desktop" \
       "${HOME}/.local/share/applications/stoa-snapshots.desktop"
-_link "${STOA_DIR}/scripts/ai/data/stoa-ai.desktop" \
-      "${HOME}/.local/share/applications/stoa-ai.desktop"
+_link "${STOA_DIR}/scripts/ai/data/stoa-models.desktop" \
+      "${HOME}/.local/share/applications/stoa-models.desktop"
 _link "${STOA_DIR}/scripts/desktop/data/stoa-settings.desktop" \
       "${HOME}/.local/share/applications/stoa-settings.desktop"
 _link "${STOA_DIR}/scripts/desktop/data/stoa-keybinds.desktop" \
@@ -424,9 +426,11 @@ _link "${STOA_DIR}/scripts/desktop/stoa-bar.sh"           "${HOME}/.local/bin/st
 _link "${STOA_DIR}/scripts/desktop/stoa-bar-toggle.sh"   "${HOME}/.local/bin/stoa-bar-toggle"
 _link "${STOA_DIR}/scripts/tools/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
 _link "${STOA_DIR}/scripts/tools/stoa-restore.sh"       "${HOME}/.local/bin/stoa-restore"
-_link "${STOA_DIR}/scripts/ai/stoa-models.sh"        "${HOME}/.local/bin/stoa-models"
+_link "${STOA_DIR}/scripts/ai/stoa-models-llama.sh"        "${HOME}/.local/bin/stoa-models-llama"
 _link "${STOA_DIR}/scripts/ai/stoa-mcp-web.py"       "${HOME}/.local/bin/stoa-mcp-web"
-_link "${STOA_DIR}/scripts/ai/stoa-ai.sh"               "${HOME}/.local/bin/stoa-ai"
+_link "${STOA_DIR}/scripts/ai/stoa-models.sh"               "${HOME}/.local/bin/stoa-models"
+_link "${STOA_DIR}/scripts/ai/stoa-models-ollama.py"       "${HOME}/.local/bin/stoa-models-ollama"
+_link "${STOA_DIR}/scripts/ai/stoa-models-watch.py"           "${HOME}/.local/bin/stoa-models-watch"
 _link "${STOA_DIR}/config/llama/presets.ini"          "${CONFIG_DIR}/llama/presets.ini"
 _link "${STOA_DIR}/scripts/input/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/input/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
