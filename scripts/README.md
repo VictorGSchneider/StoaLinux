@@ -14,7 +14,7 @@ into `~/.local/bin` under its short name (`scripts/wallpaper/stoa-walls.sh` →
 | `files/` | File actions (Thunar "Stoatools") and `stoa-dfm/`, the dotfile manager fork |
 | `input/` | Paste, OCR and text prediction: `stoa-paste`, `stoa-ocr`, `stoa-predict` (+ `.py`, `stoa-predict-protocols/`) |
 | `packages/` | Software: `stoa-store` (+ `stoa-store/`), `stoa-bauh.py`, `stoa-pkg-snapshot` |
-| `tools/` | Everything else: `stoa-fetch`, `stoa-history.py`, `stoa-sync` |
+| `tools/` | Everything else: `stoa-fetch`, `stoa-history.py`, `stoa-sync`, `stoa-models` (llama serve with the local GGUFs; presets in `config/llama/`) |
 | `lib/` | Shared shell libraries (`stoa-paths.sh`, `stoa-wm.sh`, `stoa-yad.sh`), sourced by the scripts above |
 | `vendor/` | Upstream copies of the projects the Stoa forks track; see `vendor/README.md` |
 

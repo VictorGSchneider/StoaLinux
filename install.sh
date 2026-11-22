@@ -398,6 +398,8 @@ _link "${STOA_DIR}/scripts/desktop/stoa-bar.sh"           "${HOME}/.local/bin/st
 _link "${STOA_DIR}/scripts/desktop/stoa-bar-toggle.sh"   "${HOME}/.local/bin/stoa-bar-toggle"
 _link "${STOA_DIR}/scripts/tools/stoa-sync.sh"          "${HOME}/.local/bin/stoa-sync"
 _link "${STOA_DIR}/scripts/tools/stoa-restore.sh"       "${HOME}/.local/bin/stoa-restore"
+_link "${STOA_DIR}/scripts/tools/stoa-models.sh"        "${HOME}/.local/bin/stoa-models"
+_link "${STOA_DIR}/config/llama/presets.ini"          "${CONFIG_DIR}/llama/presets.ini"
 _link "${STOA_DIR}/scripts/input/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/input/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"
 # Text prediction languages: start with Brazilian Portuguese and English
