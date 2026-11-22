@@ -200,7 +200,7 @@ telemetry_enabled = true
     auto_sync = true
 
     [shell.launcher]
-    app_grid = true
+    app_grid = false
     category_icons_only = true
     default_view = "pinned"
     pinned = [

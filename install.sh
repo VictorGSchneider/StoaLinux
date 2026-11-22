@@ -391,8 +391,8 @@ _link "${STOA_DIR}/scripts/system/stoa-snapshots/stoa-snapshots" "${HOME}/.local
 mkdir -p "${HOME}/.local/share/applications"
 _link "${STOA_DIR}/scripts/system/stoa-snapshots/data/stoa-snapshots.desktop" \
       "${HOME}/.local/share/applications/stoa-snapshots.desktop"
-_link "${STOA_DIR}/scripts/ai/data/stoa-models.desktop" \
-      "${HOME}/.local/share/applications/stoa-models.desktop"
+_link "${STOA_DIR}/scripts/ai/data/stoa-ai.desktop" \
+      "${HOME}/.local/share/applications/stoa-ai.desktop"
 _link "${STOA_DIR}/scripts/desktop/data/stoa-settings.desktop" \
       "${HOME}/.local/share/applications/stoa-settings.desktop"
 _link "${STOA_DIR}/scripts/desktop/data/stoa-keybinds.desktop" \
@@ -426,6 +426,7 @@ _link "${STOA_DIR}/scripts/tools/stoa-sync.sh"          "${HOME}/.local/bin/stoa
 _link "${STOA_DIR}/scripts/tools/stoa-restore.sh"       "${HOME}/.local/bin/stoa-restore"
 _link "${STOA_DIR}/scripts/ai/stoa-models.sh"        "${HOME}/.local/bin/stoa-models"
 _link "${STOA_DIR}/scripts/ai/stoa-mcp-web.py"       "${HOME}/.local/bin/stoa-mcp-web"
+_link "${STOA_DIR}/scripts/ai/stoa-ai.sh"               "${HOME}/.local/bin/stoa-ai"
 _link "${STOA_DIR}/config/llama/presets.ini"          "${CONFIG_DIR}/llama/presets.ini"
 _link "${STOA_DIR}/scripts/input/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/input/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"

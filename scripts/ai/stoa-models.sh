@@ -16,11 +16,20 @@ UNITS=(stoa-models stoa-mcp-web)
 case "${1:-open}" in
   run)
     shift
-    exec "$HOME/.local/bin/llama" serve \
+    LLAMA="$HOME/.local/bin/llama"
+    # Interface com o nome StoaAI na aba (cópia gerada, refeita se o llama mudar de versão).
+    UI="$HOME/.cache/stoa/llama-ui"; VER=$("$LLAMA" --version 2>&1 | head -1)
+    if [ ! -f "$UI/index.html" ] || [ "$(cat "$UI.ver" 2>/dev/null)" != "$VER" ]; then
+      HERE=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")"); mkdir -p "$(dirname "$UI")"
+      if python3 -I "$HERE/stoa-ui-brand.py" "$UI" "$LLAMA" >&2; then echo "$VER" > "$UI.ver"
+      else rm -rf "$UI" "$UI.ver"; echo "stoa-models: usando a interface original do llama" >&2; fi
+    fi
+    UIARG=(); [ -f "$UI/index.html" ] && UIARG=(--path "$UI")
+    exec "$LLAMA" serve \
       --models-dir "$HOME/Models/llm" \
       --models-preset "$HOME/.config/llama/presets.ini" \
       --models-max 1 --host 127.0.0.1 --port "${1:-$PORT}" \
-      --ui-mcp-proxy
+      --ui-mcp-proxy "${UIARG[@]}"
     ;;
   start)   systemctl --user start stoa-models ;;
   stop)    systemctl --user stop "${UNITS[@]}" ;;
