@@ -26,7 +26,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("STOA_CHAT_PORT", 9940))
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("STOA_MODELS_OLLAMA_PORT", 9940))
 OLLAMA = ("127.0.0.1", 11434)
 HERE = os.path.dirname(os.path.realpath(__file__))
 UI = os.path.expanduser("~/.cache/stoa/llama-ui")

@@ -8,7 +8,7 @@ segundos (assim um reload não desliga nada), roda `stoa-models stop` e sai.
 Só desliga depois de ter visto ao menos uma aba, então usar só a API não é afetado.
 
 Uso: stoa-models-watch [porta]      (padrão 9942, só em 127.0.0.1)
-Env: STOA_AI_GRACE (segundos, padrão 30), STOA_AI_STOP_CMD (padrão: stoa-models stop)
+Env: STOA_MODELS_GRACE (segundos, padrão 30), STOA_MODELS_STOP_CMD (padrão: stoa-models stop)
 """
 import os
 import select
@@ -19,9 +19,9 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("STOA_AI_WATCH_PORT", 9942))
-GRACE = float(os.environ.get("STOA_AI_GRACE", 30))
-STOP = os.environ.get("STOA_AI_STOP_CMD", os.path.expanduser("~/.local/bin/stoa-models") + " stop")
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("STOA_MODELS_WATCH_PORT", 9942))
+GRACE = float(os.environ.get("STOA_MODELS_GRACE", 30))
+STOP = os.environ.get("STOA_MODELS_STOP_CMD", os.path.expanduser("~/.local/bin/stoa-models") + " stop")
 HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
 ORIGINS = {f"http://{h}:{p}" for h in ("localhost", "127.0.0.1") for p in (9931, 9940)}
 
