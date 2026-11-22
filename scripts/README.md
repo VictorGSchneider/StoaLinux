@@ -13,8 +13,9 @@ into `~/.local/bin` under its short name (`scripts/wallpaper/stoa-walls.sh` →
 | `system/` | System administration: `stoa-maintain`, `stoa-gpu-setup`, `stoa-firewall`, `stoa-locksmith`, `stoa-snapshot`, `stoa-snapshots/` |
 | `files/` | File actions (Thunar "Stoatools") and `stoa-dfm/`, the dotfile manager fork |
 | `input/` | Paste, OCR and text prediction: `stoa-paste`, `stoa-ocr`, `stoa-predict` (+ `.py`, `stoa-predict-protocols/`) |
+| `ai/` | Local LLMs: `stoa-models` (llama serve with the GGUFs in `~/Models/llm`; presets in `config/llama/`) and `stoa-mcp-web` (MCP server for web search/fetch) |
 | `packages/` | Software: `stoa-store` (+ `stoa-store/`), `stoa-bauh.py`, `stoa-pkg-snapshot` |
-| `tools/` | Everything else: `stoa-fetch`, `stoa-history.py`, `stoa-sync`, `stoa-models` (llama serve with the local GGUFs; presets in `config/llama/`) |
+| `tools/` | Everything else: `stoa-fetch`, `stoa-history.py`, `stoa-sync` |
 | `lib/` | Shared shell libraries (`stoa-paths.sh`, `stoa-wm.sh`, `stoa-yad.sh`), sourced by the scripts above |
 | `vendor/` | Upstream copies of the projects the Stoa forks track; see `vendor/README.md` |
 
