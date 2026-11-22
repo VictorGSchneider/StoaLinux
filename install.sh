@@ -326,6 +326,8 @@ _link "${STOA_DIR}/scripts/ai/data/stoa-models-llama.service"              "${CO
 _link "${STOA_DIR}/scripts/ai/data/stoa-mcp-web.service"             "${CONFIG_DIR}/systemd/user/stoa-mcp-web.service"
 _link "${STOA_DIR}/scripts/ai/data/stoa-models-ollama.service"   "${CONFIG_DIR}/systemd/user/stoa-models-ollama.service"
 _link "${STOA_DIR}/scripts/ai/data/stoa-models-watch.service"       "${CONFIG_DIR}/systemd/user/stoa-models-watch.service"
+_link "${STOA_DIR}/scripts/localai/data/stoa-localai.service"      "${CONFIG_DIR}/systemd/user/stoa-localai.service"
+_link "${STOA_DIR}/config/localai/models.yaml"                  "${CONFIG_DIR}/localai/models.yaml"
 if systemctl --user show-environment >/dev/null 2>&1; then
     systemctl --user daemon-reload 2>/dev/null || true
     systemctl --user enable --now stoa-memento-refresh.timer 2>/dev/null || true
@@ -395,6 +397,8 @@ _link "${STOA_DIR}/scripts/system/stoa-snapshots/data/stoa-snapshots.desktop" \
       "${HOME}/.local/share/applications/stoa-snapshots.desktop"
 _link "${STOA_DIR}/scripts/ai/data/stoa-models.desktop" \
       "${HOME}/.local/share/applications/stoa-models.desktop"
+_link "${STOA_DIR}/scripts/localai/data/stoa-localai.desktop" \
+      "${HOME}/.local/share/applications/stoa-localai.desktop"
 _link "${STOA_DIR}/scripts/desktop/data/stoa-settings.desktop" \
       "${HOME}/.local/share/applications/stoa-settings.desktop"
 _link "${STOA_DIR}/scripts/desktop/data/stoa-keybinds.desktop" \
@@ -431,6 +435,7 @@ _link "${STOA_DIR}/scripts/ai/stoa-mcp-web.py"       "${HOME}/.local/bin/stoa-mc
 _link "${STOA_DIR}/scripts/ai/stoa-models.sh"               "${HOME}/.local/bin/stoa-models"
 _link "${STOA_DIR}/scripts/ai/stoa-models-ollama.py"       "${HOME}/.local/bin/stoa-models-ollama"
 _link "${STOA_DIR}/scripts/ai/stoa-models-watch.py"           "${HOME}/.local/bin/stoa-models-watch"
+_link "${STOA_DIR}/scripts/localai/stoa-localai.sh"            "${HOME}/.local/bin/stoa-localai"
 _link "${STOA_DIR}/config/llama/presets.ini"          "${CONFIG_DIR}/llama/presets.ini"
 _link "${STOA_DIR}/scripts/input/stoa-predict.sh"      "${HOME}/.local/bin/stoa-predict"
 _link "${STOA_DIR}/scripts/input/stoa-predict.py"      "${HOME}/.local/bin/stoa-predict.py"

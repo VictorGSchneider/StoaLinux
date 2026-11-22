@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=LocalAI
+GenericName=Local AI (text and images)
+Comment=Chat and generate images with your local models using LocalAI
+Exec=stoa-localai open
+Icon=applications-science
+Terminal=false
+Categories=Utility;
+Keywords=ai;llm;chat;images;stable diffusion;gguf;
+Actions=stop;
+
+[Desktop Action stop]
+Name=Stop LocalAI
+Exec=stoa-localai stop

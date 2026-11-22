@@ -1,0 +1,7 @@
+[Unit]
+Description=Stoa LocalAI (text and image models, local only)
+
+[Service]
+ExecStart=%h/.local/bin/stoa-localai run
+Restart=on-failure
+RestartSec=3

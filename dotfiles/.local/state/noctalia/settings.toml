@@ -223,6 +223,7 @@ telemetry_enabled = true
     show_app_actions = true
     show_session_button = false
     show_settings_button = false
+    sort_by_usage = false
 
         [shell.launcher.providers.session]
         global = true
