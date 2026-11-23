@@ -16,7 +16,8 @@ USAGE
   stoa-history restore            # put the last backup back
 
 WHAT IT PRUNES  (each class can be switched off: --no-secrets, --no-junk,
-                 --no-noise, --days 0, --no-dedupe)
+                 --no-noise, --days 0, --no-dedupe). --similar adds the
+                 disposable and similar classes; --aggressive implies it.
   secrets    lines carrying a token, key or password — history is
              world-readable to anything running as you, and a rotated
              credential still lives in this file forever
@@ -27,6 +28,16 @@ WHAT IT PRUNES  (each class can be switched off: --no-secrets, --no-junk,
              that carry a timestamp: an undated line is never aged out
   duplicate  the same command typed before; the most recent copy stays,
              so Ctrl-R keeps finding it where you last used it
+  disposable --similar only: a one-shot action that records what you did,
+             not something you will run again — pacman/yay/paru installs
+             and removals, flatpak install/uninstall, git branch -d,
+             git push -u / --delete, nmcli connection add/delete/modify
+  typo       --similar only: `git brach` (not a git command), and a line one
+             typo away from a later line — `git branc main` next to
+             `git branch main`, `store refresh7` next to `store refresh`
+  similar    --similar only: the same program with almost the same line
+             (difflib ratio >= 0.85) — a retried command, a corrected typo,
+             the same call with another path. The most recent copy stays
   multiline  --drop-multiline only: entries that still span more than one
              line after the paste trim below — a for loop, a heredoc
 
@@ -73,6 +84,7 @@ import argparse
 import os
 import re
 import shutil
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -140,6 +152,23 @@ AGGRESSIVE_HEADS = {
     "type", "whoami", "date", "cal", "uptime", "df", "free", "clear",
 }
 
+# ── Disposable: one-shot actions whose only trace is the history line ──
+# --similar. `pacman -S gparted` is a record of what you installed, not a
+# command you will search for; the package manager already has that record.
+# A bare `-Syu` or `-Sc` has no target and is left to the similar pass.
+SIMILAR_THRESHOLD = 0.85
+SIMILAR_MIN_LEN = 28
+_PM = r"^\s*(?:sudo\s+)?"
+DISPOSABLE_RE = [
+    re.compile(_PM + r"(?:pacman|yay|paru)\s+(?:-\S+\s+)*-[A-Za-z]*[RU][A-Za-z]*\b"),
+    re.compile(_PM + r"(?:pacman|yay|paru)\s+(?:-\S+\s+)*-S[A-Za-z]*\s+(?:-\S+\s+)*[^-\s]"),
+    re.compile(_PM + r"(?:pacman|yay|paru)\s+(?:-\S+\s+)*[^-\s][^\n]*\s-S\b"),
+    re.compile(_PM + r"flatpak\s+(?:install|uninstall|remove)\b"),
+    re.compile(r"^\s*git\s+(?:-C\s+\S+\s+)?branch\s+(?:-\S+\s+)*-[dD]\b"),
+    re.compile(r"^\s*git\s+(?:-C\s+\S+\s+)?push\b.*(?:\s-u\b|--set-upstream|--delete)"),
+    re.compile(_PM + r"nmcli\s+(?:-\S+\s+)*(?:connection|con|c)\s+(?:add|delete|modify)\b"),
+]
+
 # ── Junk: scratch work that outlived its scratch directory ──
 PLACEHOLDERS = {
     "foo", "bar", "baz", "qux", "asdf", "asdfasdf", "asd", "qwe", "qwerty",
@@ -189,18 +218,21 @@ SHELL_WORDS = {
 # variable name in a python REPL, so the shell-shaped passes stay out of
 # REPL files rather than being tuned for them.
 KIND_PASSES = {
-    "bash": ("secret", "junk", "noise", "unknown", "multiline", "old"),
-    "zsh": ("secret", "junk", "noise", "unknown", "multiline", "old"),
+    "bash": ("secret", "junk", "noise", "unknown", "typo", "disposable", "multiline", "old"),
+    "zsh": ("secret", "junk", "noise", "unknown", "typo", "disposable", "multiline", "old"),
     "repl": ("secret", "old"),
 }
 
-REASON_ORDER = ["secret", "junk", "noise", "unknown", "multiline", "old",
-                "duplicate", "trimmed"]
+REASON_ORDER = ["secret", "junk", "noise", "unknown", "typo", "disposable",
+                "multiline", "old", "duplicate", "similar", "trimmed"]
 REASON_LABEL = {
     "secret": "secret",
     "junk": "junk",
     "noise": "noise",
     "unknown": "unknown",
+    "typo": "typo",
+    "disposable": "disposable",
+    "similar": "similar",
     "multiline": "multi-line",
     "old": "old",
     "duplicate": "duplicate",
@@ -281,9 +313,17 @@ ZSH_LINE = re.compile(r"^: (\d{1,11}):(\d+);(.*)$", re.S)
 
 
 def _ends_open(text: str) -> bool:
-    """True when the line ends in an unescaped backslash (zsh continuation)."""
-    n = len(text) - len(text.rstrip("\\"))
-    return n % 2 == 1
+    """True when a zsh history line ends in a backslash.
+
+    zsh writes a newline inside a command as backslash + newline, so a
+    command that itself ends in `\\` (the usual `cmd \\` + newline + more
+    arguments) is stored with TWO backslashes. Counting them for parity
+    reads that as a finished line and splits one command into two entries —
+    the second a bare, undated fragment no pass can classify. Any trailing
+    backslash therefore continues, unless the next line opens an entry of
+    its own, which parse_zsh checks.
+    """
+    return text.endswith("\\")
 
 
 def parse_bash(content: str) -> list[Entry]:
@@ -471,6 +511,94 @@ def rc_names() -> set[str]:
     return names
 
 
+_GIT_CMDS: set[str] | None = None
+
+
+def git_commands() -> set[str]:
+    """Every subcommand this git answers to: builtins, git-* on PATH, aliases."""
+    global _GIT_CMDS
+    if _GIT_CMDS is None:
+        _GIT_CMDS = set()
+        if shutil.which("git"):
+            try:
+                out = subprocess.run(
+                    ["git", "--list-cmds=main,others,alias,nohelpers"],
+                    capture_output=True, text=True, timeout=10).stdout
+                _GIT_CMDS = set(out.split())
+            except (OSError, subprocess.SubprocessError):
+                pass
+    return _GIT_CMDS
+
+
+def git_subcommand(text: str) -> str | None:
+    """The subcommand word of a `git ...` line, or None if it is not one."""
+    tokens = text.split()
+    while tokens and tokens[0] in ("sudo", "doas", "time", "nohup", "env"):
+        tokens.pop(0)
+    if not tokens or tokens[0] != "git":
+        return None
+    i = 1
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok in ("-C", "-c", "--git-dir", "--work-tree", "--namespace"):
+            i += 2
+        elif tok.startswith("-"):
+            i += 1
+        else:
+            return tok if re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", tok) else None
+    return None
+
+
+def one_typo_apart(a: str, b: str) -> bool:
+    """One inserted, dropped or transposed character — never a substitution.
+
+    `refresh7` is `refresh` with a stray key; `search a` and `search b` are
+    two different commands, which a substitution would make look alike.
+    """
+    if a == b:
+        return False
+    if len(a) == len(b):
+        diff = [i for i in range(len(a)) if a[i] != b[i]]
+        return (len(diff) == 2 and diff[1] == diff[0] + 1
+                and a[diff[0]] == b[diff[1]] and a[diff[1]] == b[diff[0]])
+    if abs(len(a) - len(b)) != 1:
+        return False
+    short, long_ = (a, b) if len(a) < len(b) else (b, a)
+    i = 0
+    while i < len(short) and short[i] == long_[i]:
+        i += 1
+    return short[i:] == long_[i + 1:]
+
+
+def mark_typos(entries: list[Entry], keep_patterns: list[re.Pattern]) -> None:
+    """Drop a line that is one typo away from a later, surviving line.
+
+    The later line is the retry, so it is the one that stays. Lines must
+    share a program and every word but one; the differing word has to be a
+    plain word of 4+ characters, so flags and short arguments never match.
+    """
+    pools: dict[str, list[list[str]]] = {}
+    for entry in reversed(entries):
+        if entry.reason is not None or "\n" in entry.text:
+            continue
+        if any(p.search(entry.text) for p in keep_patterns):
+            continue
+        tokens = entry.text.split()
+        pool = pools.setdefault(head_word(entry.text), [])
+        for other in pool:
+            if len(other) != len(tokens):
+                continue
+            diff = [i for i in range(len(tokens)) if tokens[i] != other[i]]
+            if (len(diff) == 1 and len(tokens[diff[0]]) >= 4
+                    and len(other[diff[0]]) >= 4
+                    and not tokens[diff[0]].startswith("-")
+                    and one_typo_apart(tokens[diff[0]], other[diff[0]])):
+                entry.reason = "typo"
+                break
+        else:
+            pool.append(tokens)
+
+
 def classify(entry: Entry, kind: str, opts, now: float, extra_names: set[str]) -> str | None:
     """The reason this entry would go, or None to keep it.
 
@@ -505,6 +633,16 @@ def classify(entry: Entry, kind: str, opts, now: float, extra_names: set[str]) -
         if not known_command(head_word(text), extra_names):
             return "unknown"
 
+    if "typo" in passes and opts.similar and not text.count("\n"):
+        sub = git_subcommand(text)
+        cmds = git_commands()
+        if sub and cmds and sub not in cmds:
+            return "typo"
+
+    if "disposable" in passes and opts.similar:
+        if any(p.search(text) for p in DISPOSABLE_RE):
+            return "disposable"
+
     if "multiline" in passes and opts.drop_multiline and "\n" in entry.text:
         return "multiline"
 
@@ -513,6 +651,37 @@ def classify(entry: Entry, kind: str, opts, now: float, extra_names: set[str]) -
             return "old"
 
     return None
+
+
+def mark_similar(entries: list[Entry], keep_patterns: list[re.Pattern]) -> None:
+    """Drop lines that are near-copies of a later line from the same program.
+
+    Back-to-front like the exact dedupe, so the survivor is the most recent
+    copy. Only lines sharing a program (past sudo) are compared, and only
+    against the survivors already seen, so one retried command collapses
+    into its last version instead of chaining through every attempt.
+    """
+    from difflib import SequenceMatcher
+
+    survivors: dict[str, list[str]] = {}
+    for entry in reversed(entries):
+        if entry.reason is not None:
+            continue
+        if any(p.search(entry.text) for p in keep_patterns):
+            continue
+        text = " ".join(entry.text.split())
+        if len(text) < SIMILAR_MIN_LEN or "\n" in entry.text:
+            continue
+        pool = survivors.setdefault(head_word(text), [])
+        for other in pool:
+            matcher = SequenceMatcher(None, text, other, autojunk=False)
+            if (matcher.real_quick_ratio() >= SIMILAR_THRESHOLD
+                    and matcher.quick_ratio() >= SIMILAR_THRESHOLD
+                    and matcher.ratio() >= SIMILAR_THRESHOLD):
+                entry.reason = "similar"
+                break
+        else:
+            pool.append(text)
 
 
 def plan(hist: HistoryFile, opts, extra_names: set[str]) -> None:
@@ -540,6 +709,10 @@ def plan(hist: HistoryFile, opts, extra_names: set[str]) -> None:
                 entry.reason = "duplicate"
             else:
                 seen.add(key)
+
+    if opts.similar and hist.kind in ("bash", "zsh"):
+        mark_typos(hist.entries, opts.keep_patterns)
+        mark_similar(hist.entries, opts.keep_patterns)
 
     if opts.keep_last > 0:
         survivors = [e for e in hist.entries if e.reason is None]
@@ -1041,6 +1214,10 @@ def build_parser() -> argparse.ArgumentParser:
                        help="keep lines carrying tokens and passwords")
         p.add_argument("--aggressive", action="store_true",
                        help="also treat every ls/cd/cat/echo/man line as noise")
+        p.add_argument("--similar", action="store_true",
+                       help="also prune one-shot actions (pacman -S, git branch -d, "
+                            "nmcli connection add...), typos, and near-duplicates "
+                            "of a later line (implied by --aggressive)")
         p.add_argument("--drop-multiline", action="store_true",
                        help="drop entries that still span more than one line "
                             "after the paste trim (a for loop, a heredoc)")
@@ -1091,6 +1268,8 @@ def main(argv: list[str]) -> int:
     if not args or (args[0].startswith("-") and args[0] not in ("-h", "--help")):
         args = ["stats"] + args
     opts = parser.parse_args(args)
+    if getattr(opts, "aggressive", False):
+        opts.similar = True
     if opts.command != "restore":
         opts.keep_patterns = load_keep_patterns()
     handlers = {

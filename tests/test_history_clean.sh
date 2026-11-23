@@ -27,6 +27,11 @@
 #       --no-trim-pastes
 #   P7  --drop-multiline removes a genuine multi-line entry and keeps the
 #       pasted one, which is a one-line command wearing two lines
+#   P8  --similar prunes one-shot actions (pacman -S/-Rns, git branch -d)
+#       and keeps only the latest of a family of near-identical lines, and
+#       does neither without the flag. Short distinct commands, the keep
+#       list and a bare `pacman -Syu` must survive. Typos (`git brach`,
+#       `store refresh7` beside `store refresh`) go; the corrected line stays
 #
 # Everything runs under HOME=$TMP: the test must never read, and can never
 # write, the history of whoever is running it.
@@ -210,6 +215,53 @@ _stoa restore --yes > /dev/null
     _fail "restore did not reproduce the pre-clean ~/.bash_history"
 [ "$(md5sum < "$TMP/.zsh_history")" = "$before_zsh" ] || \
     _fail "restore did not reproduce the pre-clean ~/.zsh_history"
+
+# ── P8: --similar ────────────────────────────────────────────────────
+rm -f "$TMP/.bash_history" "$TMP/.python_history"
+cat > "$TMP/.zsh_history" <<ZSH
+: ${NOW}:0;sudo pacman -S gparted
+: ${NOW}:0;sudo pacman -Rns ufw vlc
+: ${NOW}:0;yay -S jan-bin
+: ${NOW}:0;git branch -d helper-design
+: ${NOW}:0;sudo pacman -Syu
+: ${NOW}:0;sudo smartctl -a /dev/nvme1n1
+: ${NOW}:0;sudo smartctl -a /dev/nvme1n2
+: ${NOW}:0;sudo smartctl -a /dev/nvme1n3
+: ${NOW}:0;stoa-drive sync-all
+: ${NOW}:0;stoa-drive sync-status
+: ${NOW}:0;docker compose up -d --build api
+: ${NOW}:0;docker compose up -d --build apj
+: ${NOW}:0;git brach
+: ${NOW}:0;git status
+: ${NOW}:0;git branc main
+: ${NOW}:0;git branch main
+: ${NOW}:0;./store refresh7
+: ${NOW}:0;./store refresh
+ZSH
+plain=$(_stoa clean --days 0)
+case "$plain" in
+    *disposable*|*similar*) _fail "disposable/similar ran without --similar" ;;
+esac
+out=$(_stoa clean --similar --days 0)
+printf '%s' "$out" | grep -qE 'disposable +4' || \
+    _fail "expected 4 disposable entries (2 pacman, yay, git branch -d), got: $(
+        printf '%s' "$out" | grep disposable || echo none)"
+printf '%s' "$out" | grep -qE 'similar +2' || \
+    _fail "expected the 2 older smartctl lines as similar, got: $(
+        printf '%s' "$out" | grep -E 'similar' || echo none)"
+printf '%s' "$out" | grep -q 'keeping    9 of 18' || \
+    _fail "expected to keep 9 of 18 (Syu, last smartctl, 2 stoa-drive, 2 docker, git status, git branch main, store refresh), got: $(
+        printf '%s' "$out" | grep keeping || echo none)"
+printf '%s' "$out" | grep -qE 'typo +3' || \
+    _fail "expected 3 typos (git brach, git branc main, store refresh7), got: $(
+        printf '%s' "$out" | grep -E 'typo' || echo none)"
+_stoa clean --similar --days 0 --apply --yes > /dev/null
+grep -q 'smartctl -a /dev/nvme1n3' "$TMP/.zsh_history" || \
+    _fail "--similar did not keep the most recent smartctl line"
+grep -q 'pacman -Syu' "$TMP/.zsh_history" || \
+    _fail "--similar removed a bare pacman -Syu"
+grep -q 'stoa-drive sync-status' "$TMP/.zsh_history" || \
+    _fail "--similar merged two short, distinct commands"
 
 if [ "$status" -eq 0 ]; then
     echo "history-clean: ok"
