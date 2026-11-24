@@ -12,9 +12,9 @@ capsule_border = "on_primary"
 capsule_border_width = 0.0
 capsule_fill = "primary_container"
 capsule_foreground = "on_surface"
-capsule_opacity = 0.59999998658895493
+capsule_opacity = 0.5999999865889549
 capsule_padding = 7.0
-capsule_thickness = 0.74999998696148396
+capsule_thickness = 0.749999986961484
 center = [ "clock", "taskbar", "launcher", "workspaces", "widget" ]
 compositor_blur = false
 end = [ "tray", "notifications", "clipboard", "stoa/drive:pill", "group:g1", "pill", "session" ]
@@ -45,7 +45,7 @@ start = [ "sysmon", "weather", "stoa/health:pill", "media" ]
     foreground = "on_surface"
     id = "g1"
     members = [ "network", "bluetooth", "volume", "brightness", "battery" ]
-    opacity = 0.64999997615814209
+    opacity = 0.6499999761581421
     padding = 6.0
 
 [brightness]
@@ -85,7 +85,7 @@ widget_order = [ "stoa_memento", "desktop-widget-0000000000000001" ]
         [desktop_widgets.widget.desktop-widget-0000000000000001.settings]
         background = true
         background_color = "on_primary"
-        background_opacity = 0.29999999999999999
+        background_opacity = 0.3
         background_padding = 7
         background_radius = 15
         clock_style = "digital"
@@ -269,7 +269,7 @@ wallpaper_scheme = "m3-content"
     enable_community_templates = false
 
 [wallpaper]
-edge_smoothness = 0.99999997764825821
+edge_smoothness = 0.9999999776482582
 fill_mode = "fit"
 transition = [ "diamond", "disc", "fade", "honeycomb", "melt", "pixel", "stripes", "vortex", "wipe", "zoom" ]
 transition_duration = 3700
